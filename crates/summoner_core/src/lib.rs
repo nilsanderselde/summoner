@@ -58,10 +58,13 @@ pub mod voice;
 pub mod wav;
 pub use adaptive_buffer::AdaptiveBufferScaler;
 pub use articulation_bus::*;
-pub use audio::{ChannelLayout, FixedAudioBuffer, Frame, MultichannelAudioBuffer, Sample};
+pub use audio::{
+    AudioRingBuffer, ChannelLayout, FixedAudioBuffer, Frame, MultichannelAudioBuffer, Sample,
+};
 pub use audio_drivers::{
-    AAudioDriver, AlsaDriver, AsapiDriver, AudioUnitDriver, NativeAudioDriver,
-    NativeAudioDriverTuner, WasapiDriver,
+    AAudioDriver, AlsaDriver, AsapiDriver, AudioDeviceDescriptor, AudioDriverBackendType,
+    AudioUnitDriver, DeviceDirection, LiveAudioTelemetry, NativeAudioDriver, NativeAudioDriverTuner,
+    WasapiDriver,
 };
 pub use bellows_bus::*;
 pub use breath_bus::*;

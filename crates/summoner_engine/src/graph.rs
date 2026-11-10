@@ -708,6 +708,8 @@ impl GraphRunner {
             track.output_gain_db = tc.output_gain_db;
             track.tuning_edo = tc.tuning_edo;
             track.tuning_root_hz = tc.tuning_root_hz;
+            track.input_monitoring = tc.input_monitoring;
+            track.armed_for_recording = tc.record_armed;
 
             if !tc.connections.is_empty() {
                 let mut dag = NodeGraph::new(
@@ -790,6 +792,16 @@ impl GraphRunner {
         ctx: &summoner_core::node::ProcessContext,
         out_buffers: &mut [&mut [summoner_core::audio::Sample]],
     ) {
+        self.process_block_with_input(block_size, ctx, None, out_buffers);
+    }
+
+    pub fn process_block_with_input(
+        &mut self,
+        block_size: usize,
+        ctx: &summoner_core::node::ProcessContext,
+        in_buffers: Option<&[&[summoner_core::audio::Sample]]>,
+        out_buffers: &mut [&mut [summoner_core::audio::Sample]],
+    ) {
         let block_size = block_size.min(MAX_RUNNER_BLOCK_SIZE);
         for out in out_buffers.iter_mut() {
             out[..block_size].fill(0.0);
@@ -821,6 +833,24 @@ impl GraphRunner {
                 &local_ctx,
                 &mut track_out_slices[..out_buffers.len().min(2)],
             );
+
+            // Live input monitoring: if track has input monitoring enabled, mix in live audio
+            if track.input_monitoring {
+                if let Some(ins) = in_buffers {
+                    if let Some(in_l) = ins.first() {
+                        let len = block_size.min(in_l.len());
+                        for i in 0..len {
+                            self.scratch_l[i] += in_l[i];
+                        }
+                    }
+                    if let Some(in_r) = ins.get(1).or_else(|| ins.first()) {
+                        let len = block_size.min(in_r.len());
+                        for i in 0..len {
+                            self.scratch_r[i] += in_r[i];
+                        }
+                    }
+                }
+            }
 
             if let Some(tf) = self.track_filters.get_mut(track_idx) {
                 if let Some(ref mut dcf) = tf.dc_block {

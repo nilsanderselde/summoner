@@ -11,6 +11,11 @@ summoner_core = { path = "../summoner_core" }
 summoner_project = { path = "../summoner_project" }
 summoner_dsp = { path = "../summoner_dsp" }
 cpal = "0.15"
+midir = "0.10"
 crossbeam-channel = "0.5"
 hound = "3.5"
+serde = { workspace = true, features = ["derive"] }
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["processthreadsapi"] }
 

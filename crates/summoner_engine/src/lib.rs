@@ -10,10 +10,13 @@
 
 pub mod audio_engine;
 pub mod graph;
+pub mod midi_engine;
 
 pub use audio_engine::{
     default_render_frames, render_project_to_wav, render_project_track_stems, run_live,
-    spawn_live_engine, EngineCommand, LiveEngineHandle, ParamUpdate,
+    spawn_live_engine, spawn_live_engine_with_settings, AudioDeviceInfo, AudioDeviceManager,
+    AudioEngineSettings, EngineCommand, LiveEngineHandle, ParamUpdate,
 };
 pub use graph::{graph_from_project, GraphRunner, NodeFactory};
+pub use midi_engine::{MidiDeviceManager, MidiInputReceiver, MidiPortInfo, TimestampedMidiEvent};
 

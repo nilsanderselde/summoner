@@ -313,3 +313,141 @@ impl MultichannelAudioBuffer {
         }
     }
 }
+
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
+
+/// Lock-free Single-Producer Single-Consumer (SPSC) Audio Ring Buffer.
+/// Safe for zero-heap-allocation audio callback transfers under `AllocGuard`.
+#[derive(Debug)]
+pub struct AudioRingBuffer {
+    data: Box<[AtomicU32]>,
+    capacity: usize,
+    write_idx: AtomicUsize,
+    read_idx: AtomicUsize,
+}
+
+impl AudioRingBuffer {
+    /// Create a new ring buffer with the specified capacity in samples.
+    pub fn new(capacity: usize) -> Self {
+        let capacity = capacity.max(64);
+        let mut data = Vec::with_capacity(capacity);
+        for _ in 0..capacity {
+            data.push(AtomicU32::new(0.0f32.to_bits()));
+        }
+        Self {
+            data: data.into_boxed_slice(),
+            capacity,
+            write_idx: AtomicUsize::new(0),
+            read_idx: AtomicUsize::new(0),
+        }
+    }
+
+    /// Total sample capacity of the ring buffer.
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
+
+    /// Number of samples currently available to read.
+    pub fn available_read(&self) -> usize {
+        let w = self.write_idx.load(Ordering::Acquire);
+        let r = self.read_idx.load(Ordering::Acquire);
+        if w >= r {
+            w - r
+        } else {
+            self.capacity - (r - w)
+        }
+    }
+
+    /// Number of samples space currently available to write.
+    pub fn available_write(&self) -> usize {
+        self.capacity.saturating_sub(self.available_read() + 1)
+    }
+
+    /// Push slice into ring buffer without heap allocation.
+    /// Returns the number of samples written.
+    pub fn push_slice(&self, src: &[Sample]) -> usize {
+        let r = self.read_idx.load(Ordering::Acquire);
+        let w = self.write_idx.load(Ordering::Relaxed);
+        let avail = if w >= r {
+            self.capacity.saturating_sub(w - r + 1)
+        } else {
+            r - w - 1
+        };
+        let to_write = src.len().min(avail);
+        for (i, &sample) in src.iter().enumerate().take(to_write) {
+            let idx = (w + i) % self.capacity;
+            self.data[idx].store(sample.to_bits(), Ordering::Relaxed);
+        }
+        let new_w = (w + to_write) % self.capacity;
+        self.write_idx.store(new_w, Ordering::Release);
+        to_write
+    }
+
+    /// Pop samples from ring buffer into destination slice without heap allocation.
+    /// Returns the number of samples read.
+    pub fn pop_slice(&self, dst: &mut [Sample]) -> usize {
+        let w = self.write_idx.load(Ordering::Acquire);
+        let r = self.read_idx.load(Ordering::Relaxed);
+        let avail = if w >= r {
+            w - r
+        } else {
+            self.capacity - (r - w)
+        };
+        let to_read = dst.len().min(avail);
+        for (i, slot) in dst.iter_mut().enumerate().take(to_read) {
+            let idx = (r + i) % self.capacity;
+            *slot = f32::from_bits(self.data[idx].load(Ordering::Relaxed));
+        }
+        let new_r = (r + to_read) % self.capacity;
+        self.read_idx.store(new_r, Ordering::Release);
+        to_read
+    }
+
+    /// Reset ring buffer indices to empty.
+    pub fn clear(&self) {
+        self.read_idx.store(0, Ordering::Release);
+        self.write_idx.store(0, Ordering::Release);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_audio_ring_buffer_push_pop_round_trip() {
+        let rb = AudioRingBuffer::new(256);
+        assert_eq!(rb.available_read(), 0);
+        assert!(rb.available_write() >= 250);
+
+        let input_samples = [0.1f32, 0.2, 0.3, 0.4, 0.5, -0.6, -0.7];
+        let written = rb.push_slice(&input_samples);
+        assert_eq!(written, input_samples.len());
+        assert_eq!(rb.available_read(), input_samples.len());
+
+        let mut read_samples = [0.0f32; 7];
+        let read = rb.pop_slice(&mut read_samples);
+        assert_eq!(read, 7);
+        assert_eq!(read_samples, input_samples);
+        assert_eq!(rb.available_read(), 0);
+    }
+
+    #[test]
+    fn test_audio_ring_buffer_zero_alloc_under_guard() {
+        use crate::allocator::AllocGuard;
+
+        let rb = AudioRingBuffer::new(512);
+        let input = [0.42f32; 128];
+        let mut output = [0.0f32; 128];
+
+        {
+            let _guard = AllocGuard::new();
+            let pushed = rb.push_slice(&input);
+            assert_eq!(pushed, 128);
+            let popped = rb.pop_slice(&mut output);
+            assert_eq!(popped, 128);
+        }
+
+        assert_eq!(output[0], 0.42);
+    }
+}

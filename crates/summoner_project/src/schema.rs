@@ -235,6 +235,8 @@ pub struct TrackConfig {
     pub group_bus: Option<String>,
     #[serde(default)]
     pub record_armed: bool,
+    #[serde(default)]
+    pub input_monitoring: bool,
     #[serde(default = "default_true")]
     pub send_to_master: bool,
     #[serde(default)]
@@ -305,6 +307,7 @@ impl Default for TrackConfig {
             color: None,
             group_bus: None,
             record_armed: false,
+            input_monitoring: false,
             send_to_master: true,
             is_frozen: false,
             frozen_buffer: None,

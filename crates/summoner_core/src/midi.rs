@@ -29,6 +29,95 @@ pub enum MidiEvent {
     SystemRealtime(u8),
 }
 
+impl MidiEvent {
+    /// Parse standard raw MIDI 1.0 bytes into a typed `MidiEvent`.
+    pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        if bytes.is_empty() {
+            return None;
+        }
+        let status = bytes[0];
+        let message_type = status & 0xF0;
+        let channel = status & 0x0F;
+
+        match message_type {
+            0x90 => {
+                if bytes.len() >= 3 {
+                    let note = bytes[1] & 0x7F;
+                    let vel = bytes[2] & 0x7F;
+                    if vel > 0 {
+                        Some(MidiEvent::NoteOn(channel, note, vel))
+                    } else {
+                        Some(MidiEvent::NoteOff(channel, note, 0))
+                    }
+                } else {
+                    None
+                }
+            }
+            0x80 => {
+                if bytes.len() >= 3 {
+                    let note = bytes[1] & 0x7F;
+                    let vel = bytes[2] & 0x7F;
+                    Some(MidiEvent::NoteOff(channel, note, vel))
+                } else {
+                    None
+                }
+            }
+            0xB0 => {
+                if bytes.len() >= 3 {
+                    let cc = bytes[1] & 0x7F;
+                    let val = bytes[2] & 0x7F;
+                    Some(MidiEvent::ControlChange(channel, cc, val))
+                } else {
+                    None
+                }
+            }
+            0xE0 => {
+                if bytes.len() >= 3 {
+                    let lsb = (bytes[1] & 0x7F) as u16;
+                    let msb = (bytes[2] & 0x7F) as u16;
+                    let bend = (msb << 7) | lsb;
+                    Some(MidiEvent::PitchBend(channel, bend))
+                } else {
+                    None
+                }
+            }
+            0xC0 => {
+                if bytes.len() >= 2 {
+                    let prog = bytes[1] & 0x7F;
+                    Some(MidiEvent::ProgramChange(channel, prog))
+                } else {
+                    None
+                }
+            }
+            0xD0 => {
+                if bytes.len() >= 2 {
+                    let press = bytes[1] & 0x7F;
+                    Some(MidiEvent::Aftertouch(channel, press))
+                } else {
+                    None
+                }
+            }
+            0xA0 => {
+                if bytes.len() >= 3 {
+                    let note = bytes[1] & 0x7F;
+                    let press = bytes[2] & 0x7F;
+                    Some(MidiEvent::PolyPressure(channel, note, press))
+                } else {
+                    None
+                }
+            }
+            0xF0 => {
+                if status >= 0xF8 {
+                    Some(MidiEvent::SystemRealtime(status))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
 /// Standard Standard MIDI File (.mid) parser.
 pub struct MidiFileParser {
     data: Vec<u8>,
@@ -148,5 +237,38 @@ impl MidiFileParser {
         }
 
         Ok(seq_tracks)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_midi_event_from_bytes_parsing() {
+        assert_eq!(
+            MidiEvent::from_bytes(&[0x90, 60, 100]),
+            Some(MidiEvent::NoteOn(0, 60, 100))
+        );
+        assert_eq!(
+            MidiEvent::from_bytes(&[0x90, 60, 0]),
+            Some(MidiEvent::NoteOff(0, 60, 0))
+        );
+        assert_eq!(
+            MidiEvent::from_bytes(&[0x81, 64, 64]),
+            Some(MidiEvent::NoteOff(1, 64, 64))
+        );
+        assert_eq!(
+            MidiEvent::from_bytes(&[0xB0, 7, 127]),
+            Some(MidiEvent::ControlChange(0, 7, 127))
+        );
+        assert_eq!(
+            MidiEvent::from_bytes(&[0xE2, 0x00, 0x40]),
+            Some(MidiEvent::PitchBend(2, 8192))
+        );
+        assert_eq!(
+            MidiEvent::from_bytes(&[0xF8]),
+            Some(MidiEvent::SystemRealtime(0xF8))
+        );
     }
 }

@@ -3,6 +3,53 @@
 
 //! Low-latency mobile audio driver backends for Android AAudio and iOS AudioUnit CoreAudio.
 
+/// Native or CPAL hardware audio driver backend type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum AudioDriverBackendType {
+    Wasapi,
+    Asio,
+    CoreAudio,
+    Alsa,
+    Jack,
+    PipeWire,
+    Mock,
+}
+
+/// Device streaming direction (input or output).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum DeviceDirection {
+    Input,
+    Output,
+    Duplex,
+}
+
+/// Metadata and capabilities descriptor for a hardware audio device.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct AudioDeviceDescriptor {
+    pub name: String,
+    pub backend: AudioDriverBackendType,
+    pub direction: DeviceDirection,
+    pub default_sample_rate: u32,
+    pub supported_sample_rates: Vec<u32>,
+    pub min_channels: usize,
+    pub max_channels: usize,
+    pub min_buffer_size: usize,
+    pub max_buffer_size: usize,
+    pub is_default: bool,
+}
+
+/// Real-time live audio telemetry counters (xruns, CPU load, latency).
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct LiveAudioTelemetry {
+    pub xrun_count: u64,
+    pub cpu_load_pct: f32,
+    pub callback_duration_us: u64,
+    pub buffer_size_frames: usize,
+    pub sample_rate: u32,
+    pub input_latency_ms: f32,
+    pub output_latency_ms: f32,
+}
+
 /// Android AAudio / NDK low-latency audio driver wrapper (Step 1087).
 #[derive(Debug, Clone)]
 pub struct AAudioDriver {
@@ -471,5 +518,38 @@ mod tests {
 
         assert!(tuner.open_stream().is_ok());
         assert!(tuner.is_active());
+    }
+
+    #[test]
+    fn test_hardware_audio_device_descriptors_and_telemetry() {
+        let desc = AudioDeviceDescriptor {
+            name: "Studio USB 2.0 DAC".to_string(),
+            backend: AudioDriverBackendType::Wasapi,
+            direction: DeviceDirection::Duplex,
+            default_sample_rate: 48000,
+            supported_sample_rates: vec![44100, 48000, 96000],
+            min_channels: 2,
+            max_channels: 8,
+            min_buffer_size: 64,
+            max_buffer_size: 2048,
+            is_default: true,
+        };
+
+        assert_eq!(desc.backend, AudioDriverBackendType::Wasapi);
+        assert_eq!(desc.direction, DeviceDirection::Duplex);
+        assert_eq!(desc.supported_sample_rates.len(), 3);
+
+        let telemetry = LiveAudioTelemetry {
+            xrun_count: 0,
+            cpu_load_pct: 1.25,
+            callback_duration_us: 180,
+            buffer_size_frames: 128,
+            sample_rate: 48000,
+            input_latency_ms: 2.67,
+            output_latency_ms: 2.67,
+        };
+
+        assert_eq!(telemetry.xrun_count, 0);
+        assert!(telemetry.cpu_load_pct < 5.0);
     }
 }

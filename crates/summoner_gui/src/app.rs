@@ -78,6 +78,8 @@ pub struct GuiState {
     pub snap_to_edges: bool,
     #[serde(default)]
     pub show_project_notes_panel: bool,
+    #[serde(default)]
+    pub audio_driver_panel: Option<crate::visualizer::AudioDriverSelectorPanel>,
 }
 
 fn default_panel_dock_edge() -> String {
@@ -483,6 +485,9 @@ impl SummonerApp {
             app.panel_dock_edge = state.panel_dock_edge;
             app.snap_to_edges = state.snap_to_edges;
             app.show_project_notes_panel = state.show_project_notes_panel;
+            if let Some(panel) = state.audio_driver_panel {
+                app.audio_driver_panel = panel;
+            }
         } else {
             app.show_first_run_wizard = true;
         }
@@ -575,9 +580,41 @@ impl SummonerApp {
             panel_dock_edge: self.panel_dock_edge.clone(),
             snap_to_edges: self.snap_to_edges,
             show_project_notes_panel: self.show_project_notes_panel,
+            audio_driver_panel: Some(self.audio_driver_panel.clone()),
         };
         state.save();
         let _ = std::fs::remove_file(".summoner_dirty.lock");
+    }
+
+    pub fn apply_audio_settings(&mut self) {
+        let out_device = self
+            .audio_driver_panel
+            .device_list
+            .get(self.audio_driver_panel.selected_device_index)
+            .cloned();
+        let in_device = self
+            .audio_driver_panel
+            .input_device_list
+            .get(self.audio_driver_panel.selected_input_device_index)
+            .cloned();
+        let settings = summoner_engine::AudioEngineSettings {
+            output_device_name: out_device,
+            input_device_name: in_device,
+            enable_input: self.audio_driver_panel.enable_input,
+            midi_input_device_name: None,
+            enable_midi: true,
+            requested_sample_rate: Some(self.audio_driver_panel.sample_rate),
+            requested_buffer_size: Some(self.audio_driver_panel.buffer_size as u32),
+        };
+        let new_handle = summoner_engine::spawn_live_engine_with_settings(
+            &self.project,
+            Arc::clone(&self.param_bus),
+            self.transport_running,
+            &settings,
+        );
+        self.audio_engine = Some(new_handle);
+        self.status_message =
+            Some("Re-initialized live audio engine with selected settings".to_string());
     }
 
     pub fn sync_track_to_graph(&mut self, track_id: u64) {
@@ -2358,6 +2395,10 @@ impl eframe::App for SummonerApp {
                         ui,
                         &mut self.audio_driver_panel,
                     );
+                    if self.audio_driver_panel.apply_requested {
+                        self.audio_driver_panel.apply_requested = false;
+                        self.apply_audio_settings();
+                    }
                 });
             self.show_audio_driver_modal = is_open;
         }
@@ -3762,5 +3803,34 @@ mod tests {
             app.status_message.as_deref(),
             Some("Redid mutation via session history")
         );
+    }
+
+    #[test]
+    fn test_gui_audio_driver_settings_apply_and_persistence() {
+        let project = create_default_project("Audio Settings Test");
+        let param_bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(project, param_bus);
+
+        // Customize driver panel settings
+        app.audio_driver_panel.sample_rate = 48000;
+        app.audio_driver_panel.buffer_size = 128;
+        app.audio_driver_panel.enable_input = true;
+
+        // Apply settings
+        app.apply_audio_settings();
+        assert!(app.audio_engine.is_some());
+        assert_eq!(
+            app.status_message.as_deref(),
+            Some("Re-initialized live audio engine with selected settings")
+        );
+
+        // Test persistence round trip
+        app.save_gui_state();
+        let loaded_state = GuiState::load().expect("GuiState should load");
+        assert!(loaded_state.audio_driver_panel.is_some());
+        let saved_panel = loaded_state.audio_driver_panel.unwrap();
+        assert_eq!(saved_panel.sample_rate, 48000);
+        assert_eq!(saved_panel.buffer_size, 128);
+        assert!(saved_panel.enable_input);
     }
 }

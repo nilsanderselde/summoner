@@ -409,6 +409,41 @@ pub struct AudioDriverSelectorPanel {
     pub device_list: Vec<String>,
     /// Index of selected output device.
     pub selected_device_index: usize,
+    /// List of available audio input devices.
+    #[serde(default)]
+    pub input_device_list: Vec<String>,
+    /// Index of selected input device.
+    #[serde(default)]
+    pub selected_input_device_index: usize,
+    /// Enable input capture & live monitoring.
+    #[serde(default = "default_panel_true")]
+    pub enable_input: bool,
+    /// Transient flag indicating user requested re-initialization with these settings.
+    #[serde(skip)]
+    pub apply_requested: bool,
+}
+
+fn default_panel_true() -> bool {
+    true
+}
+
+impl AudioDriverSelectorPanel {
+    pub fn refresh_devices(&mut self) {
+        let out_devs = summoner_engine::AudioDeviceManager::list_output_devices();
+        if !out_devs.is_empty() {
+            self.device_list = out_devs.iter().map(|d| d.name.clone()).collect();
+            if self.selected_device_index >= self.device_list.len() {
+                self.selected_device_index = 0;
+            }
+        }
+        let in_devs = summoner_engine::AudioDeviceManager::list_input_devices();
+        if !in_devs.is_empty() {
+            self.input_device_list = in_devs.iter().map(|d| d.name.clone()).collect();
+            if self.selected_input_device_index >= self.input_device_list.len() {
+                self.selected_input_device_index = 0;
+            }
+        }
+    }
 }
 
 impl Default for AudioDriverSelectorPanel {
@@ -425,6 +460,13 @@ impl Default for AudioDriverSelectorPanel {
                 "ALSA Hardware Device (HW:0)".to_string(),
             ],
             selected_device_index: 0,
+            input_device_list: vec![
+                "Default Audio Capture Endpoint".to_string(),
+                "WASAPI Microphone Input".to_string(),
+            ],
+            selected_input_device_index: 0,
+            enable_input: true,
+            apply_requested: false,
         }
     }
 }
@@ -467,10 +509,14 @@ pub fn show_audio_driver_selector_panel(ui: &mut egui::Ui, panel: &mut AudioDriv
                         "AudioUnit (iOS CoreAudio)",
                     );
                 });
+
+            if ui.button("🔄 Rescan Devices").clicked() {
+                panel.refresh_devices();
+            }
         });
 
         ui.horizontal(|ui| {
-            ui.label("Device:");
+            ui.label("Output Device:");
             if !panel.device_list.is_empty() {
                 let current_device = panel.device_list
                     [panel.selected_device_index % panel.device_list.len()]
@@ -484,6 +530,26 @@ pub fn show_audio_driver_selector_panel(ui: &mut egui::Ui, panel: &mut AudioDriv
                     });
             }
         });
+
+        ui.horizontal(|ui| {
+            ui.label("Input Device:");
+            if !panel.input_device_list.is_empty() {
+                let current_in = panel.input_device_list
+                    [panel.selected_input_device_index % panel.input_device_list.len()]
+                .clone();
+                egui::ComboBox::from_id_source("driver_in_device_combo")
+                    .selected_text(current_in)
+                    .show_ui(ui, |ui| {
+                        for (idx, dev) in panel.input_device_list.iter().enumerate() {
+                            ui.selectable_value(&mut panel.selected_input_device_index, idx, dev);
+                        }
+                    });
+            } else {
+                ui.label("(No input devices detected)");
+            }
+        });
+
+        ui.checkbox(&mut panel.enable_input, "Enable Realtime Input Capture & Live Monitoring");
 
         ui.horizontal(|ui| {
             ui.label("Sample Rate:");
@@ -508,6 +574,11 @@ pub fn show_audio_driver_selector_panel(ui: &mut egui::Ui, panel: &mut AudioDriv
         });
 
         ui.checkbox(&mut panel.exclusive_mode, "Exclusive Hardware Mode");
+
+        ui.separator();
+        if ui.button("⚡ Apply & Re-initialize Engine").clicked() {
+            panel.apply_requested = true;
+        }
     });
 }
 
