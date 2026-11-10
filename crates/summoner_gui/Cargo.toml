@@ -13,6 +13,7 @@ summoner_harmony = { path = "../summoner_harmony" }
 summoner_sequencer = { path = "../summoner_sequencer" }
 summoner_dsp = { path = "../summoner_dsp" }
 summoner_engine = { path = "../summoner_engine" }
+blake3 = { workspace = true }
 hound = "3.5"
 serde = { workspace = true, features = ["derive"] }
 toml = { workspace = true }

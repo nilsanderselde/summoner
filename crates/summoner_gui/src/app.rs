@@ -268,6 +268,7 @@ pub struct SummonerApp {
     pub show_dpi_scale_panel_modal: bool,
     pub award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView,
     pub audio_engine: Option<summoner_engine::LiveEngineHandle>,
+    pub session_dag: summoner_project::git_dag::GitSessionDag,
 }
 
 impl SummonerApp {
@@ -315,7 +316,7 @@ impl SummonerApp {
         let _ = std::fs::write(lock_file, "dirty");
 
         let mut app = Self {
-            project,
+            project: project.clone(),
             project_path: None,
             param_bus: param_bus.clone(),
             transport_running: false,
@@ -454,6 +455,7 @@ impl SummonerApp {
             show_dpi_scale_panel_modal: false,
             award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView::new(),
             audio_engine: None,
+            session_dag: summoner_project::git_dag::GitSessionDag::new(project.clone(), "Summoner User"),
         };
         app.award_winning_view.live_param_bus = Some(param_bus.clone());
 
@@ -486,6 +488,66 @@ impl SummonerApp {
         }
 
         app
+    }
+
+    pub fn commit_current_state(&mut self, message: &str) {
+        self.session_dag.commit(message, self.project.clone());
+    }
+
+    pub fn handle_undo(&mut self) {
+        let mut handled = false;
+        if let Some(ref path) = self.project_path {
+            let dir = if path.is_dir() {
+                path.clone()
+            } else {
+                path.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .to_path_buf()
+            };
+            if let Ok(repo) = summoner_project::git_dag::open_or_init_repo(&dir) {
+                if summoner_project::git_dag::undo(&repo).is_ok() {
+                    self.load_session_from_path(dir.join("summoner_session.toml"));
+                    self.status_message = Some("Undid micro-commit via Git".to_string());
+                    handled = true;
+                }
+            }
+        }
+        if !handled {
+            if let Some(state) = self.session_dag.undo() {
+                self.project = state.clone();
+                self.status_message = Some("Undid mutation via session history".to_string());
+            } else {
+                self.status_message = Some("Undo: no parent commit in history".to_string());
+            }
+        }
+    }
+
+    pub fn handle_redo(&mut self) {
+        let mut handled = false;
+        if let Some(ref path) = self.project_path {
+            let dir = if path.is_dir() {
+                path.clone()
+            } else {
+                path.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .to_path_buf()
+            };
+            if let Ok(repo) = summoner_project::git_dag::open_or_init_repo(&dir) {
+                if summoner_project::git_dag::redo(&repo).is_ok() {
+                    self.load_session_from_path(dir.join("summoner_session.toml"));
+                    self.status_message = Some("Redid micro-commit via Git".to_string());
+                    handled = true;
+                }
+            }
+        }
+        if !handled {
+            if let Some(state) = self.session_dag.redo() {
+                self.project = state.clone();
+                self.status_message = Some("Redid mutation via session history".to_string());
+            } else {
+                self.status_message = Some("Redo: no further history".to_string());
+            }
+        }
     }
 
     pub fn save_gui_state(&self) {
@@ -556,15 +618,20 @@ impl SummonerApp {
         match ext.as_str() {
             "wav" | "flac" => {
                 let asset_id = format!("asset_{}", self.project.assets.len() + 1);
+                let hash_str = match std::fs::read(path) {
+                    Ok(bytes) => blake3::hash(&bytes).to_hex().to_string(),
+                    Err(_) => blake3::hash(path.to_string_lossy().as_bytes()).to_hex().to_string(),
+                };
                 self.project
                     .assets
                     .push(summoner_project::schema::AssetConfig {
                         id: asset_id.clone(),
-                        hash: "blake3_stub".to_string(),
+                        hash: hash_str,
                         path: path.to_string_lossy().to_string(),
                         auto_slice: false,
                         slice_threshold: 0.15,
                     });
+                self.commit_current_state(&format!("Add audio asset {}", asset_id));
                 Ok(format!("Added audio asset: {}", asset_id))
             }
             "toml" => {
@@ -915,64 +982,15 @@ impl eframe::App for SummonerApp {
         }
 
         // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y Undo and Redo
-        if is_ctrl
-            && self.project_path.is_none()
-            && ctx.input(|i| i.key_pressed(egui::Key::Z) || i.key_pressed(egui::Key::Y))
-        {
-            self.status_message = Some("Undo/Redo: no project open".to_string());
-        }
-        if is_ctrl
-            && self.project_path.is_some()
-            && ctx.input(|i| i.key_pressed(egui::Key::Z))
-        {
-            let path = self.project_path.clone().unwrap_or_default();
-            let dir = if path.is_dir() {
-                path
+        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Z)) {
+            if is_shift {
+                self.handle_redo();
             } else {
-                path.parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .to_path_buf()
-            };
-            if let Ok(repo) = summoner_project::git_dag::open_or_init_repo(&dir) {
-                if is_shift {
-                    if summoner_project::git_dag::redo(&repo).is_ok() {
-                        self.load_session_from_path(dir.join("summoner_session.toml"));
-                        self.status_message = Some("Redid micro-commit via Git".to_string());
-                    } else {
-                        self.status_message = Some("Redo: no further history".to_string());
-                    }
-                } else {
-                    if summoner_project::git_dag::undo(&repo).is_ok() {
-                        self.load_session_from_path(dir.join("summoner_session.toml"));
-                        self.status_message = Some("Undid micro-commit via Git".to_string());
-                    } else {
-                        self.status_message = Some("Undo: no parent commit".to_string());
-                    }
-                }
-            } else {
-                self.status_message = Some("Git repository operation unavailable".to_string());
+                self.handle_undo();
             }
         }
-        if is_ctrl
-            && self.project_path.is_some()
-            && ctx.input(|i| i.key_pressed(egui::Key::Y))
-        {
-            let path = self.project_path.clone().unwrap_or_default();
-            let dir = if path.is_dir() {
-                path
-            } else {
-                path.parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .to_path_buf()
-            };
-            if let Ok(repo) = summoner_project::git_dag::open_or_init_repo(&dir) {
-                if summoner_project::git_dag::redo(&repo).is_ok() {
-                    self.load_session_from_path(dir.join("summoner_session.toml"));
-                    self.status_message = Some("Redid micro-commit via Git".to_string());
-                } else {
-                    self.status_message = Some("Redo: no further history".to_string());
-                }
-            }
+        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Y)) {
+            self.handle_redo();
         }
 
         // Ctrl+Shift+E Stems Export hotkey
@@ -2154,13 +2172,11 @@ impl eframe::App for SummonerApp {
 
                 ui.menu_button("Edit", |ui| {
                     if ui.button("↩ Undo (Ctrl+Z)").clicked() {
-                        self.status_message = Some("Undo action triggered (stub)".to_string());
-                        println!("Undo action triggered (stub)");
+                        self.handle_undo();
                         ui.close_menu();
                     }
                     if ui.button("↪ Redo (Ctrl+Shift+Z)").clicked() {
-                        self.status_message = Some("Redo action triggered (stub)".to_string());
-                        println!("Redo action triggered (stub)");
+                        self.handle_redo();
                         ui.close_menu();
                     }
                 });
@@ -3717,5 +3733,34 @@ mod tests {
             .collect();
         assert!(samples.iter().any(|s| s.abs() > 0.05));
         let _ = std::fs::remove_file(&wav_path);
+    }
+
+    #[test]
+    fn test_gui_undo_redo_history_dag_integration() {
+        let project = create_default_project("Undo Redo Test");
+        let param_bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(project, param_bus);
+
+        let initial_name = app.project.name.clone();
+        app.project.name = "Mutated Name".to_string();
+        app.commit_current_state("Renamed project");
+
+        assert_eq!(app.project.name, "Mutated Name");
+
+        // Perform undo
+        app.handle_undo();
+        assert_eq!(app.project.name, initial_name);
+        assert_eq!(
+            app.status_message.as_deref(),
+            Some("Undid mutation via session history")
+        );
+
+        // Perform redo
+        app.handle_redo();
+        assert_eq!(app.project.name, "Mutated Name");
+        assert_eq!(
+            app.status_message.as_deref(),
+            Some("Redid mutation via session history")
+        );
     }
 }

@@ -20,8 +20,8 @@ pub use summoner_engine::graph;
 pub mod osc;
 
 use summoner_core::allocator::AllocGuard;
-use summoner_core::audio::{FixedAudioBuffer, Sample};
-use summoner_core::node::{AudioNode, GainNode, ProcessContext, SineOscillatorNode};
+use summoner_core::audio::FixedAudioBuffer;
+use summoner_core::node::ProcessContext;
 use summoner_core::pipeline::{MultiTenantRenderQueue, RenderJob};
 use summoner_core::transport::Transport;
 use summoner_core::wav::WavWriter;
@@ -821,22 +821,18 @@ fn main() {
                 Transport::new(project.transport.sample_rate, project.transport.bpm);
             transport.play();
 
-            // Set up test DSP chain (Sine -> Gain)
-            let mut sine_node = SineOscillatorNode::new(440.0);
-            let mut gain_node = GainNode::new(0.5);
+            let mut runner = graph::GraphRunner::new(&project);
 
             // Pre-allocate fixed frame buffer outside render loop (Zero Heap Allocation in processing loop)
             const CHANNELS: usize = 2;
             const BLOCK_SIZE: usize = 64;
-            let mut in_buffer = FixedAudioBuffer::<CHANNELS, BLOCK_SIZE>::new();
-            let mut mid_buffer = FixedAudioBuffer::<CHANNELS, BLOCK_SIZE>::new();
             let mut out_buffer = FixedAudioBuffer::<CHANNELS, BLOCK_SIZE>::new();
 
             let mut frames_processed: usize = 0;
             let mut sample_sum: f64 = 0.0;
 
             println!(
-                "Starting deterministic rendering run of {} frames...",
+                "Starting deterministic graph verification run of {} frames...",
                 num_frames
             );
 
@@ -846,28 +842,12 @@ fn main() {
 
                 while frames_processed < num_frames {
                     let block_frames = (num_frames - frames_processed).min(BLOCK_SIZE);
-                    in_buffer.set_active_frames(block_frames);
-                    mid_buffer.set_active_frames(block_frames);
                     out_buffer.set_active_frames(block_frames);
-
-                    in_buffer.clear();
-                    mid_buffer.clear();
                     out_buffer.clear();
 
                     let ctx = ProcessContext::from_transport(&transport);
-
-                    // Slice buffers for slice-based AudioNode API
-                    let dummy_in: [&[Sample]; 0] = [];
-                    let mut mid_slices = mid_buffer.channels_mut_2();
-
-                    // Process sine oscillator node
-                    sine_node.process(&dummy_in, &mut mid_slices, &ctx);
-
-                    let mid_ref = mid_buffer.channels_ref_2();
                     let mut out_slices = out_buffer.channels_mut_2();
-
-                    // Process gain node
-                    gain_node.process(&mid_ref, &mut out_slices, &ctx);
+                    runner.process_block(block_frames, &ctx, &mut out_slices);
 
                     // Accumulate checksum/sum for determinism verification
                     for ch in 0..CHANNELS {

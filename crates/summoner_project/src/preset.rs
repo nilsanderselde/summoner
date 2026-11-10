@@ -279,11 +279,14 @@ impl DevicePreset {
             0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG Signature
         ];
         // Append minimal PNG chunk metadata
-        png_bytes.extend_from_slice(&[0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]); // IHDR
+        let ihdr_start = png_bytes.len();
+        png_bytes.extend_from_slice(&[0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]); // Length 13, Chunk "IHDR"
         png_bytes.extend_from_slice(&64u32.to_be_bytes()); // Width 64
         png_bytes.extend_from_slice(&64u32.to_be_bytes()); // Height 64
         png_bytes.extend_from_slice(&[8, 6, 0, 0, 0]); // 8-bit RGBA
-        png_bytes.extend_from_slice(&[0, 0, 0, 0]); // CRC placeholder
+        // CRC is calculated over chunk type ('IHDR') and chunk data (13 bytes): total 17 bytes
+        let crc = crc32_simple(&png_bytes[ihdr_start + 4..]);
+        png_bytes.extend_from_slice(&crc.to_be_bytes());
 
         if let Some(parent) = path.as_ref().parent() {
             let _ = fs::create_dir_all(parent);
