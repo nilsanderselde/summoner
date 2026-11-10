@@ -205,6 +205,163 @@ impl AutomationLane {
             .points
             .sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
     }
+
+    /// Freehand pencil draw mode: insert or update an individual point.
+    pub fn pencil_draw_point(&mut self, mut beat: f64, val: f32, snap_grid: Option<f64>) {
+        if let Some(snap) = snap_grid {
+            let s = snap.max(0.001);
+            beat = (beat / s).round() * s;
+        }
+        let pt = AutomationPoint {
+            beat,
+            value: val.clamp(0.0, 1.0),
+            interp: Interpolation::Linear,
+        };
+        match self.curve.points.binary_search_by(|p| p.beat.partial_cmp(&beat).unwrap()) {
+            Ok(idx) => self.curve.points[idx] = pt,
+            Err(idx) => self.curve.points.insert(idx, pt),
+        }
+    }
+
+    /// Add a parabolic curve segment. Curvature > 0 bulges upward, < 0 downward.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_parabola_segment(
+        &mut self,
+        mut start_beat: f64,
+        start_val: f32,
+        mut end_beat: f64,
+        end_val: f32,
+        curvature: f32,
+        steps: usize,
+        snap_grid: Option<f64>,
+    ) {
+        if let Some(snap) = snap_grid {
+            let s = snap.max(0.001);
+            start_beat = (start_beat / s).round() * s;
+            end_beat = (end_beat / s).round() * s;
+        }
+        if start_beat >= end_beat {
+            return;
+        }
+        let steps = steps.clamp(4, 64);
+        self.curve.points.retain(|p| p.beat < start_beat || p.beat > end_beat);
+
+        for step in 0..=steps {
+            let t = step as f64 / steps as f64;
+            let beat = start_beat + t * (end_beat - start_beat);
+            let linear = start_val as f64 + t * (end_val as f64 - start_val as f64);
+            let arch = 4.0 * curvature as f64 * t * (1.0 - t);
+            let val = (linear + arch).clamp(0.0, 1.0) as f32;
+            self.curve.points.push(AutomationPoint {
+                beat,
+                value: val,
+                interp: Interpolation::Linear,
+            });
+        }
+        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+    }
+
+    /// Add an S-curve (cubic hermite smoothstep) segment between two points.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_s_curve_segment(
+        &mut self,
+        mut start_beat: f64,
+        start_val: f32,
+        mut end_beat: f64,
+        end_val: f32,
+        steps: usize,
+        snap_grid: Option<f64>,
+    ) {
+        if let Some(snap) = snap_grid {
+            let s = snap.max(0.001);
+            start_beat = (start_beat / s).round() * s;
+            end_beat = (end_beat / s).round() * s;
+        }
+        if start_beat >= end_beat {
+            return;
+        }
+        let steps = steps.clamp(4, 64);
+        self.curve.points.retain(|p| p.beat < start_beat || p.beat > end_beat);
+
+        for step in 0..=steps {
+            let t = step as f64 / steps as f64;
+            let beat = start_beat + t * (end_beat - start_beat);
+            let s = t * t * (3.0 - 2.0 * t);
+            let val = (start_val as f64 + s * (end_val as f64 - start_val as f64)).clamp(0.0, 1.0) as f32;
+            self.curve.points.push(AutomationPoint {
+                beat,
+                value: val,
+                interp: Interpolation::Smooth,
+            });
+        }
+        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+    }
+
+    /// Thin dense automation curve points using the Ramer-Douglas-Peucker algorithm.
+    pub fn thin_ramer_douglas_peucker(&mut self, epsilon: f32) {
+        if self.curve.points.len() <= 2 {
+            return;
+        }
+        let mut thinned = Vec::with_capacity(self.curve.points.len());
+        rdp_recursive(&self.curve.points, epsilon.max(1e-5), &mut thinned);
+        thinned.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+        thinned.dedup_by(|a, b| (a.beat - b.beat).abs() < 1e-6);
+        self.curve.points = thinned;
+    }
+}
+
+fn perpendicular_distance(p: &AutomationPoint, line_start: &AutomationPoint, line_end: &AutomationPoint) -> f32 {
+    let dx = (line_end.beat - line_start.beat) as f32;
+    let dy = line_end.value - line_start.value;
+    let mag = (dx * dx + dy * dy).sqrt();
+    if mag < 1e-6 {
+        let px = (p.beat - line_start.beat) as f32;
+        let py = p.value - line_start.value;
+        return (px * px + py * py).sqrt();
+    }
+    let num = ((line_end.beat - line_start.beat) as f32 * (line_start.value - p.value)
+        - (line_start.beat - p.beat) as f32 * (line_end.value - line_start.value)).abs();
+    num / mag
+}
+
+#[allow(clippy::needless_range_loop)]
+fn rdp_recursive(points: &[AutomationPoint], epsilon: f32, out: &mut Vec<AutomationPoint>) {
+    if points.len() <= 2 {
+        if let Some(&first) = points.first() {
+            if out.is_empty() || (out.last().unwrap().beat - first.beat).abs() > 1e-6 {
+                out.push(first);
+            }
+        }
+        if let Some(&last) = points.last() {
+            if points.len() > 1 {
+                out.push(last);
+            }
+        }
+        return;
+    }
+
+    let first = &points[0];
+    let last = &points[points.len() - 1];
+    let mut max_dist = 0.0f32;
+    let mut index = 0;
+
+    for i in 1..points.len() - 1 {
+        let dist = perpendicular_distance(&points[i], first, last);
+        if dist > max_dist {
+            max_dist = dist;
+            index = i;
+        }
+    }
+
+    if max_dist > epsilon {
+        rdp_recursive(&points[..=index], epsilon, out);
+        rdp_recursive(&points[index..], epsilon, out);
+    } else {
+        if out.is_empty() || (out.last().unwrap().beat - first.beat).abs() > 1e-6 {
+            out.push(*first);
+        }
+        out.push(*last);
+    }
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -264,33 +421,51 @@ impl AutomationTimeline {
     }
 
     pub fn record_beat(&mut self, registry: &mut AutomationRegistry, beat: f64) {
-        if registry.is_recording_all() {
-            let dirty = registry.snapshot_dirty_params(0 /* unused frame */);
-            for (param_id, value) in dirty {
-                let lane = self
-                    .lanes
-                    .entry(param_id.clone())
-                    .or_insert_with(|| AutomationLane {
-                        param_id: param_id.clone(),
-                        curve: AutomationCurve { points: Vec::new() },
-                    });
-
-                // Keep it sorted
-                let point = AutomationPoint {
-                    beat,
-                    value,
-                    interp: Interpolation::Linear,
-                };
-
-                match lane
-                    .curve
-                    .points
-                    .binary_search_by(|p| p.beat.partial_cmp(&beat).unwrap())
-                {
-                    Ok(idx) => lane.curve.points[idx] = point,
-                    Err(idx) => lane.curve.points.insert(idx, point),
-                }
+        use crate::automation::AutomationMode;
+        if registry.mode() == AutomationMode::Read && !registry.is_recording_all() {
+            return;
+        }
+        let dirty = registry.snapshot_dirty_params(0);
+        for (param_id, value) in dirty {
+            let should_record = match registry.mode() {
+                AutomationMode::Write => true,
+                AutomationMode::Latch => true,
+                AutomationMode::Touch => registry.is_param_touched(&param_id),
+                AutomationMode::Read => registry.is_recording_all(),
+            };
+            if !should_record {
+                continue;
             }
+
+            let lane = self
+                .lanes
+                .entry(param_id.clone())
+                .or_insert_with(|| AutomationLane {
+                    param_id: param_id.clone(),
+                    curve: AutomationCurve { points: Vec::new() },
+                });
+
+            let point = AutomationPoint {
+                beat,
+                value,
+                interp: Interpolation::Linear,
+            };
+
+            match lane
+                .curve
+                .points
+                .binary_search_by(|p| p.beat.partial_cmp(&beat).unwrap())
+            {
+                Ok(idx) => lane.curve.points[idx] = point,
+                Err(idx) => lane.curve.points.insert(idx, point),
+            }
+        }
+    }
+
+    /// Thin all automation lanes using Ramer-Douglas-Peucker reduction.
+    pub fn thin_all_lanes(&mut self, epsilon: f32) {
+        for lane in self.lanes.values_mut() {
+            lane.thin_ramer_douglas_peucker(epsilon);
         }
     }
 
@@ -609,5 +784,64 @@ mod tests {
 
         assert!(timeline.lanes.contains_key("filter_res"));
         assert_eq!(timeline.evaluate("filter_res", 0.0), Some(0.5));
+    }
+
+    #[test]
+    fn test_pencil_parabola_s_curve_and_rdp_thinning() {
+        let mut lane = AutomationLane {
+            param_id: "freq".to_string(),
+            curve: AutomationCurve::new(Vec::new()),
+        };
+
+        // 1. Pencil draw
+        lane.pencil_draw_point(0.0, 0.1, None);
+        lane.pencil_draw_point(1.0, 0.9, None);
+        assert_eq!(lane.curve.points.len(), 2);
+
+        // 2. Parabola
+        lane.add_parabola_segment(2.0, 0.0, 6.0, 0.0, 0.8, 16, None);
+        // Middle of parabola should be elevated by curvature
+        let mid_val = lane.curve.evaluate_at_beat(4.0);
+        assert!(mid_val > 0.5, "Parabola midpoint should be elevated: {}", mid_val);
+
+        // 3. S-curve
+        lane.add_s_curve_segment(8.0, 0.0, 12.0, 1.0, 16, None);
+        let s_mid = lane.curve.evaluate_at_beat(10.0);
+        assert!((s_mid - 0.5).abs() < 0.05, "S-curve midpoint should be ~0.5: {}", s_mid);
+
+        // 4. Ramer-Douglas-Peucker Thinning
+        let dense_count = lane.curve.points.len();
+        lane.thin_ramer_douglas_peucker(0.05);
+        let thinned_count = lane.curve.points.len();
+        assert!(thinned_count < dense_count, "RDP should thin redundant collinear points");
+        assert!(thinned_count >= 4, "Key shape anchors must be retained");
+    }
+
+    #[test]
+    fn test_touch_latch_write_recording_modes() {
+        use crate::automation::AutomationMode;
+        let mut registry = AutomationRegistry::new();
+        let param = registry.register_param("cutoff", 0.1);
+
+        let mut timeline = AutomationTimeline::new();
+
+        // Mode 1: Touch mode when NOT touching => should NOT record
+        registry.set_mode(AutomationMode::Touch);
+        param.set(0.5);
+        timeline.record_beat(&mut registry, 1.0);
+        assert!(!timeline.lanes.contains_key("cutoff"), "Untouched param should not record in Touch mode");
+
+        // Touch the param
+        registry.touch_param("cutoff", true);
+        param.set(0.75);
+        timeline.record_beat(&mut registry, 2.0);
+        assert!(timeline.lanes.contains_key("cutoff"), "Touched param should record in Touch mode");
+        assert_eq!(timeline.evaluate("cutoff", 2.0), Some(0.75));
+
+        // Mode 2: Latch mode => records and latches
+        registry.set_mode(AutomationMode::Latch);
+        param.set(0.9);
+        timeline.record_beat(&mut registry, 3.0);
+        assert_eq!(timeline.evaluate("cutoff", 3.0), Some(0.9));
     }
 }

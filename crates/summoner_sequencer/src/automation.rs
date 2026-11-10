@@ -125,6 +125,7 @@ pub struct AutomationRegistry {
     recording_all: bool,
     mode: AutomationMode,
     latched_params: HashMap<String, f32>,
+    touched_params: HashMap<String, bool>,
 }
 
 impl AutomationRegistry {
@@ -138,6 +139,14 @@ impl AutomationRegistry {
 
     pub fn mode(&self) -> AutomationMode {
         self.mode
+    }
+
+    pub fn touch_param(&mut self, id: &str, is_touched: bool) {
+        self.touched_params.insert(id.to_string(), is_touched);
+    }
+
+    pub fn is_param_touched(&self, id: &str) -> bool {
+        self.touched_params.get(id).copied().unwrap_or(false)
     }
 
     pub fn register_param(&mut self, id: &str, initial_value: f32) -> Arc<AtomicParam> {

@@ -34,6 +34,7 @@ pub struct Track {
     pub pan: f32,
     pub muted: bool,
     pub soloed: bool,
+    pub solo_safe: bool,
     pub phase_flip: bool,
     pub input_gain_db: f32,
     pub output_gain_db: f32,
@@ -66,6 +67,7 @@ impl Track {
             pan: 0.0,
             muted: false,
             soloed: false,
+            solo_safe: false,
             phase_flip: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
@@ -84,6 +86,11 @@ impl Track {
 
     pub fn add_node(&mut self, node: Box<dyn AudioNode>) {
         self.nodes.push(node);
+    }
+
+    /// Calculate total processing latency introduced by nodes in this track.
+    pub fn total_latency_samples(&self) -> usize {
+        self.nodes.iter().map(|n| n.latency_samples()).sum()
     }
 
     /// Replace the event schedule (sorted by frame; stable for equal frames).
@@ -121,10 +128,47 @@ impl Track {
         ctx: &crate::node::ProcessContext,
         out_buffers: &mut [&mut [crate::audio::Sample]],
     ) {
+        self.process_with_input(block_size, ctx, None, out_buffers);
+    }
+
+    pub fn process_with_input(
+        &mut self,
+        block_size: usize,
+        ctx: &crate::node::ProcessContext,
+        in_buffers: Option<&[&[crate::audio::Sample]]>,
+        out_buffers: &mut [&mut [crate::audio::Sample]],
+    ) {
         self.dispatch_events(block_size, ctx);
-        if self.muted || self.nodes.is_empty() {
+        if self.muted {
             for out in out_buffers.iter_mut() {
                 out[..block_size].fill(0.0);
+            }
+            return;
+        }
+
+        if self.nodes.is_empty() {
+            if let Some(ins) = in_buffers {
+                for (ch, out) in out_buffers.iter_mut().enumerate() {
+                    if let Some(in_ch) = ins.get(ch) {
+                        let len = block_size.min(in_ch.len());
+                        out[..len].copy_from_slice(&in_ch[..len]);
+                        if len < block_size {
+                            out[len..block_size].fill(0.0);
+                        }
+                    } else if let Some(in_0) = ins.first() {
+                        let len = block_size.min(in_0.len());
+                        out[..len].copy_from_slice(&in_0[..len]);
+                        if len < block_size {
+                            out[len..block_size].fill(0.0);
+                        }
+                    } else {
+                        out[..block_size].fill(0.0);
+                    }
+                }
+            } else {
+                for out in out_buffers.iter_mut() {
+                    out[..block_size].fill(0.0);
+                }
             }
             return;
         }
@@ -155,7 +199,11 @@ impl Track {
                     out_slices[ch] = &mut buf[..block_size];
                 }
                 let in_slice_param: &[&[crate::audio::Sample]] = if node_idx == 0 {
-                    &[]
+                    if let Some(ins) = in_buffers {
+                        ins
+                    } else {
+                        &[]
+                    }
                 } else {
                     &in_slices[..channels]
                 };
@@ -168,7 +216,11 @@ impl Track {
                     out_slices[ch] = &mut buf[..block_size];
                 }
                 let in_slice_param: &[&[crate::audio::Sample]] = if node_idx == 0 {
-                    &[]
+                    if let Some(ins) = in_buffers {
+                        ins
+                    } else {
+                        &[]
+                    }
                 } else {
                     &in_slices[..channels]
                 };

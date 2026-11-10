@@ -368,6 +368,35 @@ pub struct TrackConfig {
     pub input_gain_db: f32,
     #[serde(default)]
     pub output_gain_db: f32,
+    #[serde(default)]
+    pub sends: Vec<TrackSendConfig>,
+    #[serde(default)]
+    pub is_return_track: bool,
+    #[serde(default)]
+    pub is_bus_track: bool,
+    #[serde(default)]
+    pub is_vca: bool,
+    #[serde(default)]
+    pub vca_target_ids: Vec<u64>,
+    #[serde(default)]
+    pub vca_group: Option<u32>,
+    #[serde(default)]
+    pub mute_group: Option<u32>,
+    #[serde(default)]
+    pub solo_safe: bool,
+    #[serde(default)]
+    pub sidechain_audition: bool,
+}
+
+/// Auxiliary send routing configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TrackSendConfig {
+    pub target_track_id: u64,
+    pub amount: f32,
+    #[serde(default)]
+    pub is_pre_fader: bool,
+    #[serde(default)]
+    pub muted: bool,
 }
 
 fn default_scale_type() -> String {
@@ -422,6 +451,15 @@ impl Default for TrackConfig {
             high_cut_hz: None,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            sends: Vec::new(),
+            is_return_track: false,
+            is_bus_track: false,
+            is_vca: false,
+            vca_target_ids: Vec::new(),
+            vca_group: None,
+            mute_group: None,
+            solo_safe: false,
+            sidechain_audition: false,
         }
     }
 }

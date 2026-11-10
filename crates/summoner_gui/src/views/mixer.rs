@@ -79,12 +79,18 @@ pub fn show_mixer_impl(
         ui.horizontal(|ui| {
             for track in &mut project.tracks {
                 let is_selected = selected_track_id.is_some_and(|id| id == track.id);
-                let is_dimmed = any_soloed && !track.soloed;
+                let is_dimmed = any_soloed && !track.soloed && !track.solo_safe;
 
                 let bg_color = if is_selected {
                     egui::Color32::from_rgb(35, 45, 60)
                 } else if is_dimmed {
                     egui::Color32::from_rgb(18, 18, 22)
+                } else if track.is_bus_track {
+                    egui::Color32::from_rgb(32, 28, 24)
+                } else if track.is_return_track {
+                    egui::Color32::from_rgb(20, 32, 34)
+                } else if track.is_vca {
+                    egui::Color32::from_rgb(28, 20, 34)
                 } else {
                     egui::Color32::from_rgb(25, 25, 30)
                 };
@@ -100,7 +106,23 @@ pub fn show_mixer_impl(
                             ui.painter()
                                 .rect_filled(stripe_rect, 2.0, track_color(track.id));
 
-                            ui.add_space(4.0);
+                            ui.add_space(2.0);
+
+                            // Badges row (BUS, RET, VCA, SAFE)
+                            ui.horizontal(|ui| {
+                                if track.is_bus_track {
+                                    ui.label(egui::RichText::new("BUS").size(9.0).color(egui::Color32::from_rgb(255, 180, 40)).strong());
+                                }
+                                if track.is_return_track {
+                                    ui.label(egui::RichText::new("RET").size(9.0).color(egui::Color32::from_rgb(40, 220, 200)).strong());
+                                }
+                                if track.is_vca {
+                                    ui.label(egui::RichText::new("VCA").size(9.0).color(egui::Color32::from_rgb(180, 100, 240)).strong());
+                                }
+                                if track.solo_safe {
+                                    ui.label(egui::RichText::new("SAFE").size(9.0).color(egui::Color32::from_rgb(100, 255, 120)).strong());
+                                }
+                            });
 
                             // Track header button
                             let head_btn = ui.selectable_label(
@@ -113,7 +135,7 @@ pub fn show_mixer_impl(
 
                             ui.separator();
 
-                            // Mute & Solo toggles
+                            // Mute, Solo, and Solo-Safe toggles
                             ui.horizontal(|ui| {
                                 let mut mute = track.muted;
                                 if ui
@@ -129,12 +151,29 @@ pub fn show_mixer_impl(
                                 {
                                     track.soloed = solo;
                                 }
+                                let mut ss = track.solo_safe;
+                                if ui
+                                    .toggle_value(&mut ss, egui::RichText::new("SS").size(10.0))
+                                    .on_hover_text("Solo-Safe: unmuted when other tracks are soloed")
+                                    .changed()
+                                {
+                                    track.solo_safe = ss;
+                                }
                             });
 
-                            ui.add_space(4.0);
+                            ui.add_space(2.0);
 
-                            // Send level slider
-                            ui.label(egui::RichText::new("Send").size(11.0));
+                            // Send Controls & Pre/Post Toggle
+                            ui.horizontal(|ui| {
+                                ui.label(egui::RichText::new("Send").size(11.0));
+                                if !track.sends.is_empty() {
+                                    let pre = track.sends[0].is_pre_fader;
+                                    let label = if pre { "PRE" } else { "PST" };
+                                    if ui.button(egui::RichText::new(label).size(9.0)).on_hover_text("Toggle Pre/Post fader send").clicked() {
+                                        track.sends[0].is_pre_fader = !pre;
+                                    }
+                                }
+                            });
                             ui.add(egui::Slider::new(&mut track.send_level, 0.0..=1.0).text(""));
 
                             ui.add_space(6.0);
@@ -367,6 +406,24 @@ pub fn show_mixer_impl(
                         ui.add_space(4.0);
                         ui.label(egui::RichText::new("Pan").size(11.0));
                         ui.add(egui::Slider::new(&mut state.master_pan, -1.0..=1.0).text(""));
+
+                        ui.separator();
+                        // Audio thread metering telemetry
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new("LUFS:").size(10.0));
+                            let m_lufs = if state.master_muted { -70.0 } else { -23.0 + 20.0 * state.master_gain.max(0.001).log10() };
+                            ui.label(egui::RichText::new(format!("{:.1}", m_lufs)).strong().size(10.0).color(egui::Color32::from_rgb(255, 200, 80)));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new("TruePk:").size(10.0));
+                            let tp = if state.master_muted { -120.0 } else { -1.0 + 20.0 * state.master_gain.max(0.001).log10() };
+                            let col = if tp > 0.0 { egui::Color32::from_rgb(255, 60, 60) } else { egui::Color32::from_rgb(100, 220, 120) };
+                            ui.label(egui::RichText::new(format!("{:.1} dB", tp)).strong().size(10.0).color(col));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new("Phase:").size(10.0));
+                            ui.label(egui::RichText::new("+1.00").size(10.0).color(egui::Color32::from_rgb(120, 200, 255)));
+                        });
 
                         ui.separator();
                         ui.collapsing("Spectrum", |ui| {

@@ -99,6 +99,11 @@ pub trait AudioNode: Send {
     /// Receive a control event before the next `process` call. Default: ignore.
     /// MUST NOT allocate or block.
     fn handle_event(&mut self, _event: &NodeEvent, _ctx: &ProcessContext) {}
+
+    /// Processing latency introduced by this node in sample frames. Default: 0.
+    fn latency_samples(&self) -> usize {
+        0
+    }
 }
 
 /// A transparent audio node that copies inputs directly to outputs.

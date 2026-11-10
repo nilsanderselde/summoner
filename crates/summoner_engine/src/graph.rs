@@ -686,23 +686,150 @@ pub struct TrackFilters {
     pub high_cut: Option<[HighCutFilter; 2]>,
 }
 
+pub const MAX_PDC_DELAY_SAMPLES: usize = 8192;
+
+/// Circular buffer for real-time sample-accurate Plugin Delay Compensation (PDC).
+#[derive(Clone)]
+pub struct PdcDelayBuffer {
+    buffer_l: [f32; MAX_PDC_DELAY_SAMPLES],
+    buffer_r: [f32; MAX_PDC_DELAY_SAMPLES],
+    write_pos: usize,
+    delay_samples: usize,
+}
+
+impl Default for PdcDelayBuffer {
+    fn default() -> Self {
+        Self::new(0)
+    }
+}
+
+impl PdcDelayBuffer {
+    pub fn new(delay_samples: usize) -> Self {
+        Self {
+            buffer_l: [0.0; MAX_PDC_DELAY_SAMPLES],
+            buffer_r: [0.0; MAX_PDC_DELAY_SAMPLES],
+            write_pos: 0,
+            delay_samples: delay_samples.min(MAX_PDC_DELAY_SAMPLES - 1),
+        }
+    }
+
+    pub fn set_delay(&mut self, delay: usize) {
+        self.delay_samples = delay.min(MAX_PDC_DELAY_SAMPLES - 1);
+    }
+
+    pub fn delay_samples(&self) -> usize {
+        self.delay_samples
+    }
+
+    #[inline]
+    pub fn process_block(&mut self, left: &mut [f32], right: &mut [f32]) {
+        if self.delay_samples == 0 {
+            return;
+        }
+        let len = left.len().min(right.len());
+        for i in 0..len {
+            let in_l = left[i];
+            let in_r = right[i];
+            let read_pos = (self.write_pos + MAX_PDC_DELAY_SAMPLES - self.delay_samples) % MAX_PDC_DELAY_SAMPLES;
+            left[i] = self.buffer_l[read_pos];
+            right[i] = self.buffer_r[read_pos];
+            self.buffer_l[self.write_pos] = in_l;
+            self.buffer_r[self.write_pos] = in_r;
+            self.write_pos = (self.write_pos + 1) % MAX_PDC_DELAY_SAMPLES;
+        }
+    }
+}
+
+/// Channel audio telemetry (Peak and RMS).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ChannelMeter {
+    pub peak: f32,
+    pub peak_db: f32,
+    pub rms: f32,
+    pub rms_db: f32,
+}
+
+impl Default for ChannelMeter {
+    fn default() -> Self {
+        Self {
+            peak: 0.0,
+            peak_db: -120.0,
+            rms: 0.0,
+            rms_db: -120.0,
+        }
+    }
+}
+
+/// Comprehensive real-time master output telemetry.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MasterMeterTelemetry {
+    pub channels: [ChannelMeter; 2],
+    pub true_peak_db: f32,
+    pub momentary_lufs: f32,
+    pub short_term_lufs: f32,
+    pub integrated_lufs: f32,
+    pub phase_correlation: f32,
+}
+
+impl Default for MasterMeterTelemetry {
+    fn default() -> Self {
+        Self {
+            channels: [ChannelMeter::default(), ChannelMeter::default()],
+            true_peak_db: -120.0,
+            momentary_lufs: -70.0,
+            short_term_lufs: -70.0,
+            integrated_lufs: -70.0,
+            phase_correlation: 1.0,
+        }
+    }
+}
+
+/// Cached track routing and metadata for the mixer execution graph.
+#[derive(Debug, Clone)]
+pub struct TrackMeta {
+    pub id: u64,
+    pub name: String,
+    pub is_return_track: bool,
+    pub is_bus_track: bool,
+    pub is_vca: bool,
+    pub vca_target_ids: Vec<u64>,
+    pub vca_group: Option<u32>,
+    pub mute_group: Option<u32>,
+    pub solo_safe: bool,
+    pub send_to_master: bool,
+    pub bus_target: Option<String>,
+    pub sidechain_source_track_id: Option<u64>,
+    pub sidechain_audition: bool,
+    pub sends: Vec<summoner_project::schema::TrackSendConfig>,
+    pub legacy_send_level: f32,
+}
+
 pub struct GraphRunner {
     pub tracks: Vec<Track>,
+    pub track_meta: Vec<TrackMeta>,
     pub track_filters: Vec<TrackFilters>,
+    pub pdc_buffers: Vec<PdcDelayBuffer>,
     pub master_trim_db: f32,
+    pub telemetry: MasterMeterTelemetry,
+    pub true_peak_meter: summoner_dsp::TruePeakMeter,
+    pub lufs_meter: summoner_dsp::EbuR128LoudnessMeter,
     scratch_l: Box<[f32; MAX_RUNNER_BLOCK_SIZE]>,
     scratch_r: Box<[f32; MAX_RUNNER_BLOCK_SIZE]>,
+    track_buffers: Vec<[Box<[f32; MAX_RUNNER_BLOCK_SIZE]>; 2]>,
+    track_in_buffers: Vec<[Box<[f32; MAX_RUNNER_BLOCK_SIZE]>; 2]>,
 }
 
 impl GraphRunner {
     pub fn new(project: &ProjectConfig) -> Self {
         let mut tracks = Vec::new();
+        let mut track_meta = Vec::new();
         for tc in &project.tracks {
             let mut track = Track::new(tc.id, tc.name.clone(), tc.channels);
             track.gain = tc.gain;
             track.pan = tc.pan;
             track.muted = tc.muted;
             track.soloed = tc.soloed;
+            track.solo_safe = tc.solo_safe;
             track.phase_flip = tc.phase_flip;
             track.input_gain_db = tc.input_gain_db;
             track.output_gain_db = tc.output_gain_db;
@@ -710,6 +837,24 @@ impl GraphRunner {
             track.tuning_root_hz = tc.tuning_root_hz;
             track.input_monitoring = tc.input_monitoring;
             track.armed_for_recording = tc.record_armed;
+
+            track_meta.push(TrackMeta {
+                id: tc.id,
+                name: tc.name.clone(),
+                is_return_track: tc.is_return_track,
+                is_bus_track: tc.is_bus_track,
+                is_vca: tc.is_vca,
+                vca_target_ids: tc.vca_target_ids.clone(),
+                vca_group: tc.vca_group,
+                mute_group: tc.mute_group,
+                solo_safe: tc.solo_safe,
+                send_to_master: tc.send_to_master,
+                bus_target: tc.bus_target.clone(),
+                sidechain_source_track_id: tc.sidechain_source_track_id,
+                sidechain_audition: tc.sidechain_audition,
+                sends: tc.sends.clone(),
+                legacy_send_level: tc.send_level,
+            });
 
             if !tc.connections.is_empty() {
                 let mut dag = NodeGraph::new(
@@ -777,12 +922,41 @@ impl GraphRunner {
             });
         }
 
+        // Calculate PDC delays per track
+        let max_lat = tracks.iter().map(|t| t.total_latency_samples()).max().unwrap_or(0);
+        let mut pdc_buffers = Vec::with_capacity(tracks.len());
+        for t in &tracks {
+            let lat = t.total_latency_samples();
+            let delay = max_lat.saturating_sub(lat);
+            pdc_buffers.push(PdcDelayBuffer::new(delay));
+        }
+
+        let mut track_buffers = Vec::with_capacity(project.tracks.len());
+        let mut track_in_buffers = Vec::with_capacity(project.tracks.len());
+        for _ in 0..project.tracks.len() {
+            track_buffers.push([
+                Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
+                Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
+            ]);
+            track_in_buffers.push([
+                Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
+                Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
+            ]);
+        }
+
         Self {
             tracks,
+            track_meta,
             track_filters,
+            pdc_buffers,
             master_trim_db: project.transport.master_trim_db,
+            telemetry: MasterMeterTelemetry::default(),
+            true_peak_meter: summoner_dsp::TruePeakMeter::new(),
+            lufs_meter: summoner_dsp::EbuR128LoudnessMeter::default(),
             scratch_l: Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
             scratch_r: Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
+            track_buffers,
+            track_in_buffers,
         }
     }
 
@@ -795,6 +969,7 @@ impl GraphRunner {
         self.process_block_with_input(block_size, ctx, None, out_buffers);
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn process_block_with_input(
         &mut self,
         block_size: usize,
@@ -806,104 +981,307 @@ impl GraphRunner {
         for out in out_buffers.iter_mut() {
             out[..block_size].fill(0.0);
         }
+        for tb in self.track_buffers.iter_mut() {
+            tb[0][..block_size].fill(0.0);
+            tb[1][..block_size].fill(0.0);
+        }
+        for tib in self.track_in_buffers.iter_mut() {
+            tib[0][..block_size].fill(0.0);
+            tib[1][..block_size].fill(0.0);
+        }
 
         let any_soloed = self.tracks.iter().any(|t| t.soloed);
         let master_trim = 10.0f32.powf(self.master_trim_db / 20.0);
 
-        for (track_idx, track) in self.tracks.iter_mut().enumerate() {
-            self.scratch_l[..block_size].fill(0.0);
-            self.scratch_r[..block_size].fill(0.0);
-
-            let mut local_ctx = ctx.clone();
-            if let Some(edo) = track.tuning_edo {
-                local_ctx.tuning_edo_divisions = edo;
+        // Mute groups evaluation
+        let mut muted_groups = [false; 32];
+        for (idx, meta) in self.track_meta.iter().enumerate() {
+            if let Some(g) = meta.mute_group {
+                let g_idx = (g as usize) % 32;
+                if self.tracks[idx].muted {
+                    muted_groups[g_idx] = true;
+                }
             }
-            if let Some(root_hz) = track.tuning_root_hz {
-                local_ctx.tuning_root_hz = root_hz;
-            }
+        }
 
-            let (slice_l, slice_r) = (
-                &mut self.scratch_l[..block_size],
-                &mut self.scratch_r[..block_size],
-            );
-            let mut track_out_slices: [&mut [f32]; 2] = [slice_l, slice_r];
-
-            track.process(
-                block_size,
-                &local_ctx,
-                &mut track_out_slices[..out_buffers.len().min(2)],
-            );
-
-            // Live input monitoring: if track has input monitoring enabled, mix in live audio
-            if track.input_monitoring {
-                if let Some(ins) = in_buffers {
-                    if let Some(in_l) = ins.first() {
-                        let len = block_size.min(in_l.len());
-                        for i in 0..len {
-                            self.scratch_l[i] += in_l[i];
-                        }
+        // VCA evaluation
+        let num_tracks = self.tracks.len();
+        let mut vca_gains = [1.0f32; 128];
+        let mut vca_muted = [false; 128];
+        for (vca_idx, vca_meta) in self.track_meta.iter().enumerate() {
+            if vca_meta.is_vca && vca_idx < 128 {
+                let vca_gain = self.tracks[vca_idx].gain;
+                let is_v_muted = self.tracks[vca_idx].muted;
+                for (t_idx, t_meta) in self.track_meta.iter().enumerate() {
+                    if t_idx == vca_idx || t_idx >= 128 {
+                        continue;
                     }
-                    if let Some(in_r) = ins.get(1).or_else(|| ins.first()) {
-                        let len = block_size.min(in_r.len());
-                        for i in 0..len {
-                            self.scratch_r[i] += in_r[i];
+                    let matches_target = vca_meta.vca_target_ids.contains(&t_meta.id);
+                    let matches_group = vca_meta.vca_group.is_some() && vca_meta.vca_group == t_meta.vca_group;
+                    if matches_target || matches_group {
+                        vca_gains[t_idx] *= vca_gain;
+                        if is_v_muted {
+                            vca_muted[t_idx] = true;
                         }
                     }
                 }
             }
+        }
 
-            if let Some(tf) = self.track_filters.get_mut(track_idx) {
-                if let Some(ref mut dcf) = tf.dc_block {
-                    for i in 0..block_size {
-                        self.scratch_l[i] = dcf[0].process_sample(self.scratch_l[i]);
-                        self.scratch_r[i] = dcf[1].process_sample(self.scratch_r[i]);
+        // Process in 3 stages:
+        // Stage 1: Regular audio/synth tracks
+        // Stage 2: Return tracks (receive aux sends)
+        // Stage 3: Subgroup bus tracks (receive subgroup routing)
+        for stage in 0..3 {
+            for track_idx in 0..num_tracks {
+                let meta = &self.track_meta[track_idx];
+                let is_stage_match = match stage {
+                    0 => !meta.is_return_track && !meta.is_bus_track && !meta.is_vca,
+                    1 => meta.is_return_track && !meta.is_vca,
+                    2 => meta.is_bus_track && !meta.is_vca,
+                    _ => false,
+                };
+                if !is_stage_match {
+                    continue;
+                }
+
+                let track = &mut self.tracks[track_idx];
+                let is_mute_grouped = meta.mute_group.is_some_and(|g| muted_groups[(g as usize) % 32]);
+                let is_muted = track.muted || is_mute_grouped || (track_idx < 128 && vca_muted[track_idx]);
+
+                if any_soloed && !track.soloed && !meta.solo_safe {
+                    continue;
+                }
+                if is_muted {
+                    continue;
+                }
+
+                self.scratch_l[..block_size].fill(0.0);
+                self.scratch_r[..block_size].fill(0.0);
+
+                let mut local_ctx = ctx.clone();
+                if let Some(edo) = track.tuning_edo {
+                    local_ctx.tuning_edo_divisions = edo;
+                }
+                if let Some(root_hz) = track.tuning_root_hz {
+                    local_ctx.tuning_root_hz = root_hz;
+                }
+
+                // If track has input monitoring enabled, mix in live audio
+                if track.input_monitoring {
+                    if let Some(ins) = in_buffers {
+                        if let Some(in_l) = ins.first() {
+                            let len = block_size.min(in_l.len());
+                            for i in 0..len {
+                                self.scratch_l[i] += in_l[i];
+                            }
+                        }
+                        if let Some(in_r) = ins.get(1).or_else(|| ins.first()) {
+                            let len = block_size.min(in_r.len());
+                            for i in 0..len {
+                                self.scratch_r[i] += in_r[i];
+                            }
+                        }
                     }
                 }
-                if let Some(ref mut lcf) = tf.low_cut {
-                    for i in 0..block_size {
-                        self.scratch_l[i] = lcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
-                        self.scratch_r[i] = lcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+
+                // Mix in any accumulated audio from sends or buses
+                for i in 0..block_size {
+                    self.scratch_l[i] += self.track_in_buffers[track_idx][0][i];
+                    self.scratch_r[i] += self.track_in_buffers[track_idx][1][i];
+                }
+
+                if meta.sidechain_audition {
+                    if let Some(src_id) = meta.sidechain_source_track_id {
+                        if let Some(src_idx) = self.track_meta.iter().position(|m| m.id == src_id) {
+                            let src_l = &self.track_buffers[src_idx][0][..block_size];
+                            let src_r = &self.track_buffers[src_idx][1][..block_size];
+                            self.scratch_l[..block_size].copy_from_slice(src_l);
+                            self.scratch_r[..block_size].copy_from_slice(src_r);
+                        }
+                    }
+                } else {
+                    let (slice_l, slice_r) = (
+                        &mut self.scratch_l[..block_size],
+                        &mut self.scratch_r[..block_size],
+                    );
+                    let mut track_out_slices: [&mut [f32]; 2] = [slice_l, slice_r];
+
+                    let in_l = &self.track_in_buffers[track_idx][0][..block_size];
+                    let in_r = &self.track_in_buffers[track_idx][1][..block_size];
+                    let input_slices: [&[f32]; 2] = [in_l, in_r];
+                    let ins_param = if in_l.iter().any(|&s| s != 0.0) || in_r.iter().any(|&s| s != 0.0) {
+                        Some(&input_slices[..])
+                    } else {
+                        None
+                    };
+
+                    track.process_with_input(
+                        block_size,
+                        &local_ctx,
+                        ins_param,
+                        &mut track_out_slices[..out_buffers.len().min(2)],
+                    );
+
+                    if let Some(tf) = self.track_filters.get_mut(track_idx) {
+                        if let Some(ref mut dcf) = tf.dc_block {
+                            for i in 0..block_size {
+                                self.scratch_l[i] = dcf[0].process_sample(self.scratch_l[i]);
+                                self.scratch_r[i] = dcf[1].process_sample(self.scratch_r[i]);
+                            }
+                        }
+                        if let Some(ref mut lcf) = tf.low_cut {
+                            for i in 0..block_size {
+                                self.scratch_l[i] = lcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
+                                self.scratch_r[i] = lcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                            }
+                        }
+                        if let Some(ref mut hcf) = tf.high_cut {
+                            for i in 0..block_size {
+                                self.scratch_l[i] = hcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
+                                self.scratch_r[i] = hcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                            }
+                        }
                     }
                 }
-                if let Some(ref mut hcf) = tf.high_cut {
-                    for i in 0..block_size {
-                        self.scratch_l[i] = hcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
-                        self.scratch_r[i] = hcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
-                    }
-                }
-            }
 
-            if any_soloed && !track.soloed {
-                continue;
-            }
+                // Apply PDC Delay Alignment
+                self.pdc_buffers[track_idx].process_block(
+                    &mut self.scratch_l[..block_size],
+                    &mut self.scratch_r[..block_size],
+                );
 
-            let strip_db = track.input_gain_db + track.output_gain_db;
-            let strip_gain = 10.0f32.powf(strip_db / 20.0)
-                * if track.phase_flip { -1.0 } else { 1.0 }
-                * master_trim;
-            let effective_gain = track.gain * strip_gain;
+                // Cache post-PDC audio for sidechain taps
+                self.track_buffers[track_idx][0][..block_size].copy_from_slice(&self.scratch_l[..block_size]);
+                self.track_buffers[track_idx][1][..block_size].copy_from_slice(&self.scratch_r[..block_size]);
 
-            let pan = track.pan.clamp(-1.0, 1.0);
-            let num_out = out_buffers.len().min(2);
-            if num_out == 2 {
+                let strip_db = track.input_gain_db + track.output_gain_db;
+                let vca_mult = if track_idx < 128 { vca_gains[track_idx] } else { 1.0 };
+                let strip_gain = 10.0f32.powf(strip_db / 20.0)
+                    * if track.phase_flip { -1.0 } else { 1.0 }
+                    * master_trim;
+                let effective_gain = track.gain * strip_gain * vca_mult;
+
+                let pan = track.pan.clamp(-1.0, 1.0);
                 let left_gain = effective_gain * (1.0 - pan).min(1.0);
                 let right_gain = effective_gain * (1.0 + pan).min(1.0);
-                let scratch_l = &self.scratch_l[..block_size];
-                let scratch_r = if track.channels <= 1 {
-                    &self.scratch_l[..block_size]
-                } else {
-                    &self.scratch_r[..block_size]
-                };
-                for i in 0..block_size {
-                    out_buffers[0][i] += scratch_l[i] * left_gain;
-                    out_buffers[1][i] += scratch_r[i] * right_gain;
+
+                // Aux Sends routing
+                for send in &meta.sends {
+                    if send.muted || send.amount <= 0.0 {
+                        continue;
+                    }
+                    if let Some(target_idx) = self.track_meta.iter().position(|m| m.id == send.target_track_id) {
+                        let (send_l_gain, send_r_gain) = if send.is_pre_fader {
+                            (send.amount, send.amount)
+                        } else {
+                            (left_gain * send.amount, right_gain * send.amount)
+                        };
+                        for i in 0..block_size {
+                            self.track_in_buffers[target_idx][0][i] += self.scratch_l[i] * send_l_gain;
+                            self.track_in_buffers[target_idx][1][i] += self.scratch_r[i] * send_r_gain;
+                        }
+                    }
                 }
-            } else if num_out == 1 {
-                let scratch_l = &self.scratch_l[..block_size];
-                for i in 0..block_size {
-                    out_buffers[0][i] += scratch_l[i] * effective_gain;
+
+                // Legacy send_level routing to return track if present
+                if meta.legacy_send_level > 0.0 {
+                    if let Some(target_idx) = self.track_meta.iter().position(|m| m.is_return_track) {
+                        let s_l = left_gain * meta.legacy_send_level;
+                        let s_r = right_gain * meta.legacy_send_level;
+                        for i in 0..block_size {
+                            self.track_in_buffers[target_idx][0][i] += self.scratch_l[i] * s_l;
+                            self.track_in_buffers[target_idx][1][i] += self.scratch_r[i] * s_r;
+                        }
+                    }
+                }
+
+                // Subgroup Bus routing or direct Master mix
+                let mut routed_to_bus = false;
+                if let Some(ref bus_name) = meta.bus_target {
+                    if let Some(target_idx) = self.track_meta.iter().position(|m| m.name == *bus_name || m.id.to_string() == *bus_name) {
+                        for i in 0..block_size {
+                            self.track_in_buffers[target_idx][0][i] += self.scratch_l[i] * left_gain;
+                            self.track_in_buffers[target_idx][1][i] += self.scratch_r[i] * right_gain;
+                        }
+                        routed_to_bus = true;
+                    }
+                }
+
+                if !routed_to_bus && meta.send_to_master {
+                    let num_out = out_buffers.len().min(2);
+                    if num_out == 2 {
+                        let scratch_r = if track.channels <= 1 {
+                            &self.scratch_l[..block_size]
+                        } else {
+                            &self.scratch_r[..block_size]
+                        };
+                        for i in 0..block_size {
+                            out_buffers[0][i] += self.scratch_l[i] * left_gain;
+                            out_buffers[1][i] += scratch_r[i] * right_gain;
+                        }
+                    } else if num_out == 1 {
+                        for i in 0..block_size {
+                            out_buffers[0][i] += self.scratch_l[i] * effective_gain;
+                        }
+                    }
                 }
             }
+        }
+
+        // Master Output Telemetry & Analysis
+        let num_out = out_buffers.len().min(2);
+        if num_out > 0 {
+            let mut max_l = 0.0f32;
+            let mut max_r = 0.0f32;
+            let mut sum_sq_l = 0.0f32;
+            let mut sum_sq_r = 0.0f32;
+            let mut sum_lr = 0.0f32;
+
+            for i in 0..block_size {
+                let l = out_buffers[0][i];
+                let r = if num_out > 1 { out_buffers[1][i] } else { l };
+                let abs_l = l.abs();
+                let abs_r = r.abs();
+                if abs_l > max_l { max_l = abs_l; }
+                if abs_r > max_r { max_r = abs_r; }
+                sum_sq_l += l * l;
+                sum_sq_r += r * r;
+                sum_lr += l * r;
+            }
+
+            let rms_l = (sum_sq_l / block_size as f32).sqrt();
+            let rms_r = (sum_sq_r / block_size as f32).sqrt();
+            let peak_l_db = if max_l > 1e-6 { 20.0 * max_l.log10() } else { -120.0 };
+            let peak_r_db = if max_r > 1e-6 { 20.0 * max_r.log10() } else { -120.0 };
+            let rms_l_db = if rms_l > 1e-6 { 20.0 * rms_l.log10() } else { -120.0 };
+            let rms_r_db = if rms_r > 1e-6 { 20.0 * rms_r.log10() } else { -120.0 };
+
+            let denom = (sum_sq_l * sum_sq_r).sqrt();
+            let phase_corr = if denom > 1e-9 {
+                (sum_lr / denom).clamp(-1.0, 1.0)
+            } else {
+                1.0
+            };
+
+            self.true_peak_meter.process_block(&out_buffers[0][..block_size]);
+            if num_out > 1 {
+                self.true_peak_meter.process_block(&out_buffers[1][..block_size]);
+            }
+
+            self.lufs_meter.process_block(&out_buffers[0][..block_size]);
+
+            self.telemetry = MasterMeterTelemetry {
+                channels: [
+                    ChannelMeter { peak: max_l, peak_db: peak_l_db, rms: rms_l, rms_db: rms_l_db },
+                    ChannelMeter { peak: max_r, peak_db: peak_r_db, rms: rms_r, rms_db: rms_r_db },
+                ],
+                true_peak_db: self.true_peak_meter.max_true_peak_db,
+                momentary_lufs: self.lufs_meter.momentary_lufs,
+                short_term_lufs: self.lufs_meter.short_term_lufs,
+                integrated_lufs: self.lufs_meter.integrated_lufs,
+                phase_correlation: phase_corr,
+            };
         }
     }
 }
@@ -1269,5 +1647,204 @@ mod tests {
         assert!(r.iter().any(|&s| s.abs() > 0.5));
         // Phase flip inverted the initial positive sine half-cycle to negative
         assert!(r[1] < 0.0);
+    }
+
+    #[test]
+    fn test_aux_sends_pre_post_fader_and_return_tracks() {
+        use summoner_project::schema::{TrackConfig, TrackSendConfig};
+        let mut project = create_default_project("Aux Send Test");
+        project.tracks.clear();
+
+        // Track 1: Source synth, gain = 0.5
+        let mut t1 = TrackConfig {
+            id: 1,
+            name: "Synth".to_string(),
+            gain: 0.5,
+            send_to_master: false, // Don't send directly to master so we only hear the return
+            sends: vec![
+                TrackSendConfig {
+                    target_track_id: 2,
+                    amount: 1.0,
+                    is_pre_fader: false,
+                    muted: false,
+                }
+            ],
+            ..Default::default()
+        };
+        t1.nodes.push(NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params: [("freq".to_string(), 440.0)].into_iter().collect(),
+            plugin_state: None,
+        });
+
+        // Track 2: Return track (Reverb return), gain = 1.0, send_to_master = true
+        let t2 = TrackConfig {
+            id: 2,
+            name: "Reverb Return".to_string(),
+            is_return_track: true,
+            gain: 1.0,
+            send_to_master: true,
+            ..Default::default()
+        };
+
+        project.tracks.push(t1);
+        project.tracks.push(t2);
+
+        let mut runner = GraphRunner::new(&project);
+        let (mut l, mut r) = (vec![0.0f32; 256], vec![0.0f32; 256]);
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+
+        runner.process_block(256, &ctx, &mut [&mut l[..], &mut r[..]]);
+        // Post-fader send from Track 1 reached Track 2 and was output to Master
+        assert!(l.iter().any(|&s| s.abs() > 0.05));
+    }
+
+    #[test]
+    fn test_subgroup_bus_routing() {
+        use summoner_project::schema::TrackConfig;
+        let mut project = create_default_project("Bus Test");
+        project.tracks.clear();
+
+        // Track 1: Kick -> bus_target = "Drum Bus"
+        let mut t1 = TrackConfig {
+            id: 1,
+            name: "Kick".to_string(),
+            bus_target: Some("Drum Bus".to_string()),
+            gain: 0.8,
+            send_to_master: true, // Should be overridden by bus_target
+            ..Default::default()
+        };
+        t1.nodes.push(NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params: [("freq".to_string(), 60.0)].into_iter().collect(),
+            plugin_state: None,
+        });
+
+        // Track 2: Drum Bus, is_bus_track = true
+        let t2 = TrackConfig {
+            id: 2,
+            name: "Drum Bus".to_string(),
+            is_bus_track: true,
+            gain: 0.5,
+            send_to_master: true,
+            ..Default::default()
+        };
+
+        project.tracks.push(t1);
+        project.tracks.push(t2);
+
+        let mut runner = GraphRunner::new(&project);
+        let (mut l, mut r) = (vec![0.0f32; 256], vec![0.0f32; 256]);
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+
+        runner.process_block(256, &ctx, &mut [&mut l[..], &mut r[..]]);
+        assert!(l.iter().any(|&s| s.abs() > 0.05));
+    }
+
+    #[test]
+    fn test_vca_fader_scaling_and_mute_groups() {
+        use summoner_project::schema::TrackConfig;
+        let mut project = create_default_project("VCA Test");
+        project.tracks.clear();
+
+        // Track 1: Member of VCA Group 1
+        let mut t1 = TrackConfig {
+            id: 1,
+            name: "Vocal 1".to_string(),
+            gain: 1.0,
+            vca_group: Some(1),
+            mute_group: Some(2),
+            ..Default::default()
+        };
+        t1.nodes.push(NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params: [("freq".to_string(), 440.0)].into_iter().collect(),
+            plugin_state: None,
+        });
+
+        // Track 2: VCA Track controlling Group 1 with gain = 0.5
+        let vca = TrackConfig {
+            id: 2,
+            name: "VCA Lead".to_string(),
+            is_vca: true,
+            gain: 0.5,
+            vca_group: Some(1),
+            ..Default::default()
+        };
+
+        project.tracks.push(t1);
+        project.tracks.push(vca);
+
+        let mut runner = GraphRunner::new(&project);
+        let (mut l, mut r) = (vec![0.0f32; 256], vec![0.0f32; 256]);
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+
+        runner.process_block(256, &ctx, &mut [&mut l[..], &mut r[..]]);
+        let peak: f32 = l.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
+        // Track 1 had gain 1.0, scaled by VCA gain 0.5 => max peak ~ 0.5
+        assert!(peak > 0.3 && peak < 0.6);
+    }
+
+    #[test]
+    fn test_solo_safe_and_sidechain_audition() {
+        use summoner_project::schema::TrackConfig;
+        let mut project = create_default_project("Solo Safe & Sidechain Test");
+        project.tracks.clear();
+
+        // Track 1: Soloed
+        let mut t1 = TrackConfig {
+            id: 1,
+            name: "Lead Synth".to_string(),
+            gain: 1.0,
+            soloed: true,
+            ..Default::default()
+        };
+        t1.nodes.push(NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params: [("freq".to_string(), 440.0)].into_iter().collect(),
+            plugin_state: None,
+        });
+
+        // Track 2: Not soloed, but solo_safe = true (e.g. Master FX or Click)
+        let mut t2 = TrackConfig {
+            id: 2,
+            name: "Click Track".to_string(),
+            gain: 1.0,
+            soloed: false,
+            solo_safe: true,
+            ..Default::default()
+        };
+        t2.nodes.push(NodeConfig {
+            kind: "SineOscillatorNode".to_string(),
+            params: [("freq".to_string(), 880.0)].into_iter().collect(),
+            plugin_state: None,
+        });
+
+        // Track 3: Sidechain auditioning Track 1
+        let t3 = TrackConfig {
+            id: 3,
+            name: "Bass Ducked".to_string(),
+            gain: 1.0,
+            soloed: false,
+            solo_safe: true,
+            sidechain_source_track_id: Some(1),
+            sidechain_audition: true,
+            ..Default::default()
+        };
+
+        project.tracks.push(t1);
+        project.tracks.push(t2);
+        project.tracks.push(t3);
+
+        let mut runner = GraphRunner::new(&project);
+        let (mut l, mut r) = (vec![0.0f32; 256], vec![0.0f32; 256]);
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+
+        runner.process_block(256, &ctx, &mut [&mut l[..], &mut r[..]]);
+        // Solo-safe tracks output alongside soloed track
+        assert!(l.iter().any(|&s| s.abs() > 0.1));
+        // Verify telemetry
+        assert!(runner.telemetry.channels[0].peak > 0.0);
+        assert!(runner.telemetry.momentary_lufs > -70.0);
     }
 }
