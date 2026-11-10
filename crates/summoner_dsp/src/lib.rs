@@ -51,6 +51,7 @@ pub mod hammer_strike;
 pub mod horn_reflection;
 pub mod hurdy_gurdy;
 pub mod idiophone_resonator;
+pub mod immersive_downmix;
 pub mod jawari_bridge;
 pub mod ji_bridge;
 pub mod koto;
@@ -169,6 +170,7 @@ pub use sitar::*;
 pub use soundboard_bridge::*;
 pub use spatial_audio::*;
 pub use spatial_multichannel::*;
+pub use immersive_downmix::*;
 pub use spatial_room::*;
 pub mod spectral_eq_alias {
     pub use crate::spectral_eq::*;
