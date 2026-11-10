@@ -20,7 +20,9 @@ use crate::schema::{
     AssetConfig, AutomationEventConfig, AutomationLaneConfig, MarkerConfig, MidiMappingConfig,
     NodeConfig, ProjectConfig, TrackConfig, TransportConfig,
 };
-use crate::{parse_project_toml, serialize_project_toml};
+use crate::parse_project_toml;
+#[cfg(test)]
+use crate::serialize_project_toml;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -109,7 +111,7 @@ impl CrashRecoveryManager {
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "toml") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "toml") {
                 if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
                     if let Some(ts_str) = stem.strip_prefix("snapshot_") {
                         if let Ok(ts) = ts_str.parse::<u64>() {
