@@ -24,6 +24,7 @@ pub enum DitherMode {
     None,
     Tpdf,
     NoiseShaped,
+    PowRAnalog,
 }
 
 impl std::str::FromStr for DitherMode {
@@ -33,6 +34,7 @@ impl std::str::FromStr for DitherMode {
         Ok(match s.to_lowercase().trim() {
             "tpdf" => Self::Tpdf,
             "shaped" | "noiseshaped" | "noise_shaped" => Self::NoiseShaped,
+            "powr" | "powr_analog" | "powranalog" => Self::PowRAnalog,
             _ => Self::None,
         })
     }
@@ -648,6 +650,13 @@ pub fn apply_dither_buffer(buffer: &mut [f32], bit_depth: BitDepth, dither: Dith
                 prng = prng.wrapping_mul(1664525).wrapping_add(1013904223);
                 let r2 = ((prng >> 9) as f32) / ((1 << 23) as f32) - 0.5;
                 (r1 - r2) * 0.75 * inv_scale
+            }
+            DitherMode::PowRAnalog => {
+                prng = prng.wrapping_mul(1664525).wrapping_add(1013904223);
+                let r1 = ((prng >> 9) as f32) / ((1 << 23) as f32) - 0.5;
+                prng = prng.wrapping_mul(1664525).wrapping_add(1013904223);
+                let r2 = ((prng >> 9) as f32) / ((1 << 23) as f32) - 0.5;
+                (r1 - r2) * 0.9 * inv_scale
             }
         };
 

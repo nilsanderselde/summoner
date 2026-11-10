@@ -136,6 +136,7 @@ pub use code_node::*;
 pub use control_io::*;
 pub use console_emulation::{ConsoleEmulationNode, ConsoleMode};
 pub use crystal_resonator::*;
+pub use dither::*;
 pub use ecosystem_hardware::*;
 pub use electric_piano::*;
 pub use free_reed::*;
