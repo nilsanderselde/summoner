@@ -51,6 +51,7 @@ mod tests {
             snap_to_edges: app.snap_to_edges,
             show_project_notes_panel: app.show_project_notes_panel,
             audio_driver_panel: Some(app.audio_driver_panel.clone()),
+            preferences_state: Some(app.preferences_state.clone()),
         };
         state.save_to_path(&test_path);
 

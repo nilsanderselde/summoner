@@ -444,6 +444,11 @@ impl AudioDriverSelectorPanel {
             }
         }
     }
+
+    #[cfg(feature = "gui")]
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
+        show_audio_driver_selector_panel(ui, self);
+    }
 }
 
 impl Default for AudioDriverSelectorPanel {

@@ -786,6 +786,7 @@ mod tests {
                 time_signature: "4/4".to_string(),
                 master_tune_cents: 0.0,
                 master_trim_db: 0.0,
+                ..Default::default()
             },
             tracks: vec![
                 summoner_project::schema::TrackConfig {

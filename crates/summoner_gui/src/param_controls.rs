@@ -1133,6 +1133,24 @@ pub struct ShortcutsPreferencesConfig {
 }
 
 impl ShortcutsPreferencesConfig {
+    pub fn new_default() -> Self {
+        let mut bindings = HashMap::new();
+        bindings.insert("Play / Pause".to_string(), "Space".to_string());
+        bindings.insert("Stop".to_string(), "Escape".to_string());
+        bindings.insert("Record".to_string(), "R".to_string());
+        bindings.insert("Undo".to_string(), "Ctrl+Z".to_string());
+        bindings.insert("Redo".to_string(), "Ctrl+Shift+Z".to_string());
+        bindings.insert("Cut".to_string(), "Ctrl+X".to_string());
+        bindings.insert("Copy".to_string(), "Ctrl+C".to_string());
+        bindings.insert("Paste".to_string(), "Ctrl+V".to_string());
+        bindings.insert("Split Clip".to_string(), "Ctrl+E".to_string());
+        bindings.insert("Toggle Metronome".to_string(), "Ctrl+Shift+M".to_string());
+        bindings.insert("Toggle Loop".to_string(), "Ctrl+L".to_string());
+        bindings.insert("Zoom to Fit".to_string(), "Ctrl+0".to_string());
+        bindings.insert("Preferences".to_string(), "Ctrl+,".to_string());
+        Self { bindings }
+    }
+
     pub fn get_binding(&self, action: &str) -> Option<&str> {
         self.bindings.get(action).map(|s| s.as_str())
     }
@@ -1164,7 +1182,7 @@ impl Default for PluginsPreferencesConfig {
 }
 
 /// Step 795: Full application Preferences State container.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PreferencesState {
     pub active_category: PreferencesCategory,
     pub audio: AudioPreferencesConfig,
@@ -1172,4 +1190,17 @@ pub struct PreferencesState {
     pub appearance: AppearancePreferencesConfig,
     pub shortcuts: ShortcutsPreferencesConfig,
     pub plugins: PluginsPreferencesConfig,
+}
+
+impl Default for PreferencesState {
+    fn default() -> Self {
+        Self {
+            active_category: PreferencesCategory::Audio,
+            audio: AudioPreferencesConfig::default(),
+            midi: MidiPreferencesConfig::default(),
+            appearance: AppearancePreferencesConfig::default(),
+            shortcuts: ShortcutsPreferencesConfig::new_default(),
+            plugins: PluginsPreferencesConfig::default(),
+        }
+    }
 }

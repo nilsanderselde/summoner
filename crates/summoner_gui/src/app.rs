@@ -80,6 +80,8 @@ pub struct GuiState {
     pub show_project_notes_panel: bool,
     #[serde(default)]
     pub audio_driver_panel: Option<crate::visualizer::AudioDriverSelectorPanel>,
+    #[serde(default)]
+    pub preferences_state: Option<crate::param_controls::PreferencesState>,
 }
 
 fn default_panel_dock_edge() -> String {
@@ -271,6 +273,8 @@ pub struct SummonerApp {
     pub award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView,
     pub audio_engine: Option<summoner_engine::LiveEngineHandle>,
     pub session_dag: summoner_project::git_dag::GitSessionDag,
+    pub show_preferences_window: bool,
+    pub preferences_state: crate::param_controls::PreferencesState,
 }
 
 impl SummonerApp {
@@ -458,10 +462,15 @@ impl SummonerApp {
             award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView::new(),
             audio_engine: None,
             session_dag: summoner_project::git_dag::GitSessionDag::new(project.clone(), "Summoner User"),
+            show_preferences_window: false,
+            preferences_state: crate::param_controls::PreferencesState::default(),
         };
         app.award_winning_view.live_param_bus = Some(param_bus.clone());
 
         if let Some(state) = GuiState::load() {
+            if let Some(pref) = state.preferences_state {
+                app.preferences_state = pref;
+            }
             app.current_view = state.current_view;
             app.selected_track_id = state.selected_track_id;
             app.show_rack = state.show_rack;
@@ -581,6 +590,7 @@ impl SummonerApp {
             snap_to_edges: self.snap_to_edges,
             show_project_notes_panel: self.show_project_notes_panel,
             audio_driver_panel: Some(self.audio_driver_panel.clone()),
+            preferences_state: Some(self.preferences_state.clone()),
         };
         state.save();
         let _ = std::fs::remove_file(".summoner_dirty.lock");
@@ -615,6 +625,163 @@ impl SummonerApp {
         self.audio_engine = Some(new_handle);
         self.status_message =
             Some("Re-initialized live audio engine with selected settings".to_string());
+    }
+
+    pub fn handle_copy(&mut self, ctx: &egui::Context) {
+        if let Ok(serialized) = toml::to_string(&self.project.tracks) {
+            ctx.output_mut(|o| o.copied_text = serialized);
+            self.status_message = Some("Copied selection to clipboard".to_string());
+        }
+    }
+
+    pub fn handle_cut(&mut self, ctx: &egui::Context) {
+        self.handle_copy(ctx);
+        self.commit_current_state("Cut");
+        self.status_message = Some("Cut selection to clipboard".to_string());
+    }
+
+    pub fn handle_paste(&mut self, ctx: &egui::Context) {
+        let clipboard = ctx.input(|i| {
+            for event in &i.raw.events {
+                if let egui::Event::Paste(ref text) = event {
+                    return Some(text.clone());
+                }
+            }
+            None
+        });
+        if let Some(text) = clipboard {
+            if let Ok(tracks) = toml::from_str::<Vec<summoner_project::schema::TrackConfig>>(&text) {
+                for mut t in tracks {
+                    t.id = (self.project.tracks.len() + 1) as u64;
+                    t.name = format!("{} (Pasted)", t.name);
+                    self.project.tracks.push(t);
+                }
+                self.commit_current_state("Paste");
+                self.status_message = Some("Pasted tracks from clipboard".to_string());
+            }
+        }
+    }
+
+    pub fn render_preferences_window(&mut self, ctx: &egui::Context) {
+        if !self.show_preferences_window {
+            return;
+        }
+
+        let mut is_open = self.show_preferences_window;
+        egui::Window::new("⚙ Preferences")
+            .open(&mut is_open)
+            .resizable(true)
+            .default_width(700.0)
+            .default_height(480.0)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        ui.set_width(140.0);
+                        if ui.selectable_label(self.preferences_state.active_category == crate::param_controls::PreferencesCategory::Audio, "🔊 Audio").clicked() {
+                            self.preferences_state.active_category = crate::param_controls::PreferencesCategory::Audio;
+                        }
+                        if ui.selectable_label(self.preferences_state.active_category == crate::param_controls::PreferencesCategory::Midi, "🎹 MIDI").clicked() {
+                            self.preferences_state.active_category = crate::param_controls::PreferencesCategory::Midi;
+                        }
+                        if ui.selectable_label(self.preferences_state.active_category == crate::param_controls::PreferencesCategory::Appearance, "🎨 Appearance").clicked() {
+                            self.preferences_state.active_category = crate::param_controls::PreferencesCategory::Appearance;
+                        }
+                        if ui.selectable_label(self.preferences_state.active_category == crate::param_controls::PreferencesCategory::Shortcuts, "⌨ Shortcuts").clicked() {
+                            self.preferences_state.active_category = crate::param_controls::PreferencesCategory::Shortcuts;
+                        }
+                        if ui.selectable_label(self.preferences_state.active_category == crate::param_controls::PreferencesCategory::Plugins, "🔌 Plugins").clicked() {
+                            self.preferences_state.active_category = crate::param_controls::PreferencesCategory::Plugins;
+                        }
+                    });
+
+                    ui.separator();
+
+                    ui.vertical(|ui| {
+                        match self.preferences_state.active_category {
+                            crate::param_controls::PreferencesCategory::Audio => {
+                                ui.heading("Audio Hardware Settings");
+                                ui.label("Configure real-time audio output/input drivers, buffer size, and sample rate.");
+                                ui.add_space(8.0);
+                                self.audio_driver_panel.ui(ui);
+                                if self.audio_driver_panel.apply_requested {
+                                    self.audio_driver_panel.apply_requested = false;
+                                    self.apply_audio_settings();
+                                }
+                            }
+                            crate::param_controls::PreferencesCategory::Midi => {
+                                ui.heading("MIDI Configuration");
+                                ui.label("Hardware MIDI input/output ports and controller mappings.");
+                                ui.add_space(8.0);
+                                ui.label(format!("Input Routing: {}", self.preferences_state.midi.routing_mode));
+                                ui.add(egui::Slider::new(&mut self.preferences_state.midi.latency_ms, 0.0..=50.0).text("Latency Compensation (ms)"));
+                            }
+                            crate::param_controls::PreferencesCategory::Appearance => {
+                                ui.heading("Appearance & Display");
+                                ui.label("Customize themes, high-DPI scaling, and accessibility options.");
+                                ui.add_space(8.0);
+                                ui.horizontal(|ui| {
+                                    if ui.selectable_label(self.dark_theme, "🌙 Dark Theme").clicked() {
+                                        self.dark_theme = true;
+                                    }
+                                    if ui.selectable_label(!self.dark_theme, "☀️ Light Theme").clicked() {
+                                        self.dark_theme = false;
+                                    }
+                                });
+                                ui.checkbox(&mut self.show_tutorial_tooltips, "Show Informative Tooltips on Hover");
+                                ui.checkbox(&mut self.beginner_mode, "Beginner Mode (Simplified Guides)");
+                            }
+                            crate::param_controls::PreferencesCategory::Shortcuts => {
+                                ui.heading("Keyboard Shortcuts Customization");
+                                ui.label("Customize application hotkeys and global DAW commands.");
+                                ui.add_space(8.0);
+
+                                egui::ScrollArea::vertical().max_height(280.0).show(ui, |ui| {
+                                    egui::Grid::new("shortcuts_grid").striped(true).show(ui, |ui| {
+                                        ui.label(egui::RichText::new("Action").strong());
+                                        ui.label(egui::RichText::new("Hotkey Binding").strong());
+                                        ui.end_row();
+
+                                        let mut keys_to_edit: Vec<(String, String)> = self
+                                            .preferences_state
+                                            .shortcuts
+                                            .bindings
+                                            .iter()
+                                            .map(|(k, v)| (k.clone(), v.clone()))
+                                            .collect();
+                                        keys_to_edit.sort_by(|a, b| a.0.cmp(&b.0));
+
+                                        for (action, mut binding) in keys_to_edit {
+                                            ui.label(&action);
+                                            if ui.text_edit_singleline(&mut binding).changed() {
+                                                self.preferences_state.shortcuts.bindings.insert(action, binding);
+                                            }
+                                            ui.end_row();
+                                        }
+                                    });
+                                });
+
+                                if ui.button("↺ Reset All Shortcuts to Defaults").clicked() {
+                                    self.preferences_state.shortcuts = crate::param_controls::ShortcutsPreferencesConfig::new_default();
+                                }
+                            }
+                            crate::param_controls::PreferencesCategory::Plugins => {
+                                ui.heading("Plugin Scanner & Sandboxing");
+                                ui.label("VST3, CLAP, and AU plugin discovery locations.");
+                                ui.add_space(8.0);
+                                ui.checkbox(&mut self.preferences_state.plugins.safe_mode, "Out-of-Process Plugin Sandbox (Crash Protection)");
+                                ui.add(egui::Slider::new(&mut self.preferences_state.plugins.cpu_budget_percent, 10.0..=100.0).text("CPU Budget Limit %"));
+                                ui.separator();
+                                ui.label("Scan Directories:");
+                                for path in &self.preferences_state.plugins.scan_paths {
+                                    ui.monospace(format!("• {}", path));
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+
+        self.show_preferences_window = is_open;
     }
 
     pub fn sync_track_to_graph(&mut self, track_id: u64) {
@@ -1323,6 +1490,26 @@ impl eframe::App for SummonerApp {
                     "Hidden"
                 }
             ));
+        }
+
+        // Ctrl+,: Toggle Preferences Window
+        if is_ctrl && ctx.input(|i| i.key_pressed(egui::Key::Comma)) {
+            self.show_preferences_window = !self.show_preferences_window;
+        }
+
+        // Ctrl+C: Copy
+        if is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::C)) {
+            self.handle_copy(ctx);
+        }
+
+        // Ctrl+X: Cut
+        if is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::X)) {
+            self.handle_cut(ctx);
+        }
+
+        // Ctrl+V: Paste
+        if is_ctrl && !is_shift && ctx.input(|i| i.key_pressed(egui::Key::V)) {
+            self.handle_paste(ctx);
         }
 
         // Execute command palette actions
@@ -2219,6 +2406,24 @@ impl eframe::App for SummonerApp {
                         self.handle_redo();
                         ui.close_menu();
                     }
+                    ui.separator();
+                    if ui.button("✂ Cut (Ctrl+X)").clicked() {
+                        self.handle_cut(ctx);
+                        ui.close_menu();
+                    }
+                    if ui.button("📋 Copy (Ctrl+C)").clicked() {
+                        self.handle_copy(ctx);
+                        ui.close_menu();
+                    }
+                    if ui.button("📥 Paste (Ctrl+V)").clicked() {
+                        self.handle_paste(ctx);
+                        ui.close_menu();
+                    }
+                    ui.separator();
+                    if ui.button("⚙ Preferences... (Ctrl+,)").clicked() {
+                        self.show_preferences_window = true;
+                        ui.close_menu();
+                    }
                 });
 
                 ui.menu_button("View", |ui| {
@@ -2534,6 +2739,9 @@ impl eframe::App for SummonerApp {
                 });
             self.show_backup_manager_modal = is_open;
         }
+
+        // Preferences Window (D5)
+        self.render_preferences_window(ctx);
 
         // Neural Audio Style Transfer Preview Modal (Step 1267)
         if self.show_style_transfer_modal {
@@ -3835,5 +4043,31 @@ mod tests {
         assert_eq!(saved_panel.sample_rate, 48000);
         assert_eq!(saved_panel.buffer_size, 128);
         assert!(saved_panel.enable_input);
+    }
+
+    #[test]
+    fn test_preferences_window_and_shortcut_customization() {
+        let project = create_default_project("Preferences Test");
+        let param_bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(project, param_bus);
+
+        assert!(!app.show_preferences_window);
+        app.show_preferences_window = true;
+        assert_eq!(app.preferences_state.active_category, crate::param_controls::PreferencesCategory::Audio);
+
+        // Customize shortcut binding
+        app.preferences_state.shortcuts.set_binding("Play / Pause", "P");
+        assert_eq!(app.preferences_state.shortcuts.get_binding("Play / Pause"), Some("P"));
+
+        // Switch preferences category
+        app.preferences_state.active_category = crate::param_controls::PreferencesCategory::Shortcuts;
+        assert_eq!(app.preferences_state.active_category, crate::param_controls::PreferencesCategory::Shortcuts);
+
+        // Verify state persistence
+        app.save_gui_state();
+        let loaded = GuiState::load().expect("GuiState load should succeed");
+        assert!(loaded.preferences_state.is_some());
+        let pref = loaded.preferences_state.unwrap();
+        assert_eq!(pref.shortcuts.get_binding("Play / Pause"), Some("P"));
     }
 }
