@@ -31,6 +31,7 @@ pub mod compressor;
 pub mod console_emulation;
 pub mod control_io;
 pub mod crystal_resonator;
+pub mod dc_coupled_cv;
 pub mod delay;
 pub mod distortion;
 pub mod dither;
@@ -211,6 +212,7 @@ pub use composites::{
     GlitchPercussionSynth, PluckSynth, SamplerDevice,
 };
 pub use compressor::CompressorNode;
+pub use dc_coupled_cv::*;
 pub use delay::EffectDelay;
 pub use distortion::{DistortionNode, DistortionType};
 pub use dither::{apply_dither, DitherType};
