@@ -83,6 +83,7 @@ pub mod ring_mod;
 pub mod sample_editor;
 pub mod rotary_speaker;
 pub mod sampler;
+pub mod sf2_parser;
 pub mod shakuhachi;
 pub mod sitar;
 pub mod slicer;
@@ -94,6 +95,8 @@ pub mod spectral_resynthesis;
 pub mod spectrogram_art;
 pub mod spring_lattice;
 pub mod stem_separator;
+pub mod stock_instruments;
+pub mod streaming_sampler;
 pub mod tape_saturation;
 pub mod tine_resonator;
 pub mod tonehole_grid;
@@ -184,6 +187,9 @@ pub use plugin_host::{
     scan_plugin_directory, PluginAudioNode, PluginDescriptor, PluginFormat, PluginParamInfo,
     PluginStateConfig,
 };
+pub use sf2_parser::*;
+pub use stock_instruments::*;
+pub use streaming_sampler::*;
 
 pub use biquad::{FilterBiquad, FilterType};
 pub use bitcrusher::BitcrusherNode;

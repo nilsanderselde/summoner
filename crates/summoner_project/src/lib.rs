@@ -19,6 +19,7 @@ pub mod backup;
 pub mod benchmark;
 pub mod clip_editing;
 pub mod cloud_federated;
+pub mod content_browser;
 pub mod crash_analyzer;
 pub mod crdt;
 pub mod dependency_audit;
@@ -33,6 +34,7 @@ pub mod scratch_audio_cache;
 pub mod session_markers;
 pub mod sfz;
 pub mod smf;
+pub mod stock_content;
 pub mod system_tools;
 
 pub use audio_clip::*;
@@ -41,6 +43,7 @@ pub use backup::*;
 pub use benchmark::*;
 pub use clip_editing::*;
 pub use cloud_federated::*;
+pub use content_browser::*;
 pub use crash_analyzer::*;
 pub use crdt::*;
 pub use dependency_audit::*;
@@ -53,6 +56,7 @@ pub use schema::*;
 pub use scratch_audio_cache::*;
 pub use smf::*;
 pub use session_markers::*;
+pub use stock_content::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]

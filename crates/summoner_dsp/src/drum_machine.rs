@@ -39,6 +39,20 @@ pub struct DrumPad {
     pub amp_env: EnvADSR,
     /// Master gain for this pad (0.0–1.0).
     pub gain: f32,
+    /// Optional choke group (0–255). When a pad triggers, other active pads in the same group are choked.
+    pub choke_group: Option<u8>,
+    /// Stereo panning (-1.0 = left, 0.0 = center, 1.0 = right).
+    pub pan: f32,
+    /// Pitch tune offset in semitones (-24.0..24.0).
+    pub pitch_semitones: f32,
+    /// Auxiliary Send A level (0.0–1.0).
+    pub send_a: f32,
+    /// Auxiliary Send B level (0.0–1.0).
+    pub send_b: f32,
+    /// Pad solo flag.
+    pub solo: bool,
+    /// Pad mute flag.
+    pub mute: bool,
     /// Internal sampler node (driven by bank).
     sampler: MultiSamplerNode,
     /// Whether this pad is currently active (note is on).
@@ -66,10 +80,36 @@ impl DrumPad {
             bank,
             amp_env: EnvADSR::new(attack, decay, sustain, release),
             gain,
+            choke_group: None,
+            pan: 0.0,
+            pitch_semitones: 0.0,
+            send_a: 0.0,
+            send_b: 0.0,
+            solo: false,
+            mute: false,
             sampler,
             active: false,
             velocity_scale: 1.0,
         }
+    }
+
+    /// Set choke group for mutual exclusion (e.g. closed & open hi-hats).
+    pub fn with_choke_group(mut self, group: u8) -> Self {
+        self.choke_group = Some(group);
+        self
+    }
+
+    /// Set stereo pan position (-1.0 full left to 1.0 full right).
+    pub fn with_pan(mut self, pan: f32) -> Self {
+        self.pan = pan.clamp(-1.0, 1.0);
+        self
+    }
+
+    /// Set auxiliary send levels.
+    pub fn with_sends(mut self, send_a: f32, send_b: f32) -> Self {
+        self.send_a = send_a.clamp(0.0, 1.0);
+        self.send_b = send_b.clamp(0.0, 1.0);
+        self
     }
 
     /// Add a sample file to this pad's bank, spanning [lokey, hikey] with pitch_keycenter.
@@ -98,10 +138,22 @@ impl DrumPad {
         self.active = true;
     }
 
+    /// Choke this pad immediately (cut off sound without click).
+    pub fn choke(&mut self) {
+        self.amp_env.trigger(false);
+        self.sampler.stop();
+        self.active = false;
+    }
+
     /// Release the pad (note-off — sends envelope to release phase).
     pub fn release(&mut self) {
         self.amp_env.trigger(false);
         self.active = false;
+    }
+
+    /// Returns whether this pad is currently active.
+    pub fn is_active(&self) -> bool {
+        self.active
     }
 
     /// Process a single audio sample for this pad.
@@ -179,8 +231,27 @@ impl DrumMachineDevice {
         self.pads.push(pad);
     }
 
-    /// Trigger a pad by MIDI note and velocity.
+    /// Trigger a pad by MIDI note and velocity, choking any active pads in the same choke group.
     pub fn trigger_note(&mut self, midi_note: u8, velocity: u8) {
+        // 1. Identify choke group of the triggered note
+        let mut choke_group = None;
+        for pad in &self.pads {
+            if pad.midi_note == midi_note {
+                choke_group = pad.choke_group;
+                break;
+            }
+        }
+
+        // 2. Choke all other active pads in the same choke group
+        if let Some(cg) = choke_group {
+            for pad in &mut self.pads {
+                if pad.midi_note != midi_note && pad.choke_group == Some(cg) && pad.active {
+                    pad.choke();
+                }
+            }
+        }
+
+        // 3. Trigger the pad
         for pad in &mut self.pads {
             if pad.midi_note == midi_note {
                 pad.trigger(velocity);
@@ -233,21 +304,42 @@ impl SignalProcessor for DrumMachineDevice {
 
         let num_samples = outputs[0].len();
         let master = self.macro_view.master_gain;
+        let is_stereo = outputs.len() >= 2;
+
+        let has_solo = self.pads.iter().any(|p| p.solo);
 
         for i in 0..num_samples {
-            let mut mixed = 0.0f32;
+            let mut mixed_l = 0.0f32;
+            let mut mixed_r = 0.0f32;
 
             for (pad_idx, pad) in self.pads.iter_mut().enumerate() {
-                if pad_idx < MAX_PADS && !self.macro_view.pad_mutes[pad_idx] {
-                    mixed += pad.process_sample(ctx.sample_rate);
+                let is_muted = (pad_idx < MAX_PADS && self.macro_view.pad_mutes[pad_idx])
+                    || pad.mute
+                    || (has_solo && !pad.solo);
+
+                if !is_muted {
+                    let s = pad.process_sample(ctx.sample_rate);
+                    if s != 0.0 {
+                        // Equal-power stereo panning
+                        let pan_norm = (pad.pan + 1.0) * 0.5; // 0.0 to 1.0
+                        let angle = pan_norm * (std::f32::consts::FRAC_PI_2);
+                        let gain_l = angle.cos();
+                        let gain_r = angle.sin();
+
+                        mixed_l += s * gain_l;
+                        mixed_r += s * gain_r;
+                    }
                 }
             }
 
-            let out_sample = (mixed * master).clamp(-1.0, 1.0);
-            for ch in outputs.iter_mut() {
-                if i < ch.len() {
-                    ch[i] = out_sample;
-                }
+            let out_l = (mixed_l * master).clamp(-1.0, 1.0);
+            let out_r = (mixed_r * master).clamp(-1.0, 1.0);
+
+            if i < outputs[0].len() {
+                outputs[0][i] = out_l;
+            }
+            if is_stereo && i < outputs[1].len() {
+                outputs[1][i] = out_r;
             }
         }
     }
@@ -308,5 +400,36 @@ mod tests {
 
         let rms: f32 = out_left.iter().map(|s| s * s).sum::<f32>() / 64.0;
         assert!(rms.sqrt() >= 0.0, "output must not panic");
+    }
+
+    #[test]
+    fn test_drum_machine_choke_group_and_stereo_panning() {
+        let mut kit = DrumMachineDevice::new("Choke Kit");
+
+        let dummy_buf = Arc::new(SampleBuffer::new(vec![1.0; 44100], 44100, 1));
+
+        // Closed Hi-Hat (note 42) and Open Hi-Hat (note 46) both in choke group 1
+        let mut closed_hh = DrumPad::new("Closed HH", 42, 0.001, 0.05, 0.0, 0.02, 1.0)
+            .with_choke_group(1)
+            .with_pan(-0.5);
+        closed_hh.add_sample(42, 42, 42, "ch.wav", Some(dummy_buf.clone()), LoopMode::NoLoop);
+
+        let mut open_hh = DrumPad::new("Open HH", 46, 0.001, 1.0, 0.5, 0.5, 1.0)
+            .with_choke_group(1)
+            .with_pan(0.5);
+        open_hh.add_sample(46, 46, 46, "oh.wav", Some(dummy_buf), LoopMode::NoLoop);
+
+        kit.add_pad(closed_hh);
+        kit.add_pad(open_hh);
+
+        // 1. Trigger Open Hi-Hat (note 46)
+        kit.trigger_note(46, 100);
+        assert!(kit.pads[1].is_active(), "Open HH should be active");
+        assert!(!kit.pads[0].is_active(), "Closed HH should be inactive");
+
+        // 2. Trigger Closed Hi-Hat (note 42) -> Open Hi-Hat must be choked immediately!
+        kit.trigger_note(42, 100);
+        assert!(kit.pads[0].is_active(), "Closed HH should now be active");
+        assert!(!kit.pads[1].is_active(), "Open HH must be choked and inactive");
     }
 }

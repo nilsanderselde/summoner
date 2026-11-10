@@ -6,13 +6,23 @@ use summoner_core::audio::Sample;
 use summoner_core::node::ProcessContext;
 
 /// Loop mode for sample playback.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LoopMode {
+    #[default]
     NoLoop,
     Loop,
     LoopContinuous,
     PingPong,
     LoopRelease,
+}
+
+/// Round-robin cycling mode for multisampled instruments.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RoundRobinMode {
+    #[default]
+    Sequential,
+    Random,
+    Cycle,
 }
 
 /// A shared buffer holding audio samples (e.g., loaded from a WAV/FLAC file).
@@ -50,6 +60,12 @@ pub struct SampleRegion {
     pub loop_end: usize,
     pub sample_path: String,
     pub buffer: Option<Arc<SampleBuffer>>,
+    /// Round-robin group identifier.
+    pub round_robin_group: u8,
+    /// Specific 0-based round-robin index within the group.
+    pub round_robin_index: u8,
+    /// Total round-robin variations available in this group.
+    pub round_robin_count: u8,
 }
 
 impl SampleRegion {
@@ -65,18 +81,57 @@ impl SampleRegion {
             loop_end: 0,
             sample_path: sample_path.into(),
             buffer: None,
+            round_robin_group: 0,
+            round_robin_index: 0,
+            round_robin_count: 1,
         }
+    }
+
+    pub fn with_velocity(mut self, lovel: u8, hivel: u8) -> Self {
+        self.lovel = lovel;
+        self.hivel = hivel;
+        self
+    }
+
+    pub fn with_round_robin(mut self, group: u8, index: u8, count: u8) -> Self {
+        self.round_robin_group = group;
+        self.round_robin_index = index;
+        self.round_robin_count = count.max(1);
+        self
     }
 
     pub fn matches(&self, note: u8, velocity: u8) -> bool {
         note >= self.lokey && note <= self.hikey && velocity >= self.lovel && velocity <= self.hivel
     }
+
+    pub fn matches_with_rr(&self, note: u8, velocity: u8, rr_idx: u8) -> bool {
+        if !self.matches(note, velocity) {
+            return false;
+        }
+        if self.round_robin_count <= 1 {
+            true
+        } else {
+            self.round_robin_index == (rr_idx % self.round_robin_count)
+        }
+    }
 }
 
-/// Bank of multi-sample regions for SFZ instrument loading.
-#[derive(Debug, Clone, Default)]
+/// Bank of multi-sample regions for SFZ/SF2 instrument loading.
+#[derive(Debug, Clone)]
 pub struct MultiSampleBank {
     pub regions: Vec<SampleRegion>,
+    pub round_robin_mode: RoundRobinMode,
+    rr_counters: std::collections::HashMap<u8, u8>,
+}
+
+impl Default for MultiSampleBank {
+    fn default() -> Self {
+        Self {
+            regions: Vec::new(),
+            round_robin_mode: RoundRobinMode::Sequential,
+            rr_counters: std::collections::HashMap::new(),
+        }
+    }
 }
 
 impl MultiSampleBank {
@@ -90,6 +145,44 @@ impl MultiSampleBank {
 
     pub fn find_region(&self, note: u8, velocity: u8) -> Option<&SampleRegion> {
         self.regions.iter().find(|r| r.matches(note, velocity))
+    }
+
+    /// Selects a matching region taking round-robin state into account and advances the RR counter.
+    pub fn select_region(&mut self, note: u8, velocity: u8) -> Option<SampleRegion> {
+        let matching: Vec<(usize, &SampleRegion)> = self
+            .regions
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| r.matches(note, velocity))
+            .collect();
+
+        if matching.is_empty() {
+            return self.find_nearest_region(note, velocity).cloned();
+        }
+
+        // Check if there is round-robin differentiation among matches
+        let has_rr = matching.iter().any(|(_, r)| r.round_robin_count > 1);
+        if !has_rr {
+            return Some((*matching[0].1).clone());
+        }
+
+        let counter = self.rr_counters.entry(note).or_insert(0);
+        let cur_rr = match self.round_robin_mode {
+            RoundRobinMode::Sequential | RoundRobinMode::Cycle => *counter,
+            RoundRobinMode::Random => {
+                // Pseudo-random index without extra dependencies
+                ((*counter as u32 * 1103515245 + 12345) & 0x7F) as u8
+            }
+        };
+
+        let selected = matching
+            .iter()
+            .find(|(_, r)| r.matches_with_rr(note, velocity, cur_rr))
+            .map(|(_, r)| (*r).clone())
+            .unwrap_or_else(|| (*matching[0].1).clone());
+
+        *counter = counter.wrapping_add(1);
+        Some(selected)
     }
 
     pub fn auto_map_regions_by_keycenter(&mut self) {
@@ -342,9 +435,11 @@ impl MultiSamplerNode {
     }
 
     pub fn trigger_note(&mut self, note: u8, velocity: u8) {
-        if let Some(region) = self.bank.find_nearest_region(note, velocity) {
+        if let Some(region) = self.bank.select_region(note, velocity) {
             if let Some(idx) = self.bank.regions.iter().position(|r| {
-                r.sample_path == region.sample_path && r.pitch_keycenter == region.pitch_keycenter
+                r.sample_path == region.sample_path
+                    && r.pitch_keycenter == region.pitch_keycenter
+                    && r.round_robin_index == region.round_robin_index
             }) {
                 let semitone_diff = note as f64 - region.pitch_keycenter as f64;
                 self.playback_rate = 2.0f64.powf(semitone_diff / 12.0);
@@ -716,5 +811,44 @@ mod tests {
         node.process_block(&inputs, &mut outputs, &ctx);
         // Position should advance into loop and reverse at 20
         assert!(node.playing);
+    }
+
+    #[test]
+    fn test_multisample_velocity_and_round_robin() {
+        let mut bank = MultiSampleBank::new();
+        // Two velocity layers (soft, hard), with 2 round-robin variations each on C4 (note 60)
+        let r_soft_rr1 = SampleRegion::new(60, 60, 60, "snare_soft_1.wav")
+            .with_velocity(1, 64)
+            .with_round_robin(0, 0, 2);
+        let r_soft_rr2 = SampleRegion::new(60, 60, 60, "snare_soft_2.wav")
+            .with_velocity(1, 64)
+            .with_round_robin(0, 1, 2);
+        let r_hard_rr1 = SampleRegion::new(60, 60, 60, "snare_hard_1.wav")
+            .with_velocity(65, 127)
+            .with_round_robin(1, 0, 2);
+        let r_hard_rr2 = SampleRegion::new(60, 60, 60, "snare_hard_2.wav")
+            .with_velocity(65, 127)
+            .with_round_robin(1, 1, 2);
+
+        bank.add_region(r_soft_rr1);
+        bank.add_region(r_soft_rr2);
+        bank.add_region(r_hard_rr1);
+        bank.add_region(r_hard_rr2);
+
+        // First trigger at soft velocity (vel 30): should pick soft_1
+        let reg1 = bank.select_region(60, 30).unwrap();
+        assert_eq!(reg1.sample_path, "snare_soft_1.wav");
+
+        // Second trigger at soft velocity: should alternate to soft_2
+        let reg2 = bank.select_region(60, 30).unwrap();
+        assert_eq!(reg2.sample_path, "snare_soft_2.wav");
+
+        // Third trigger at hard velocity (vel 100): counter is at 2 -> 2 % 2 = 0 -> hard_1
+        let reg3 = bank.select_region(60, 100).unwrap();
+        assert_eq!(reg3.sample_path, "snare_hard_1.wav");
+
+        // Fourth trigger at hard velocity: counter is at 3 -> 3 % 2 = 1 -> hard_2
+        let reg4 = bank.select_region(60, 100).unwrap();
+        assert_eq!(reg4.sample_path, "snare_hard_2.wav");
     }
 }
