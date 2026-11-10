@@ -13,6 +13,7 @@ pub mod disk_stream;
 pub mod graph;
 pub mod metronome;
 pub mod midi_engine;
+pub mod recorder;
 
 pub use audio_engine::{
     default_render_frames, render_project_to_wav, render_project_track_stems, run_live,
@@ -23,4 +24,8 @@ pub use disk_stream::{DiskStreamConfig, DiskStreamHandle, DiskStreamManager};
 pub use graph::{graph_from_project, GraphRunner, NodeFactory};
 pub use metronome::MetronomeGenerator;
 pub use midi_engine::{MidiDeviceManager, MidiInputReceiver, MidiPortInfo, TimestampedMidiEvent};
+pub use recorder::{
+    AudioInputSource, AudioRecorder, LoopRecordSettings, PunchSettings, RecordState,
+    RecordedTakeResult,
+};
 
