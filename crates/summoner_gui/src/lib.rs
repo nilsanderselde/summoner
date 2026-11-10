@@ -28,6 +28,7 @@ pub mod lod;
 pub mod oscilloscope_view;
 pub mod platform;
 pub mod renderer;
+pub mod state_audit;
 pub mod touch_controls;
 pub mod visualizer;
 pub mod waveform_cache;
@@ -39,6 +40,7 @@ pub mod command_palette;
 pub mod patch_canvas;
 
 pub use patch_canvas::*;
+pub use state_audit::*;
 #[cfg(feature = "gui")]
 pub mod param_controls;
 #[cfg(feature = "gui")]
