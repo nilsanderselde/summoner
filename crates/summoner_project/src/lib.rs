@@ -47,6 +47,7 @@ pub mod smf;
 pub mod stock_content;
 pub mod system_tools;
 pub mod templates;
+pub mod user_manual;
 pub mod video;
 
 pub use aaf_omf::*;
@@ -80,6 +81,7 @@ pub use smf::*;
 pub use session_markers::*;
 pub use stock_content::*;
 pub use templates::*;
+pub use user_manual::*;
 pub use video::*;
 
 #[cfg(target_os = "windows")]
