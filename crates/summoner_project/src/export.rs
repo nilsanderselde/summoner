@@ -903,8 +903,14 @@ pub struct BatchConvertReport {
     pub converted_paths: Vec<PathBuf>,
 }
 
-/// Read audio samples from file path (WAV, FLAC, or generic container).
+/// Read audio samples from file path (MP3, AAC/M4A, OGG, AIFF, WAV 24/32-bit and float, FLAC).
 pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
+    if let Ok(decoded) = crate::audio_import::decode_audio_file(path) {
+        if !decoded.samples.is_empty() {
+            return Ok((decoded.samples, decoded.sample_rate, decoded.channels));
+        }
+    }
+
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
