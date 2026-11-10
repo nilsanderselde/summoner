@@ -681,6 +681,13 @@ impl LuaEditorState {
             "Label: Status OK".to_string(),
         ]
     }
+
+    /// Task H2: Hot reload script from file on disk, re-evaluating curve and updating valid state.
+    pub fn hot_reload_from_file(&mut self, path: &std::path::Path) -> Result<f64, String> {
+        let code = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+        self.script_code = code;
+        self.test_run_script()
+    }
 }
 
 // ============================================================================
@@ -795,6 +802,28 @@ mod gpu_waveform_tests {
         let val = lua_editor.test_run_script().unwrap();
         assert!(val > 0.0);
         assert!(lua_editor.is_valid);
+    }
+
+    #[test]
+    fn test_lua_editor_hot_reload_from_file() {
+        let mut lua_editor = LuaEditorState::new();
+        let temp_dir = std::env::temp_dir().join("summoner_lua_test");
+        let _ = std::fs::create_dir_all(&temp_dir);
+        let script_file = temp_dir.join("automation.lua");
+
+        // Write first version of script
+        std::fs::write(&script_file, "return t * 2.0").unwrap();
+        let val1 = lua_editor.hot_reload_from_file(&script_file).unwrap();
+        assert!((val1 - 1.0).abs() < 1e-4); // t=0.5 -> 0.5 * 2.0 = 1.0
+        assert!(lua_editor.is_valid);
+
+        // Hot reload updated version of script
+        std::fs::write(&script_file, "return t * 10.0 + 1.0").unwrap();
+        let val2 = lua_editor.hot_reload_from_file(&script_file).unwrap();
+        assert!((val2 - 6.0).abs() < 1e-4); // t=0.5 -> 0.5 * 10.0 + 1.0 = 6.0
+        assert!(lua_editor.is_valid);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 
     #[test]
