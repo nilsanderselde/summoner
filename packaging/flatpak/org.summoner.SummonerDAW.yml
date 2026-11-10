@@ -6,17 +6,26 @@ sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
 command: summon
 finish-args:
+  # Inter-process communication and window system sockets (X11 & Wayland)
   - --share=ipc
   - --socket=fallback-x11
   - --socket=wayland
+  # Audio subsystems (PulseAudio and direct PipeWire socket)
   - --socket=pulseaudio
+  - --filesystem=xdg-run/pipewire-0
+  # Direct audio and MIDI device access
   - --device=all
+  # Realtime scheduling permissions via RTKit daemon
+  - --system-talk-name=org.freedesktop.RealtimeKit1
+  # File system permissions for project files, samples, and exports
+  - --filesystem=host
 modules:
   - name: summoner
     buildsystem: simple
     build-commands:
-      - cargo build --release
+      - cargo build --release --features gui
       - install -Dm755 target/release/summon /app/bin/summon
+      - install -Dm644 target/Summoner.AppDir/usr/share/applications/summoner.desktop /app/share/applications/org.summoner.SummonerDAW.desktop
     sources:
       - type: dir
         path: ../..

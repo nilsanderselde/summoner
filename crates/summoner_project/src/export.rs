@@ -747,13 +747,32 @@ pub fn export_flac(
         let crc8 = flac_crc8(&frame);
         frame.push(crc8);
 
-        // Subframes (one per channel), each Verbatim: header byte 0x02 (0 padding, 000001 verbatim, 0 wasted bits)
+        // Subframes (one per channel): use Constant subframe for silent/constant runs to achieve lossless compression
         for c in 0..ch {
-            frame.push(0x02);
-            for f in 0..blk_len {
-                let sample_f32 = samples[(frame_offset + f) * ch + c];
-                let pcm = (sample_f32.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
-                frame.extend_from_slice(&pcm.to_be_bytes());
+            let first_sample_f32 = samples[frame_offset * ch + c];
+            let first_pcm = (first_sample_f32.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+            let mut is_constant = true;
+            for f in 1..blk_len {
+                let s_f32 = samples[(frame_offset + f) * ch + c];
+                let pcm = (s_f32.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                if pcm != first_pcm {
+                    is_constant = false;
+                    break;
+                }
+            }
+
+            if is_constant {
+                // Subframe Constant (type 000000, 0 wasted bits -> header byte 0x00)
+                frame.push(0x00);
+                frame.extend_from_slice(&first_pcm.to_be_bytes());
+            } else {
+                // Subframe Verbatim (type 000001, 0 wasted bits -> header byte 0x02)
+                frame.push(0x02);
+                for f in 0..blk_len {
+                    let sample_f32 = samples[(frame_offset + f) * ch + c];
+                    let pcm = (sample_f32.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                    frame.extend_from_slice(&pcm.to_be_bytes());
+                }
             }
         }
 
@@ -1761,6 +1780,44 @@ mod tests {
         let zip_file = fs::File::open(&zip_path).unwrap();
         let mut archive = zip::ZipArchive::new(zip_file).unwrap();
         assert!(archive.by_name("MANIFEST.txt").is_ok());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_flac_compression_and_reference_decoder_verification() {
+        let temp_dir = std::env::temp_dir().join(format!("summoner_flac_cmp_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        // 1. Silent block of 4096 stereo samples (8192 floats = 16384 bytes uncompressed)
+        let silence = vec![0.0f32; 8192];
+        let silent_flac_path = temp_dir.join("silence.flac");
+        export_flac(&silent_flac_path, &silence, 44100, 2, 5).unwrap();
+        let silent_bytes = fs::read(&silent_flac_path).unwrap();
+        // With Constant subframe compression, a 16KB uncompressed payload compresses to < 100 bytes!
+        assert!(
+            silent_bytes.len() < 120,
+            "Silent FLAC should compress to < 120 bytes with constant subframes, got {}",
+            silent_bytes.len()
+        );
+
+        // Verify decoding silence with reference Claxon reader
+        let mut reader = FlacReader::open(&silent_flac_path).expect("Reference flac reader must open file");
+        let decoded: Vec<i32> = reader.samples().map(|s| s.unwrap()).collect();
+        assert_eq!(decoded.len(), silence.len());
+        assert!(decoded.iter().all(|&s| s == 0));
+
+        // 2. High frequency square wave with varying blocks
+        let mut square = Vec::with_capacity(4096);
+        for i in 0..4096 {
+            square.push(if (i / 32) % 2 == 0 { 0.5f32 } else { -0.5f32 });
+        }
+        let square_flac_path = temp_dir.join("square.flac");
+        export_flac(&square_flac_path, &square, 44100, 1, 5).unwrap();
+        let mut square_reader = FlacReader::open(&square_flac_path).expect("Claxon should open square wave FLAC");
+        let decoded_square: Vec<i32> = square_reader.samples().map(|s| s.unwrap()).collect();
+        assert_eq!(decoded_square.len(), square.len());
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

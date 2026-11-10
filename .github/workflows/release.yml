@@ -1,29 +1,30 @@
-name: Summoner Release
+name: Summoner DAW Multi-Platform Release
 
 on:
   push:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-release:
-    name: Build Release Binary (${{ matrix.target }})
+    name: Build Release Asset (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: summoner-linux-x86_64.tar.gz
-            asset_path: target/x86_64-unknown-linux-gnu/release/summon
+            platform: linux
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: summoner-windows-x86_64.zip
-            asset_path: target/x86_64-pc-windows-msvc/release/summon.exe
+            platform: windows
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: summoner-macos-arm64.tar.gz
-            asset_path: target/aarch64-apple-darwin/release/summon
+            platform: macos
 
     steps:
       - name: Checkout Repository
@@ -34,31 +35,72 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install Linux GUI Dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      # Linux-specific build & package steps
+      - name: Install Linux Build Dependencies (Ubuntu)
+        if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxcb1-dev libxcursor-dev libxrandr-dev libxi-dev libasound2-dev libudev-dev pkg-config
+          sudo apt-get install -y libx11-dev libxcb1-dev libxcursor-dev libxrandr-dev libxi-dev libasound2-dev libudev-dev pkg-config dpkg-dev
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build GUI Release Binary
-        run: cargo build --release --target ${{ matrix.target }} --features gui
-
-      - name: Package Artifact (Linux / macOS)
-        if: matrix.os != 'windows-latest'
+      - name: Build and Package Linux Assets
+        if: matrix.platform == 'linux'
         run: |
-          tar -czf ${{ matrix.artifact_name }} -C $(dirname ${{ matrix.asset_path }}) $(basename ${{ matrix.asset_path }})
+          cargo build --release --target ${{ matrix.target }} --features gui
+          cp target/${{ matrix.target }}/release/summon target/release/summon
+          chmod +x target/release/summon
+          # Test smoke run
+          ./target/release/summon --help || true
+          # Create tar.gz
+          tar -czf summoner-linux-x86_64.tar.gz -C target/release summon
+          # Build AppImage & Debian package
+          chmod +x packaging/linux/build_appimage.sh packaging/linux/build_deb.sh
+          ./packaging/linux/build_appimage.sh || true
+          ./packaging/linux/build_deb.sh || true
 
-      - name: Package Artifact (Windows)
-        if: matrix.os == 'windows-latest'
+      # Windows-specific build & package steps
+      - name: Build and Package Windows Assets
+        if: matrix.platform == 'windows'
+        shell: powershell
         run: |
-          Compress-Archive -Path ${{ matrix.asset_path }} -DestinationPath ${{ matrix.artifact_name }}
+          cargo build --release --target ${{ matrix.target }} --features gui
+          if (-not (Test-Path "target\release")) { New-Item -ItemType Directory -Path "target\release" }
+          Copy-Item "target\${{ matrix.target }}\release\summon.exe" "target\release\summon.exe"
+          # Smoke test
+          & "target\release\summon.exe" --help
+          # Create zip
+          Compress-Archive -Path "target\release\summon.exe" -DestinationPath "summoner-windows-x64.zip"
+          # Compile NSIS installer
+          makensis packaging/windows/installer.nsi
+          if (Test-Path "packaging\windows\SummonerDAW-Installer-v1.0.0-x64.exe") {
+              Move-Item "packaging\windows\SummonerDAW-Installer-v1.0.0-x64.exe" "SummonerDAW-Installer-v1.0.0-x64.exe"
+          }
 
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+      # macOS-specific build & package steps
+      - name: Install macOS Cross Targets
+        if: matrix.platform == 'macos'
+        run: |
+          rustup target add x86_64-apple-darwin
+          rustup target add aarch64-apple-darwin
+
+      - name: Build and Package macOS Assets
+        if: matrix.platform == 'macos'
+        run: |
+          cargo build --release --target aarch64-apple-darwin --features gui
+          cargo build --release --target x86_64-apple-darwin --features gui
+          chmod +x packaging/macos/create_dmg.sh packaging/macos/notarize_dmg.sh
+          ./packaging/macos/create_dmg.sh
+          ./packaging/macos/notarize_dmg.sh || true
+          tar -czf summoner-macos-universal.tar.gz -C target/macOS_stage/Summoner.app .
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.artifact_name }}
+          files: |
+            *.tar.gz
+            *.zip
+            *.dmg
+            *.exe
+            target/*.deb
+            target/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

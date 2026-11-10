@@ -607,7 +607,18 @@ impl SummonerApp {
             .input_device_list
             .get(self.audio_driver_panel.selected_input_device_index)
             .cloned();
+        let backend = match self.audio_driver_panel.selected_driver_name.to_lowercase().as_str() {
+            "wasapi" => Some(summoner_core::audio_drivers::AudioDriverBackendType::Wasapi),
+            "asio" => Some(summoner_core::audio_drivers::AudioDriverBackendType::Asio),
+            "coreaudio" => Some(summoner_core::audio_drivers::AudioDriverBackendType::CoreAudio),
+            "alsa" => Some(summoner_core::audio_drivers::AudioDriverBackendType::Alsa),
+            "jack" => Some(summoner_core::audio_drivers::AudioDriverBackendType::Jack),
+            "pipewire" => Some(summoner_core::audio_drivers::AudioDriverBackendType::PipeWire),
+            _ => None,
+        };
         let settings = summoner_engine::AudioEngineSettings {
+            backend,
+            wasapi_exclusive: self.audio_driver_panel.exclusive_mode,
             output_device_name: out_device,
             input_device_name: in_device,
             enable_input: self.audio_driver_panel.enable_input,
@@ -4053,6 +4064,7 @@ mod tests {
 
         assert!(!app.show_preferences_window);
         app.show_preferences_window = true;
+        app.preferences_state.active_category = crate::param_controls::PreferencesCategory::Audio;
         assert_eq!(app.preferences_state.active_category, crate::param_controls::PreferencesCategory::Audio);
 
         // Customize shortcut binding

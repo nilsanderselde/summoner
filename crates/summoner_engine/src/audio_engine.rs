@@ -21,6 +21,7 @@ use std::thread;
 use std::time::Instant;
 use summoner_core::allocator::AllocGuard;
 use summoner_core::audio::{AudioRingBuffer, FixedAudioBuffer};
+use summoner_core::audio_drivers::{AudioDriverBackendType, DeviceDirection};
 use summoner_core::node::ProcessContext;
 use summoner_core::param_bus::{ParamBus, ParamId};
 use summoner_core::transport::Transport;
@@ -61,75 +62,156 @@ pub struct AudioDeviceInfo {
     pub supported_sample_rates: Vec<u32>,
 }
 
+/// Convert an `AudioDriverBackendType` to the corresponding CPAL `HostId` if available on this platform.
+pub fn backend_to_host_id(backend: AudioDriverBackendType) -> Option<cpal::HostId> {
+    let target_names: &[&str] = match backend {
+        AudioDriverBackendType::Wasapi => &["wasapi"],
+        AudioDriverBackendType::Asio => &["asio"],
+        AudioDriverBackendType::CoreAudio => &["coreaudio"],
+        AudioDriverBackendType::Alsa => &["alsa"],
+        AudioDriverBackendType::Jack => &["jack"],
+        AudioDriverBackendType::PipeWire => &["jack", "alsa"],
+        AudioDriverBackendType::Mock => return None,
+    };
+    for host_id in cpal::available_hosts() {
+        let name = host_id.name().to_lowercase();
+        if target_names.iter().any(|&target| name.contains(target)) {
+            return Some(host_id);
+        }
+    }
+    None
+}
+
+/// Convert a CPAL `HostId` to the matching `AudioDriverBackendType`.
+pub fn host_id_to_backend(host_id: cpal::HostId) -> AudioDriverBackendType {
+    let name = host_id.name().to_lowercase();
+    if name.contains("wasapi") {
+        AudioDriverBackendType::Wasapi
+    } else if name.contains("asio") {
+        AudioDriverBackendType::Asio
+    } else if name.contains("coreaudio") {
+        AudioDriverBackendType::CoreAudio
+    } else if name.contains("alsa") {
+        AudioDriverBackendType::Alsa
+    } else if name.contains("jack") {
+        AudioDriverBackendType::Jack
+    } else {
+        AudioDriverBackendType::Mock
+    }
+}
+
 pub struct AudioDeviceManager;
 
 impl AudioDeviceManager {
-    /// List all audio output devices available on the system.
-    pub fn list_output_devices() -> Vec<AudioDeviceInfo> {
-        let host = cpal::default_host();
-        let default_name = host.default_output_device().and_then(|d| d.name().ok());
-        let mut devices = Vec::new();
-        if let Ok(dev_iter) = host.output_devices() {
-            for dev in dev_iter {
-                if let Ok(name) = dev.name() {
-                    let is_default = default_name.as_deref() == Some(&name);
-                    let mut max_channels = 2;
-                    let mut default_sr = 44100;
-                    let mut supported_rates = Vec::new();
-                    if let Ok(configs) = dev.supported_output_configs() {
-                        for c in configs {
-                            max_channels = max_channels.max(c.channels());
-                            let min_r = c.min_sample_rate().0;
-                            let max_r = c.max_sample_rate().0;
-                            for r in [44100, 48000, 88200, 96000, 192000] {
-                                if r >= min_r && r <= max_r && !supported_rates.contains(&r) {
-                                    supported_rates.push(r);
-                                }
-                            }
-                        }
-                    }
-                    if let Ok(cfg) = dev.default_output_config() {
-                        default_sr = cfg.sample_rate().0;
-                    }
-                    devices.push(AudioDeviceInfo {
-                        name,
-                        is_default,
-                        max_channels,
-                        default_sample_rate: default_sr,
-                        supported_sample_rates: supported_rates,
-                    });
-                }
+    /// Return all active or available audio driver backends on the current host.
+    pub fn available_backends() -> Vec<AudioDriverBackendType> {
+        let mut backends = Vec::new();
+        for host_id in cpal::available_hosts() {
+            let b = host_id_to_backend(host_id);
+            if !backends.contains(&b) && b != AudioDriverBackendType::Mock {
+                backends.push(b);
             }
         }
-        devices
+        #[cfg(target_os = "linux")]
+        {
+            if !backends.contains(&AudioDriverBackendType::PipeWire) {
+                backends.push(AudioDriverBackendType::PipeWire);
+            }
+        }
+        backends
     }
 
-    /// List all audio input devices available on the system.
+    /// List all audio devices for a specific audio driver backend and streaming direction.
+    pub fn list_devices_for_backend(
+        backend: AudioDriverBackendType,
+        direction: DeviceDirection,
+    ) -> Vec<AudioDeviceInfo> {
+        let host = if let Some(id) = backend_to_host_id(backend) {
+            match cpal::host_from_id(id) {
+                Ok(h) => h,
+                Err(_) => return Vec::new(),
+            }
+        } else {
+            return Vec::new();
+        };
+
+        match direction {
+            DeviceDirection::Output => Self::list_devices_from_host(&host, true),
+            DeviceDirection::Input => Self::list_devices_from_host(&host, false),
+            DeviceDirection::Duplex => {
+                let mut out = Self::list_devices_from_host(&host, true);
+                let inp = Self::list_devices_from_host(&host, false);
+                for d in inp {
+                    if !out.iter().any(|existing| existing.name == d.name) {
+                        out.push(d);
+                    }
+                }
+                out
+            }
+        }
+    }
+
+    /// List all audio output devices available on the default audio host.
+    pub fn list_output_devices() -> Vec<AudioDeviceInfo> {
+        Self::list_devices_from_host(&cpal::default_host(), true)
+    }
+
+    /// List all audio input devices available on the default audio host.
     pub fn list_input_devices() -> Vec<AudioDeviceInfo> {
-        let host = cpal::default_host();
-        let default_name = host.default_input_device().and_then(|d| d.name().ok());
+        Self::list_devices_from_host(&cpal::default_host(), false)
+    }
+
+    fn list_devices_from_host(host: &cpal::Host, output: bool) -> Vec<AudioDeviceInfo> {
+        let default_name = if output {
+            host.default_output_device().and_then(|d| d.name().ok())
+        } else {
+            host.default_input_device().and_then(|d| d.name().ok())
+        };
         let mut devices = Vec::new();
-        if let Ok(dev_iter) = host.input_devices() {
+        let dev_iter = if output {
+            host.output_devices().ok()
+        } else {
+            host.input_devices().ok()
+        };
+        if let Some(dev_iter) = dev_iter {
             for dev in dev_iter {
                 if let Ok(name) = dev.name() {
                     let is_default = default_name.as_deref() == Some(&name);
-                    let mut max_channels = 1;
+                    let mut max_channels = if output { 2 } else { 1 };
                     let mut default_sr = 44100;
                     let mut supported_rates = Vec::new();
-                    if let Ok(configs) = dev.supported_input_configs() {
-                        for c in configs {
-                            max_channels = max_channels.max(c.channels());
-                            let min_r = c.min_sample_rate().0;
-                            let max_r = c.max_sample_rate().0;
-                            for r in [44100, 48000, 88200, 96000] {
-                                if r >= min_r && r <= max_r && !supported_rates.contains(&r) {
-                                    supported_rates.push(r);
+                    if output {
+                        if let Ok(configs) = dev.supported_output_configs() {
+                            for c in configs {
+                                max_channels = max_channels.max(c.channels());
+                                let min_r = c.min_sample_rate().0;
+                                let max_r = c.max_sample_rate().0;
+                                for r in [44100, 48000, 88200, 96000, 192000] {
+                                    if r >= min_r && r <= max_r && !supported_rates.contains(&r) {
+                                        supported_rates.push(r);
+                                    }
                                 }
                             }
                         }
-                    }
-                    if let Ok(cfg) = dev.default_input_config() {
-                        default_sr = cfg.sample_rate().0;
+                        if let Ok(cfg) = dev.default_output_config() {
+                            default_sr = cfg.sample_rate().0;
+                        }
+                    } else {
+                        if let Ok(configs) = dev.supported_input_configs() {
+                            for c in configs {
+                                max_channels = max_channels.max(c.channels());
+                                let min_r = c.min_sample_rate().0;
+                                let max_r = c.max_sample_rate().0;
+                                for r in [44100, 48000, 88200, 96000] {
+                                    if r >= min_r && r <= max_r && !supported_rates.contains(&r) {
+                                        supported_rates.push(r);
+                                    }
+                                }
+                            }
+                        }
+                        if let Ok(cfg) = dev.default_input_config() {
+                            default_sr = cfg.sample_rate().0;
+                        }
                     }
                     devices.push(AudioDeviceInfo {
                         name,
@@ -147,6 +229,8 @@ impl AudioDeviceManager {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct AudioEngineSettings {
+    pub backend: Option<AudioDriverBackendType>,
+    pub wasapi_exclusive: bool,
     pub output_device_name: Option<String>,
     pub input_device_name: Option<String>,
     pub enable_input: bool,
@@ -159,6 +243,8 @@ pub struct AudioEngineSettings {
 impl Default for AudioEngineSettings {
     fn default() -> Self {
         Self {
+            backend: None,
+            wasapi_exclusive: false,
             output_device_name: None,
             input_device_name: None,
             enable_input: true,
@@ -433,7 +519,21 @@ pub fn spawn_live_engine_with_settings(
         }
     });
 
-    let host = cpal::default_host();
+    let host = if let Some(b) = settings.backend {
+        if let Some(host_id) = backend_to_host_id(b) {
+            cpal::host_from_id(host_id).unwrap_or_else(|err| {
+                eprintln!(
+                    "Warning: failed to load audio backend {:?}: {}. Falling back to default host.",
+                    b, err
+                );
+                cpal::default_host()
+            })
+        } else {
+            cpal::default_host()
+        }
+    } else {
+        cpal::default_host()
+    };
 
     // 1. Resolve output device
     let device_opt = if let Some(ref name) = settings.output_device_name {
@@ -465,7 +565,10 @@ pub fn spawn_live_engine_with_settings(
 
         if let Some(in_dev) = in_dev_opt {
             if let Ok(in_cfg) = in_dev.default_input_config() {
-                let stream_cfg: cpal::StreamConfig = in_cfg.into();
+                let mut stream_cfg: cpal::StreamConfig = in_cfg.into();
+                if let Some(buf_size) = settings.requested_buffer_size {
+                    stream_cfg.buffer_size = cpal::BufferSize::Fixed(buf_size);
+                }
                 in_channels = stream_cfg.channels as usize;
                 let rb_producer = Arc::clone(&input_ring_buffer);
                 let in_active_flag = Arc::clone(&input_active);
@@ -501,7 +604,10 @@ pub fn spawn_live_engine_with_settings(
 
     if let (Some(device), Some(config)) = (device_opt, config_opt) {
         let sample_rate = config.sample_rate().0;
-        let stream_config: cpal::StreamConfig = config.into();
+        let mut stream_config: cpal::StreamConfig = config.into();
+        if let Some(buf_size) = settings.requested_buffer_size {
+            stream_config.buffer_size = cpal::BufferSize::Fixed(buf_size);
+        }
         let channels = stream_config.channels as usize;
 
         let mut proj_for_rate = project.clone();
@@ -838,6 +944,45 @@ mod tests {
         handle.set_metronome_enabled(true);
         handle.set_metronome_gain(0.85);
         handle.start_count_in(2);
+    }
+
+    #[test]
+    fn test_audio_device_manager_available_backends() {
+        let backends = AudioDeviceManager::available_backends();
+        // At least one backend or safe empty list on headless
+        for b in &backends {
+            assert_ne!(*b, AudioDriverBackendType::Mock);
+        }
+
+        // Test listing devices for backend
+        for &backend in &[
+            AudioDriverBackendType::Wasapi,
+            AudioDriverBackendType::Asio,
+            AudioDriverBackendType::CoreAudio,
+            AudioDriverBackendType::Alsa,
+            AudioDriverBackendType::Jack,
+            AudioDriverBackendType::PipeWire,
+        ] {
+            let devs = AudioDeviceManager::list_devices_for_backend(backend, DeviceDirection::Output);
+            let _ = devs.len();
+        }
+    }
+
+    #[test]
+    fn test_audio_engine_settings_backend_and_buffer_size() {
+        let mut settings = AudioEngineSettings::default();
+        assert_eq!(settings.backend, None);
+        assert!(!settings.wasapi_exclusive);
+
+        settings.backend = Some(AudioDriverBackendType::Wasapi);
+        settings.wasapi_exclusive = true;
+        settings.requested_buffer_size = Some(256);
+        settings.requested_sample_rate = Some(48000);
+
+        let project = create_default_project("Settings Test");
+        let param_bus = Arc::new(ParamBus::new());
+        let handle = spawn_live_engine_with_settings(&project, param_bus, false, &settings);
+        assert!(!handle.is_playing());
     }
 }
 
