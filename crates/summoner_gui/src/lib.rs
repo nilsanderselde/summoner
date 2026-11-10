@@ -36,6 +36,9 @@ pub mod waveform_cache;
 pub mod app;
 #[cfg(feature = "gui")]
 pub mod command_palette;
+pub mod patch_canvas;
+
+pub use patch_canvas::*;
 #[cfg(feature = "gui")]
 pub mod param_controls;
 #[cfg(feature = "gui")]
