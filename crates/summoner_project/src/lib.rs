@@ -13,6 +13,7 @@
 
 //! Project document TOML schema parsing and serialization for Summoner DAW.
 
+pub mod aaf_omf;
 pub mod audio_clip;
 pub mod audio_import;
 pub mod backup;
@@ -41,6 +42,7 @@ pub mod stock_content;
 pub mod system_tools;
 pub mod templates;
 
+pub use aaf_omf::*;
 pub use audio_clip::*;
 pub use audio_import::*;
 pub use backup::*;
