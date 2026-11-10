@@ -157,6 +157,7 @@ pub mod ring_mod_view;
 pub mod rotary_doppler_view;
 pub mod rotary_speaker_view;
 pub mod sample_editor_view;
+pub mod score_editor_view;
 pub mod scala_browser;
 pub mod schottky_wavefolder_view;
 pub mod sfz_sampler_view;
@@ -375,6 +376,7 @@ pub use ring_mod_view::{RingModPreset, RingModulatorView, RingWaveformShape, RIN
 pub use rotary_doppler_view::RotaryDopplerView;
 pub use rotary_speaker_view::RotarySpeakerView;
 pub use sample_editor_view::SampleEditorView;
+pub use score_editor_view::*;
 pub use sfz_sampler_view::{SfzLoopTopology, SfzRegionSlot, SfzSamplerPreset, SfzSamplerView, SFZ_SAMPLER_PUCK_HIT_RADIUS};
 pub use sidechain_matrix_view::SidechainMatrixView;
 pub use simd_poly_wavetable_view::{SimdPolyWavetablePreset, SimdPolyWavetableView, WavetableFrameShape, MAX_SIMD_POLY_VOICES, SIMD_POLY_WAVETABLE_PUCK_HIT_RADIUS, WAVETABLE_FRAME_SIZE};

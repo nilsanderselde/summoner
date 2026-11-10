@@ -600,7 +600,7 @@ impl SampleEditorView {
 
         // Hann-windowed DFT analysis
         let mut windowed = vec![0.0f32; window_size];
-        for i in 0..window_size {
+        for (i, win_val) in windowed.iter_mut().enumerate().take(window_size) {
             let idx = start + i;
             let sample_val = if idx < self.waveform_samples.len() {
                 self.waveform_samples[idx]
@@ -609,20 +609,20 @@ impl SampleEditorView {
             };
             // Hann window
             let w = 0.5 * (1.0 - (2.0 * std::f32::consts::PI * i as f32 / window_size as f32).cos());
-            windowed[i] = sample_val * w;
+            *win_val = sample_val * w;
         }
 
-        for k in 0..num_bins {
+        for (k, mag_entry) in magnitudes.iter_mut().enumerate().take(num_bins) {
             let mut re = 0.0f32;
             let mut im = 0.0f32;
-            for n in 0..window_size {
+            for (n, &win_samp) in windowed.iter().enumerate().take(window_size) {
                 let angle = 2.0 * std::f32::consts::PI * k as f32 * n as f32 / window_size as f32;
-                re += windowed[n] * angle.cos();
-                im -= windowed[n] * angle.sin();
+                re += win_samp * angle.cos();
+                im -= win_samp * angle.sin();
             }
             let mag = (re * re + im * im).sqrt() / (window_size as f32 * 0.5);
             let mag_db = (20.0 * (mag + 1e-6).log10()).clamp(-120.0, 0.0);
-            magnitudes[k] = mag_db;
+            *mag_entry = mag_db;
         }
 
         magnitudes
