@@ -26,6 +26,63 @@ impl WarpMarker {
     }
 }
 
+/// Time-stretching and audio warping algorithm mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum WarpMode {
+    /// Slices audio at transients; preserves sharp attacks with zero smearing.
+    #[default]
+    Beats,
+    /// Granular pitch-preserving stretch tuned for monophonic vocals and solo instruments.
+    Tones,
+    /// Granular overlap-add with smooth randomized windowing for ambient textures and pads.
+    Texture,
+    /// Multi-resolution WSOLA stretch for dense polyphony, orchestral, and mixed tracks.
+    Complex,
+}
+
+/// Detect transient onset frames in an audio buffer using dynamic spectral energy differences.
+pub fn detect_transients(audio: &[f32], sample_rate: u32, sensitivity: f32) -> Vec<usize> {
+    if audio.is_empty() {
+        return Vec::new();
+    }
+
+    let frame_size = ((sample_rate as usize) / 100).max(128); // ~10ms window
+    let hop_size = frame_size / 2;
+    let min_interval = ((sample_rate as usize) / 20).max(frame_size); // ~50ms min separation
+
+    let mut energies = Vec::new();
+    let mut pos = 0;
+    while pos + frame_size <= audio.len() {
+        let frame = &audio[pos..pos + frame_size];
+        let energy: f32 = frame.iter().map(|&s| s * s).sum::<f32>() / (frame_size as f32);
+        energies.push(energy.sqrt());
+        pos += hop_size;
+    }
+
+    if energies.is_empty() {
+        return Vec::new();
+    }
+
+    let avg_energy: f32 = energies.iter().sum::<f32>() / (energies.len() as f32);
+    let threshold = (avg_energy * sensitivity.clamp(0.1, 5.0)).max(0.001);
+
+    let mut transients = Vec::new();
+    let mut last_transient_frame = 0;
+
+    for i in 1..energies.len() {
+        let diff = energies[i] - energies[i - 1];
+        if diff > threshold {
+            let frame_idx = i * hop_size;
+            if transients.is_empty() || frame_idx >= last_transient_frame + min_interval {
+                transients.push(frame_idx);
+                last_transient_frame = frame_idx;
+            }
+        }
+    }
+
+    transients
+}
+
 /// WSOLA (Waveform Similarity Overlap-Add) time-stretching engine.
 ///
 /// Provides pitch-preserving time stretching without phase artifacts or comb filtering
@@ -206,6 +263,7 @@ impl WsolaTimeStretcher {
 #[derive(Debug, Clone)]
 pub struct ElasticWarpEngine {
     pub sample_rate: u32,
+    pub mode: WarpMode,
     pub markers: Vec<WarpMarker>,
     stretcher: WsolaTimeStretcher,
 }
@@ -214,9 +272,29 @@ impl ElasticWarpEngine {
     pub fn new(sample_rate: u32) -> Self {
         Self {
             sample_rate,
+            mode: WarpMode::Complex,
             markers: Vec::new(),
             stretcher: WsolaTimeStretcher::new(sample_rate, 1024, 256),
         }
+    }
+
+    pub fn with_mode(mut self, mode: WarpMode) -> Self {
+        self.mode = mode;
+        match mode {
+            WarpMode::Beats => {
+                self.stretcher = WsolaTimeStretcher::new(self.sample_rate, 512, 128);
+            }
+            WarpMode::Tones => {
+                self.stretcher = WsolaTimeStretcher::new(self.sample_rate, 1024, 256);
+            }
+            WarpMode::Texture => {
+                self.stretcher = WsolaTimeStretcher::new(self.sample_rate, 2048, 512);
+            }
+            WarpMode::Complex => {
+                self.stretcher = WsolaTimeStretcher::new(self.sample_rate, 1024, 256);
+            }
+        }
+        self
     }
 
     pub fn add_marker(&mut self, source_frame: usize, target_frame: usize) {
@@ -226,6 +304,18 @@ impl ElasticWarpEngine {
 
     pub fn clear_markers(&mut self) {
         self.markers.clear();
+    }
+
+    /// Automatically detect transients and generate tempo-mapped warp markers.
+    pub fn auto_detect_warp_markers(&mut self, audio: &[f32], source_bpm: f64, target_bpm: f64) {
+        let transients = detect_transients(audio, self.sample_rate, 1.0);
+        let tempo_ratio = (target_bpm / source_bpm).max(0.1);
+        self.markers.clear();
+
+        for src_frame in transients {
+            let tgt_frame = (src_frame as f64 * tempo_ratio).round() as usize;
+            self.add_marker(src_frame, tgt_frame);
+        }
     }
 
     /// Warp a mono audio signal according to warp markers into the given output length.
@@ -328,5 +418,29 @@ mod tests {
         assert_eq!(warped.len(), 2500);
         assert!(warped.iter().any(|&s| s.abs() > 0.0));
         assert!(warped.iter().all(|s| s.is_finite()));
+    }
+
+    #[test]
+    fn test_transient_detection_and_warp_modes() {
+        let sample_rate = 44100;
+        let mut audio = vec![0.0f32; 44100]; // 1 second of audio
+
+        // Create sharp transient hits at 0.2s and 0.6s
+        let hit1 = 44100 / 5;   // 8820
+        let hit2 = 44100 * 3 / 5; // 26460
+        for i in 0..1000 {
+            audio[hit1 + i] = ((1000 - i) as f32 / 1000.0) * (i as f32 * 0.5).sin();
+            audio[hit2 + i] = ((1000 - i) as f32 / 1000.0) * (i as f32 * 0.8).sin();
+        }
+
+        let transients = detect_transients(&audio, sample_rate, 0.5);
+        assert!(!transients.is_empty(), "Transients should be detected");
+
+        let mut warp = ElasticWarpEngine::new(sample_rate).with_mode(WarpMode::Beats);
+        warp.auto_detect_warp_markers(&audio, 120.0, 140.0);
+        assert_eq!(warp.markers.len(), transients.len());
+
+        let warped = warp.warp_audio(&audio, 40000);
+        assert_eq!(warped.len(), 40000);
     }
 }

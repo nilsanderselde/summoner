@@ -27,6 +27,7 @@ pub mod enterprise_qa;
 pub mod export;
 pub mod git_dag;
 pub mod media_export;
+pub mod mixer_snapshots;
 pub mod preset;
 pub mod project_tools;
 pub mod schema;
@@ -36,6 +37,7 @@ pub mod sfz;
 pub mod smf;
 pub mod stock_content;
 pub mod system_tools;
+pub mod templates;
 
 pub use audio_clip::*;
 pub use audio_import::*;
@@ -50,6 +52,7 @@ pub use dependency_audit::*;
 pub use enterprise_qa::*;
 pub use export::*;
 pub use media_export::*;
+pub use mixer_snapshots::*;
 pub use preset::*;
 pub use project_tools::*;
 pub use schema::*;
@@ -57,6 +60,7 @@ pub use scratch_audio_cache::*;
 pub use smf::*;
 pub use session_markers::*;
 pub use stock_content::*;
+pub use templates::*;
 
 #[cfg(target_os = "windows")]
 #[link(name = "advapi32")]

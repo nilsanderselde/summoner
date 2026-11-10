@@ -9,6 +9,7 @@
 //! Enforces zero heap allocations in real-time execution loops under `AllocGuard`.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Maximum pre-allocated dimensions for the scene matrix.
 pub const MAX_MATRIX_TRACKS: usize = 16;
@@ -168,6 +169,26 @@ pub enum MatrixEvent {
     SceneLaunched { scene_idx: usize, beat: f64 },
 }
 
+/// A recorded clip performance captured from Session View into the timeline Arrangement.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ArrangementRecordedClip {
+    pub track_idx: usize,
+    pub scene_idx: usize,
+    pub clip_name: String,
+    pub timeline_start_beat: f64,
+    pub timeline_length_beats: f64,
+    pub loop_length_beats: f64,
+}
+
+/// Session performance recording state.
+#[derive(Debug, Clone, Default)]
+pub struct SessionArrangementRecorder {
+    pub is_recording: bool,
+    pub record_start_beat: f64,
+    pub active_track_clips: HashMap<usize, (usize, String, f64, f64)>, // track_idx -> (scene_idx, name, start_beat, loop_len)
+    pub recorded_clips: Vec<ArrangementRecordedClip>,
+}
+
 /// Horizontal Scene definition spanning all track columns.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Scene {
@@ -208,6 +229,8 @@ pub struct ClipMatrix {
     pub pending_events: Vec<MatrixEvent>,
     #[serde(skip)]
     pub last_evaluated_beat: f64,
+    #[serde(skip)]
+    pub arrangement_recorder: SessionArrangementRecorder,
 }
 
 impl Default for ClipMatrix {
@@ -245,6 +268,7 @@ impl ClipMatrix {
             queued_scene_idx: None,
             pending_events: Vec::with_capacity(64),
             last_evaluated_beat: 0.0,
+            arrangement_recorder: SessionArrangementRecorder::default(),
         }
     }
 
@@ -358,6 +382,28 @@ impl ClipMatrix {
     }
 
     fn execute_clip_launch(&mut self, track_idx: usize, scene_idx: usize, current_beat: f64) {
+        // Track live performance if arrangement recording is active
+        if self.arrangement_recorder.is_recording {
+            let slot_name = self.slots[self.slot_index(track_idx, scene_idx)].name.clone();
+            let slot_len = self.slots[self.slot_index(track_idx, scene_idx)].length_beats;
+            if let Some((old_scene, old_name, start_beat, loop_len)) =
+                self.arrangement_recorder.active_track_clips.remove(&track_idx)
+            {
+                let length = (current_beat - start_beat).max(0.25);
+                self.arrangement_recorder.recorded_clips.push(ArrangementRecordedClip {
+                    track_idx,
+                    scene_idx: old_scene,
+                    clip_name: old_name,
+                    timeline_start_beat: start_beat,
+                    timeline_length_beats: length,
+                    loop_length_beats: loop_len,
+                });
+            }
+            self.arrangement_recorder
+                .active_track_clips
+                .insert(track_idx, (scene_idx, slot_name, current_beat, slot_len));
+        }
+
         // Find existing playing clip on this track to handle legato or stop
         let mut previous_playhead = 0.0;
         let mut was_playing = false;
@@ -558,6 +604,45 @@ impl ClipMatrix {
             }
         }
     }
+
+    /// Begin live capture from Session View into the timeline Arrangement.
+    pub fn start_arrangement_recording(&mut self, start_beat: f64) {
+        self.arrangement_recorder.is_recording = true;
+        self.arrangement_recorder.record_start_beat = start_beat;
+        self.arrangement_recorder.recorded_clips.clear();
+        self.arrangement_recorder.active_track_clips.clear();
+
+        for t in 0..self.num_tracks {
+            for s in 0..self.num_scenes {
+                let idx = self.slot_index(t, s);
+                if self.slots[idx].state == SlotState::Playing {
+                    let name = self.slots[idx].name.clone();
+                    let len = self.slots[idx].length_beats;
+                    self.arrangement_recorder
+                        .active_track_clips
+                        .insert(t, (s, name, start_beat, len));
+                }
+            }
+        }
+    }
+
+    /// Stop live capture and return all recorded arrangement clip instances.
+    pub fn stop_arrangement_recording(&mut self, end_beat: f64) -> Vec<ArrangementRecordedClip> {
+        self.arrangement_recorder.is_recording = false;
+        let active = std::mem::take(&mut self.arrangement_recorder.active_track_clips);
+        for (track_idx, (scene_idx, name, start_beat, loop_len)) in active {
+            let length = (end_beat - start_beat).max(0.25);
+            self.arrangement_recorder.recorded_clips.push(ArrangementRecordedClip {
+                track_idx,
+                scene_idx,
+                clip_name: name,
+                timeline_start_beat: start_beat,
+                timeline_length_beats: length,
+                loop_length_beats: loop_len,
+            });
+        }
+        self.arrangement_recorder.recorded_clips.clone()
+    }
 }
 
 #[cfg(test)]
@@ -638,5 +723,35 @@ mod tests {
         matrix.evaluate_tick(2.0, 4.0, 2.0);
         assert_eq!(matrix.get_slot(0, 0).unwrap().state, SlotState::Stopped);
         assert_eq!(matrix.get_slot(0, 1).unwrap().state, SlotState::Playing);
+    }
+
+    #[test]
+    fn test_clip_matrix_arrangement_recording() {
+        let mut matrix = ClipMatrix::new(2, 2);
+        matrix.set_clip(0, 0, "Drums Verse", 4.0, true);
+        matrix.set_clip(0, 1, "Drums Chorus", 4.0, true);
+
+        matrix.start_arrangement_recording(0.0);
+        // Launch verse at beat 0
+        matrix.trigger_clip(0, 0, true);
+
+        // Advance to beat 8.0
+        matrix.evaluate_tick(8.0, 4.0, 8.0);
+
+        // Switch to chorus at beat 8.0
+        matrix.trigger_clip(0, 1, true);
+
+        // Advance to beat 16.0
+        matrix.evaluate_tick(16.0, 4.0, 8.0);
+
+        let recorded = matrix.stop_arrangement_recording(16.0);
+        assert_eq!(recorded.len(), 2);
+        assert_eq!(recorded[0].clip_name, "Drums Verse");
+        assert_eq!(recorded[0].timeline_start_beat, 0.0);
+        assert_eq!(recorded[0].timeline_length_beats, 8.0);
+
+        assert_eq!(recorded[1].clip_name, "Drums Chorus");
+        assert_eq!(recorded[1].timeline_start_beat, 8.0);
+        assert_eq!(recorded[1].timeline_length_beats, 8.0);
     }
 }

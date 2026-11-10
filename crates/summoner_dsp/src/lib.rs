@@ -15,6 +15,7 @@
 
 pub mod ai_mixing;
 pub mod air_reed;
+pub mod audio_to_midi;
 pub mod audiounit_host;
 pub mod auto_wah;
 pub mod autotune;
@@ -188,6 +189,7 @@ pub use plugin_host::{
     PluginStateConfig,
 };
 pub use sf2_parser::*;
+pub use audio_to_midi::*;
 pub use stock_instruments::*;
 pub use streaming_sampler::*;
 

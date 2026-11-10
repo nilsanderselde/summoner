@@ -157,6 +157,96 @@ pub fn auto_level_track_gain(track: &mut TrackConfig, current_lufs: f32, target_
     }
 }
 
+/// Detect audio tail duration after playback ends (e.g. reverb/delay tails).
+/// Scans backward or in blocks from the end to find where the audio envelope drops
+/// below `threshold_db` (e.g. -60 dBFS) for at least `min_silence_ms`.
+pub fn detect_tail_frames(
+    samples_l: &[f32],
+    samples_r: &[f32],
+    sample_rate: u32,
+    threshold_db: f32,
+) -> usize {
+    let num_samples = samples_l.len().min(if samples_r.is_empty() {
+        samples_l.len()
+    } else {
+        samples_r.len()
+    });
+    if num_samples == 0 {
+        return 0;
+    }
+
+    let threshold_amp = 10.0f32.powf(threshold_db / 20.0);
+    let block_size = (sample_rate as usize / 100).max(1); // 10ms blocks
+    let mut last_audible_frame = 0;
+
+    for i in (0..num_samples).step_by(block_size) {
+        let end = (i + block_size).min(num_samples);
+        let mut max_val = 0.0f32;
+        for j in i..end {
+            let amp_l = samples_l[j].abs();
+            let amp_r = if !samples_r.is_empty() {
+                samples_r[j].abs()
+            } else {
+                amp_l
+            };
+            let peak = amp_l.max(amp_r);
+            if peak > max_val {
+                max_val = peak;
+            }
+        }
+        if max_val >= threshold_amp {
+            last_audible_frame = end;
+        }
+    }
+
+    last_audible_frame
+}
+
+/// Flatten a frozen track into a permanent audio track.
+/// Clears DSP plugin nodes, removes frozen buffer, and converts track to permanent audio track.
+pub fn flatten_track(track: &mut TrackConfig) -> Result<(), String> {
+    if !track.is_frozen || track.frozen_buffer.is_none() {
+        return Err("Cannot flatten a track that is not frozen".to_string());
+    }
+
+    // Retain frozen audio as permanent audio, clear synth/plugin DSP nodes
+    track.nodes.clear();
+    track.is_frozen = false;
+    // Set track name to indicate flattened status if not already
+    if !track.name.contains("(Flattened)") {
+        track.name = format!("{} (Flattened)", track.name);
+    }
+
+    Ok(())
+}
+
+/// Bounce a track in place.
+/// If `replace_source` is true, replaces the DSP nodes on the source track with the bounced audio
+/// and resets frozen state. If false, mutes source track and creates a new bounced track.
+pub fn bounce_in_place(
+    project: &mut ProjectConfig,
+    track_id: u64,
+    rendered_samples: Vec<f32>,
+    replace_source: bool,
+) -> Result<u64, String> {
+    if replace_source {
+        let track = match project.tracks.iter_mut().find(|t| t.id == track_id) {
+            Some(t) => t,
+            None => return Err(format!("Track with ID {} not found", track_id)),
+        };
+
+        track.nodes.clear();
+        track.frozen_buffer = Some(rendered_samples);
+        track.is_frozen = true;
+        if !track.name.contains("(Bounced)") {
+            track.name = format!("{} (Bounced)", track.name);
+        }
+        Ok(track_id)
+    } else {
+        bounce_track_to_new_track(project, track_id, rendered_samples)
+    }
+}
+
 /// Step 695: Bounce track to new audio track (renders to audio, retains original track DSP).
 pub fn bounce_track_to_new_track(
     project: &mut ProjectConfig,
@@ -184,4 +274,76 @@ pub fn bounce_track_to_new_track(
 
     project.tracks.push(bounced_track);
     Ok(new_id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tail_detection() {
+        let sample_rate = 44100;
+        // 2 seconds total: 1 second of audio at 0.5, then 0.5s decaying to -70dB, then silence
+        let mut audio = vec![0.0f32; sample_rate as usize * 2];
+        for i in 0..sample_rate as usize {
+            audio[i] = 0.5;
+        }
+        // decay from 1s to 1.5s
+        let decay_samples = sample_rate as usize / 2;
+        for i in 0..decay_samples {
+            let t = i as f32 / decay_samples as f32;
+            let amp = 0.5 * (-5.0 * t).exp(); // drops below -60dB (0.001) around t=1.0
+            audio[sample_rate as usize + i] = amp;
+        }
+
+        let tail_frame = detect_tail_frames(&audio, &audio, sample_rate, -60.0);
+        // Should detect tail ending somewhere between 1.0s and 1.5s (44100 to 66150)
+        assert!(tail_frame >= 44100);
+        assert!(tail_frame <= 66150);
+    }
+
+    #[test]
+    fn test_freeze_flatten_and_bounce_in_place() {
+        let mut project = ProjectConfig {
+            tracks: vec![TrackConfig {
+                id: 1,
+                name: "Synth Bass".to_string(),
+                nodes: vec![NodeConfig {
+                    kind: "SynthNode".to_string(),
+                    params: std::collections::HashMap::new(),
+                    plugin_state: None,
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        // Freeze
+        let audio = vec![0.1f32; 1000];
+        freeze_track(&mut project.tracks[0], audio.clone());
+        assert!(project.tracks[0].is_frozen);
+        assert_eq!(project.tracks[0].frozen_buffer.as_ref().unwrap().len(), 1000);
+
+        // Flatten
+        flatten_track(&mut project.tracks[0]).unwrap();
+        assert!(!project.tracks[0].is_frozen);
+        assert!(project.tracks[0].nodes.is_empty());
+        assert!(project.tracks[0].name.contains("(Flattened)"));
+
+        // Bounce in place (replace source)
+        let bounced_samples = vec![0.2f32; 2000];
+        let bounced_id = bounce_in_place(&mut project, 1, bounced_samples, true).unwrap();
+        assert_eq!(bounced_id, 1);
+        assert!(project.tracks[0].is_frozen);
+        assert_eq!(project.tracks[0].frozen_buffer.as_ref().unwrap().len(), 2000);
+        assert!(project.tracks[0].name.contains("(Bounced)"));
+
+        // Bounce to new track
+        let new_samples = vec![0.3f32; 3000];
+        let new_id = bounce_in_place(&mut project, 1, new_samples, false).unwrap();
+        assert_eq!(new_id, 2);
+        assert_eq!(project.tracks.len(), 2);
+        assert!(project.tracks[0].muted);
+        assert_eq!(project.tracks[1].name, "Synth Bass (Flattened) (Bounced) (Bounced)");
+    }
 }

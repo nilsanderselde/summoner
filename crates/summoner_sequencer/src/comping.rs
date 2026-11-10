@@ -243,6 +243,109 @@ impl CompTrack {
         (None, None)
     }
 
+    /// Perform swipe-comping across a take lane for a given time range.
+    /// Overlapping master comp regions are automatically trimmed, split, or replaced,
+    /// and the new take slice is cleanly spliced in with crossfades.
+    pub fn swipe_comp(
+        &mut self,
+        take_id: u32,
+        timeline_start: usize,
+        timeline_end: usize,
+    ) -> Option<u32> {
+        if timeline_end <= timeline_start {
+            return None;
+        }
+
+        let take = self.get_take(take_id)?.clone();
+
+        let source_start = timeline_start.saturating_sub(take.start_frame);
+        let duration = timeline_end - timeline_start;
+        let source_end = source_start + duration;
+
+        // Process existing regions: trim, split, or discard
+        let mut updated_regions = Vec::new();
+        for r in &self.comp_regions {
+            let r_start = r.timeline_start_frame;
+            let r_end = r.timeline_end_frame();
+
+            if r_end <= timeline_start || r_start >= timeline_end {
+                // Completely outside swipe range
+                updated_regions.push(r.clone());
+            } else if r_start >= timeline_start && r_end <= timeline_end {
+                // Completely covered by new swipe selection -> discard
+                continue;
+            } else if r_start < timeline_start && r_end > timeline_end {
+                // Region spans across both start and end -> split into two
+                let left_len = timeline_start - r_start;
+                let mut left_piece = r.clone();
+                left_piece.source_end_frame = r.source_start_frame + left_len;
+
+                let right_offset = timeline_end - r_start;
+                let mut right_piece = r.clone();
+                right_piece.id = self.next_region_id;
+                self.next_region_id += 1;
+                right_piece.timeline_start_frame = timeline_end;
+                right_piece.source_start_frame = r.source_start_frame + right_offset;
+
+                updated_regions.push(left_piece);
+                updated_regions.push(right_piece);
+            } else if r_start < timeline_start && r_end > timeline_start {
+                // Overlaps the beginning of the swipe range -> trim end
+                let left_len = timeline_start - r_start;
+                let mut left_piece = r.clone();
+                left_piece.source_end_frame = r.source_start_frame + left_len;
+                updated_regions.push(left_piece);
+            } else if r_start < timeline_end && r_end > timeline_end {
+                // Overlaps the end of the swipe range -> trim start
+                let trim_offset = timeline_end - r_start;
+                let mut right_piece = r.clone();
+                right_piece.timeline_start_frame = timeline_end;
+                right_piece.source_start_frame = r.source_start_frame + trim_offset;
+                updated_regions.push(right_piece);
+            }
+        }
+
+        let new_region_id = self.next_region_id;
+        self.next_region_id += 1;
+
+        let mut new_region = CompRegion::new(
+            new_region_id,
+            take_id,
+            source_start,
+            source_end,
+            timeline_start,
+        );
+        new_region.crossfade_in_samples = self.default_crossfade_samples;
+        new_region.crossfade_out_samples = self.default_crossfade_samples;
+
+        updated_regions.push(new_region);
+        updated_regions.sort_by_key(|r| r.timeline_start_frame);
+        self.comp_regions = updated_regions;
+
+        Some(new_region_id)
+    }
+
+    /// Flatten the current composite regions into a brand new take.
+    pub fn flatten_to_take(&mut self, take_name: &str) -> Option<u32> {
+        if self.comp_regions.is_empty() {
+            return None;
+        }
+
+        let max_end = self
+            .comp_regions
+            .iter()
+            .map(|r| r.timeline_end_frame())
+            .max()
+            .unwrap_or(0);
+        if max_end == 0 {
+            return None;
+        }
+
+        let (samples_l, samples_r) = self.render_comp_stereo(max_end);
+        let take_id = self.add_take(take_name, samples_l, samples_r);
+        Some(take_id)
+    }
+
     /// Find an audio take by ID.
     pub fn get_take(&self, take_id: u32) -> Option<&AudioTake> {
         self.lanes.iter().find(|l| l.take.id == take_id).map(|l| &l.take)
@@ -379,5 +482,48 @@ mod tests {
         let removed = comp.remove_region(second.unwrap());
         assert!(removed);
         assert_eq!(comp.comp_regions.len(), 1);
+    }
+
+    #[test]
+    fn test_swipe_comping_and_flatten_to_take() {
+        let mut comp = CompTrack::new(1, "Lead Vocal", 44100);
+        let take1_l = vec![0.2f32; 10_000];
+        let take2_l = vec![0.8f32; 10_000];
+        let t1 = comp.add_take("Take 1", take1_l.clone(), take1_l);
+        let t2 = comp.add_take("Take 2", take2_l.clone(), take2_l);
+
+        // Initial swipe: Take 1 over whole 0..8000
+        let r1 = comp.swipe_comp(t1, 0, 8000).unwrap();
+        assert_eq!(comp.comp_regions.len(), 1);
+        assert_eq!(comp.comp_regions[0].id, r1);
+
+        // Swipe Take 2 in the middle: 3000..5000 (should split Take 1 into [0..3000] and [5000..8000])
+        let r2 = comp.swipe_comp(t2, 3000, 5000).unwrap();
+        assert_eq!(comp.comp_regions.len(), 3);
+
+        assert_eq!(comp.comp_regions[0].take_id, t1);
+        assert_eq!(comp.comp_regions[0].timeline_start_frame, 0);
+        assert_eq!(comp.comp_regions[0].timeline_end_frame(), 3000);
+
+        assert_eq!(comp.comp_regions[1].take_id, t2);
+        assert_eq!(comp.comp_regions[1].id, r2);
+        assert_eq!(comp.comp_regions[1].timeline_start_frame, 3000);
+        assert_eq!(comp.comp_regions[1].timeline_end_frame(), 5000);
+
+        assert_eq!(comp.comp_regions[2].take_id, t1);
+        assert_eq!(comp.comp_regions[2].timeline_start_frame, 5000);
+        assert_eq!(comp.comp_regions[2].timeline_end_frame(), 8000);
+
+        // Flatten to new take
+        let final_take_id = comp.flatten_to_take("Comped Lead Vocal Master").unwrap();
+        assert_eq!(comp.lanes.len(), 3);
+        let master_take = comp.get_take(final_take_id).unwrap();
+        assert_eq!(master_take.name, "Comped Lead Vocal Master");
+        assert_eq!(master_take.num_frames(), 8000);
+
+        // Check values in middle of take 1 and take 2 sections
+        assert!((master_take.samples_left[1500] - 0.2).abs() < 1e-4);
+        assert!((master_take.samples_left[4000] - 0.8).abs() < 1e-4);
+        assert!((master_take.samples_left[6500] - 0.2).abs() < 1e-4);
     }
 }
