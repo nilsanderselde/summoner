@@ -16,6 +16,7 @@ pub mod metronome;
 pub mod midi_engine;
 pub mod midi_recorder;
 pub mod recorder;
+pub mod virtual_midi;
 
 pub use audio_engine::{
     backend_to_host_id, default_render_frames, host_id_to_backend, render_project_to_wav,
@@ -40,5 +41,8 @@ pub use midi_recorder::{
 pub use recorder::{
     AudioInputSource, AudioRecorder, LoopRecordSettings, PunchSettings, RecordState,
     RecordedTakeResult,
+};
+pub use virtual_midi::{
+    VirtualMidiDirection, VirtualMidiManager, VirtualMidiPort, VirtualMidiPortInfo,
 };
 

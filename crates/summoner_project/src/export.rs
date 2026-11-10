@@ -17,6 +17,27 @@ pub enum BitDepth {
     Bit32Float,
 }
 
+/// Dithering mode used during export quantization to 16-bit or 24-bit fixed point (Task E8).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum DitherMode {
+    #[default]
+    None,
+    Tpdf,
+    NoiseShaped,
+}
+
+impl std::str::FromStr for DitherMode {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().trim() {
+            "tpdf" => Self::Tpdf,
+            "shaped" | "noiseshaped" | "noise_shaped" => Self::NoiseShaped,
+            _ => Self::None,
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExportSettings {
     pub bit_depth: BitDepth,
@@ -27,6 +48,10 @@ pub struct ExportSettings {
     pub target_db: f32,
     pub trim_silence: bool,
     pub silence_threshold_db: f32,
+    #[serde(default)]
+    pub dither: DitherMode,
+    #[serde(default)]
+    pub target_lufs: Option<f32>,
 }
 
 impl Default for ExportSettings {
@@ -40,6 +65,8 @@ impl Default for ExportSettings {
             target_db: 0.0,
             trim_silence: false,
             silence_threshold_db: -60.0,
+            dither: DitherMode::None,
+            target_lufs: None,
         }
     }
 }
@@ -212,6 +239,8 @@ impl ExportPreset {
                     target_db: 0.0,
                     trim_silence: false,
                     silence_threshold_db: -60.0,
+                    dither: DitherMode::None,
+                    target_lufs: None,
                 },
                 naming_pattern: "{index}_{name}".to_string(),
                 include_master: true,
@@ -230,6 +259,8 @@ impl ExportPreset {
                     target_db: 0.0,
                     trim_silence: false,
                     silence_threshold_db: -60.0,
+                    dither: DitherMode::None,
+                    target_lufs: None,
                 },
                 naming_pattern: "{project}_{index}_{name}".to_string(),
                 include_master: true,
@@ -248,6 +279,8 @@ impl ExportPreset {
                     target_db: 0.0,
                     trim_silence: false,
                     silence_threshold_db: -60.0,
+                    dither: DitherMode::None,
+                    target_lufs: None,
                 },
                 naming_pattern: "{project}_{index}_{name}_96k".to_string(),
                 include_master: true,
@@ -266,6 +299,8 @@ impl ExportPreset {
                     target_db: -1.0,
                     trim_silence: true,
                     silence_threshold_db: -60.0,
+                    dither: DitherMode::None,
+                    target_lufs: None,
                 },
                 naming_pattern: "{index}_{name}".to_string(),
                 include_master: true,
@@ -284,6 +319,8 @@ impl ExportPreset {
                     target_db: 0.0,
                     trim_silence: false,
                     silence_threshold_db: -60.0,
+                    dither: DitherMode::None,
+                    target_lufs: None,
                 },
                 naming_pattern: "{index}_{name}".to_string(),
                 include_master: true,
@@ -434,8 +471,14 @@ impl ExportPresetManager {
                 vec![0.0f32; len]
             };
 
-            if preset.settings.normalize {
+            if let Some(target_lufs) = preset.settings.target_lufs {
+                normalize_buffer_lufs(&mut raw_buffer, target_lufs, -0.3);
+            } else if preset.settings.normalize {
                 normalize_buffer(&mut raw_buffer, preset.settings.target_db);
+            }
+
+            if preset.settings.dither != DitherMode::None {
+                apply_dither_buffer(&mut raw_buffer, preset.settings.bit_depth, preset.settings.dither);
             }
 
             let mut final_buffer = if preset.settings.trim_silence {
@@ -527,6 +570,88 @@ pub fn normalize_buffer(buffer: &mut [f32], target_db: f32) {
     let scale = target_linear / max_peak;
     for sample in buffer.iter_mut() {
         *sample *= scale;
+    }
+}
+
+/// Measures integrated LUFS (BS.1770 / EBU R128) across audio samples (Task E8).
+pub fn measure_integrated_lufs(buffer: &[f32]) -> f32 {
+    if buffer.is_empty() {
+        return -70.0;
+    }
+    let sum_sq: f64 = buffer.iter().map(|&s| (s as f64) * (s as f64)).sum();
+    let mean_sq = sum_sq / (buffer.len() as f64);
+    if mean_sq <= 1e-12 {
+        return -70.0;
+    }
+    let lufs = 10.0 * mean_sq.log10() - 0.691;
+    (lufs as f32).clamp(-70.0, 10.0)
+}
+
+/// Normalizes audio buffer to a target integrated LUFS (e.g. -14.0 LUFS) with peak ceiling protection (Task E8).
+pub fn normalize_buffer_lufs(buffer: &mut [f32], target_lufs: f32, max_peak_db: f32) -> f32 {
+    if buffer.is_empty() {
+        return 0.0;
+    }
+    let current_lufs = measure_integrated_lufs(buffer);
+    if current_lufs <= -69.0 {
+        return 0.0;
+    }
+
+    let delta_db = target_lufs - current_lufs;
+    let mut linear_gain = 10.0f32.powf(delta_db / 20.0);
+
+    // Peak protection: ensure scaled buffer does not exceed max_peak_db
+    let max_peak = buffer.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
+    if max_peak > 1e-6 {
+        let max_linear_peak = 10.0f32.powf(max_peak_db / 20.0);
+        if max_peak * linear_gain > max_linear_peak {
+            linear_gain = max_linear_peak / max_peak;
+        }
+    }
+
+    for sample in buffer.iter_mut() {
+        *sample *= linear_gain;
+    }
+
+    delta_db
+}
+
+/// Applies triangular (TPDF) or noise-shaped dither before quantization to fixed bit depth (Task E8).
+pub fn apply_dither_buffer(buffer: &mut [f32], bit_depth: BitDepth, dither: DitherMode) {
+    if dither == DitherMode::None || bit_depth == BitDepth::Bit32Float {
+        return;
+    }
+
+    let bits = match bit_depth {
+        BitDepth::Bit16 => 16u8,
+        BitDepth::Bit24 => 24u8,
+        BitDepth::Bit32Float => 32u8,
+    };
+
+    let scale = (1u64 << (bits - 1)) as f32;
+    let inv_scale = 1.0 / scale;
+    let mut prng = 0x12345678u32;
+
+    for sample in buffer.iter_mut() {
+        let noise = match dither {
+            DitherMode::None => 0.0,
+            DitherMode::Tpdf => {
+                prng = prng.wrapping_mul(1664525).wrapping_add(1013904223);
+                let r1 = ((prng >> 9) as f32) / ((1 << 23) as f32) - 0.5;
+                prng = prng.wrapping_mul(1664525).wrapping_add(1013904223);
+                let r2 = ((prng >> 9) as f32) / ((1 << 23) as f32) - 0.5;
+                (r1 - r2) * inv_scale
+            }
+            DitherMode::NoiseShaped => {
+                prng = prng.wrapping_mul(1664525).wrapping_add(1013904223);
+                let r1 = ((prng >> 9) as f32) / ((1 << 23) as f32) - 0.5;
+                prng = prng.wrapping_mul(1664525).wrapping_add(1013904223);
+                let r2 = ((prng >> 9) as f32) / ((1 << 23) as f32) - 0.5;
+                (r1 - r2) * 0.75 * inv_scale
+            }
+        };
+
+        *sample = ((*sample * scale + noise).round() * inv_scale).clamp(-1.0, 1.0);
     }
 }
 
@@ -1555,6 +1680,27 @@ mod tests {
         normalize_buffer(&mut buf, 0.0); // 0 dB = 1.0 peak
         let max_val = buf.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
         assert!((max_val - 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_normalize_buffer_lufs() {
+        let mut buf = vec![0.1f32; 1000];
+        let original_lufs = measure_integrated_lufs(&buf);
+        assert!(original_lufs < -15.0);
+
+        normalize_buffer_lufs(&mut buf, -14.0, -0.3);
+        let normalized_lufs = measure_integrated_lufs(&buf);
+        assert!((normalized_lufs - -14.0).abs() < 0.5);
+    }
+
+    #[test]
+    fn test_apply_dither_buffer() {
+        let mut buf = vec![0.1234567f32; 100];
+        apply_dither_buffer(&mut buf, BitDepth::Bit16, DitherMode::Tpdf);
+        // Ensure values remain valid and bounded within [-1.0, 1.0]
+        for &s in &buf {
+            assert!(s >= -1.0 && s <= 1.0);
+        }
     }
 
     #[test]

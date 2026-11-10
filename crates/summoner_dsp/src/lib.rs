@@ -15,6 +15,7 @@
 
 pub mod ai_mixing;
 pub mod air_reed;
+pub mod audiounit_host;
 pub mod auto_wah;
 pub mod autotune;
 pub mod biquad;
@@ -22,6 +23,7 @@ pub mod bitcrusher;
 pub mod bowed_string;
 pub mod cassotto_chamber;
 pub mod clavinet;
+pub mod clap_host;
 pub mod composites;
 pub mod compressor;
 pub mod console_emulation;
@@ -50,6 +52,7 @@ pub mod jawari_bridge;
 pub mod ji_bridge;
 pub mod koto;
 pub mod limiter;
+pub mod lv2_host;
 pub mod live_session_recorder;
 pub mod math;
 pub mod meter;

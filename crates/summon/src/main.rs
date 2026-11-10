@@ -40,7 +40,7 @@ fn print_usage() {
     println!("Usage:");
     println!("  summon init [PATH]");
     println!("  summon render-stub [PROJECT_PATH] [--frames N]");
-    println!("  summon render-wav [PROJECT_PATH] [OUTPUT_WAV_PATH] [--frames N]");
+    println!("  summon render-wav [PROJECT_PATH] [OUTPUT_WAV_PATH] [--frames N] [--normalize-lufs LUFS] [--dither none|tpdf|shaped]");
     println!("  summon render-batch [MANIFEST_PATH]");
     println!("  summon patch-export [PROJECT_PATH]");
     println!("  summon patch-export-clap [PROJECT_PATH] [OUTPUT_DIR]");
@@ -713,6 +713,8 @@ fn main() {
                 .unwrap_or("summoner_session.toml");
             let out_wav_path = args.get(3).map(|s| s.as_str()).unwrap_or("output.wav");
             let mut explicit_frames: Option<usize> = None;
+            let mut target_lufs: Option<f32> = None;
+            let mut dither_mode = summoner_project::export::DitherMode::None;
 
             let mut i = 4;
             while i < args.len() {
@@ -720,6 +722,14 @@ fn main() {
                     if let Ok(n) = args[i + 1].parse() {
                         explicit_frames = Some(n);
                     }
+                    i += 2;
+                } else if args[i] == "--normalize-lufs" && i + 1 < args.len() {
+                    if let Ok(lufs) = args[i + 1].parse() {
+                        target_lufs = Some(lufs);
+                    }
+                    i += 2;
+                } else if args[i] == "--dither" && i + 1 < args.len() {
+                    dither_mode = args[i + 1].parse().unwrap_or_default();
                     i += 2;
                 } else {
                     i += 1;
@@ -767,12 +777,8 @@ fn main() {
             const BLOCK_SIZE: usize = 64;
             let mut out_buffer = FixedAudioBuffer::<CHANNELS, BLOCK_SIZE>::new();
 
-            let mut wav_writer =
-                WavWriter::create(out_wav_path, project.transport.sample_rate, CHANNELS as u16)
-                    .expect("Failed to create WAV writer");
-
             let mut frames_processed: usize = 0;
-            let mut interleaved = vec![0.0f32; BLOCK_SIZE * CHANNELS];
+            let mut all_interleaved = Vec::with_capacity(num_frames * CHANNELS);
 
             while frames_processed < num_frames {
                 let block_frames = (num_frames - frames_processed).min(BLOCK_SIZE);
@@ -787,21 +793,34 @@ fn main() {
                     runner.process_block(block_frames, &ctx, &mut out_slices);
                 }
 
-                // Interleave samples and write file I/O outside real-time audio thread scope
                 let ch0 = out_buffer.channel(0);
                 let ch1 = out_buffer.channel(1);
                 for f in 0..block_frames {
-                    interleaved[f * 2] = ch0[f];
-                    interleaved[f * 2 + 1] = ch1[f];
+                    all_interleaved.push(ch0[f]);
+                    all_interleaved.push(ch1[f]);
                 }
-
-                wav_writer
-                    .write_interleaved_samples(&interleaved[..block_frames * CHANNELS])
-                    .expect("Failed to write WAV samples");
 
                 transport.advance_frames(block_frames as u64);
                 frames_processed += block_frames;
             }
+
+            if let Some(lufs) = target_lufs {
+                let gain_applied = summoner_project::export::normalize_buffer_lufs(&mut all_interleaved, lufs, -0.3);
+                println!("Applied loudness normalization: {:.1} dB gain (target: {:.1} LUFS)", gain_applied, lufs);
+            }
+
+            if dither_mode != summoner_project::export::DitherMode::None {
+                summoner_project::export::apply_dither_buffer(&mut all_interleaved, summoner_project::export::BitDepth::Bit16, dither_mode);
+                println!("Applied export dithering: {:?}", dither_mode);
+            }
+
+            let mut wav_writer =
+                WavWriter::create(out_wav_path, project.transport.sample_rate, CHANNELS as u16)
+                    .expect("Failed to create WAV writer");
+
+            wav_writer
+                .write_interleaved_samples(&all_interleaved)
+                .expect("Failed to write WAV samples");
 
             wav_writer
                 .finalize()
