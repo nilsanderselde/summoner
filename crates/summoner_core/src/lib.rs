@@ -14,6 +14,7 @@
 //! Core audio abstractions, node graph evaluation, and zero-allocation primitives for Summoner DAW.
 #![allow(missing_docs)]
 
+pub mod ableton_link;
 pub mod adaptive_buffer;
 pub mod allocator;
 pub mod articulation_bus;
@@ -57,6 +58,7 @@ pub mod transport;
 pub mod tuning_matrix;
 pub mod voice;
 pub mod wav;
+pub use ableton_link::*;
 pub use adaptive_buffer::AdaptiveBufferScaler;
 pub use articulation_bus::*;
 pub use audio::{
