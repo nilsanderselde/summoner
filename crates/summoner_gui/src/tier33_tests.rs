@@ -40,6 +40,8 @@ mod tests {
             auto_save_interval_secs: app.auto_save_interval_secs,
             show_tutorial_tooltips: app.show_tutorial_tooltips,
             high_contrast_mode: app.high_contrast_mode,
+            colorblind_mode: app.colorblind_mode,
+            ui_scale: app.ui_scale,
             font_size: app.font_size,
             reduce_motion: app.reduce_motion,
             keyboard_navigation: app.keyboard_navigation,

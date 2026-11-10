@@ -3,8 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Colorblind accessibility theme modes (Step 1305).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ColorblindMode {
+    #[default]
     None,
     Protanopia,   // Red-blind / red-weak
     Deuteranopia, // Green-blind / green-weak

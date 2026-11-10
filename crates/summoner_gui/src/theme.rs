@@ -176,6 +176,97 @@ pub fn apply_high_contrast_theme(ctx: &egui::Context, font_size: f32) {
     update_font_styles(ctx, font_size);
 }
 
+/// Applies Okabe-Ito colorblind-safe theme for Protanopia (red-blindness).
+#[cfg(feature = "gui")]
+pub fn apply_protanopia_theme(ctx: &egui::Context, font_size: f32) {
+    let mut visuals = Visuals::dark();
+    visuals.panel_fill = Color32::from_rgb(12, 16, 26);
+    visuals.window_fill = Color32::from_rgb(20, 26, 40);
+    visuals.extreme_bg_color = Color32::from_rgb(6, 8, 14);
+
+    // Replace red/green accents with high-contrast Sky Blue and Amber Orange
+    let sky_blue = Color32::from_rgb(86, 180, 233);
+    let amber_orange = Color32::from_rgb(230, 159, 0);
+
+    visuals.widgets.hovered.bg_fill = Color32::from_rgb(32, 50, 80);
+    visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.5_f32, sky_blue);
+    visuals.widgets.hovered.fg_stroke = egui::Stroke::new(1.5_f32, Color32::WHITE);
+
+    visuals.widgets.active.bg_fill = sky_blue;
+    visuals.widgets.active.bg_stroke = egui::Stroke::new(2.0_f32, amber_orange);
+    visuals.widgets.active.fg_stroke = egui::Stroke::new(2.0_f32, Color32::BLACK);
+
+    visuals.selection.bg_fill = Color32::from_rgba_unmultiplied(86, 180, 233, 100);
+    visuals.selection.stroke = egui::Stroke::new(2.0_f32, sky_blue);
+
+    visuals.window_rounding = Rounding::same(6.0);
+    ctx.set_visuals(visuals);
+    update_font_styles(ctx, font_size);
+}
+
+/// Applies Okabe-Ito colorblind-safe theme for Deuteranopia (green-blindness).
+#[cfg(feature = "gui")]
+pub fn apply_deuteranopia_theme(ctx: &egui::Context, font_size: f32) {
+    let mut visuals = Visuals::dark();
+    visuals.panel_fill = Color32::from_rgb(10, 15, 24);
+    visuals.window_fill = Color32::from_rgb(18, 25, 38);
+    visuals.extreme_bg_color = Color32::from_rgb(5, 8, 13);
+
+    // Okabe-Ito Deep Blue and Yellow
+    let deep_blue = Color32::from_rgb(0, 114, 178);
+    let yellow = Color32::from_rgb(240, 228, 66);
+
+    visuals.widgets.hovered.bg_fill = Color32::from_rgb(28, 45, 75);
+    visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.5_f32, yellow);
+    visuals.widgets.hovered.fg_stroke = egui::Stroke::new(1.5_f32, Color32::WHITE);
+
+    visuals.widgets.active.bg_fill = deep_blue;
+    visuals.widgets.active.bg_stroke = egui::Stroke::new(2.0_f32, yellow);
+    visuals.widgets.active.fg_stroke = egui::Stroke::new(2.0_f32, Color32::WHITE);
+
+    visuals.selection.bg_fill = Color32::from_rgba_unmultiplied(0, 114, 178, 120);
+    visuals.selection.stroke = egui::Stroke::new(2.0_f32, yellow);
+
+    visuals.window_rounding = Rounding::same(6.0);
+    ctx.set_visuals(visuals);
+    update_font_styles(ctx, font_size);
+}
+
+/// Applies Okabe-Ito colorblind-safe theme for Tritanopia (blue-blindness).
+#[cfg(feature = "gui")]
+pub fn apply_tritanopia_theme(ctx: &egui::Context, font_size: f32) {
+    let mut visuals = Visuals::dark();
+    visuals.panel_fill = Color32::from_rgb(14, 14, 18);
+    visuals.window_fill = Color32::from_rgb(24, 22, 28);
+    visuals.extreme_bg_color = Color32::from_rgb(8, 8, 10);
+
+    // Okabe-Ito Bluish Green and Reddish Purple
+    let bluish_green = Color32::from_rgb(0, 158, 115);
+    let reddish_purple = Color32::from_rgb(204, 121, 167);
+
+    visuals.widgets.hovered.bg_fill = Color32::from_rgb(45, 30, 48);
+    visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.5_f32, bluish_green);
+    visuals.widgets.hovered.fg_stroke = egui::Stroke::new(1.5_f32, Color32::WHITE);
+
+    visuals.widgets.active.bg_fill = reddish_purple;
+    visuals.widgets.active.bg_stroke = egui::Stroke::new(2.0_f32, bluish_green);
+    visuals.widgets.active.fg_stroke = egui::Stroke::new(2.0_f32, Color32::WHITE);
+
+    visuals.selection.bg_fill = Color32::from_rgba_unmultiplied(204, 121, 167, 110);
+    visuals.selection.stroke = egui::Stroke::new(2.0_f32, bluish_green);
+
+    visuals.window_rounding = Rounding::same(6.0);
+    ctx.set_visuals(visuals);
+    update_font_styles(ctx, font_size);
+}
+
+/// Sets application UI scaling factor (pixels per point).
+#[cfg(feature = "gui")]
+pub fn set_ui_scale(ctx: &egui::Context, scale_factor: f32) {
+    let clamped = scale_factor.clamp(0.5, 3.0);
+    ctx.set_pixels_per_point(clamped);
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "gui")]
@@ -192,6 +283,10 @@ mod tests {
 
         apply_light_theme(&ctx, 14.0);
         apply_high_contrast_theme(&ctx, 16.0);
+        apply_protanopia_theme(&ctx, 14.0);
+        apply_deuteranopia_theme(&ctx, 14.0);
+        apply_tritanopia_theme(&ctx, 14.0);
+        set_ui_scale(&ctx, 1.25);
     }
 
     #[test]

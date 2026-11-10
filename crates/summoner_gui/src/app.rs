@@ -58,6 +58,10 @@ pub struct GuiState {
     pub show_tutorial_tooltips: bool,
     #[serde(default)]
     pub high_contrast_mode: bool,
+    #[serde(default)]
+    pub colorblind_mode: crate::views::theme_customizer::ColorblindMode,
+    #[serde(default = "default_ui_scale")]
+    pub ui_scale: f32,
     #[serde(default = "default_font_size")]
     pub font_size: f32,
     #[serde(default)]
@@ -96,6 +100,9 @@ fn default_track_header_width() -> f32 {
 }
 fn default_dark_theme() -> bool {
     true
+}
+fn default_ui_scale() -> f32 {
+    1.0
 }
 fn default_true() -> bool {
     true
@@ -194,6 +201,8 @@ pub struct SummonerApp {
     pub patch_browser_state: crate::views::patch_browser::PatchBrowserState,
     pub show_patch_browser: bool,
     pub high_contrast_mode: bool,
+    pub colorblind_mode: crate::views::theme_customizer::ColorblindMode,
+    pub ui_scale: f32,
     pub font_size: f32,
     pub reduce_motion: bool,
     pub keyboard_navigation: bool,
@@ -378,6 +387,8 @@ impl SummonerApp {
             show_patch_browser: true,
             co_producer_state: crate::views::co_producer::CoProducerState::default(),
             high_contrast_mode: false,
+            colorblind_mode: crate::views::theme_customizer::ColorblindMode::None,
+            ui_scale: 1.0,
             font_size: 14.0,
             reduce_motion: false,
             keyboard_navigation: true,
@@ -484,6 +495,8 @@ impl SummonerApp {
             app.show_tutorial_tooltips = state.show_tutorial_tooltips;
             app.show_first_run_wizard = state.first_run;
             app.high_contrast_mode = state.high_contrast_mode;
+            app.colorblind_mode = state.colorblind_mode;
+            app.ui_scale = state.ui_scale;
             app.font_size = state.font_size;
             app.reduce_motion = state.reduce_motion;
             app.keyboard_navigation = state.keyboard_navigation;
@@ -579,6 +592,8 @@ impl SummonerApp {
             auto_save_interval_secs: self.auto_save_interval_secs,
             show_tutorial_tooltips: self.show_tutorial_tooltips,
             high_contrast_mode: self.high_contrast_mode,
+            colorblind_mode: self.colorblind_mode,
+            ui_scale: self.ui_scale,
             font_size: self.font_size,
             reduce_motion: self.reduce_motion,
             keyboard_navigation: self.keyboard_navigation,
@@ -1130,10 +1145,28 @@ impl eframe::App for SummonerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.high_contrast_mode {
             crate::theme::apply_high_contrast_theme(ctx, self.font_size);
-        } else if self.dark_theme {
-            crate::theme::apply_summoner_theme(ctx, self.font_size);
         } else {
-            crate::theme::apply_light_theme(ctx, self.font_size);
+            match self.colorblind_mode {
+                crate::views::theme_customizer::ColorblindMode::Protanopia => {
+                    crate::theme::apply_protanopia_theme(ctx, self.font_size);
+                }
+                crate::views::theme_customizer::ColorblindMode::Deuteranopia => {
+                    crate::theme::apply_deuteranopia_theme(ctx, self.font_size);
+                }
+                crate::views::theme_customizer::ColorblindMode::Tritanopia => {
+                    crate::theme::apply_tritanopia_theme(ctx, self.font_size);
+                }
+                crate::views::theme_customizer::ColorblindMode::None => {
+                    if self.dark_theme {
+                        crate::theme::apply_summoner_theme(ctx, self.font_size);
+                    } else {
+                        crate::theme::apply_light_theme(ctx, self.font_size);
+                    }
+                }
+            }
+        }
+        if (self.ui_scale - 1.0).abs() > 0.001 {
+            crate::theme::set_ui_scale(ctx, self.ui_scale);
         }
 
         if self.reduce_motion {
@@ -3040,6 +3073,45 @@ impl eframe::App for SummonerApp {
                                 );
                             });
                             ui.end_row();
+
+                            ui.label("Colorblind Palette:");
+                            ui.push_id("acc_colorblind_combo", |ui| {
+                                egui::ComboBox::from_id_source("acc_colorblind_select")
+                                    .selected_text(self.colorblind_mode.display_name())
+                                    .show_ui(ui, |ui| {
+                                        ui.selectable_value(
+                                            &mut self.colorblind_mode,
+                                            crate::views::theme_customizer::ColorblindMode::None,
+                                            "Standard (Full Color)",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.colorblind_mode,
+                                            crate::views::theme_customizer::ColorblindMode::Protanopia,
+                                            "Protanopia (Red-Blind Safe)",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.colorblind_mode,
+                                            crate::views::theme_customizer::ColorblindMode::Deuteranopia,
+                                            "Deuteranopia (Green-Blind Safe)",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.colorblind_mode,
+                                            crate::views::theme_customizer::ColorblindMode::Tritanopia,
+                                            "Tritanopia (Blue-Blind Safe)",
+                                        );
+                                    });
+                            });
+                            ui.end_row();
+
+                            ui.label("UI Scale Factor:");
+                            ui.push_id("acc_ui_scale_slider", |ui| {
+                                ui.add(
+                                    egui::Slider::new(&mut self.ui_scale, 0.75..=2.5)
+                                        .text("zoom")
+                                        .step_by(0.05),
+                                );
+                            });
+                            ui.end_row();
                         });
 
                     ui.separator();
@@ -3756,6 +3828,8 @@ mod tests {
             auto_save_interval_secs: 300,
             show_tutorial_tooltips: true,
             high_contrast_mode: false,
+            colorblind_mode: crate::views::theme_customizer::ColorblindMode::None,
+            ui_scale: 1.0,
             font_size: 14.0,
             reduce_motion: false,
             keyboard_navigation: true,
@@ -3875,6 +3949,8 @@ mod tests {
         assert!(app.keyboard_navigation);
 
         app.high_contrast_mode = true;
+        app.colorblind_mode = crate::views::theme_customizer::ColorblindMode::Protanopia;
+        app.ui_scale = 1.5;
         app.font_size = 18.5;
         app.reduce_motion = true;
         app.keyboard_navigation = true;
@@ -3894,6 +3970,8 @@ mod tests {
             auto_save_interval_secs: 300,
             show_tutorial_tooltips: true,
             high_contrast_mode: app.high_contrast_mode,
+            colorblind_mode: app.colorblind_mode,
+            ui_scale: app.ui_scale,
             font_size: app.font_size,
             reduce_motion: app.reduce_motion,
             keyboard_navigation: app.keyboard_navigation,
@@ -3903,6 +3981,11 @@ mod tests {
 
         let loaded = GuiState::load_from_path(&temp_path).expect("GuiState should load");
         assert!(loaded.high_contrast_mode);
+        assert_eq!(
+            loaded.colorblind_mode,
+            crate::views::theme_customizer::ColorblindMode::Protanopia
+        );
+        assert_eq!(loaded.ui_scale, 1.5);
         assert_eq!(loaded.font_size, 18.5);
         assert!(loaded.reduce_motion);
         assert!(loaded.keyboard_navigation);
@@ -3957,6 +4040,8 @@ mod tests {
             auto_save_interval_secs: 300,
             show_tutorial_tooltips: true,
             high_contrast_mode: false,
+            colorblind_mode: crate::views::theme_customizer::ColorblindMode::None,
+            ui_scale: 1.0,
             font_size: 14.0,
             reduce_motion: false,
             keyboard_navigation: true,
