@@ -56,6 +56,7 @@ pub mod system_tools;
 pub mod templates;
 pub mod user_manual;
 pub mod video;
+pub mod wasm_headless;
 pub mod webrtc_mesh;
 
 pub use aaf_omf::*;
@@ -98,6 +99,7 @@ pub use stock_content::*;
 pub use templates::*;
 pub use user_manual::*;
 pub use video::*;
+pub use wasm_headless::*;
 pub use webrtc_mesh::*;
 
 #[cfg(target_os = "windows")]
