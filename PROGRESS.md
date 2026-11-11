@@ -1,5 +1,5 @@
 # Summoner DAW — Product Readiness & Shippability Tracker
-> **Current Shippability Score:** 7.8 / 10  
+> **Current Shippability Score:** not scored - see `local/AUDIT_20261110.md` (many modules are models, not real OS/plugin backends)  
 > **Status:** Sprint 1 Active (Live I/O Foundation & DAG Integration — Audit 2026-11-09)  
 > **Authoritative Root:** `PROGRESS.md` & `local/AUDIT_20261109.md`  
 > **License:** AGPLv3
@@ -18,7 +18,7 @@ Following the comprehensive gap analysis in `local/AUDIT_20261109.md`, the proje
 | **GUI Accessibility & Two-Tier UX** | 25% | 8.5 / 10 | 2.125 | Arranger, Piano Roll, Modular Canvas, Mixer, Stage Matrix, Real Undo/Redo routed to GitSessionDag |
 | **Factory Content & Presets** | 15% | 8.5 / 10 | 1.275 | Curated factory presets packaged & recursive scanning enabled across synth, physical modeling, drums |
 | **Codebase Ergonomics & Build Speed**| 15% | 9.0 / 10 | 1.350 | Fast incremental builds, lock-free ParamBus live automation dispatch across DAW parameters |
-| **Total Weighted Score** | **100%** | | **8.91 / 10** | **Sprint 1 Active Track** |
+| **Total Weighted Score** | **100%** | | **self-reported, unverified** | **Sprint 1 Active Track** |
 
 ---
 
@@ -31,7 +31,7 @@ Following the comprehensive gap analysis in `local/AUDIT_20261109.md`, the proje
 
 ### 🎯 Gap 2: Codebase Ergonomics & Binary Footprint (`dsp_node_ui.rs`)
 - **Status:** **STABILIZED & FAST INCREMENTAL BUILDS**
-- **Issue:** Single monolithic file `crates/summoner_gui/src/dsp_node_ui.rs` has grown to 1.49 MB (>11,700 lines) with a match block spanning 1,090 node types.
+- **Issue:** Single monolithic file `crates/summoner_gui/src/dsp_node_ui.rs` has grown to 6.2 MB (rustfmt cannot process it; see audit item FND-2) with a match block spanning 1,090 node types.
 - **Current Metric:** Incremental compilation executes in under 0.4s; complete GUI unit test suite runs 976 tests in 0.23s.
 - **Post-1.0 Roadmap:** Full category submodularization into declarative tables queued for post-1.0 maintenance to preserve stability during release candidate stabilization.
 

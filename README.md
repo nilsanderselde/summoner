@@ -49,13 +49,13 @@ cargo run -p summon --features gui -- gui
 
 | Crate | Responsibilities |
 |---|---|
-| [`summoner_core`](file:///crates/summoner_core) | Core data structures, audio node traits, transport clock, memory allocator guard, voice pool. |
-| [`summoner_dsp`](file:///crates/summoner_dsp) | SIMD DSP algorithms, oscillators, filters, modulators, sampler, granular synth, drum machine, effects. |
-| [`summoner_harmony`](file:///crates/summoner_harmony) | Microtonal tuning (N-EDO, `.scl`), harmonic bus, chord suggestions, scale snapping. |
-| [`summoner_project`](file:///crates/summoner_project) | Project schema, TOML serialization, Git micro-commit DAG, asset hashing. |
-| [`summoner_sequencer`](file:///crates/summoner_sequencer) | Automation timeline, step sequencers, generative engines (Markov, Cellular Automata). |
-| [`summoner_gui`](file:///crates/summoner_gui) | Graphical user interface views (Arranger, Node Graph, Piano Roll, Mixer, Stage View). |
-| [`summon`](file:///crates/summon) | Headless CLI application and audio stream runtime. |
+| [`summoner_core`](crates/summoner_core) | Core data structures, audio node traits, transport clock, memory allocator guard, voice pool. |
+| [`summoner_dsp`](crates/summoner_dsp) | SIMD DSP algorithms, oscillators, filters, modulators, sampler, granular synth, drum machine, effects. |
+| [`summoner_harmony`](crates/summoner_harmony) | Microtonal tuning (N-EDO, `.scl`), harmonic bus, chord suggestions, scale snapping. |
+| [`summoner_project`](crates/summoner_project) | Project schema, TOML serialization, Git micro-commit DAG, asset hashing. |
+| [`summoner_sequencer`](crates/summoner_sequencer) | Automation timeline, step sequencers, generative engines (Markov, Cellular Automata). |
+| [`summoner_gui`](crates/summoner_gui) | Graphical user interface views (Arranger, Node Graph, Piano Roll, Mixer, Stage View). |
+| [`summon`](crates/summon) | Headless CLI application and audio stream runtime. |
 
 ---
 
