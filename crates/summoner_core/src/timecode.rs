@@ -631,6 +631,6 @@ mod tests {
             }
         }
         // An 80-bit frame with biphase code has between 80 and 160 transitions
-        assert!(zero_crossings >= 80 && zero_crossings <= 160);
+        assert!((80..=160).contains(&zero_crossings));
     }
 }

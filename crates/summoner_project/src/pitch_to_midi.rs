@@ -306,9 +306,7 @@ mod tests {
             audio.push((2.0 * std::f32::consts::PI * 440.0 * i as f32 / sr).sin() * 0.7);
         }
         // Silence for 0.1 seconds
-        for _ in 0..((sr * 0.1) as usize) {
-            audio.push(0.0);
-        }
+        audio.extend(std::iter::repeat_n(0.0, (sr * 0.1) as usize));
         // Note 2: 261.63 Hz (C4 = 60) for 0.25 seconds
         for i in 0..((sr * 0.25) as usize) {
             audio.push((2.0 * std::f32::consts::PI * 261.63 * i as f32 / sr).sin() * 0.7);

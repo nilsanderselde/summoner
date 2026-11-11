@@ -635,9 +635,9 @@ mod tests {
 
         node.process(&inputs, &mut outputs, &ctx);
 
-        for i in 0..512 {
-            assert!((outputs[0][i] - 0.4).abs() < 1e-5);
-            assert!((outputs[1][i] - 0.4).abs() < 1e-5);
+        for (a, b) in outputs[0].iter().zip(outputs[1].iter()).take(512) {
+            assert!((a - 0.4).abs() < 1e-5);
+            assert!((b - 0.4).abs() < 1e-5);
         }
     }
 }

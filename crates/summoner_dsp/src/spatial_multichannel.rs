@@ -499,7 +499,7 @@ mod tests {
         // Front source (azimuth = 0, elevation = 0)
         panner.set_position(0.0, 0.0, 1.0);
         // W (index 0) = 0.707, X (front, index 1) = 1.0, Y (left, index 2) = 0.0, Z (up, index 3) = 0.0
-        assert!((panner.target_gains[0] - 0.7071).abs() < 1e-3);
+        assert!((panner.target_gains[0] - std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-3);
         assert!((panner.target_gains[1] - 1.0).abs() < 1e-3);
         assert!(panner.target_gains[2].abs() < 1e-3);
         assert!(panner.target_gains[3].abs() < 1e-3);

@@ -482,10 +482,11 @@ mod tests {
         }
         writer.finalize().unwrap();
 
-        let mut config = DiskStreamConfig::default();
-        config.buffer_capacity_frames = 16384;
-        config.read_chunk_frames = 4096;
-        config.low_watermark_frames = 8192;
+        let config = DiskStreamConfig {
+            buffer_capacity_frames: 16384,
+            read_chunk_frames: 4096,
+            low_watermark_frames: 8192,
+        };
 
         let mut manager = DiskStreamManager::new(config);
         let handle = manager.open_stream("test_stream", &wav_path).unwrap();

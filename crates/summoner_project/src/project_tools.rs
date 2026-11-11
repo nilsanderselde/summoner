@@ -285,9 +285,7 @@ mod tests {
         let sample_rate = 44100;
         // 2 seconds total: 1 second of audio at 0.5, then 0.5s decaying to -70dB, then silence
         let mut audio = vec![0.0f32; sample_rate as usize * 2];
-        for i in 0..sample_rate as usize {
-            audio[i] = 0.5;
-        }
+        audio[..sample_rate as usize].fill(0.5);
         // decay from 1s to 1.5s
         let decay_samples = sample_rate as usize / 2;
         for i in 0..decay_samples {

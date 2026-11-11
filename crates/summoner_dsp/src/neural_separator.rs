@@ -287,8 +287,10 @@ mod tests {
 
     #[test]
     fn test_neural_separator_hardware_provider_selection() {
-        let mut config = NeuralSeparatorConfig::default();
-        config.provider = OnnxExecutionProvider::DirectMl { device_id: 1 };
+        let config = NeuralSeparatorConfig {
+            provider: OnnxExecutionProvider::DirectMl { device_id: 1 },
+            ..Default::default()
+        };
         assert_eq!(config.provider.name(), "DirectML (DirectX 12 GPU)");
 
         let separator = NeuralAudioSeparator::new(config);

@@ -1708,7 +1708,7 @@ mod tests {
         apply_dither_buffer(&mut buf, BitDepth::Bit16, DitherMode::Tpdf);
         // Ensure values remain valid and bounded within [-1.0, 1.0]
         for &s in &buf {
-            assert!(s >= -1.0 && s <= 1.0);
+            assert!((-1.0..=1.0).contains(&s));
         }
     }
 

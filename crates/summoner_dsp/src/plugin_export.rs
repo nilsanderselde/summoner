@@ -522,10 +522,10 @@ mod tests {
 
         let mut bridge = PluginRuntimeBridge::new(manifest, Box::new(code_node), 44100.0);
 
-        let in_left = vec![1.0f32; 32];
-        let in_right = vec![1.0f32; 32];
-        let mut out_left = vec![0.0f32; 32];
-        let mut out_right = vec![0.0f32; 32];
+        let in_left = [1.0f32; 32];
+        let in_right = [1.0f32; 32];
+        let mut out_left = [0.0f32; 32];
+        let mut out_right = [0.0f32; 32];
 
         let inputs = [&in_left[..], &in_right[..]];
         let mut outputs = [&mut out_left[..], &mut out_right[..]];

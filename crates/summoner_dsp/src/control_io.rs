@@ -652,7 +652,7 @@ mod tests {
         let mut node = UdpControlNode::new(0.0, 100.0);
         node.handle_datagram(b"0.75");
 
-        let mut cv_out = vec![0.0f32; 32];
+        let mut cv_out = [0.0f32; 32];
         let mut outputs = [&mut cv_out[..]];
         let ctx = ProcessContext {
             sample_rate: 44100,
@@ -675,8 +675,8 @@ mod tests {
         node.parse_serial_line("A0: 1023\n"); // Max ADC -> 1.0
         node.parse_serial_line("A1: 511.5\n"); // Half ADC -> 0.5
 
-        let mut out_a0 = vec![0.0f32; 32];
-        let mut out_a1 = vec![0.0f32; 32];
+        let mut out_a0 = [0.0f32; 32];
+        let mut out_a1 = [0.0f32; 32];
         let mut outputs = [&mut out_a0[..], &mut out_a1[..]];
 
         let ctx = ProcessContext {

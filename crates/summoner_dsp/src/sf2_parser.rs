@@ -607,7 +607,7 @@ mod tests {
         info_body.extend_from_slice(b"INAM");
         info_body.extend_from_slice(&(name_bytes.len() as u32).to_le_bytes());
         info_body.extend_from_slice(name_bytes);
-        if name_bytes.len() % 2 != 0 {
+        if !name_bytes.len().is_multiple_of(2) {
             info_body.push(0);
         }
 

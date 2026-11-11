@@ -153,7 +153,7 @@ mod tests {
         // All samples quantized to 16-bit grid with psychoacoustic noise shaping
         for &s in &buf {
             assert!((s - 0.5).abs() < 0.005);
-            assert!(s >= -1.0 && s <= 1.0);
+            assert!((-1.0..=1.0).contains(&s));
         }
     }
 }

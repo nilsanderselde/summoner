@@ -424,9 +424,11 @@ mod tests {
         let _ = fs::remove_dir_all(&temp_dir);
         let mgr = TemplateManager::new(&temp_dir);
 
-        let mut custom_tpl = ProjectTemplate::default();
-        custom_tpl.name = "My Custom Default".to_string();
-        custom_tpl.bpm = 140.0;
+        let custom_tpl = ProjectTemplate {
+            name: "My Custom Default".to_string(),
+            bpm: 140.0,
+            ..Default::default()
+        };
 
         // Save as default
         mgr.save_as_default_template(&custom_tpl).unwrap();
