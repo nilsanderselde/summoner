@@ -169,7 +169,8 @@ impl TemplateManager {
         ProjectTemplate {
             id: "synthwave".to_string(),
             name: "Synthwave / Outrun".to_string(),
-            description: "80s retro synthwave setup with drum machine, analog bass, and lush leads".to_string(),
+            description: "80s retro synthwave setup with drum machine, analog bass, and lush leads"
+                .to_string(),
             category: "Electronic".to_string(),
             bpm: 124.0,
             time_signature: "4/4".to_string(),
@@ -233,7 +234,8 @@ impl TemplateManager {
         ProjectTemplate {
             id: "acoustic_songwriter".to_string(),
             name: "Acoustic / Songwriter".to_string(),
-            description: "Clean tracking template for lead vocals and stereo acoustic guitars".to_string(),
+            description: "Clean tracking template for lead vocals and stereo acoustic guitars"
+                .to_string(),
             category: "Acoustic".to_string(),
             bpm: 104.0,
             time_signature: "4/4".to_string(),
@@ -286,7 +288,8 @@ impl TemplateManager {
         ProjectTemplate {
             id: "mastering_suite".to_string(),
             name: "Mastering Suite".to_string(),
-            description: "Precision mastering session with reference track and loudness analysis".to_string(),
+            description: "Precision mastering session with reference track and loudness analysis"
+                .to_string(),
             category: "Mastering".to_string(),
             bpm: 120.0,
             time_signature: "4/4".to_string(),

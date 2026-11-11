@@ -608,7 +608,8 @@ impl SampleEditorView {
                 0.0
             };
             // Hann window
-            let w = 0.5 * (1.0 - (2.0 * std::f32::consts::PI * i as f32 / window_size as f32).cos());
+            let w =
+                0.5 * (1.0 - (2.0 * std::f32::consts::PI * i as f32 / window_size as f32).cos());
             *win_val = sample_val * w;
         }
 
@@ -927,7 +928,7 @@ mod tests {
         // Compute spectral slice (FFT magnitude bins)
         let slice = editor.compute_spectral_slice(1000, 256);
         assert_eq!(slice.len(), 128); // 128 bins for 256-point window
-        // 440 Hz bin at 44.1kHz with 256 window is bin round(440 * 256 / 44100) = ~3
+                                      // 440 Hz bin at 44.1kHz with 256 window is bin round(440 * 256 / 44100) = ~3
         assert!(slice[3] > -20.0); // Strong peak near 440Hz
 
         // Spectrogram matrix

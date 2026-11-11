@@ -54,7 +54,8 @@ pub struct SpringWaypoint {
 
 impl Default for SpringWaypoint {
     fn default() -> Self {
-        let (f, disp, tens, nonlin, angle, damp) = SpringArticulation::DriverDrive.nominal_parameters();
+        let (f, disp, tens, nonlin, angle, damp) =
+            SpringArticulation::DriverDrive.nominal_parameters();
         Self {
             beat: 0.0,
             drive_force: f,
@@ -366,7 +367,11 @@ impl SpringGestureEngine {
                 self.loop_length_beats
             } else {
                 let b = beat % self.loop_length_beats;
-                if b < 0.0 { b + self.loop_length_beats } else { b }
+                if b < 0.0 {
+                    b + self.loop_length_beats
+                } else {
+                    b
+                }
             }
         } else {
             beat
@@ -417,7 +422,11 @@ impl SpringGestureEngine {
                     lerp(w1.dispersion_factor, w2.dispersion_factor, t_exp),
                     lerp(w1.boundary_tension, w2.boundary_tension, t_exp),
                     lerp(w1.spring_nonlinearity, w2.spring_nonlinearity, t_exp),
-                    lerp(w1.transducer_pickup_angle, w2.transducer_pickup_angle, t_exp),
+                    lerp(
+                        w1.transducer_pickup_angle,
+                        w2.transducer_pickup_angle,
+                        t_exp,
+                    ),
                     lerp(w1.damper_damping, w2.damper_damping, t_exp),
                     lerp(w1.decay_t60_sec, w2.decay_t60_sec, t_exp),
                 )
@@ -429,19 +438,65 @@ impl SpringGestureEngine {
                     lerp(w1.dispersion_factor, w2.dispersion_factor, t_bez),
                     lerp(w1.boundary_tension, w2.boundary_tension, t_bez),
                     lerp(w1.spring_nonlinearity, w2.spring_nonlinearity, t_bez),
-                    lerp(w1.transducer_pickup_angle, w2.transducer_pickup_angle, t_bez),
+                    lerp(
+                        w1.transducer_pickup_angle,
+                        w2.transducer_pickup_angle,
+                        t_bez,
+                    ),
                     lerp(w1.damper_damping, w2.damper_damping, t_bez),
                     lerp(w1.decay_t60_sec, w2.decay_t60_sec, t_bez),
                 )
             }
             SpringInterpolationCurve::CubicCatmullRom => (
-                catmull_rom_1d(w0.drive_force, w1.drive_force, w2.drive_force, w3.drive_force, t),
-                catmull_rom_1d(w0.dispersion_factor, w1.dispersion_factor, w2.dispersion_factor, w3.dispersion_factor, t),
-                catmull_rom_1d(w0.boundary_tension, w1.boundary_tension, w2.boundary_tension, w3.boundary_tension, t),
-                catmull_rom_1d(w0.spring_nonlinearity, w1.spring_nonlinearity, w2.spring_nonlinearity, w3.spring_nonlinearity, t),
-                catmull_rom_1d(w0.transducer_pickup_angle, w1.transducer_pickup_angle, w2.transducer_pickup_angle, w3.transducer_pickup_angle, t),
-                catmull_rom_1d(w0.damper_damping, w1.damper_damping, w2.damper_damping, w3.damper_damping, t),
-                catmull_rom_1d(w0.decay_t60_sec, w1.decay_t60_sec, w2.decay_t60_sec, w3.decay_t60_sec, t),
+                catmull_rom_1d(
+                    w0.drive_force,
+                    w1.drive_force,
+                    w2.drive_force,
+                    w3.drive_force,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.dispersion_factor,
+                    w1.dispersion_factor,
+                    w2.dispersion_factor,
+                    w3.dispersion_factor,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.boundary_tension,
+                    w1.boundary_tension,
+                    w2.boundary_tension,
+                    w3.boundary_tension,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.spring_nonlinearity,
+                    w1.spring_nonlinearity,
+                    w2.spring_nonlinearity,
+                    w3.spring_nonlinearity,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.transducer_pickup_angle,
+                    w1.transducer_pickup_angle,
+                    w2.transducer_pickup_angle,
+                    w3.transducer_pickup_angle,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.damper_damping,
+                    w1.damper_damping,
+                    w2.damper_damping,
+                    w3.damper_damping,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.decay_t60_sec,
+                    w1.decay_t60_sec,
+                    w2.decay_t60_sec,
+                    w3.decay_t60_sec,
+                    t,
+                ),
             ),
         };
 
@@ -452,7 +507,11 @@ impl SpringGestureEngine {
         };
 
         SpringBusSnapshot {
-            articulation: if t < 0.5 { w1.articulation } else { w2.articulation },
+            articulation: if t < 0.5 {
+                w1.articulation
+            } else {
+                w2.articulation
+            },
             drive_force: f.clamp(0.0, 1.0),
             dispersion_factor: disp.clamp(0.0, 1.0),
             boundary_tension: tens.clamp(0.0, 1.0),
@@ -592,7 +651,9 @@ mod tests {
     #[test]
     fn test_spring_gesture_toml_roundtrip() {
         let engine = SpringGestureEngine::new(SpringGesturePattern::default());
-        let toml_str = engine.to_toml().expect("Failed to serialize spring gesture TOML");
+        let toml_str = engine
+            .to_toml()
+            .expect("Failed to serialize spring gesture TOML");
         assert!(toml_str.contains("SpringReverbDecaySwell"));
 
         let restored: SpringGestureEngine = SpringGestureEngine::from_toml(&toml_str)

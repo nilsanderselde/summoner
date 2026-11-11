@@ -4,16 +4,16 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::layout_math::Rect;
     use crate::views::sitar_view::{
-        SitarView, SitarHudPreset, SITAR_PUCK_HIT_RADIUS, MIN_SITAR_STRIKE_VELOCITY, MAX_SITAR_STRIKE_VELOCITY,
-        MIN_MEEND_SEMITONES, MAX_MEEND_SEMITONES,
+        SitarHudPreset, SitarView, MAX_MEEND_SEMITONES, MAX_SITAR_STRIKE_VELOCITY,
+        MIN_MEEND_SEMITONES, MIN_SITAR_STRIKE_VELOCITY, SITAR_PUCK_HIT_RADIUS,
     };
     use crate::views::turkish_ney_view::{
-        TurkishNeyView, TurkishNeyType, BashpareHornType, NEY_PUCK_HIT_RADIUS,
-        MIN_JET_VELOCITY_MPS, MAX_JET_VELOCITY_MPS, MIN_EMBOUCHURE_ANGLE_DEG, MAX_EMBOUCHURE_ANGLE_DEG,
+        BashpareHornType, TurkishNeyType, TurkishNeyView, MAX_EMBOUCHURE_ANGLE_DEG,
+        MAX_JET_VELOCITY_MPS, MIN_EMBOUCHURE_ANGLE_DEG, MIN_JET_VELOCITY_MPS, NEY_PUCK_HIT_RADIUS,
     };
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn55_pure_sitar_presets_and_acoustics() {
@@ -44,8 +44,10 @@ pub mod pure_tests {
 
         // Test puck physics updates
         view.update_physics_from_puck(0.5, 0.5);
-        let expected_meend = MIN_MEEND_SEMITONES + 0.5 * (MAX_MEEND_SEMITONES - MIN_MEEND_SEMITONES);
-        let expected_vel = MIN_SITAR_STRIKE_VELOCITY + 0.5 * (MAX_SITAR_STRIKE_VELOCITY - MIN_SITAR_STRIKE_VELOCITY);
+        let expected_meend =
+            MIN_MEEND_SEMITONES + 0.5 * (MAX_MEEND_SEMITONES - MIN_MEEND_SEMITONES);
+        let expected_vel = MIN_SITAR_STRIKE_VELOCITY
+            + 0.5 * (MAX_SITAR_STRIKE_VELOCITY - MIN_SITAR_STRIKE_VELOCITY);
         assert!((view.meend_pull_semitones - expected_meend).abs() < 1e-3);
         assert!((view.strike_velocity - expected_vel).abs() < 1e-3);
 
@@ -124,7 +126,7 @@ pub mod pure_tests {
         let pid_ney_len = ParamId(3 * 1000 + 1 * 20 + 2);
         let pid_ney_tur = ParamId(3 * 1000 + 1 * 20 + 3);
         let pid_ney_los = ParamId(3 * 1000 + 1 * 20 + 4);
-        let pid_ney_q   = ParamId(3 * 1000 + 1 * 20 + 5);
+        let pid_ney_q = ParamId(3 * 1000 + 1 * 20 + 5);
 
         bus.register(pid_sit_vel, 0.75);
         bus.register(pid_sit_mee, 1.5);
@@ -166,7 +168,9 @@ pub mod pure_tests {
         let sitar = SitarView::new();
         let sitar_ascii = sitar.render_ascii(70, 16);
         assert!(!sitar_ascii.is_empty());
-        assert!(sitar_ascii.iter().any(|line| line.contains("SITAR PERFORMANCE HUD")));
+        assert!(sitar_ascii
+            .iter()
+            .any(|line| line.contains("SITAR PERFORMANCE HUD")));
 
         let ney = TurkishNeyView::new();
         let ney_ascii = ney.render_ascii(70, 16);
@@ -178,11 +182,11 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use std::sync::Arc;
-    use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use eframe::egui;
+    use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn55_gui_modal_lifecycle() {
@@ -288,11 +292,23 @@ pub mod gui_tests {
     #[test]
     fn test_turn55_gui_command_palette_registration() {
         let palette = CommandPalette::new();
-        let has_sitar = palette.actions.iter().any(|a| a.action_id == "open_sitar_hud");
-        let has_ney = palette.actions.iter().any(|a| a.action_id == "open_turkish_ney_hud");
+        let has_sitar = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_sitar_hud");
+        let has_ney = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_turkish_ney_hud");
 
-        assert!(has_sitar, "open_sitar_hud should be registered in CommandPalette");
-        assert!(has_ney, "open_turkish_ney_hud should be registered in CommandPalette");
+        assert!(
+            has_sitar,
+            "open_sitar_hud should be registered in CommandPalette"
+        );
+        assert!(
+            has_ney,
+            "open_turkish_ney_hud should be registered in CommandPalette"
+        );
     }
 
     #[test]
@@ -308,6 +324,9 @@ pub mod gui_tests {
             });
         });
 
-        assert!(!output.shapes.is_empty(), "Headless render should produce visual output shapes");
+        assert!(
+            !output.shapes.is_empty(),
+            "Headless render should produce visual output shapes"
+        );
     }
 }

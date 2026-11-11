@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::harmonic_exciter_view::{
         ExciterMode, HarmonicExciterView, EXCITER_PUCK_HIT_RADIUS,
     };
     use crate::views::stereo_widener_view::{
         StereoWidenerMode, StereoWidenerView, STEREO_CROSSOVER_HANDLE_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn99_pure_harmonic_exciter_initialization_and_kinematics() {
@@ -106,8 +106,14 @@ pub mod pure_tests {
         let modes = [
             (StereoWidenerMode::MidSideBandWidth, "Mid/Side Band Width"),
             (StereoWidenerMode::HaasMicroDelay, "Haas Micro-Delay"),
-            (StereoWidenerMode::FrequencySplitMultiband, "Frequency Split Multiband"),
-            (StereoWidenerMode::BinauralHRTFSpatializer, "Binaural HRTF Spatializer"),
+            (
+                StereoWidenerMode::FrequencySplitMultiband,
+                "Frequency Split Multiband",
+            ),
+            (
+                StereoWidenerMode::BinauralHRTFSpatializer,
+                "Binaural HRTF Spatializer",
+            ),
         ];
 
         for (mode, expected_name) in modes {
@@ -149,11 +155,22 @@ pub mod pure_tests {
 
         // Crossover handle hit testing
         let canvas = Rect::new(0.0, 0.0, 500.0, 200.0);
-        let low_x = canvas.x + StereoWidenerView::freq_to_norm_x(view.crossover_low_hz) * canvas.width;
-        let high_x = canvas.x + StereoWidenerView::freq_to_norm_x(view.crossover_high_hz) * canvas.width;
-        assert_eq!(view.hit_test_crossover_handle((low_x, 100.0), canvas), Some(0));
-        assert_eq!(view.hit_test_crossover_handle((high_x, 100.0), canvas), Some(1));
-        assert_eq!(view.hit_test_crossover_handle((low_x + 60.0, 100.0), canvas), None);
+        let low_x =
+            canvas.x + StereoWidenerView::freq_to_norm_x(view.crossover_low_hz) * canvas.width;
+        let high_x =
+            canvas.x + StereoWidenerView::freq_to_norm_x(view.crossover_high_hz) * canvas.width;
+        assert_eq!(
+            view.hit_test_crossover_handle((low_x, 100.0), canvas),
+            Some(0)
+        );
+        assert_eq!(
+            view.hit_test_crossover_handle((high_x, 100.0), canvas),
+            Some(1)
+        );
+        assert_eq!(
+            view.hit_test_crossover_handle((low_x + 60.0, 100.0), canvas),
+            None
+        );
 
         // Deterministic ASCII snapshot
         let snap = view.render_ascii_snapshot_str();
@@ -165,11 +182,11 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use crate::views::modern_inspector::show_modern_inspector_with_context;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_inspector::show_modern_inspector_with_context;
 
     #[test]
     fn test_turn99_gui_modal_window_lifecycles() {
@@ -209,7 +226,11 @@ pub mod gui_tests {
     fn test_turn99_gui_lock_free_param_bus_dispatch_harmonic_exciter_and_stereo_widener() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -229,10 +250,28 @@ pub mod gui_tests {
 
         view.sync_harmonic_exciter_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("crossover_freq_hz"), Some(&7200.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("drive_percent"), Some(&65.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("brilliance_db"), Some(&9.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("warmth_blend"), Some(&0.40));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("crossover_freq_hz"),
+            Some(&7200.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("drive_percent"),
+            Some(&65.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("brilliance_db"),
+            Some(&9.5)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("warmth_blend"),
+            Some(&0.40)
+        );
 
         let pid_drive = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_freq = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -253,11 +292,34 @@ pub mod gui_tests {
 
         view.sync_stereo_widener_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("haas_delay_ms"), Some(&12.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("mid_band_width_pct"), Some(&150.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("crossover_low_hz"), Some(&220.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("crossover_high_hz"), Some(&5500.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("balance_lr"), Some(&0.15));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("haas_delay_ms"),
+            Some(&12.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("mid_band_width_pct"),
+            Some(&150.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("crossover_low_hz"),
+            Some(&220.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("crossover_high_hz"),
+            Some(&5500.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("balance_lr"),
+            Some(&0.15)
+        );
 
         let pid_haas = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_width = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);

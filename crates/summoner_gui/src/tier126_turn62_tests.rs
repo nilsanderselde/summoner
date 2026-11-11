@@ -5,11 +5,11 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::layout_math::Rect;
+    use crate::views::free_reed_view::{
+        FreeReedHudPreset, FreeReedView, FREE_REED_PUCK_HIT_RADIUS,
+    };
     use crate::views::rotary_speaker_view::{
         RotarySpeakerView, RotarySpeedState, ROTARY_HANDLE_HIT_RADIUS,
-    };
-    use crate::views::free_reed_view::{
-        FreeReedView, FreeReedHudPreset, FREE_REED_PUCK_HIT_RADIUS,
     };
 
     #[test]
@@ -44,7 +44,8 @@ pub mod pure_tests {
         let shift_0 = view.calculate_horn_doppler_shift(view.horn_angle_rad);
         assert!(shift_0.abs() < 1e-4);
 
-        let shift_pi2 = view.calculate_horn_doppler_shift(view.horn_angle_rad - std::f32::consts::FRAC_PI_2);
+        let shift_pi2 =
+            view.calculate_horn_doppler_shift(view.horn_angle_rad - std::f32::consts::FRAC_PI_2);
         assert!(shift_pi2 > 0.0);
 
         // Physics step acceleration
@@ -55,8 +56,14 @@ pub mod pure_tests {
         // Microphone handle hit testing
         let mic_screen_pos = (150.0, 150.0);
         assert!(view.hit_test_mic_handle((150.0, 150.0), mic_screen_pos));
-        assert!(view.hit_test_mic_handle((150.0 + ROTARY_HANDLE_HIT_RADIUS * 0.8, 150.0), mic_screen_pos));
-        assert!(!view.hit_test_mic_handle((150.0 + ROTARY_HANDLE_HIT_RADIUS * 1.5, 150.0), mic_screen_pos));
+        assert!(view.hit_test_mic_handle(
+            (150.0 + ROTARY_HANDLE_HIT_RADIUS * 0.8, 150.0),
+            mic_screen_pos
+        ));
+        assert!(!view.hit_test_mic_handle(
+            (150.0 + ROTARY_HANDLE_HIT_RADIUS * 1.5, 150.0),
+            mic_screen_pos
+        ));
 
         // Deterministic ASCII snapshot
         let snap_lines = view.render_ascii_snapshot(64, 16);
@@ -142,12 +149,12 @@ pub mod pure_tests {
 #[cfg(feature = "gui")]
 #[cfg(test)]
 pub mod gui_tests {
-    use std::sync::Arc;
-    use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::rotary_speaker_view::RotarySpeedState;
+    use eframe::egui;
+    use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn62_gui_modal_lifecycle() {
@@ -190,7 +197,11 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
 
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -263,10 +274,22 @@ pub mod gui_tests {
     #[test]
     fn test_turn62_gui_command_palette_actions_registered() {
         let palette = CommandPalette::new();
-        let has_rotary = palette.actions.iter().any(|a| a.action_id == "open_rotary_speaker_hud");
-        let has_free_reed = palette.actions.iter().any(|a| a.action_id == "open_free_reed_hud");
+        let has_rotary = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_rotary_speaker_hud");
+        let has_free_reed = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_free_reed_hud");
 
-        assert!(has_rotary, "Expected open_rotary_speaker_hud in command palette");
-        assert!(has_free_reed, "Expected open_free_reed_hud in command palette");
+        assert!(
+            has_rotary,
+            "Expected open_rotary_speaker_hud in command palette"
+        );
+        assert!(
+            has_free_reed,
+            "Expected open_free_reed_hud in command palette"
+        );
     }
 }

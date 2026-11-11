@@ -5,11 +5,9 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::layout_math::Rect;
+    use crate::views::vocal_tract_view::{VocalTractView, VOCAL_PUCK_HIT_RADIUS};
     use crate::views::waveguide_brass_view::{
-        WaveguideBrassView, BrassInstrument, BRASS_PUCK_HIT_RADIUS,
-    };
-    use crate::views::vocal_tract_view::{
-        VocalTractView, VOCAL_PUCK_HIT_RADIUS,
+        BrassInstrument, WaveguideBrassView, BRASS_PUCK_HIT_RADIUS,
     };
     use summoner_dsp::vocal_tract::VowelPreset;
 
@@ -145,11 +143,11 @@ pub mod pure_tests {
 #[cfg(feature = "gui")]
 #[cfg(test)]
 pub mod gui_tests {
-    use std::sync::Arc;
-    use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use eframe::egui;
+    use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn61_gui_modal_lifecycle() {
@@ -192,7 +190,11 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
 
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -213,10 +215,34 @@ pub mod gui_tests {
 
         view.sync_waveguide_brass_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("lip_tension_hz").copied(), Some(440.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("blowing_pressure_kpa").copied(), Some(5.2));
-        assert_eq!(view.inspector_state.node_param_values.get("lip_tension_hz").copied(), Some(440.0));
-        assert_eq!(view.inspector_state.node_param_values.get("blowing_pressure_kpa").copied(), Some(5.2));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("lip_tension_hz")
+                .copied(),
+            Some(440.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("blowing_pressure_kpa")
+                .copied(),
+            Some(5.2)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("lip_tension_hz")
+                .copied(),
+            Some(440.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("blowing_pressure_kpa")
+                .copied(),
+            Some(5.2)
+        );
 
         assert_eq!(arc_bus.get(ParamId(base)), Some(440.0));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(5.2));
@@ -235,10 +261,34 @@ pub mod gui_tests {
 
         view.sync_vocal_tract_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("tongue_position").copied(), Some(0.60));
-        assert_eq!(view.device_rack_state.node_param_values.get("tongue_height").copied(), Some(0.70));
-        assert_eq!(view.inspector_state.node_param_values.get("tongue_position").copied(), Some(0.60));
-        assert_eq!(view.inspector_state.node_param_values.get("tongue_height").copied(), Some(0.70));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("tongue_position")
+                .copied(),
+            Some(0.60)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("tongue_height")
+                .copied(),
+            Some(0.70)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("tongue_position")
+                .copied(),
+            Some(0.60)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("tongue_height")
+                .copied(),
+            Some(0.70)
+        );
 
         assert_eq!(arc_bus.get(ParamId(base)), Some(0.60));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(0.70));
@@ -278,13 +328,19 @@ pub mod gui_tests {
     #[test]
     fn test_turn61_gui_command_palette_actions_registered() {
         let palette = CommandPalette::new();
-        let brass_action = palette.actions.iter().find(|a| a.action_id == "open_waveguide_brass_hud");
+        let brass_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_waveguide_brass_hud");
         assert!(brass_action.is_some());
         let brass = brass_action.unwrap();
         assert_eq!(brass.category, "Physical Modeling");
         assert!(brass.label.contains("Waveguide Brass"));
 
-        let vocal_action = palette.actions.iter().find(|a| a.action_id == "open_vocal_tract_hud");
+        let vocal_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_vocal_tract_hud");
         assert!(vocal_action.is_some());
         let vocal = vocal_action.unwrap();
         assert_eq!(vocal.category, "Physical Modeling");

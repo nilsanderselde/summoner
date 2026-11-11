@@ -13,9 +13,9 @@
 
 //! Declarative session configuration schema for `.toml` project files.
 
+use crate::audio_clip::{ArrangerLaneConfig, AudioClipConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::audio_clip::{ArrangerLaneConfig, AudioClipConfig};
 
 /// Root project session definition.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -133,15 +133,24 @@ impl ProjectConfig {
             Err(_) => {
                 let mut val: toml::Value = toml::from_str(raw_toml).map_err(|e| e.to_string())?;
                 if let Some(table) = val.as_table_mut() {
-                    table.insert("version".to_string(), toml::Value::String("1.1.0".to_string()));
+                    table.insert(
+                        "version".to_string(),
+                        toml::Value::String("1.1.0".to_string()),
+                    );
                     if let Some(tracks) = table.get_mut("tracks").and_then(|t| t.as_array_mut()) {
                         for track in tracks {
                             if let Some(t_table) = track.as_table_mut() {
                                 if !t_table.contains_key("audio_clips") {
-                                    t_table.insert("audio_clips".to_string(), toml::Value::Array(Vec::new()));
+                                    t_table.insert(
+                                        "audio_clips".to_string(),
+                                        toml::Value::Array(Vec::new()),
+                                    );
                                 }
                                 if !t_table.contains_key("arranger_lanes") {
-                                    t_table.insert("arranger_lanes".to_string(), toml::Value::Array(Vec::new()));
+                                    t_table.insert(
+                                        "arranger_lanes".to_string(),
+                                        toml::Value::Array(Vec::new()),
+                                    );
                                 }
                             }
                         }
@@ -294,7 +303,8 @@ impl TransportConfig {
     pub fn to_tempo_map(&self) -> summoner_core::TempoMap {
         let mut map = summoner_core::TempoMap::new(self.bpm, 4, 4, self.sample_rate);
         if let Some((num_str, den_str)) = self.time_signature.split_once('/') {
-            if let (Ok(num), Ok(den)) = (num_str.trim().parse::<u8>(), den_str.trim().parse::<u8>()) {
+            if let (Ok(num), Ok(den)) = (num_str.trim().parse::<u8>(), den_str.trim().parse::<u8>())
+            {
                 map.meter_points[0] = summoner_core::MeterPoint::new(0.0, num, den);
             }
         }
@@ -311,7 +321,11 @@ impl TransportConfig {
             }
         }
         for mp in &self.meter_points {
-            map.add_meter_point(summoner_core::MeterPoint::new(mp.beat, mp.numerator, mp.denominator));
+            map.add_meter_point(summoner_core::MeterPoint::new(
+                mp.beat,
+                mp.numerator,
+                mp.denominator,
+            ));
         }
         map
     }
@@ -532,7 +546,10 @@ impl TrackConfig {
     }
 
     pub fn audio_clips_at_beat(&self, beat: f64) -> Vec<&AudioClipConfig> {
-        self.audio_clips.iter().filter(|c| c.contains_beat(beat)).collect()
+        self.audio_clips
+            .iter()
+            .filter(|c| c.contains_beat(beat))
+            .collect()
     }
 
     pub fn audio_clips_in_range(&self, start_beat: f64, end_beat: f64) -> Vec<&AudioClipConfig> {
@@ -775,7 +792,8 @@ time_signature = "4/4"
 id = 1
 name = "Audio 1"
 "#;
-        let migrated = ProjectConfig::migrate_schema(legacy_toml).expect("Migration should succeed");
+        let migrated =
+            ProjectConfig::migrate_schema(legacy_toml).expect("Migration should succeed");
         assert_eq!(migrated.version, "1.1.0");
         assert_eq!(migrated.tracks.len(), 1);
         assert!(migrated.tracks[0].audio_clips.is_empty());

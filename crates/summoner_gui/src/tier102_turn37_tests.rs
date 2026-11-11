@@ -18,10 +18,22 @@ pub mod pure_tests {
             clip_name: Some("Stage Intro".to_string()),
             name: "Stage Intro".to_string(),
             steps: vec![
-                TrackerStepConfig { note: 48.0, ..Default::default() },
-                TrackerStepConfig { note: 55.0, ..Default::default() },
-                TrackerStepConfig { note: 60.0, ..Default::default() },
-                TrackerStepConfig { note: 67.0, ..Default::default() },
+                TrackerStepConfig {
+                    note: 48.0,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 55.0,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 60.0,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 67.0,
+                    ..Default::default()
+                },
             ],
             ..Default::default()
         };

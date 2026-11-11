@@ -14,9 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 use summoner_core::param_bus::{ParamBus, ParamId};
-use summoner_core::sitar_bus::{
-    SitarArticulation, SitarBus, SitarBusSnapshot,
-};
+use summoner_core::sitar_bus::{SitarArticulation, SitarBus, SitarBusSnapshot};
 
 /// Interpolation curve between discrete Sitar keyframe waypoints.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -102,13 +100,9 @@ pub enum SitarGesturePattern {
         chikari_density: f32,
     },
     /// Surbahar deep alap with low bass resonance and heavy Jawari buzz.
-    SurbaharDeepMeditation {
-        phrase_length_beats: f64,
-    },
+    SurbaharDeepMeditation { phrase_length_beats: f64 },
     /// Extended Tarab sympathetic resonance cascade across 13 sympathetic strings.
-    TarabSympatheticCascade {
-        phrase_length_beats: f64,
-    },
+    TarabSympatheticCascade { phrase_length_beats: f64 },
 }
 
 /// Dynamic Sitar articulation timeline and parameter trajectory engine.
@@ -146,7 +140,11 @@ impl SitarGestureEngine {
     }
 
     pub fn sort_waypoints(&mut self) {
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     pub fn clear(&mut self) {
@@ -157,7 +155,10 @@ impl SitarGestureEngine {
         self.clear();
 
         match &pattern {
-            SitarGesturePattern::RagaYamanAlap { phrase_length_beats, max_meend_pull } => {
+            SitarGesturePattern::RagaYamanAlap {
+                phrase_length_beats,
+                max_meend_pull,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(SitarWaypoint {
@@ -225,7 +226,10 @@ impl SitarGestureEngine {
                 });
             }
 
-            SitarGesturePattern::VilayatKhanGayaki { phrase_length_beats, max_velocity } => {
+            SitarGesturePattern::VilayatKhanGayaki {
+                phrase_length_beats,
+                max_velocity,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(SitarWaypoint {
@@ -277,7 +281,10 @@ impl SitarGestureEngine {
                 });
             }
 
-            SitarGesturePattern::RaviShankarKharajJhala { phrase_length_beats, chikari_density } => {
+            SitarGesturePattern::RaviShankarKharajJhala {
+                phrase_length_beats,
+                chikari_density,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(SitarWaypoint {
@@ -329,7 +336,9 @@ impl SitarGestureEngine {
                 });
             }
 
-            SitarGesturePattern::SurbaharDeepMeditation { phrase_length_beats } => {
+            SitarGesturePattern::SurbaharDeepMeditation {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(SitarWaypoint {
@@ -381,7 +390,9 @@ impl SitarGestureEngine {
                 });
             }
 
-            SitarGesturePattern::TarabSympatheticCascade { phrase_length_beats } => {
+            SitarGesturePattern::TarabSympatheticCascade {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(SitarWaypoint {
@@ -559,25 +570,96 @@ impl SitarGestureEngine {
         };
 
         let curve = wp2.curve;
-        let miz = interp(wp0.mizrab_velocity, wp1.mizrab_velocity, wp2.mizrab_velocity, wp3.mizrab_velocity, curve).clamp(0.0, 1.0);
-        let meend = interp(wp0.meend_pull_semitones, wp1.meend_pull_semitones, wp2.meend_pull_semitones, wp3.meend_pull_semitones, curve).clamp(0.0, 5.0);
-        let gap = interp(wp0.jawari_gap_mm, wp1.jawari_gap_mm, wp2.jawari_gap_mm, wp3.jawari_gap_mm, curve).clamp(0.01, 1.5);
-        let jiva = interp(wp0.jiva_thread_pos, wp1.jiva_thread_pos, wp2.jiva_thread_pos, wp3.jiva_thread_pos, curve).clamp(0.0, 1.0);
-        let bleed = interp(wp0.tarab_bleed, wp1.tarab_bleed, wp2.tarab_bleed, wp3.tarab_bleed, curve).clamp(0.0, 1.0);
-        let chik = interp(wp0.chikari_trigger, wp1.chikari_trigger, wp2.chikari_trigger, wp3.chikari_trigger, curve).clamp(0.0, 1.0);
-        let decay = interp(wp0.gourd_decay, wp1.gourd_decay, wp2.gourd_decay, wp3.gourd_decay, curve).clamp(0.1, 3.0);
-        let bgain = interp(wp0.body_gain, wp1.body_gain, wp2.body_gain, wp3.body_gain, curve).clamp(0.0, 2.0);
-        let mgain = interp(wp0.master_gain, wp1.master_gain, wp2.master_gain, wp3.master_gain, curve).clamp(0.0, 2.0);
+        let miz = interp(
+            wp0.mizrab_velocity,
+            wp1.mizrab_velocity,
+            wp2.mizrab_velocity,
+            wp3.mizrab_velocity,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let meend = interp(
+            wp0.meend_pull_semitones,
+            wp1.meend_pull_semitones,
+            wp2.meend_pull_semitones,
+            wp3.meend_pull_semitones,
+            curve,
+        )
+        .clamp(0.0, 5.0);
+        let gap = interp(
+            wp0.jawari_gap_mm,
+            wp1.jawari_gap_mm,
+            wp2.jawari_gap_mm,
+            wp3.jawari_gap_mm,
+            curve,
+        )
+        .clamp(0.01, 1.5);
+        let jiva = interp(
+            wp0.jiva_thread_pos,
+            wp1.jiva_thread_pos,
+            wp2.jiva_thread_pos,
+            wp3.jiva_thread_pos,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let bleed = interp(
+            wp0.tarab_bleed,
+            wp1.tarab_bleed,
+            wp2.tarab_bleed,
+            wp3.tarab_bleed,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let chik = interp(
+            wp0.chikari_trigger,
+            wp1.chikari_trigger,
+            wp2.chikari_trigger,
+            wp3.chikari_trigger,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let decay = interp(
+            wp0.gourd_decay,
+            wp1.gourd_decay,
+            wp2.gourd_decay,
+            wp3.gourd_decay,
+            curve,
+        )
+        .clamp(0.1, 3.0);
+        let bgain = interp(
+            wp0.body_gain,
+            wp1.body_gain,
+            wp2.body_gain,
+            wp3.body_gain,
+            curve,
+        )
+        .clamp(0.0, 2.0);
+        let mgain = interp(
+            wp0.master_gain,
+            wp1.master_gain,
+            wp2.master_gain,
+            wp3.master_gain,
+            curve,
+        )
+        .clamp(0.0, 2.0);
 
         SitarBusSnapshot {
-            articulation: if t > 0.5 { wp2.articulation } else { wp1.articulation },
+            articulation: if t > 0.5 {
+                wp2.articulation
+            } else {
+                wp1.articulation
+            },
             mizrab_velocity: miz,
             meend_pull_semitones: meend,
             jawari_gap_mm: gap,
             jiva_thread_pos: jiva,
             tarab_bleed: bleed,
             chikari_trigger: chik,
-            raga_scale_id: if t > 0.5 { wp2.raga_scale_id } else { wp1.raga_scale_id },
+            raga_scale_id: if t > 0.5 {
+                wp2.raga_scale_id
+            } else {
+                wp1.raga_scale_id
+            },
             gourd_decay: decay,
             body_gain: bgain,
             master_gain: mgain,
@@ -627,12 +709,10 @@ mod tests {
 
     #[test]
     fn test_sitar_gesture_engine_yaman_evaluation() {
-        let engine = SitarGestureEngine::with_pattern(
-            SitarGesturePattern::RagaYamanAlap {
-                phrase_length_beats: 8.0,
-                max_meend_pull: 4.0,
-            },
-        );
+        let engine = SitarGestureEngine::with_pattern(SitarGesturePattern::RagaYamanAlap {
+            phrase_length_beats: 8.0,
+            max_meend_pull: 4.0,
+        });
 
         let snap_start = engine.evaluate_at_beat(0.0);
         assert_eq!(snap_start.articulation, SitarArticulation::RagaYamanAlap);
@@ -645,12 +725,10 @@ mod tests {
 
     #[test]
     fn test_sitar_gesture_engine_toml_roundtrip() {
-        let engine = SitarGestureEngine::with_pattern(
-            SitarGesturePattern::VilayatKhanGayaki {
-                phrase_length_beats: 4.0,
-                max_velocity: 0.95,
-            },
-        );
+        let engine = SitarGestureEngine::with_pattern(SitarGesturePattern::VilayatKhanGayaki {
+            phrase_length_beats: 4.0,
+            max_velocity: 0.95,
+        });
 
         let toml_str = toml::to_string(&engine).expect("Failed to serialize SitarGestureEngine");
         let deserialized: SitarGestureEngine =

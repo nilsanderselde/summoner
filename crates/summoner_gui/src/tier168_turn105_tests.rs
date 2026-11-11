@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::multiband_decompressor_view::{
-        MultibandDecompressorView, DecompressorPreset, DECOMPRESSOR_PUCK_HIT_RADIUS,
-    };
+    use crate::layout_math::Rect;
     use crate::views::dynamic_stereo_width_view::{
         DynamicStereoWidthView, StereoWidthProfile, STEREO_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
+    use crate::views::multiband_decompressor_view::{
+        DecompressorPreset, MultibandDecompressorView, DECOMPRESSOR_PUCK_HIT_RADIUS,
+    };
 
     #[test]
     fn test_turn105_pure_multiband_decompressor_initialization_and_kinematics() {
@@ -22,7 +22,10 @@ pub mod pure_tests {
 
         // Presets and their nominal names
         let presets = [
-            (DecompressorPreset::MasterDynRestoration, "Master Dynamic Rescue"),
+            (
+                DecompressorPreset::MasterDynRestoration,
+                "Master Dynamic Rescue",
+            ),
             (DecompressorPreset::DrumTransientRescue, "Drum Transients"),
             (DecompressorPreset::SlapBassPunch, "Slap Bass Punch"),
             (DecompressorPreset::VocalAirRestoration, "Vocal Air Expand"),
@@ -70,7 +73,7 @@ pub mod pure_tests {
         let out_below = view.evaluate_expansion_curve(1, -40.0);
         let out_above = view.evaluate_expansion_curve(1, -10.0);
         assert_eq!(out_below, -40.0); // 1:1 below threshold (-18.0 dB)
-        assert!(out_above > -10.0);   // Upward boost above threshold
+        assert!(out_above > -10.0); // Upward boost above threshold
 
         // Touch puck hit testing (>= 22pt radius -> 44x44pt bounding box)
         let canvas = Rect::new(40.0, 40.0, 360.0, 280.0);
@@ -98,11 +101,26 @@ pub mod pure_tests {
 
         // Profiles and their nominal names
         let profiles = [
-            (StereoWidthProfile::BroadcastMasteringClean, "BROADCAST MASTER (CLEAN)"),
-            (StereoWidthProfile::ClubVinylPressing, "CLUB VINYL CUT (180Hz MONO)"),
-            (StereoWidthProfile::CinematicSuperWide, "CINEMATIC SUPER WIDE"),
-            (StereoWidthProfile::AcousticNaturalDepth, "ACOUSTIC NATURAL DEPTH"),
-            (StereoWidthProfile::EDMPolyrhythmicHyperWidth, "EDM HYPER WIDTH (200%)"),
+            (
+                StereoWidthProfile::BroadcastMasteringClean,
+                "BROADCAST MASTER (CLEAN)",
+            ),
+            (
+                StereoWidthProfile::ClubVinylPressing,
+                "CLUB VINYL CUT (180Hz MONO)",
+            ),
+            (
+                StereoWidthProfile::CinematicSuperWide,
+                "CINEMATIC SUPER WIDE",
+            ),
+            (
+                StereoWidthProfile::AcousticNaturalDepth,
+                "ACOUSTIC NATURAL DEPTH",
+            ),
+            (
+                StereoWidthProfile::EDMPolyrhythmicHyperWidth,
+                "EDM HYPER WIDTH (200%)",
+            ),
         ];
 
         for (prof, expected_name) in profiles {
@@ -154,8 +172,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -177,25 +195,40 @@ pub mod gui_tests {
         assert!(!view.is_dynamic_stereo_width_hud_open());
 
         // 3. Multiband De-Compressor Parameter Sync Bridge
-        view.multiband_decompressor_view.threshold_db[view.multiband_decompressor_view.selected_band] = -21.0;
-        view.multiband_decompressor_view.ratio[view.multiband_decompressor_view.selected_band] = 2.4;
-        view.multiband_decompressor_view.range_db[view.multiband_decompressor_view.selected_band] = 7.5;
+        view.multiband_decompressor_view.threshold_db
+            [view.multiband_decompressor_view.selected_band] = -21.0;
+        view.multiband_decompressor_view.ratio[view.multiband_decompressor_view.selected_band] =
+            2.4;
+        view.multiband_decompressor_view.range_db[view.multiband_decompressor_view.selected_band] =
+            7.5;
         view.sync_multiband_decompressor_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("threshold_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("threshold_db")
+                .copied(),
             Some(-21.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("ratio").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("ratio")
+                .copied(),
             Some(2.4)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("range_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("range_db")
+                .copied(),
             Some(7.5)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("threshold").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("threshold")
+                .copied(),
             Some(-21.0)
         );
         assert_eq!(
@@ -209,15 +242,24 @@ pub mod gui_tests {
         view.sync_dynamic_stereo_width_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("elliptical_bass_hz").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("elliptical_bass_hz")
+                .copied(),
             Some(150.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("side_width_ratio").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("side_width_ratio")
+                .copied(),
             Some(1.65)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("bass_cutoff_hz").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("bass_cutoff_hz")
+                .copied(),
             Some(150.0)
         );
         assert_eq!(
@@ -236,12 +278,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let decomp_action = palette.actions.iter().find(|a| a.action_id == "open_multiband_decompressor_hud");
-        assert!(decomp_action.is_some(), "open_multiband_decompressor_hud should be registered");
+        let decomp_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_multiband_decompressor_hud");
+        assert!(
+            decomp_action.is_some(),
+            "open_multiband_decompressor_hud should be registered"
+        );
         assert_eq!(decomp_action.unwrap().category, "Mastering & Dynamics");
 
-        let stereo_action = palette.actions.iter().find(|a| a.action_id == "open_dynamic_stereo_width_hud");
-        assert!(stereo_action.is_some(), "open_dynamic_stereo_width_hud should be registered");
+        let stereo_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_dynamic_stereo_width_hud");
+        assert!(
+            stereo_action.is_some(),
+            "open_dynamic_stereo_width_hud should be registered"
+        );
         assert_eq!(stereo_action.unwrap().category, "Spatial & Surround");
     }
 }

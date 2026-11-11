@@ -188,7 +188,8 @@ impl SpatialRoomView {
         let bounce_left = (0.0, sy + (ly - sy) * t_left_x, sz + (lz - sz) * t_left_x);
 
         // 2. Right Wall (X = W)
-        let dist_right = ((2.0 * w - sx - lx).powi(2) + (ly - sy).powi(2) + (lz - sz).powi(2)).sqrt();
+        let dist_right =
+            ((2.0 * w - sx - lx).powi(2) + (ly - sy).powi(2) + (lz - sz).powi(2)).sqrt();
         let t_right_x = (w - sx) / (2.0 * w - sx - lx).max(1e-4);
         let bounce_right = (w, sy + (ly - sy) * t_right_x, sz + (lz - sz) * t_right_x);
 
@@ -198,7 +199,8 @@ impl SpatialRoomView {
         let bounce_back = (sx + (lx - sx) * t_back_y, 0.0, sz + (lz - sz) * t_back_y);
 
         // 4. Front Wall (Y = D)
-        let dist_front = ((lx - sx).powi(2) + (2.0 * d - sy - ly).powi(2) + (lz - sz).powi(2)).sqrt();
+        let dist_front =
+            ((lx - sx).powi(2) + (2.0 * d - sy - ly).powi(2) + (lz - sz).powi(2)).sqrt();
         let t_front_y = (d - sy) / (2.0 * d - sy - ly).max(1e-4);
         let bounce_front = (sx + (lx - sx) * t_front_y, d, sz + (lz - sz) * t_front_y);
 
@@ -208,7 +210,8 @@ impl SpatialRoomView {
         let bounce_floor = (sx + (lx - sx) * t_floor_z, sy + (ly - sy) * t_floor_z, 0.0);
 
         // 6. Ceiling (Z = H)
-        let dist_ceil = ((lx - sx).powi(2) + (ly - sy).powi(2) + (2.0 * h - sz - lz).powi(2)).sqrt();
+        let dist_ceil =
+            ((lx - sx).powi(2) + (ly - sy).powi(2) + (2.0 * h - sz - lz).powi(2)).sqrt();
         let t_ceil_z = (h - sz) / (2.0 * h - sz - lz).max(1e-4);
         let bounce_ceil = (sx + (lx - sx) * t_ceil_z, sy + (ly - sy) * t_ceil_z, h);
 

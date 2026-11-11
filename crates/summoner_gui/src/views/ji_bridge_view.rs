@@ -81,7 +81,10 @@ impl JiBridgeView {
     pub fn new() -> Self {
         // Authentic Hirajoshi default bridge positions
         let mut default_pos = [0.65f32; NUM_JI_BRIDGES];
-        let ratios: [f32; NUM_JI_BRIDGES] = [1.0000, 0.6674, 0.7492, 0.7937, 1.0000, 1.0595, 1.3348, 1.4983, 1.5874, 2.0000, 2.1189, 2.6697, 2.9966];
+        let ratios: [f32; NUM_JI_BRIDGES] = [
+            1.0000, 0.6674, 0.7492, 0.7937, 1.0000, 1.0595, 1.3348, 1.4983, 1.5874, 2.0000, 2.1189,
+            2.6697, 2.9966,
+        ];
         for (i, &r) in ratios.iter().enumerate() {
             default_pos[i] = (0.65 / r.sqrt()).clamp(0.20, 0.85);
         }
@@ -156,7 +159,12 @@ impl JiBridgeView {
     }
 
     /// Render headless PNG snapshot visualizer for layout alignment, touch target verification, and WCAG contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep Slate (#0A0E18)
@@ -296,19 +304,49 @@ impl JiBridgeView {
 
             ui.horizontal(|ui| {
                 ui.label("Ji Bridge Material:");
-                if ui.selectable_label(self.profile == JiBridgeViewProfile::PaulowniaHardwood, "Paulownia Wood").clicked() {
+                if ui
+                    .selectable_label(
+                        self.profile == JiBridgeViewProfile::PaulowniaHardwood,
+                        "Paulownia Wood",
+                    )
+                    .clicked()
+                {
                     self.set_profile(JiBridgeViewProfile::PaulowniaHardwood);
                 }
-                if ui.selectable_label(self.profile == JiBridgeViewProfile::IvoryBone, "Ivory / Bone").clicked() {
+                if ui
+                    .selectable_label(
+                        self.profile == JiBridgeViewProfile::IvoryBone,
+                        "Ivory / Bone",
+                    )
+                    .clicked()
+                {
                     self.set_profile(JiBridgeViewProfile::IvoryBone);
                 }
-                if ui.selectable_label(self.profile == JiBridgeViewProfile::RosewoodGuzheng, "Rosewood Guzheng").clicked() {
+                if ui
+                    .selectable_label(
+                        self.profile == JiBridgeViewProfile::RosewoodGuzheng,
+                        "Rosewood Guzheng",
+                    )
+                    .clicked()
+                {
                     self.set_profile(JiBridgeViewProfile::RosewoodGuzheng);
                 }
-                if ui.selectable_label(self.profile == JiBridgeViewProfile::SyntheticDelrin, "Synthetic Delrin").clicked() {
+                if ui
+                    .selectable_label(
+                        self.profile == JiBridgeViewProfile::SyntheticDelrin,
+                        "Synthetic Delrin",
+                    )
+                    .clicked()
+                {
                     self.set_profile(JiBridgeViewProfile::SyntheticDelrin);
                 }
-                if ui.selectable_label(self.profile == JiBridgeViewProfile::SmokedBamboo, "Smoked Bamboo").clicked() {
+                if ui
+                    .selectable_label(
+                        self.profile == JiBridgeViewProfile::SmokedBamboo,
+                        "Smoked Bamboo",
+                    )
+                    .clicked()
+                {
                     self.set_profile(JiBridgeViewProfile::SmokedBamboo);
                 }
             });
@@ -318,7 +356,13 @@ impl JiBridgeView {
             ui.horizontal(|ui| {
                 ui.label("Selected String Bridge Position:");
                 let mut pos = self.bridge_positions[self.selected_bridge_index];
-                if ui.add(egui::Slider::new(&mut pos, 0.15..=0.90).text(format!("String {}", self.selected_bridge_index + 1))).changed() {
+                if ui
+                    .add(
+                        egui::Slider::new(&mut pos, 0.15..=0.90)
+                            .text(format!("String {}", self.selected_bridge_index + 1)),
+                    )
+                    .changed()
+                {
                     self.set_bridge_position(self.selected_bridge_index, pos);
                 }
             });
@@ -326,7 +370,12 @@ impl JiBridgeView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 

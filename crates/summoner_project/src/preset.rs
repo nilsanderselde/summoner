@@ -284,7 +284,7 @@ impl DevicePreset {
         png_bytes.extend_from_slice(&64u32.to_be_bytes()); // Width 64
         png_bytes.extend_from_slice(&64u32.to_be_bytes()); // Height 64
         png_bytes.extend_from_slice(&[8, 6, 0, 0, 0]); // 8-bit RGBA
-        // CRC is calculated over chunk type ('IHDR') and chunk data (13 bytes): total 17 bytes
+                                                       // CRC is calculated over chunk type ('IHDR') and chunk data (13 bytes): total 17 bytes
         let crc = crc32_simple(&png_bytes[ihdr_start + 4..]);
         png_bytes.extend_from_slice(&crc.to_be_bytes());
 

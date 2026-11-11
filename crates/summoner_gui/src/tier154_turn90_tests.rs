@@ -5,13 +5,11 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
+    use crate::views::nam_amp_view::{NamAmpProfile, NamAmpView, NAM_AMP_PUCK_HIT_RADIUS};
     use crate::views::neural_super_resolution_view::{
         NeuralSuperResolutionView, SuperResolutionProfile, SUPER_RES_PUCK_HIT_RADIUS,
     };
-    use crate::views::nam_amp_view::{
-        NamAmpProfile, NamAmpView, NAM_AMP_PUCK_HIT_RADIUS,
-    };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn90_pure_neural_super_resolution_initialization_and_kinematics() {
@@ -26,11 +24,23 @@ pub mod pure_tests {
 
         // Architecture profiles & names
         let profiles = [
-            (SuperResolutionProfile::WaveletTransientAir, "TRANSIENT WAVELET AIR"),
+            (
+                SuperResolutionProfile::WaveletTransientAir,
+                "TRANSIENT WAVELET AIR",
+            ),
             (SuperResolutionProfile::VocalSparkleLPC, "VOCAL SPARKLE LPC"),
-            (SuperResolutionProfile::SubHarmonicOctave, "SUBHARMONIC OCTAVE"),
-            (SuperResolutionProfile::DiffusionSpectrogram, "DIFFUSION SPECTROGRAM"),
-            (SuperResolutionProfile::ArchiveRestoration, "ARCHIVE RESTORATION"),
+            (
+                SuperResolutionProfile::SubHarmonicOctave,
+                "SUBHARMONIC OCTAVE",
+            ),
+            (
+                SuperResolutionProfile::DiffusionSpectrogram,
+                "DIFFUSION SPECTROGRAM",
+            ),
+            (
+                SuperResolutionProfile::ArchiveRestoration,
+                "ARCHIVE RESTORATION",
+            ),
         ];
         for (p, name) in profiles {
             view.set_profile(p);
@@ -83,11 +93,36 @@ pub mod pure_tests {
 
         // Architecture profiles & nominal parameters
         let profiles = [
-            (NamAmpProfile::CleanTube1965, 1.2, -72.0, "VINTAGE CLEAN 6V6"),
-            (NamAmpProfile::BritishCrunchPlexi, 2.5, -60.0, "BRITISH PLEXI EL34"),
-            (NamAmpProfile::ModernHighGainLead, 4.2, -48.0, "MODERN RECTO 12AX7"),
-            (NamAmpProfile::BassSlapAmpegSVT, 2.0, -65.0, "ALL-TUBE BASS SVT"),
-            (NamAmpProfile::BoutiqueClassAOverdrive, 3.0, -55.0, "BOUTIQUE CLASS-A EL84"),
+            (
+                NamAmpProfile::CleanTube1965,
+                1.2,
+                -72.0,
+                "VINTAGE CLEAN 6V6",
+            ),
+            (
+                NamAmpProfile::BritishCrunchPlexi,
+                2.5,
+                -60.0,
+                "BRITISH PLEXI EL34",
+            ),
+            (
+                NamAmpProfile::ModernHighGainLead,
+                4.2,
+                -48.0,
+                "MODERN RECTO 12AX7",
+            ),
+            (
+                NamAmpProfile::BassSlapAmpegSVT,
+                2.0,
+                -65.0,
+                "ALL-TUBE BASS SVT",
+            ),
+            (
+                NamAmpProfile::BoutiqueClassAOverdrive,
+                3.0,
+                -55.0,
+                "BOUTIQUE CLASS-A EL84",
+            ),
         ];
         for (p, exp_drive, exp_gate, name) in profiles {
             view.set_profile(p);
@@ -173,7 +208,11 @@ pub mod gui_tests {
     fn test_turn90_gui_lock_free_param_bus_dispatch_super_res_and_nam_amp() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -195,12 +234,40 @@ pub mod gui_tests {
 
         view.sync_neural_super_resolution_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("hf_boost_db"), Some(&6.2));
-        assert_eq!(view.device_rack_state.node_param_values.get("spectral_continuity"), Some(&0.92));
-        assert_eq!(view.device_rack_state.node_param_values.get("harmonic_density"), Some(&0.85));
-        assert_eq!(view.device_rack_state.node_param_values.get("cutoff_frequency_hz"), Some(&14500.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("ultrasonic_air_db"), Some(&4.2));
-        assert_eq!(view.device_rack_state.node_param_values.get("reconstruction_quality_pct"), Some(&99.2));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("hf_boost_db"),
+            Some(&6.2)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("spectral_continuity"),
+            Some(&0.92)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("harmonic_density"),
+            Some(&0.85)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("cutoff_frequency_hz"),
+            Some(&14500.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("ultrasonic_air_db"),
+            Some(&4.2)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("reconstruction_quality_pct"),
+            Some(&99.2)
+        );
 
         let pid_boost = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_cont = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -217,12 +284,34 @@ pub mod gui_tests {
 
         view.sync_nam_amp_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("drive"), Some(&3.8));
-        assert_eq!(view.device_rack_state.node_param_values.get("output_gain"), Some(&1.15));
-        assert_eq!(view.device_rack_state.node_param_values.get("gate_threshold_db"), Some(&-52.0));
-        assert_eq!(view.inspector_state.node_param_values.get("cabinet_air"), Some(&0.45));
-        assert_eq!(view.inspector_state.node_param_values.get("tube_sag"), Some(&0.40));
-        assert_eq!(view.inspector_state.node_param_values.get("presence_boost_db"), Some(&2.5));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("drive"),
+            Some(&3.8)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("output_gain"),
+            Some(&1.15)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("gate_threshold_db"),
+            Some(&-52.0)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("cabinet_air"),
+            Some(&0.45)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("tube_sag"),
+            Some(&0.40)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("presence_boost_db"),
+            Some(&2.5)
+        );
 
         let pid_drive = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_gain = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -236,13 +325,18 @@ pub mod gui_tests {
         let ctx = egui::Context::default();
 
         // 1. Super-Resolution trigger propagation from rack
-        view.device_rack_state.requested_open_neural_super_resolution_hud = true;
+        view.device_rack_state
+            .requested_open_neural_super_resolution_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
             });
         });
-        assert!(!view.device_rack_state.requested_open_neural_super_resolution_hud);
+        assert!(
+            !view
+                .device_rack_state
+                .requested_open_neural_super_resolution_hud
+        );
         assert!(view.is_neural_super_resolution_hud_open());
         view.close_neural_super_resolution_hud();
 
@@ -261,13 +355,25 @@ pub mod gui_tests {
     #[test]
     fn test_turn90_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let sr_action = palette.actions.iter().find(|a| a.action_id == "open_neural_super_resolution_hud");
-        assert!(sr_action.is_some(), "open_neural_super_resolution_hud must be registered in command palette");
+        let sr_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_super_resolution_hud");
+        assert!(
+            sr_action.is_some(),
+            "open_neural_super_resolution_hud must be registered in command palette"
+        );
         let sr = sr_action.unwrap();
         assert_eq!(sr.category, "Restoration");
 
-        let nam_action = palette.actions.iter().find(|a| a.action_id == "open_nam_amp_hud");
-        assert!(nam_action.is_some(), "open_nam_amp_hud must be registered in command palette");
+        let nam_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_nam_amp_hud");
+        assert!(
+            nam_action.is_some(),
+            "open_nam_amp_hud must be registered in command palette"
+        );
         let nam = nam_action.unwrap();
         assert_eq!(nam.category, "Amplification");
     }

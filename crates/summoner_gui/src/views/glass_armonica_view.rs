@@ -596,7 +596,12 @@ impl GlassArmonicaView {
     }
 
     /// Render headless PNG snapshot visualizer for layout alignment, touch target verification, and WCAG contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep Slate Navy (#0A0E18)
@@ -668,7 +673,11 @@ impl GlassArmonicaView {
                 let theta = (i as f32 / num_pts as f32) * 2.0 * std::f32::consts::PI;
                 let px = (center_x + r * theta.cos()) as isize;
                 let py = (center_y + r * theta.sin()) as isize;
-                if px >= c_left as isize && px < c_right as isize && py >= c_top as isize && py < c_bottom as isize {
+                if px >= c_left as isize
+                    && px < c_right as isize
+                    && py >= c_top as isize
+                    && py < c_bottom as isize
+                {
                     let idx = (py as usize * width + px as usize) * 4;
                     pixels[idx] = 0x00;
                     pixels[idx + 1] = 0xE5;
@@ -753,7 +762,8 @@ impl GlassArmonicaView {
             }
         }
 
-        let water_fill_split = bar_left + ((bar_right - bar_left) as f32 * self.water_level_pct) as usize;
+        let water_fill_split =
+            bar_left + ((bar_right - bar_left) as f32 * self.water_level_pct) as usize;
         for y in bar_y_start..bar_y_end {
             for x in bar_left..=water_fill_split.min(bar_right) {
                 let idx = (y * width + x) * 4;
@@ -767,7 +777,12 @@ impl GlassArmonicaView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 

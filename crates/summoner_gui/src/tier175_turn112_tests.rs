@@ -6,13 +6,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::spectral_debleed_view::{
-        SpectralDebleedView, DebleedMode, DEBLEED_PUCK_HIT_RADIUS,
+        DebleedMode, SpectralDebleedView, DEBLEED_PUCK_HIT_RADIUS,
     };
     use crate::views::spectral_reshaper_view::{
-        SpectralReshaperView, ReshaperPreset, RESHAPER_PUCK_HIT_RADIUS,
+        ReshaperPreset, SpectralReshaperView, RESHAPER_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn112_pure_spectral_debleed_initialization_and_kinematics() {
@@ -22,11 +22,46 @@ pub mod pure_tests {
 
         // Modes and expected values
         let modes = [
-            (DebleedMode::DrumKitHiHatBleed, "DRUM HI-HAT SPILL", -28.0, 2.4, 0.95, 0.90),
-            (DebleedMode::VocalHeadphoneSpill, "VOCAL HP SPILL", -42.0, 1.8, 0.70, 0.98),
-            (DebleedMode::LiveStageGuitarSpill, "STAGE GUITAR SPILL", -22.0, 3.2, 0.85, 0.82),
-            (DebleedMode::AcousticPianoHammerDebleed, "PIANO HAMMER/DAMPER", -36.0, 1.5, 0.80, 0.94),
-            (DebleedMode::OrchestralSectionIsolator, "ORCHESTRA ISOLATOR", -32.0, 2.0, 0.60, 0.88),
+            (
+                DebleedMode::DrumKitHiHatBleed,
+                "DRUM HI-HAT SPILL",
+                -28.0,
+                2.4,
+                0.95,
+                0.90,
+            ),
+            (
+                DebleedMode::VocalHeadphoneSpill,
+                "VOCAL HP SPILL",
+                -42.0,
+                1.8,
+                0.70,
+                0.98,
+            ),
+            (
+                DebleedMode::LiveStageGuitarSpill,
+                "STAGE GUITAR SPILL",
+                -22.0,
+                3.2,
+                0.85,
+                0.82,
+            ),
+            (
+                DebleedMode::AcousticPianoHammerDebleed,
+                "PIANO HAMMER/DAMPER",
+                -36.0,
+                1.5,
+                0.80,
+                0.94,
+            ),
+            (
+                DebleedMode::OrchestralSectionIsolator,
+                "ORCHESTRA ISOLATOR",
+                -32.0,
+                2.0,
+                0.60,
+                0.88,
+            ),
         ];
 
         for (m, expected_name, exp_thresh, exp_gamma, exp_pres, exp_coh) in modes {
@@ -157,8 +192,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -187,19 +222,31 @@ pub mod gui_tests {
         view.sync_spectral_debleed_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("separation_thresh_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("separation_thresh_db")
+                .copied(),
             Some(-32.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("mask_sharpness_gamma").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("mask_sharpness_gamma")
+                .copied(),
             Some(2.8)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("separation_thresh_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("separation_thresh_db")
+                .copied(),
             Some(-32.5)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("mask_sharpness_gamma").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("mask_sharpness_gamma")
+                .copied(),
             Some(2.8)
         );
 
@@ -213,19 +260,31 @@ pub mod gui_tests {
         view.sync_spectral_reshaper_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("attack_gain_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("attack_gain_db")
+                .copied(),
             Some(5.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("sustain_gain_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("sustain_gain_db")
+                .copied(),
             Some(-2.5)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("attack_gain_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("attack_gain_db")
+                .copied(),
             Some(5.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("sustain_gain_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("sustain_gain_db")
+                .copied(),
             Some(-2.5)
         );
 
@@ -240,12 +299,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let sd_action = palette.actions.iter().find(|a| a.action_id == "open_spectral_debleed_hud");
-        assert!(sd_action.is_some(), "open_spectral_debleed_hud should be registered");
+        let sd_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_spectral_debleed_hud");
+        assert!(
+            sd_action.is_some(),
+            "open_spectral_debleed_hud should be registered"
+        );
         assert_eq!(sd_action.unwrap().category, "Spectral & Synthesis");
 
-        let sr_action = palette.actions.iter().find(|a| a.action_id == "open_spectral_reshaper_hud");
-        assert!(sr_action.is_some(), "open_spectral_reshaper_hud should be registered");
+        let sr_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_spectral_reshaper_hud");
+        assert!(
+            sr_action.is_some(),
+            "open_spectral_reshaper_hud should be registered"
+        );
         assert_eq!(sr_action.unwrap().category, "Spectral & Synthesis");
     }
 }

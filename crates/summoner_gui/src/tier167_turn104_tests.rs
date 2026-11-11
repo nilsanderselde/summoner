@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::multiband_clipper_view::{
-        MultibandClipperView, ClipperCurveMode, NUM_CLIPPER_BANDS, CLIPPER_KNEE_PUCK_HIT_RADIUS,
+        ClipperCurveMode, MultibandClipperView, CLIPPER_KNEE_PUCK_HIT_RADIUS, NUM_CLIPPER_BANDS,
     };
     use crate::views::multiband_expander_view::{
-        MultibandExpanderView, ExpanderMode, NUM_EXPANDER_BANDS, EXPANDER_NODE_HIT_RADIUS,
+        ExpanderMode, MultibandExpanderView, EXPANDER_NODE_HIT_RADIUS, NUM_EXPANDER_BANDS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn104_pure_multiband_clipper_initialization_and_kinematics() {
@@ -147,7 +147,8 @@ pub mod pure_tests {
         for &(mode, _) in &modes {
             view.set_mode(mode);
             let y_zero = MultibandExpanderView::evaluate_transfer_curve(0.0, -30.0, 2.0, 4.0, mode);
-            let y_low = MultibandExpanderView::evaluate_transfer_curve(-50.0, -30.0, 2.0, 4.0, mode);
+            let y_low =
+                MultibandExpanderView::evaluate_transfer_curve(-50.0, -30.0, 2.0, 4.0, mode);
             assert!(y_zero.is_finite());
             assert!(y_low.is_finite());
         }
@@ -170,7 +171,10 @@ pub mod pure_tests {
                 let band = &view.bands[view.active_band_idx];
                 let nx = MultibandExpanderView::threshold_to_normalized(band.threshold_db);
                 let ny = MultibandExpanderView::ratio_to_normalized(band.ratio);
-                (canvas.x + nx * canvas.width, canvas.y + (1.0 - ny) * canvas.height)
+                (
+                    canvas.x + nx * canvas.width,
+                    canvas.y + (1.0 - ny) * canvas.height,
+                )
             },
             canvas,
         ));
@@ -184,8 +188,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -207,44 +211,70 @@ pub mod gui_tests {
         assert!(!view.is_multiband_expander_hud_open());
 
         // 3. Multiband Clipper Parameter Sync Bridge
-        view.multiband_clipper_view.bands[view.multiband_clipper_view.active_band_idx].threshold_db = -8.5;
-        view.multiband_clipper_view.bands[view.multiband_clipper_view.active_band_idx].ceiling_db = -1.2;
+        view.multiband_clipper_view.bands[view.multiband_clipper_view.active_band_idx]
+            .threshold_db = -8.5;
+        view.multiband_clipper_view.bands[view.multiband_clipper_view.active_band_idx].ceiling_db =
+            -1.2;
         view.multiband_clipper_view.knee_width_db = 5.5;
         view.sync_multiband_clipper_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("threshold_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("threshold_db")
+                .copied(),
             Some(-8.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("ceiling_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("ceiling_db")
+                .copied(),
             Some(-1.2)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("knee_width_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("knee_width_db")
+                .copied(),
             Some(5.5)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("threshold").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("threshold")
+                .copied(),
             Some(-8.5)
         );
 
         // 4. Multiband Expander Parameter Sync Bridge
-        view.multiband_expander_view.bands[view.multiband_expander_view.active_band_idx].threshold_db = -42.0;
-        view.multiband_expander_view.bands[view.multiband_expander_view.active_band_idx].ratio = 4.5;
-        view.multiband_expander_view.bands[view.multiband_expander_view.active_band_idx].knee_db = 8.0;
+        view.multiband_expander_view.bands[view.multiband_expander_view.active_band_idx]
+            .threshold_db = -42.0;
+        view.multiband_expander_view.bands[view.multiband_expander_view.active_band_idx].ratio =
+            4.5;
+        view.multiband_expander_view.bands[view.multiband_expander_view.active_band_idx].knee_db =
+            8.0;
         view.sync_multiband_expander_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("threshold_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("threshold_db")
+                .copied(),
             Some(-42.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("ratio").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("ratio")
+                .copied(),
             Some(4.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("knee_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("knee_db")
+                .copied(),
             Some(8.0)
         );
         assert_eq!(
@@ -312,10 +342,7 @@ pub mod gui_tests {
     #[test]
     fn test_turn104_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let target_ids = [
-            "open_multiband_clipper_hud",
-            "open_multiband_expander_hud",
-        ];
+        let target_ids = ["open_multiband_clipper_hud", "open_multiband_expander_hud"];
 
         for action_id in target_ids {
             let found = palette.actions.iter().any(|a| a.action_id == action_id);

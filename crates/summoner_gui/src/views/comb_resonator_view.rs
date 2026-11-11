@@ -18,7 +18,7 @@ pub const MAX_COMB_TEETH: usize = 32;
 pub enum CombPolarity {
     #[default]
     Positive, // Reinforces even/odd harmonics (standard resonant peaks)
-    Negative, // Creates notch at f0, peaks at odd multiples (flanger hollow tone)
+    Negative,    // Creates notch at f0, peaks at odd multiples (flanger hollow tone)
     ComplexRing, // Alternating quadrature harmonic feedback
 }
 
@@ -27,10 +27,10 @@ pub enum CombPolarity {
 pub enum CombResonatorProfile {
     #[default]
     TunedChimeA4, // 440 Hz, 85% feedback, positive polarity, 12 teeth
-    SubHollowNotch, // 55 Hz, 92% feedback, negative polarity, 8 teeth
+    SubHollowNotch,     // 55 Hz, 92% feedback, negative polarity, 8 teeth
     FormantVocalFlange, // 1200 Hz, 78% feedback, complex ring, 16 teeth
-    StereoQuadrature, // 880 Hz, 82% feedback, positive, 20 teeth, wide spread
-    MetallicHighQ, // 3200 Hz, 96% feedback, complex ring, 24 teeth
+    StereoQuadrature,   // 880 Hz, 82% feedback, positive, 20 teeth, wide spread
+    MetallicHighQ,      // 3200 Hz, 96% feedback, complex ring, 24 teeth
 }
 
 impl CombResonatorProfile {
@@ -640,7 +640,8 @@ impl CombResonatorView {
             if let Some(pos) = response.interact_pointer_pos() {
                 if curve_rect.contains(pos) {
                     let nx = ((pos.x - curve_rect.min.x) / curve_rect.width()).clamp(0.02, 0.98);
-                    let ny = (1.0 - (pos.y - curve_rect.min.y) / curve_rect.height()).clamp(0.05, 0.98);
+                    let ny =
+                        (1.0 - (pos.y - curve_rect.min.y) / curve_rect.height()).clamp(0.05, 0.98);
                     self.puck_pos = (nx, ny);
                     self.base_frequency_hz = Self::normalized_to_freq(nx);
                     self.feedback_pct = (ny * 100.0).clamp(0.0, 99.0);
@@ -739,10 +740,8 @@ impl CombResonatorView {
         );
         painter.rect_filled(damp_box, 4.0, Color32::from_rgb(18, 25, 38));
         let norm_damp = Self::freq_to_normalized(self.dampening_hz);
-        let damp_fill = egui::Rect::from_min_size(
-            damp_box.min,
-            egui::vec2(damp_box.width() * norm_damp, 24.0),
-        );
+        let damp_fill =
+            egui::Rect::from_min_size(damp_box.min, egui::vec2(damp_box.width() * norm_damp, 24.0));
         painter.rect_filled(damp_fill, 4.0, Color32::from_rgb(255, 107, 43));
 
         if response.dragged() || response.clicked() {

@@ -32,16 +32,28 @@ pub mod pure_tests {
 
         // Automation request helper
         state.request_macro_automation("Tone");
-        assert_eq!(state.requested_automation_param, Some("macro_tone".to_string()));
+        assert_eq!(
+            state.requested_automation_param,
+            Some("macro_tone".to_string())
+        );
 
         state.request_macro_automation("Space");
-        assert_eq!(state.requested_automation_param, Some("macro_space".to_string()));
+        assert_eq!(
+            state.requested_automation_param,
+            Some("macro_space".to_string())
+        );
 
         state.request_macro_automation("Punch");
-        assert_eq!(state.requested_automation_param, Some("macro_punch".to_string()));
+        assert_eq!(
+            state.requested_automation_param,
+            Some("macro_punch".to_string())
+        );
 
         state.request_macro_automation("Char");
-        assert_eq!(state.requested_automation_param, Some("macro_char".to_string()));
+        assert_eq!(
+            state.requested_automation_param,
+            Some("macro_char".to_string())
+        );
     }
 
     #[test]
@@ -59,7 +71,10 @@ pub mod pure_tests {
 
         // Automation request for master gain
         state.requested_automation_param = Some("master_gain".to_string());
-        assert_eq!(state.requested_automation_param, Some("master_gain".to_string()));
+        assert_eq!(
+            state.requested_automation_param,
+            Some("master_gain".to_string())
+        );
     }
 
     #[test]
@@ -73,8 +88,14 @@ pub mod pure_tests {
         // Open Tone macro automation editor
         assert!(view.open_macro_automation_editor("macro_tone"));
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param, Some("macro_tone".to_string()));
-        let editor = view.automation_editor.as_ref().expect("Automation editor should be present");
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some("macro_tone".to_string())
+        );
+        let editor = view
+            .automation_editor
+            .as_ref()
+            .expect("Automation editor should be present");
         assert_eq!(editor.min_display, 0.0);
         assert_eq!(editor.max_display, 1.0);
         assert_eq!(editor.unit_name, "%");
@@ -84,17 +105,26 @@ pub mod pure_tests {
 
         // Open Space macro with short alias
         assert!(view.open_macro_automation_editor("space"));
-        assert_eq!(view.requested_modular_automation_param, Some("macro_space".to_string()));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some("macro_space".to_string())
+        );
         let editor = view.automation_editor.as_ref().unwrap();
         assert!((editor.nodes[0].value - 0.45).abs() < 1e-4);
 
         // Open Punch macro
         assert!(view.open_macro_automation_editor("punch"));
-        assert_eq!(view.requested_modular_automation_param, Some("macro_punch".to_string()));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some("macro_punch".to_string())
+        );
 
         // Open Character macro
         assert!(view.open_macro_automation_editor("char"));
-        assert_eq!(view.requested_modular_automation_param, Some("macro_character".to_string()));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some("macro_character".to_string())
+        );
 
         // Unknown macro returns false gracefully
         assert!(!view.open_macro_automation_editor("unknown_macro"));
@@ -110,12 +140,21 @@ pub mod pure_tests {
         let track_id = view.tracks[0].id;
         assert!(view.open_track_automation_editor(track_id, "macro_tone"));
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param, Some("macro_tone".to_string()));
-        let editor = view.automation_editor.as_ref().expect("Automation editor open");
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some("macro_tone".to_string())
+        );
+        let editor = view
+            .automation_editor
+            .as_ref()
+            .expect("Automation editor open");
         assert!((editor.nodes[0].value - 0.82).abs() < 1e-4);
 
         assert!(view.open_track_automation_editor(track_id, "space"));
-        assert_eq!(view.requested_modular_automation_param, Some("macro_space".to_string()));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some("macro_space".to_string())
+        );
     }
 
     #[test]
@@ -150,14 +189,29 @@ pub mod pure_tests {
 
         // Verify ParamBus receives values at correct macro offsets
         let track_id = view.tracks[0].id;
-        assert_eq!(param_bus.get(ParamId(track_id as u32 * 1000 + 100)), Some(0.85)); // Tone
-        assert_eq!(param_bus.get(ParamId(track_id as u32 * 1000 + 102)), Some(0.70)); // Space
-        assert_eq!(param_bus.get(ParamId(track_id as u32 * 1000 + 105)), Some(0.60)); // Punch
-        assert_eq!(param_bus.get(ParamId(track_id as u32 * 1000 + 104)), Some(0.40)); // Character
+        assert_eq!(
+            param_bus.get(ParamId(track_id as u32 * 1000 + 100)),
+            Some(0.85)
+        ); // Tone
+        assert_eq!(
+            param_bus.get(ParamId(track_id as u32 * 1000 + 102)),
+            Some(0.70)
+        ); // Space
+        assert_eq!(
+            param_bus.get(ParamId(track_id as u32 * 1000 + 105)),
+            Some(0.60)
+        ); // Punch
+        assert_eq!(
+            param_bus.get(ParamId(track_id as u32 * 1000 + 104)),
+            Some(0.40)
+        ); // Character
 
         // Verify AutomationTimeline has recorded both track-scoped and global macro lane keys
         assert_eq!(timeline.evaluate("macro_tone", 4.0), Some(0.85));
-        assert_eq!(timeline.evaluate(&format!("track_{}_macro_tone", track_id), 4.0), Some(0.85));
+        assert_eq!(
+            timeline.evaluate(&format!("track_{}_macro_tone", track_id), 4.0),
+            Some(0.85)
+        );
         assert_eq!(timeline.evaluate("macro_space", 4.0), Some(0.70));
         assert_eq!(timeline.evaluate("macro_punch", 4.0), Some(0.60));
         assert_eq!(timeline.evaluate("macro_character", 4.0), Some(0.40));
@@ -220,6 +274,9 @@ pub mod gui_tests {
         // Automation request was consumed and opened automation editor
         assert_eq!(view.top_bar_state.requested_automation_param, None);
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param, Some("macro_tone".to_string()));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some("macro_tone".to_string())
+        );
     }
 }

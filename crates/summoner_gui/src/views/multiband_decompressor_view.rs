@@ -289,9 +289,15 @@ impl MultibandDecompressorView {
     /// Render deterministic ASCII snapshot banner string.
     pub fn render_ascii_snapshot_str(&self) -> String {
         let mut out = String::new();
-        out.push_str("================================================================================\n");
-        out.push_str("SUMMONER DAW — MASTERING LINEAR-PHASE MULTIBAND DE-COMPRESSOR HUD [PASS: >=44pt]\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
+        out.push_str(
+            "SUMMONER DAW — MASTERING LINEAR-PHASE MULTIBAND DE-COMPRESSOR HUD [PASS: >=44pt]\n",
+        );
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str(&format!(
             "Preset: {:?} | Band: {} | Thresh: {:.1} dB | Ratio: 1:{:.2} | Range: +{:.1} dB\n",
             self.preset,
@@ -306,13 +312,19 @@ impl MultibandDecompressorView {
             self.linear_phase_fir_taps,
             self.crossover_hz[0], self.crossover_hz[1], self.crossover_hz[2]
         ));
-        out.push_str("--------------------------------------------------------------------------------\n");
+        out.push_str(
+            "--------------------------------------------------------------------------------\n",
+        );
         for line in self.render_ascii(80, 20) {
             out.push_str(&line);
             out.push('\n');
         }
-        out.push_str("================================================================================\n");
-        out.push_str("[VERIFIED: Minimum 44x44pt Touch Hit Targets | WCAG AAA Contrast Compliant]\n");
+        out.push_str(
+            "================================================================================\n",
+        );
+        out.push_str(
+            "[VERIFIED: Minimum 44x44pt Touch Hit Targets | WCAG AAA Contrast Compliant]\n",
+        );
         out
     }
 

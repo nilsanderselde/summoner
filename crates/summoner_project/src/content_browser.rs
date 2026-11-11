@@ -226,16 +226,37 @@ impl ContentBrowser {
 
                     // Extract auto-tags from filename and directory
                     let mut tags = Vec::new();
-                    if let Some(parent) = path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()) {
+                    if let Some(parent) = path
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .and_then(|n| n.to_str())
+                    {
                         tags.push(parent.to_lowercase());
                     }
                     let stem = item.name.to_lowercase();
-                    if stem.contains("kick") { tags.push("kick".into()); tags.push("drums".into()); }
-                    if stem.contains("snare") { tags.push("snare".into()); tags.push("drums".into()); }
-                    if stem.contains("hihat") || stem.contains("hat") { tags.push("hihat".into()); tags.push("drums".into()); }
-                    if stem.contains("bass") { tags.push("bass".into()); }
-                    if stem.contains("lead") { tags.push("lead".into()); tags.push("synth".into()); }
-                    if stem.contains("pad") { tags.push("pad".into()); tags.push("synth".into()); }
+                    if stem.contains("kick") {
+                        tags.push("kick".into());
+                        tags.push("drums".into());
+                    }
+                    if stem.contains("snare") {
+                        tags.push("snare".into());
+                        tags.push("drums".into());
+                    }
+                    if stem.contains("hihat") || stem.contains("hat") {
+                        tags.push("hihat".into());
+                        tags.push("drums".into());
+                    }
+                    if stem.contains("bass") {
+                        tags.push("bass".into());
+                    }
+                    if stem.contains("lead") {
+                        tags.push("lead".into());
+                        tags.push("synth".into());
+                    }
+                    if stem.contains("pad") {
+                        tags.push("pad".into());
+                        tags.push("synth".into());
+                    }
 
                     // Detect tempo from name (e.g., "drum_loop_128bpm.wav")
                     if let Some(bpm) = parse_tempo_from_filename(&stem) {
@@ -297,7 +318,11 @@ impl ContentBrowser {
                 if !q_lower.is_empty() {
                     let name_match = item.name.to_lowercase().contains(&q_lower);
                     let tag_match = item.tags.iter().any(|t| t.contains(&q_lower));
-                    let path_match = item.path.to_string_lossy().to_lowercase().contains(&q_lower);
+                    let path_match = item
+                        .path
+                        .to_string_lossy()
+                        .to_lowercase()
+                        .contains(&q_lower);
                     if !name_match && !tag_match && !path_match {
                         return false;
                     }
@@ -473,14 +498,20 @@ mod tests {
     fn test_content_browser_search_and_favorites() {
         let mut browser = ContentBrowser::new();
 
-        let item1 = ContentItem::new("samples/drums/punchy_808_kick.wav", ContentItemKind::AudioSample)
-            .with_tags(&["drums", "kick", "808", "electronic"])
-            .with_audio_metadata(0.45, 44100, 1);
+        let item1 = ContentItem::new(
+            "samples/drums/punchy_808_kick.wav",
+            ContentItemKind::AudioSample,
+        )
+        .with_tags(&["drums", "kick", "808", "electronic"])
+        .with_audio_metadata(0.45, 44100, 1);
 
-        let item2 = ContentItem::new("loops/synth/synthwave_lead_120bpm.wav", ContentItemKind::AudioLoop)
-            .with_tags(&["synth", "lead", "synthwave", "loop"])
-            .with_bpm(120.0)
-            .with_audio_metadata(4.0, 44100, 2);
+        let item2 = ContentItem::new(
+            "loops/synth/synthwave_lead_120bpm.wav",
+            ContentItemKind::AudioLoop,
+        )
+        .with_tags(&["synth", "lead", "synthwave", "loop"])
+        .with_bpm(120.0)
+        .with_audio_metadata(4.0, 44100, 2);
 
         let item3 = ContentItem::new("presets/sub_bass_cyber.toml", ContentItemKind::Preset)
             .with_tags(&["bass", "preset", "cyberpunk"]);

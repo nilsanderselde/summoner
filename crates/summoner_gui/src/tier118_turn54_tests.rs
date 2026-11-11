@@ -4,15 +4,16 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::views::bowed_string_view::{
+        BowedStringView, StringMaterial, MAX_BOW_FORCE_N, MAX_BOW_SPEED_MPS, MIN_BOW_FORCE_N,
+        MIN_BOW_SPEED_MPS,
+    };
+    use crate::views::shakuhachi_view::{
+        ShakuhachiLengthType, ShakuhachiView, MAX_JET_VELOCITY_MPS, MIN_JET_VELOCITY_MPS,
+    };
     use summoner_core::param_bus::{ParamBus, ParamId};
     use summoner_sequencer::automation_timeline::{
         AutomationCurve, AutomationLane, AutomationPoint, AutomationTimeline, Interpolation,
-    };
-    use crate::views::bowed_string_view::{
-        BowedStringView, StringMaterial, MIN_BOW_SPEED_MPS, MAX_BOW_SPEED_MPS, MIN_BOW_FORCE_N, MAX_BOW_FORCE_N,
-    };
-    use crate::views::shakuhachi_view::{
-        ShakuhachiView, ShakuhachiLengthType, MIN_JET_VELOCITY_MPS, MAX_JET_VELOCITY_MPS,
     };
 
     #[test]
@@ -26,7 +27,10 @@ pub mod pure_tests {
         // Test StringMaterial densities and friction
         let (mu_s, mu_d) = StringMaterial::SteelCore.friction_coefficients();
         assert!(mu_s > mu_d);
-        assert!(StringMaterial::TungstenHeavy.linear_mass_density_g_m() > StringMaterial::GutCore.linear_mass_density_g_m());
+        assert!(
+            StringMaterial::TungstenHeavy.linear_mass_density_g_m()
+                > StringMaterial::GutCore.linear_mass_density_g_m()
+        );
         assert_eq!(MIN_BOW_SPEED_MPS, 0.01);
         assert_eq!(MAX_BOW_SPEED_MPS, 2.0);
         assert_eq!(MIN_BOW_FORCE_N, 0.05);
@@ -124,8 +128,16 @@ pub mod pure_tests {
                 param_id: lane_bow.clone(),
                 curve: AutomationCurve {
                     points: vec![
-                        AutomationPoint { beat: 0.0, value: 0.20, interp: Interpolation::Linear },
-                        AutomationPoint { beat: 4.0, value: 1.80, interp: Interpolation::Linear },
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 0.20,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 4.0,
+                            value: 1.80,
+                            interp: Interpolation::Linear,
+                        },
                     ],
                 },
             },
@@ -137,8 +149,16 @@ pub mod pure_tests {
                 param_id: lane_shak.clone(),
                 curve: AutomationCurve {
                     points: vec![
-                        AutomationPoint { beat: 0.0, value: 10.0, interp: Interpolation::Linear },
-                        AutomationPoint { beat: 4.0, value: 30.0, interp: Interpolation::Linear },
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 10.0,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 4.0,
+                            value: 30.0,
+                            interp: Interpolation::Linear,
+                        },
                     ],
                 },
             },
@@ -171,11 +191,11 @@ pub mod pure_tests {
 #[cfg(feature = "gui")]
 #[cfg(test)]
 pub mod gui_tests {
-    use std::sync::Arc;
-    use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use eframe::egui;
+    use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn54_gui_bowed_string_modal_lifecycle() {
@@ -288,11 +308,23 @@ pub mod gui_tests {
     #[test]
     fn test_turn54_gui_command_palette_registration() {
         let palette = CommandPalette::new();
-        let has_bowed = palette.actions.iter().any(|a| a.action_id == "open_bowed_string_hud");
-        let has_shak = palette.actions.iter().any(|a| a.action_id == "open_shakuhachi_hud");
+        let has_bowed = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_bowed_string_hud");
+        let has_shak = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_shakuhachi_hud");
 
-        assert!(has_bowed, "open_bowed_string_hud should be registered in CommandPalette");
-        assert!(has_shak, "open_shakuhachi_hud should be registered in CommandPalette");
+        assert!(
+            has_bowed,
+            "open_bowed_string_hud should be registered in CommandPalette"
+        );
+        assert!(
+            has_shak,
+            "open_shakuhachi_hud should be registered in CommandPalette"
+        );
     }
 
     #[test]
@@ -308,6 +340,9 @@ pub mod gui_tests {
             });
         });
 
-        assert!(!output.shapes.is_empty(), "egui output shapes should be generated for open HUDs");
+        assert!(
+            !output.shapes.is_empty(),
+            "egui output shapes should be generated for open HUDs"
+        );
     }
 }

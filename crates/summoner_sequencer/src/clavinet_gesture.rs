@@ -63,14 +63,36 @@ pub struct ClavinetWaypoint {
 
 impl Default for ClavinetWaypoint {
     fn default() -> Self {
-        let (mode, blend, phase, hardness, damping, br, tr, md, sf, wah_en, wah_sens, wah_freq, wah_res, wah_mix) =
-            ClavinetArticulation::StevieFunk.nominal_parameters();
+        let (
+            mode,
+            blend,
+            phase,
+            hardness,
+            damping,
+            br,
+            tr,
+            md,
+            sf,
+            wah_en,
+            wah_sens,
+            wah_freq,
+            wah_res,
+            wah_mix,
+        ) = ClavinetArticulation::StevieFunk.nominal_parameters();
 
         let mut mask = 0u32;
-        if br { mask |= 1; }
-        if tr { mask |= 2; }
-        if md { mask |= 4; }
-        if sf { mask |= 8; }
+        if br {
+            mask |= 1;
+        }
+        if tr {
+            mask |= 2;
+        }
+        if md {
+            mask |= 4;
+        }
+        if sf {
+            mask |= 8;
+        }
 
         Self {
             beat: 0.0,
@@ -385,7 +407,11 @@ impl ClavinetGestureEngine {
                 self.loop_length_beats
             } else {
                 let b = beat % self.loop_length_beats;
-                if b < 0.0 { b + self.loop_length_beats } else { b }
+                if b < 0.0 {
+                    b + self.loop_length_beats
+                } else {
+                    b
+                }
             }
         } else {
             beat
@@ -414,50 +440,110 @@ impl ClavinetGestureEngine {
         let blend = match curve {
             ClavinetInterpolationCurve::Hold => w1.pickup_blend,
             ClavinetInterpolationCurve::Linear => lerp(w1.pickup_blend, w2.pickup_blend, t),
-            _ => catmull_rom_1d(w0.pickup_blend, w1.pickup_blend, w2.pickup_blend, w3.pickup_blend, t),
-        }.clamp(0.0, 1.0);
+            _ => catmull_rom_1d(
+                w0.pickup_blend,
+                w1.pickup_blend,
+                w2.pickup_blend,
+                w3.pickup_blend,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let phase = match curve {
             ClavinetInterpolationCurve::Hold => w1.pickup_phase_deg,
             ClavinetInterpolationCurve::Linear => lerp(w1.pickup_phase_deg, w2.pickup_phase_deg, t),
-            _ => catmull_rom_1d(w0.pickup_phase_deg, w1.pickup_phase_deg, w2.pickup_phase_deg, w3.pickup_phase_deg, t),
-        }.clamp(0.0, 180.0);
+            _ => catmull_rom_1d(
+                w0.pickup_phase_deg,
+                w1.pickup_phase_deg,
+                w2.pickup_phase_deg,
+                w3.pickup_phase_deg,
+                t,
+            ),
+        }
+        .clamp(0.0, 180.0);
 
         let hardness = match curve {
             ClavinetInterpolationCurve::Hold => w1.anvil_hardness,
             ClavinetInterpolationCurve::Linear => lerp(w1.anvil_hardness, w2.anvil_hardness, t),
-            _ => catmull_rom_1d(w0.anvil_hardness, w1.anvil_hardness, w2.anvil_hardness, w3.anvil_hardness, t),
-        }.clamp(0.0, 1.0);
+            _ => catmull_rom_1d(
+                w0.anvil_hardness,
+                w1.anvil_hardness,
+                w2.anvil_hardness,
+                w3.anvil_hardness,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let damping = match curve {
             ClavinetInterpolationCurve::Hold => w1.yarn_damping,
             ClavinetInterpolationCurve::Linear => lerp(w1.yarn_damping, w2.yarn_damping, t),
-            _ => catmull_rom_1d(w0.yarn_damping, w1.yarn_damping, w2.yarn_damping, w3.yarn_damping, t),
-        }.clamp(0.0, 1.0);
+            _ => catmull_rom_1d(
+                w0.yarn_damping,
+                w1.yarn_damping,
+                w2.yarn_damping,
+                w3.yarn_damping,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let wah_sens = match curve {
             ClavinetInterpolationCurve::Hold => w1.auto_wah_sensitivity,
-            ClavinetInterpolationCurve::Linear => lerp(w1.auto_wah_sensitivity, w2.auto_wah_sensitivity, t),
-            _ => catmull_rom_1d(w0.auto_wah_sensitivity, w1.auto_wah_sensitivity, w2.auto_wah_sensitivity, w3.auto_wah_sensitivity, t),
-        }.clamp(0.0, 1.0);
+            ClavinetInterpolationCurve::Linear => {
+                lerp(w1.auto_wah_sensitivity, w2.auto_wah_sensitivity, t)
+            }
+            _ => catmull_rom_1d(
+                w0.auto_wah_sensitivity,
+                w1.auto_wah_sensitivity,
+                w2.auto_wah_sensitivity,
+                w3.auto_wah_sensitivity,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let wah_freq = match curve {
             ClavinetInterpolationCurve::Hold => w1.auto_wah_freq_hz,
             ClavinetInterpolationCurve::Linear => lerp(w1.auto_wah_freq_hz, w2.auto_wah_freq_hz, t),
-            _ => catmull_rom_1d(w0.auto_wah_freq_hz, w1.auto_wah_freq_hz, w2.auto_wah_freq_hz, w3.auto_wah_freq_hz, t),
-        }.clamp(50.0, 4000.0);
+            _ => catmull_rom_1d(
+                w0.auto_wah_freq_hz,
+                w1.auto_wah_freq_hz,
+                w2.auto_wah_freq_hz,
+                w3.auto_wah_freq_hz,
+                t,
+            ),
+        }
+        .clamp(50.0, 4000.0);
 
         let wah_res = match curve {
             ClavinetInterpolationCurve::Hold => w1.auto_wah_resonance_q,
-            ClavinetInterpolationCurve::Linear => lerp(w1.auto_wah_resonance_q, w2.auto_wah_resonance_q, t),
-            _ => catmull_rom_1d(w0.auto_wah_resonance_q, w1.auto_wah_resonance_q, w2.auto_wah_resonance_q, w3.auto_wah_resonance_q, t),
-        }.clamp(0.5, 25.0);
+            ClavinetInterpolationCurve::Linear => {
+                lerp(w1.auto_wah_resonance_q, w2.auto_wah_resonance_q, t)
+            }
+            _ => catmull_rom_1d(
+                w0.auto_wah_resonance_q,
+                w1.auto_wah_resonance_q,
+                w2.auto_wah_resonance_q,
+                w3.auto_wah_resonance_q,
+                t,
+            ),
+        }
+        .clamp(0.5, 25.0);
 
         let wah_mix = match curve {
             ClavinetInterpolationCurve::Hold => w1.auto_wah_mix,
             ClavinetInterpolationCurve::Linear => lerp(w1.auto_wah_mix, w2.auto_wah_mix, t),
-            _ => catmull_rom_1d(w0.auto_wah_mix, w1.auto_wah_mix, w2.auto_wah_mix, w3.auto_wah_mix, t),
-        }.clamp(0.0, 1.0);
+            _ => catmull_rom_1d(
+                w0.auto_wah_mix,
+                w1.auto_wah_mix,
+                w2.auto_wah_mix,
+                w3.auto_wah_mix,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let progress = if self.loop_length_beats > 0.0 {
             (effective_beat / self.loop_length_beats).clamp(0.0, 1.0) as f32
@@ -466,13 +552,25 @@ impl ClavinetGestureEngine {
         };
 
         ClavinetBusSnapshot {
-            articulation: if t > 0.5 { w2.articulation } else { w1.articulation },
-            pickup_mode: if t > 0.5 { w2.pickup_mode } else { w1.pickup_mode },
+            articulation: if t > 0.5 {
+                w2.articulation
+            } else {
+                w1.articulation
+            },
+            pickup_mode: if t > 0.5 {
+                w2.pickup_mode
+            } else {
+                w1.pickup_mode
+            },
             pickup_blend: blend,
             pickup_phase_deg: phase,
             anvil_hardness: hardness,
             yarn_damping: damping,
-            tone_switches_mask: if t > 0.5 { w2.tone_switches_mask } else { w1.tone_switches_mask },
+            tone_switches_mask: if t > 0.5 {
+                w2.tone_switches_mask
+            } else {
+                w1.tone_switches_mask
+            },
             auto_wah_enabled: w1.auto_wah_enabled,
             auto_wah_sensitivity: wah_sens,
             auto_wah_freq_hz: wah_freq,
@@ -499,7 +597,10 @@ impl ClavinetGestureEngine {
         param_bus.set(ParamId(base_id.0 + 4), snap.anvil_hardness);
         param_bus.set(ParamId(base_id.0 + 5), snap.yarn_damping);
         param_bus.set(ParamId(base_id.0 + 6), snap.tone_switches_mask as f32);
-        param_bus.set(ParamId(base_id.0 + 7), if snap.auto_wah_enabled { 1.0 } else { 0.0 });
+        param_bus.set(
+            ParamId(base_id.0 + 7),
+            if snap.auto_wah_enabled { 1.0 } else { 0.0 },
+        );
         param_bus.set(ParamId(base_id.0 + 8), snap.auto_wah_sensitivity);
         param_bus.set(ParamId(base_id.0 + 9), snap.auto_wah_freq_hz);
         param_bus.set(ParamId(base_id.0 + 10), snap.auto_wah_resonance_q);

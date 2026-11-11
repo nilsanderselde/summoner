@@ -554,7 +554,10 @@ pub fn show_audio_driver_selector_panel(ui: &mut egui::Ui, panel: &mut AudioDriv
             }
         });
 
-        ui.checkbox(&mut panel.enable_input, "Enable Realtime Input Capture & Live Monitoring");
+        ui.checkbox(
+            &mut panel.enable_input,
+            "Enable Realtime Input Capture & Live Monitoring",
+        );
 
         ui.horizontal(|ui| {
             ui.label("Sample Rate:");

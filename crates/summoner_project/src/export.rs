@@ -480,7 +480,11 @@ impl ExportPresetManager {
             }
 
             if preset.settings.dither != DitherMode::None {
-                apply_dither_buffer(&mut raw_buffer, preset.settings.bit_depth, preset.settings.dither);
+                apply_dither_buffer(
+                    &mut raw_buffer,
+                    preset.settings.bit_depth,
+                    preset.settings.dither,
+                );
             }
 
             let mut final_buffer = if preset.settings.trim_silence {
@@ -791,10 +795,7 @@ fn encode_utf8_u64(val: u64) -> Vec<u8> {
     if val < 0x80 {
         vec![val as u8]
     } else if val < 0x800 {
-        vec![
-            0xC0 | ((val >> 6) as u8 & 0x1F),
-            0x80 | (val as u8 & 0x3F),
-        ]
+        vec![0xC0 | ((val >> 6) as u8 & 0x1F), 0x80 | (val as u8 & 0x3F)]
     } else if val < 0x10000 {
         vec![
             0xE0 | ((val >> 12) as u8 & 0x0F),
@@ -1019,8 +1020,8 @@ pub fn backup_project_zip(project_dir: &Path, zip_path: &Path) -> Result<(), Str
     use std::io::Write;
     let file = std::fs::File::create(zip_path).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipWriter::new(file);
-    let options = zip::write::FileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
+    let options =
+        zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
     let mut manifest = String::from("PROJECT BACKUP MANIFEST:\n");
     if project_dir.exists() {
@@ -1582,7 +1583,10 @@ pub fn export_midi_file(sequence: &SequenceConfig, bpm: f64) -> Result<Vec<u8>, 
         }],
         markers: Vec::new(),
         tracks: vec![crate::smf::SmfTrack {
-            name: sequence.clip_name.clone().unwrap_or_else(|| "Sequence".to_string()),
+            name: sequence
+                .clip_name
+                .clone()
+                .unwrap_or_else(|| "Sequence".to_string()),
             channel: 0,
             notes,
         }],
@@ -1884,7 +1888,8 @@ mod tests {
 
     #[test]
     fn test_flac_aiff_ogg_binary_roundtrip_and_no_text_stubs() {
-        let temp_dir = std::env::temp_dir().join(format!("summoner_flac_rt_{}", std::process::id()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("summoner_flac_rt_{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();
 
@@ -1895,7 +1900,8 @@ mod tests {
         write_audio_file(&flac_path, &signal, 48000, 2, "flac").unwrap();
         let raw_flac = fs::read(&flac_path).unwrap();
         assert_eq!(&raw_flac[0..4], b"fLaC");
-        let mut flac_reader = FlacReader::open(&flac_path).expect("claxon must decode exported FLAC");
+        let mut flac_reader =
+            FlacReader::open(&flac_path).expect("claxon must decode exported FLAC");
         assert_eq!(flac_reader.streaminfo().sample_rate, 48000);
         assert_eq!(flac_reader.streaminfo().channels, 2);
         let decoded_flac: Vec<i32> = flac_reader.samples().map(|s| s.unwrap()).collect();
@@ -1941,7 +1947,8 @@ mod tests {
 
     #[test]
     fn test_flac_compression_and_reference_decoder_verification() {
-        let temp_dir = std::env::temp_dir().join(format!("summoner_flac_cmp_{}", std::process::id()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("summoner_flac_cmp_{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();
 
@@ -1958,7 +1965,8 @@ mod tests {
         );
 
         // Verify decoding silence with reference Claxon reader
-        let mut reader = FlacReader::open(&silent_flac_path).expect("Reference flac reader must open file");
+        let mut reader =
+            FlacReader::open(&silent_flac_path).expect("Reference flac reader must open file");
         let decoded: Vec<i32> = reader.samples().map(|s| s.unwrap()).collect();
         assert_eq!(decoded.len(), silence.len());
         assert!(decoded.iter().all(|&s| s == 0));
@@ -1970,7 +1978,8 @@ mod tests {
         }
         let square_flac_path = temp_dir.join("square.flac");
         export_flac(&square_flac_path, &square, 44100, 1, 5).unwrap();
-        let mut square_reader = FlacReader::open(&square_flac_path).expect("Claxon should open square wave FLAC");
+        let mut square_reader =
+            FlacReader::open(&square_flac_path).expect("Claxon should open square wave FLAC");
         let decoded_square: Vec<i32> = square_reader.samples().map(|s| s.unwrap()).collect();
         assert_eq!(decoded_square.len(), square.len());
 

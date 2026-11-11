@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::oversampled_limiter_view::{
         DitherShapingCurve, LimiterProfile, OversampledLimiterView, LIMITER_PUCK_HIT_RADIUS,
     };
     use crate::views::vari_mu_master_view::{
         TubeProfile, VariMuMasterView, VARI_MU_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn96_pure_oversampled_limiter_initialization_and_kinematics() {
@@ -27,11 +27,41 @@ pub mod pure_tests {
 
         // Profile switching and default character metrics
         let profiles = [
-            (LimiterProfile::TransparentClean, -0.3, -6.0, 50.0, "TRANSPARENT"),
-            (LimiterProfile::WarmAnalogTape, -0.5, -8.5, 120.0, "WARM TAPE"),
-            (LimiterProfile::PunchyTransient, -0.2, -7.2, 25.0, "PUNCHY SNAP"),
-            (LimiterProfile::BroadcastEbuR128, -1.0, -5.0, 85.0, "BROADCAST EBU"),
-            (LimiterProfile::AggressiveClubLoudness, -0.1, -12.0, 15.0, "CLUB LOUD"),
+            (
+                LimiterProfile::TransparentClean,
+                -0.3,
+                -6.0,
+                50.0,
+                "TRANSPARENT",
+            ),
+            (
+                LimiterProfile::WarmAnalogTape,
+                -0.5,
+                -8.5,
+                120.0,
+                "WARM TAPE",
+            ),
+            (
+                LimiterProfile::PunchyTransient,
+                -0.2,
+                -7.2,
+                25.0,
+                "PUNCHY SNAP",
+            ),
+            (
+                LimiterProfile::BroadcastEbuR128,
+                -1.0,
+                -5.0,
+                85.0,
+                "BROADCAST EBU",
+            ),
+            (
+                LimiterProfile::AggressiveClubLoudness,
+                -0.1,
+                -12.0,
+                15.0,
+                "CLUB LOUD",
+            ),
         ];
 
         for (prof, expected_ceil, expected_thresh, expected_rel, expected_name) in profiles {
@@ -73,7 +103,11 @@ pub mod pure_tests {
             (DitherShapingCurve::Lipshitz, "LIPSHITZ", 6.2),
             (DitherShapingCurve::EWeighted, "E-WEIGHTED", 11.5),
             (DitherShapingCurve::FWeighted, "F-WEIGHTED", 13.8),
-            (DitherShapingCurve::ModifiedShibata, "MODIFIED SHIBATA", 16.2),
+            (
+                DitherShapingCurve::ModifiedShibata,
+                "MODIFIED SHIBATA",
+                16.2,
+            ),
         ];
 
         for (curve, label, snr) in dither_curves {
@@ -111,11 +145,41 @@ pub mod pure_tests {
 
         // Profile switching and character definitions
         let profiles = [
-            (TubeProfile::Fairchild670Vintage, 0.2, 300.0, 2.0, "FAIRCHILD 670"),
-            (TubeProfile::ManleyVariableMu, 25.0, 400.0, 1.5, "MANLEY VARI-MU"),
-            (TubeProfile::TeletronixLa2aOpto, 10.0, 1500.0, 3.0, "LA-2A OPTO"),
-            (TubeProfile::Neve33609DiodeBridge, 3.0, 100.0, 2.5, "NEVE 33609"),
-            (TubeProfile::PultecTubeFeedback, 15.0, 500.0, 1.8, "PULTEC TUBE SAT"),
+            (
+                TubeProfile::Fairchild670Vintage,
+                0.2,
+                300.0,
+                2.0,
+                "FAIRCHILD 670",
+            ),
+            (
+                TubeProfile::ManleyVariableMu,
+                25.0,
+                400.0,
+                1.5,
+                "MANLEY VARI-MU",
+            ),
+            (
+                TubeProfile::TeletronixLa2aOpto,
+                10.0,
+                1500.0,
+                3.0,
+                "LA-2A OPTO",
+            ),
+            (
+                TubeProfile::Neve33609DiodeBridge,
+                3.0,
+                100.0,
+                2.5,
+                "NEVE 33609",
+            ),
+            (
+                TubeProfile::PultecTubeFeedback,
+                15.0,
+                500.0,
+                1.8,
+                "PULTEC TUBE SAT",
+            ),
         ];
 
         for (prof, att, rel, base_ratio, name) in profiles {
@@ -221,7 +285,11 @@ pub mod gui_tests {
     fn test_turn96_gui_lock_free_param_bus_dispatch_limiter_and_vari_mu() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -242,11 +310,28 @@ pub mod gui_tests {
 
         view.sync_oversampled_limiter_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("ceiling_dbtp"), Some(&-0.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("threshold_db"), Some(&-8.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("release_ms"), Some(&45.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("auto_release"), Some(&1.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("is_16_bit_dither"), Some(&1.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("ceiling_dbtp"),
+            Some(&-0.5)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("threshold_db"),
+            Some(&-8.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("release_ms"),
+            Some(&45.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("auto_release"),
+            Some(&1.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("is_16_bit_dither"),
+            Some(&1.0)
+        );
 
         let pid_ceil = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_thresh = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -265,12 +350,38 @@ pub mod gui_tests {
 
         view.sync_vari_mu_master_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("threshold_db"), Some(&-18.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("input_drive_db"), Some(&6.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("makeup_gain_db"), Some(&4.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("stereo_link_pct"), Some(&80.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("tube_bias_v"), Some(&-8.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("dynamic_ratio"), Some(&3.2));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("threshold_db"),
+            Some(&-18.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("input_drive_db"),
+            Some(&6.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("makeup_gain_db"),
+            Some(&4.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("stereo_link_pct"),
+            Some(&80.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("tube_bias_v"),
+            Some(&-8.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("dynamic_ratio"),
+            Some(&3.2)
+        );
 
         let pid_th = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_drv = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -288,13 +399,18 @@ pub mod gui_tests {
         let ctx = egui::Context::default();
 
         // 1. Limiter trigger propagation from rack
-        view.device_rack_state.requested_open_oversampled_limiter_hud = true;
+        view.device_rack_state
+            .requested_open_oversampled_limiter_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
             });
         });
-        assert!(!view.device_rack_state.requested_open_oversampled_limiter_hud);
+        assert!(
+            !view
+                .device_rack_state
+                .requested_open_oversampled_limiter_hud
+        );
         assert!(view.is_oversampled_limiter_hud_open());
         view.close_oversampled_limiter_hud();
 
@@ -313,13 +429,25 @@ pub mod gui_tests {
     #[test]
     fn test_turn96_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let limiter_action = palette.actions.iter().find(|a| a.action_id == "open_oversampled_limiter_hud");
-        assert!(limiter_action.is_some(), "open_oversampled_limiter_hud must be registered in command palette");
+        let limiter_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_oversampled_limiter_hud");
+        assert!(
+            limiter_action.is_some(),
+            "open_oversampled_limiter_hud must be registered in command palette"
+        );
         let lim = limiter_action.unwrap();
         assert_eq!(lim.category, "Dynamics & Mastering");
 
-        let vari_mu_action = palette.actions.iter().find(|a| a.action_id == "open_vari_mu_master_hud");
-        assert!(vari_mu_action.is_some(), "open_vari_mu_master_hud must be registered in command palette");
+        let vari_mu_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_vari_mu_master_hud");
+        assert!(
+            vari_mu_action.is_some(),
+            "open_vari_mu_master_hud must be registered in command palette"
+        );
         let vm = vari_mu_action.unwrap();
         assert_eq!(vm.category, "Dynamics & Mastering");
     }

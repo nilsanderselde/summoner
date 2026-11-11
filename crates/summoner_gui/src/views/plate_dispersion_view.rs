@@ -69,13 +69,13 @@ impl PlateReverbViewProfile {
 #[derive(Debug, Clone)]
 pub struct PlateDispersionView {
     pub profile: PlateReverbViewProfile,
-    pub dispersion_factor: f32,    // [0.0 ..= 1.0]
-    pub damper_position: f32,      // [0.0 open ..= 1.0 muted]
-    pub decay_t60_sec: f32,        // [0.4 ..= 8.0]
-    pub driver_saturation: f32,    // [0.0 ..= 1.0]
-    pub high_damping: f32,         // [0.0 ..= 1.0]
-    pub stereo_width: f32,         // [0.0 ..= 1.0]
-    pub puck_pos: (f32, f32),      // Normalized (X: dispersion_factor, Y: 1.0 - damper_position)
+    pub dispersion_factor: f32, // [0.0 ..= 1.0]
+    pub damper_position: f32,   // [0.0 open ..= 1.0 muted]
+    pub decay_t60_sec: f32,     // [0.4 ..= 8.0]
+    pub driver_saturation: f32, // [0.0 ..= 1.0]
+    pub high_damping: f32,      // [0.0 ..= 1.0]
+    pub stereo_width: f32,      // [0.0 ..= 1.0]
+    pub puck_pos: (f32, f32),   // Normalized (X: dispersion_factor, Y: 1.0 - damper_position)
     pub is_dragging_puck: bool,
     pub color_palette: ContrastColorPalette,
 }
@@ -266,7 +266,8 @@ impl PlateDispersionView {
         for i in 0..NUM_DISPERSION_CURVE_POINTS - 1 {
             let x0 = curve_x + (i as f32 / (NUM_DISPERSION_CURVE_POINTS - 1) as f32) * curve_w;
             let y0 = curve_y + (1.0 - curve[i]) * curve_h;
-            let x1 = curve_x + ((i + 1) as f32 / (NUM_DISPERSION_CURVE_POINTS - 1) as f32) * curve_w;
+            let x1 =
+                curve_x + ((i + 1) as f32 / (NUM_DISPERSION_CURVE_POINTS - 1) as f32) * curve_w;
             let y1 = curve_y + (1.0 - curve[i + 1]) * curve_h;
 
             painter.line_segment(
@@ -281,10 +282,8 @@ impl PlateDispersionView {
         let pad_w = rect.width() * 0.40;
         let pad_h = rect.height() - 90.0;
 
-        let pad_rect = egui::Rect::from_min_size(
-            egui::pos2(pad_x, pad_y),
-            egui::vec2(pad_w, pad_h),
-        );
+        let pad_rect =
+            egui::Rect::from_min_size(egui::pos2(pad_x, pad_y), egui::vec2(pad_w, pad_h));
 
         painter.rect_stroke(
             pad_rect,
@@ -358,7 +357,8 @@ impl PlateDispersionView {
             for col in 1..width - 1 {
                 let col_frac = col as f32 / width as f32;
                 if col_frac < 0.50 {
-                    let idx = ((col_frac / 0.50) * (NUM_DISPERSION_CURVE_POINTS - 1) as f32) as usize;
+                    let idx =
+                        ((col_frac / 0.50) * (NUM_DISPERSION_CURVE_POINTS - 1) as f32) as usize;
                     if idx < NUM_DISPERSION_CURVE_POINTS && (norm_y - curve[idx]).abs() < 0.08 {
                         row_str.push('#'); // Curve point
                     } else {
@@ -401,7 +401,8 @@ impl PlateDispersionView {
         for i in 0..NUM_DISPERSION_CURVE_POINTS - 1 {
             let x0 = curve_x + (i as f32 / (NUM_DISPERSION_CURVE_POINTS - 1) as f32) * curve_w;
             let y0 = curve_y + (1.0 - curve[i]) * curve_h;
-            let x1 = curve_x + ((i + 1) as f32 / (NUM_DISPERSION_CURVE_POINTS - 1) as f32) * curve_w;
+            let x1 =
+                curve_x + ((i + 1) as f32 / (NUM_DISPERSION_CURVE_POINTS - 1) as f32) * curve_w;
             let y1 = curve_y + (1.0 - curve[i + 1]) * curve_h;
             draw_line_segment_pl(&mut pixels, width, height, x0, y0, x1, y1, curve_col);
         }
@@ -460,7 +461,12 @@ fn draw_circle_filled_pl(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f3
     }
 }
 
-fn encode_minimal_png_pl(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_pl(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

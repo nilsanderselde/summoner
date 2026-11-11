@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::tube_bias_view::{
-        TubeBiasView, TubeTopology, TUBE_PUCK_HIT_RADIUS, NUM_HARMONICS,
-    };
+    use crate::layout_math::Rect;
     use crate::views::tape_saturation_view::{
         TapeSaturationView, TapeViewSpeed, TAPE_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
+    use crate::views::tube_bias_view::{
+        TubeBiasView, TubeTopology, NUM_HARMONICS, TUBE_PUCK_HIT_RADIUS,
+    };
 
     #[test]
     fn test_turn92_pure_tube_bias_initialization_and_kinematics() {
@@ -30,7 +30,10 @@ pub mod pure_tests {
         let topologies = [
             (TubeTopology::Triode12AX7, "12AX7 TRIODE (VINTAGE WARMTH)"),
             (TubeTopology::PentodeEL34, "EL34 PENTODE (BRITISH PUNCH)"),
-            (TubeTopology::BeamTetrode6L6, "6L6 BEAM TETRODE (AMERICAN HEADROOM)"),
+            (
+                TubeTopology::BeamTetrode6L6,
+                "6L6 BEAM TETRODE (AMERICAN HEADROOM)",
+            ),
             (TubeTopology::CleanModern, "CLEAN MODERN (TRANSPARENT SAT)"),
         ];
         for (topo, label) in topologies {
@@ -187,7 +190,11 @@ pub mod gui_tests {
     fn test_turn92_gui_lock_free_param_bus_dispatch_tube_bias_and_tape_saturation() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -209,12 +216,40 @@ pub mod gui_tests {
 
         view.sync_tube_bias_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("bias_voltage_v"), Some(&-2.25));
-        assert_eq!(view.device_rack_state.node_param_values.get("plate_voltage_v"), Some(&300.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("drive_warmth_db"), Some(&12.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("sag_compression_pct"), Some(&40.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("asymmetry_balance_pct"), Some(&70.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("dry_wet_pct"), Some(&90.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("bias_voltage_v"),
+            Some(&-2.25)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("plate_voltage_v"),
+            Some(&300.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("drive_warmth_db"),
+            Some(&12.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("sag_compression_pct"),
+            Some(&40.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("asymmetry_balance_pct"),
+            Some(&70.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("dry_wet_pct"),
+            Some(&90.0)
+        );
 
         let pid_bias = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_plate = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -233,14 +268,38 @@ pub mod gui_tests {
 
         view.sync_tape_saturation_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("drive"), Some(&3.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("saturation"), Some(&0.8));
-        assert_eq!(view.device_rack_state.node_param_values.get("bias"), Some(&0.25));
-        assert_eq!(view.device_rack_state.node_param_values.get("head_bump"), Some(&0.65));
-        assert_eq!(view.device_rack_state.node_param_values.get("wow_flutter"), Some(&0.2));
-        assert_eq!(view.device_rack_state.node_param_values.get("hysteresis"), Some(&0.6));
-        assert_eq!(view.device_rack_state.node_param_values.get("tone"), Some(&0.75));
-        assert_eq!(view.device_rack_state.node_param_values.get("dry_wet"), Some(&85.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("drive"),
+            Some(&3.5)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("saturation"),
+            Some(&0.8)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("bias"),
+            Some(&0.25)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("head_bump"),
+            Some(&0.65)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("wow_flutter"),
+            Some(&0.2)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("hysteresis"),
+            Some(&0.6)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("tone"),
+            Some(&0.75)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("dry_wet"),
+            Some(&85.0)
+        );
 
         let pid_drv = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_sat = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -279,13 +338,25 @@ pub mod gui_tests {
     #[test]
     fn test_turn92_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let tube_action = palette.actions.iter().find(|a| a.action_id == "open_tube_bias_hud");
-        assert!(tube_action.is_some(), "open_tube_bias_hud must be registered in command palette");
+        let tube_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_tube_bias_hud");
+        assert!(
+            tube_action.is_some(),
+            "open_tube_bias_hud must be registered in command palette"
+        );
         let tube = tube_action.unwrap();
         assert_eq!(tube.category, "Distortion / Saturation");
 
-        let tape_action = palette.actions.iter().find(|a| a.action_id == "open_tape_saturation_hud");
-        assert!(tape_action.is_some(), "open_tape_saturation_hud must be registered in command palette");
+        let tape_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_tape_saturation_hud");
+        assert!(
+            tape_action.is_some(),
+            "open_tape_saturation_hud must be registered in command palette"
+        );
         let tape = tape_action.unwrap();
         assert_eq!(tape.category, "Distortion / Saturation");
     }

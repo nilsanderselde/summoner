@@ -320,7 +320,10 @@ mod tests {
         let audio = vec![0.1f32; 1000];
         freeze_track(&mut project.tracks[0], audio.clone());
         assert!(project.tracks[0].is_frozen);
-        assert_eq!(project.tracks[0].frozen_buffer.as_ref().unwrap().len(), 1000);
+        assert_eq!(
+            project.tracks[0].frozen_buffer.as_ref().unwrap().len(),
+            1000
+        );
 
         // Flatten
         flatten_track(&mut project.tracks[0]).unwrap();
@@ -333,7 +336,10 @@ mod tests {
         let bounced_id = bounce_in_place(&mut project, 1, bounced_samples, true).unwrap();
         assert_eq!(bounced_id, 1);
         assert!(project.tracks[0].is_frozen);
-        assert_eq!(project.tracks[0].frozen_buffer.as_ref().unwrap().len(), 2000);
+        assert_eq!(
+            project.tracks[0].frozen_buffer.as_ref().unwrap().len(),
+            2000
+        );
         assert!(project.tracks[0].name.contains("(Bounced)"));
 
         // Bounce to new track
@@ -342,6 +348,9 @@ mod tests {
         assert_eq!(new_id, 2);
         assert_eq!(project.tracks.len(), 2);
         assert!(project.tracks[0].muted);
-        assert_eq!(project.tracks[1].name, "Synth Bass (Flattened) (Bounced) (Bounced)");
+        assert_eq!(
+            project.tracks[1].name,
+            "Synth Bass (Flattened) (Bounced) (Bounced)"
+        );
     }
 }

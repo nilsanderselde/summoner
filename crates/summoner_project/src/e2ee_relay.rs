@@ -101,7 +101,10 @@ impl EncryptedProjectEnvelope {
         let expected_tag = mac_hasher.finalize();
 
         if expected_tag.as_bytes() != &self.auth_tag {
-            return Err("MAC authentication failure: ciphertext has been tampered with or key is invalid".to_string());
+            return Err(
+                "MAC authentication failure: ciphertext has been tampered with or key is invalid"
+                    .to_string(),
+            );
         }
 
         // Decrypt stream cipher
@@ -184,7 +187,9 @@ impl ZeroKnowledgeRelayServer {
         let mut out = Vec::new();
 
         match cmd {
-            RelayClientCommand::JoinRoom { room_id, peer_id, .. } => {
+            RelayClientCommand::JoinRoom {
+                room_id, peer_id, ..
+            } => {
                 let peers = self.rooms.entry(room_id.clone()).or_default();
                 if !peers.contains(&peer_id) {
                     peers.push(peer_id.clone());
@@ -280,7 +285,8 @@ impl E2eeSyncSession {
     /// Rotates key epoch for forward secrecy.
     pub fn rotate_epoch(&mut self) {
         self.key_epoch += 1;
-        self.shared_key = *blake3::keyed_hash(&self.shared_key, &self.key_epoch.to_le_bytes()).as_bytes();
+        self.shared_key =
+            *blake3::keyed_hash(&self.shared_key, &self.key_epoch.to_le_bytes()).as_bytes();
     }
 
     fn generate_nonce(&mut self) -> [u8; 16] {
@@ -352,14 +358,8 @@ mod tests {
         let nonce = [0x02u8; 16];
         let data = b"Untampered project bytes";
 
-        let mut envelope = EncryptedProjectEnvelope::seal(
-            "peer_bob",
-            "room_x",
-            1,
-            &key,
-            nonce,
-            data,
-        );
+        let mut envelope =
+            EncryptedProjectEnvelope::seal("peer_bob", "room_x", 1, &key, nonce, data);
 
         // Tamper with 1 byte of ciphertext
         if let Some(b) = envelope.ciphertext.first_mut() {
@@ -442,4 +442,3 @@ mod tests {
         assert_eq!(plain2, b"take 2");
     }
 }
-

@@ -6,14 +6,14 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::biwa_sawari_view::{
         BiwaSawariPreset, BiwaSawariView, BIWA_PUCK_HIT_RADIUS, NUM_SAWARI_HARMONICS,
     };
     use crate::views::schottky_wavefolder_view::{
-        SchottkyWavefolderPreset, SchottkyWavefolderView, SCHOTTKY_PUCK_HIT_RADIUS,
-        NUM_WAVEFOLDER_HARMONICS,
+        SchottkyWavefolderPreset, SchottkyWavefolderView, NUM_WAVEFOLDER_HARMONICS,
+        SCHOTTKY_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn116_pure_biwa_sawari_initialization_and_physics() {
@@ -23,10 +23,46 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (BiwaSawariPreset::SatsumaHeikeEpic, "Satsuma Biwa (Heike Epic Recitation)", 0.85, 0.40, 60.0, 0.85, 2.2, 0.65),
-            (BiwaSawariPreset::ChikuzenDelicateLyric, "Chikuzen Biwa (Delicate Lyrical Silk)", 0.45, 0.18, 120.0, 0.70, 3.5, 0.25),
-            (BiwaSawariPreset::GagakuCourtBiwa, "Gaku-Biwa (Imperial Court Orchestra)", 0.60, 0.08, 15.0, 0.60, 1.2, 0.35),
-            (BiwaSawariPreset::ModernExperimentalPercussive, "Modern Biwa (Percussive Body Slap)", 0.95, 0.85, 350.0, 0.92, 0.8, 0.90),
+            (
+                BiwaSawariPreset::SatsumaHeikeEpic,
+                "Satsuma Biwa (Heike Epic Recitation)",
+                0.85,
+                0.40,
+                60.0,
+                0.85,
+                2.2,
+                0.65,
+            ),
+            (
+                BiwaSawariPreset::ChikuzenDelicateLyric,
+                "Chikuzen Biwa (Delicate Lyrical Silk)",
+                0.45,
+                0.18,
+                120.0,
+                0.70,
+                3.5,
+                0.25,
+            ),
+            (
+                BiwaSawariPreset::GagakuCourtBiwa,
+                "Gaku-Biwa (Imperial Court Orchestra)",
+                0.60,
+                0.08,
+                15.0,
+                0.60,
+                1.2,
+                0.35,
+            ),
+            (
+                BiwaSawariPreset::ModernExperimentalPercussive,
+                "Modern Biwa (Percussive Body Slap)",
+                0.95,
+                0.85,
+                350.0,
+                0.92,
+                0.8,
+                0.90,
+            ),
         ];
 
         for (p, exp_name, exp_vel, exp_gap, exp_bend, exp_mul, exp_damp, exp_slap) in presets {
@@ -93,15 +129,54 @@ pub mod pure_tests {
     #[test]
     fn test_turn116_pure_schottky_wavefolder_initialization_and_physics() {
         let mut view = SchottkyWavefolderView::new();
-        assert_eq!(view.preset, SchottkyWavefolderPreset::BuchlaWestCoastHarmonics);
+        assert_eq!(
+            view.preset,
+            SchottkyWavefolderPreset::BuchlaWestCoastHarmonics
+        );
         assert_eq!(SCHOTTKY_PUCK_HIT_RADIUS, 22.0); // >= 44x44pt touch bounding target
 
         // Preset profiles and expected values
         let presets = [
-            (SchottkyWavefolderPreset::SubtleEvenFoldWarmth, "Subtle Even Fold Warmth (2-Stage Diode)", 10.0, 0.15, 2.0, 120.0, 0.50, -2.0),
-            (SchottkyWavefolderPreset::BuchlaWestCoastHarmonics, "Buchla West-Coast Harmonics (3-Stage Classic)", 18.0, 0.0, 3.0, 80.0, 0.35, -4.0),
-            (SchottkyWavefolderPreset::ScreamingDiodeCascade, "Screaming Diode Cascade (5-Stage Extreme)", 28.0, 0.05, 5.0, 220.0, 0.20, -7.5),
-            (SchottkyWavefolderPreset::AsymmetricMetallicCrunch, "Asymmetric Metallic Crunch (Industrial)", 22.0, -0.45, 4.0, 450.0, 0.40, -5.0),
+            (
+                SchottkyWavefolderPreset::SubtleEvenFoldWarmth,
+                "Subtle Even Fold Warmth (2-Stage Diode)",
+                10.0,
+                0.15,
+                2.0,
+                120.0,
+                0.50,
+                -2.0,
+            ),
+            (
+                SchottkyWavefolderPreset::BuchlaWestCoastHarmonics,
+                "Buchla West-Coast Harmonics (3-Stage Classic)",
+                18.0,
+                0.0,
+                3.0,
+                80.0,
+                0.35,
+                -4.0,
+            ),
+            (
+                SchottkyWavefolderPreset::ScreamingDiodeCascade,
+                "Screaming Diode Cascade (5-Stage Extreme)",
+                28.0,
+                0.05,
+                5.0,
+                220.0,
+                0.20,
+                -7.5,
+            ),
+            (
+                SchottkyWavefolderPreset::AsymmetricMetallicCrunch,
+                "Asymmetric Metallic Crunch (Industrial)",
+                22.0,
+                -0.45,
+                4.0,
+                450.0,
+                0.40,
+                -5.0,
+            ),
         ];
 
         for (p, exp_name, exp_drv, exp_bias, exp_stg, exp_cap, exp_knee, exp_trim) in presets {
@@ -172,8 +247,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -202,19 +277,31 @@ pub mod gui_tests {
         view.sync_biwa_sawari_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("bachi_plectrum_velocity").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("bachi_plectrum_velocity")
+                .copied(),
             Some(0.90)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("sawari_buzz_clearance").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("sawari_buzz_clearance")
+                .copied(),
             Some(0.50)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("bachi_plectrum_velocity").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("bachi_plectrum_velocity")
+                .copied(),
             Some(0.90)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("sawari_buzz_clearance").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("sawari_buzz_clearance")
+                .copied(),
             Some(0.50)
         );
 
@@ -226,19 +313,31 @@ pub mod gui_tests {
         view.sync_schottky_wavefolder_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("input_drive_gain").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("input_drive_gain")
+                .copied(),
             Some(24.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("fold_symmetry_bias").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("fold_symmetry_bias")
+                .copied(),
             Some(-0.25)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("input_drive_gain").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("input_drive_gain")
+                .copied(),
             Some(24.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("fold_symmetry_bias").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("fold_symmetry_bias")
+                .copied(),
             Some(-0.25)
         );
 
@@ -253,12 +352,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let biwa_action = palette.actions.iter().find(|a| a.action_id == "open_biwa_sawari_hud");
-        assert!(biwa_action.is_some(), "open_biwa_sawari_hud should be registered");
+        let biwa_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_biwa_sawari_hud");
+        assert!(
+            biwa_action.is_some(),
+            "open_biwa_sawari_hud should be registered"
+        );
         assert_eq!(biwa_action.unwrap().category, "Physical Modeling");
 
-        let wavefold_action = palette.actions.iter().find(|a| a.action_id == "open_schottky_wavefolder_hud");
-        assert!(wavefold_action.is_some(), "open_schottky_wavefolder_hud should be registered");
+        let wavefold_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_schottky_wavefolder_hud");
+        assert!(
+            wavefold_action.is_some(),
+            "open_schottky_wavefolder_hud should be registered"
+        );
         assert_eq!(wavefold_action.unwrap().category, "Dynamics & Saturation");
     }
 }

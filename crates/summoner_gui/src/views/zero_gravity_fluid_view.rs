@@ -187,7 +187,8 @@ impl ZeroGravityFluidView {
                 let dy = y as f32 - center_y;
                 let dist = (dx * dx + dy * dy).sqrt();
                 let wave_phase = dist * (std::f32::consts::TAU / wavelength);
-                let p = (wave_phase.cos() / (1.0 + dist * 0.5)) * self.pressure_damping * damping_decay;
+                let p =
+                    (wave_phase.cos() / (1.0 + dist * 0.5)) * self.pressure_damping * damping_decay;
                 self.pressure_grid[y * 4 + x] = p.clamp(-1.0, 1.0);
             }
         }
@@ -269,7 +270,10 @@ impl ZeroGravityFluidView {
         banner.push_str("=== ZERO-GRAVITY ACOUSTIC FLUID DYNAMICS & MOLECULAR RESONATOR HUD ===\n");
         banner.push_str(&format!(
             "Regime: {} | Viscosity: {:.3} cSt | Sound Speed: {:.0} m/s | Capillary f₀: {:.1} Hz\n",
-            self.regime.name(), self.viscosity_cst, self.sound_speed_mps, self.capillary_freq_hz
+            self.regime.name(),
+            self.viscosity_cst,
+            self.sound_speed_mps,
+            self.capillary_freq_hz
         ));
         banner.push_str("Touch Target Compliance: [PASS: >=44pt] Bounding Radius: 22.0pt\n");
         banner.push_str(&lines.join("\n"));

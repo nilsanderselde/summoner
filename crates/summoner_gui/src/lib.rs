@@ -19,6 +19,7 @@
 
 pub mod ascii_renderer;
 pub mod docking_layout;
+#[rustfmt::skip]
 pub mod dsp_node_ui;
 pub mod factory_presets;
 pub mod gpu_waveform;
@@ -34,9 +35,9 @@ pub mod visualizer;
 pub mod waveform_cache;
 
 #[cfg(feature = "gui")]
-pub mod app_state;
-#[cfg(feature = "gui")]
 pub mod app;
+#[cfg(feature = "gui")]
+pub mod app_state;
 #[cfg(feature = "gui")]
 pub mod command_palette;
 pub mod patch_canvas;
@@ -51,125 +52,6 @@ pub mod patch_matrix;
 pub mod stage_view;
 #[cfg(feature = "gui")]
 pub mod theme;
-#[cfg(feature = "gui")]
-pub mod tier32_tests;
-#[cfg(feature = "gui")]
-pub mod tier33_advanced_tests;
-#[cfg(feature = "gui")]
-pub mod tier33_tests;
-#[cfg(feature = "gui")]
-pub mod tier34_tests;
-pub mod tier35_tests;
-pub mod tier36_tests;
-pub mod tier37_tests;
-pub mod tier38_tests;
-pub mod tier39_tests;
-pub mod tier40_tests;
-pub mod tier41_tests;
-pub mod tier43_tests;
-pub mod tier44_tests;
-pub mod tier45_tests;
-pub mod tier46_tests;
-pub mod tier47_tests;
-#[cfg(feature = "gui")]
-pub mod tier48_tests;
-#[cfg(feature = "gui")]
-pub mod tier49_tests;
-#[cfg(feature = "gui")]
-pub mod tier50_tests;
-#[cfg(feature = "gui")]
-pub mod tier51_tests;
-#[cfg(feature = "gui")]
-pub mod tier52_tests;
-#[cfg(feature = "gui")]
-pub mod tier53_tests;
-#[cfg(feature = "gui")]
-pub mod tier54_tests;
-#[cfg(feature = "gui")]
-pub mod tier55_tests;
-#[cfg(feature = "gui")]
-pub mod tier56_tests;
-#[cfg(feature = "gui")]
-pub mod tier57_tests;
-#[cfg(feature = "gui")]
-pub mod tier58_tests;
-#[cfg(feature = "gui")]
-pub mod tier59_tests;
-#[cfg(feature = "gui")]
-pub mod tier60_tests;
-#[cfg(feature = "gui")]
-pub mod tier61_tests;
-#[cfg(feature = "gui")]
-pub mod tier62_tests;
-#[cfg(feature = "gui")]
-pub mod tier63_tests;
-#[cfg(feature = "gui")]
-pub mod tier64_tests;
-#[cfg(feature = "gui")]
-pub mod tier65_tests;
-#[cfg(feature = "gui")]
-pub mod tier66_tests;
-#[cfg(feature = "gui")]
-pub mod tier67_tests;
-#[cfg(feature = "gui")]
-pub mod tier68_tests;
-#[cfg(feature = "gui")]
-pub mod tier69_tests;
-#[cfg(feature = "gui")]
-pub mod tier70_tests;
-#[cfg(feature = "gui")]
-pub mod tier71_tests;
-#[cfg(feature = "gui")]
-pub mod tier72_tests;
-#[cfg(feature = "gui")]
-pub mod tier73_tests;
-#[cfg(feature = "gui")]
-pub mod tier74_tests;
-#[cfg(feature = "gui")]
-pub mod tier75_tests;
-#[cfg(feature = "gui")]
-pub mod tier76_tests;
-#[cfg(feature = "gui")]
-pub mod tier77_tests;
-#[cfg(feature = "gui")]
-pub mod tier78_tests;
-#[cfg(feature = "gui")]
-pub mod tier79_tests;
-#[cfg(feature = "gui")]
-pub mod tier80_redesign_tests;
-#[cfg(feature = "gui")]
-pub mod tier81_m33_tests;
-pub mod tier82_turn2_tests;
-pub mod tier83_turn3_tests;
-pub mod tier84_turn6_tests;
-pub mod tier85_turn11_tests;
-pub mod tier86_turn16_tests;
-#[cfg(feature = "gui")]
-pub mod tier87_turn17_tests;
-#[cfg(feature = "gui")]
-pub mod tier88_turn19_tests;
-#[cfg(feature = "gui")]
-pub mod tier89_turn20_tests;
-#[cfg(feature = "gui")]
-pub mod tier90_turn21_tests;
-#[cfg(feature = "gui")]
-pub mod tier91_turn23_tests;
-#[cfg(feature = "gui")]
-pub mod tier92_turn26_tests;
-#[cfg(feature = "gui")]
-pub mod tier93_turn28_tests;
-#[cfg(feature = "gui")]
-pub mod tier94_turn29_tests;
-#[cfg(feature = "gui")]
-pub mod tier95_turn30_tests;
-#[cfg(feature = "gui")]
-pub mod tier96_turn31_tests;
-#[cfg(feature = "gui")]
-pub mod tier97_turn32_tests;
-#[cfg(feature = "gui")]
-pub mod tier98_turn33_tests;
-#[cfg(feature = "gui")]
-pub mod tier99_turn34_tests;
 #[cfg(feature = "gui")]
 pub mod tier100_turn35_tests;
 #[cfg(feature = "gui")]
@@ -341,18 +223,143 @@ pub mod tier189_turn126_tests;
 #[cfg(feature = "gui")]
 pub mod tier190_turn127_tests;
 #[cfg(feature = "gui")]
+pub mod tier32_tests;
+#[cfg(feature = "gui")]
+pub mod tier33_advanced_tests;
+#[cfg(feature = "gui")]
+pub mod tier33_tests;
+#[cfg(feature = "gui")]
+pub mod tier34_tests;
+pub mod tier35_tests;
+pub mod tier36_tests;
+pub mod tier37_tests;
+pub mod tier38_tests;
+pub mod tier39_tests;
+pub mod tier40_tests;
+pub mod tier41_tests;
+pub mod tier43_tests;
+pub mod tier44_tests;
+pub mod tier45_tests;
+pub mod tier46_tests;
+pub mod tier47_tests;
+#[cfg(feature = "gui")]
+pub mod tier48_tests;
+#[cfg(feature = "gui")]
+pub mod tier49_tests;
+#[cfg(feature = "gui")]
+pub mod tier50_tests;
+#[cfg(feature = "gui")]
+pub mod tier51_tests;
+#[cfg(feature = "gui")]
+pub mod tier52_tests;
+#[cfg(feature = "gui")]
+pub mod tier53_tests;
+#[cfg(feature = "gui")]
+pub mod tier54_tests;
+#[cfg(feature = "gui")]
+pub mod tier55_tests;
+#[cfg(feature = "gui")]
+pub mod tier56_tests;
+#[cfg(feature = "gui")]
+pub mod tier57_tests;
+#[cfg(feature = "gui")]
+pub mod tier58_tests;
+#[cfg(feature = "gui")]
+pub mod tier59_tests;
+#[cfg(feature = "gui")]
+pub mod tier60_tests;
+#[cfg(feature = "gui")]
+pub mod tier61_tests;
+#[cfg(feature = "gui")]
+pub mod tier62_tests;
+#[cfg(feature = "gui")]
+pub mod tier63_tests;
+#[cfg(feature = "gui")]
+pub mod tier64_tests;
+#[cfg(feature = "gui")]
+pub mod tier65_tests;
+#[cfg(feature = "gui")]
+pub mod tier66_tests;
+#[cfg(feature = "gui")]
+pub mod tier67_tests;
+#[cfg(feature = "gui")]
+pub mod tier68_tests;
+#[cfg(feature = "gui")]
+pub mod tier69_tests;
+#[cfg(feature = "gui")]
+pub mod tier70_tests;
+#[cfg(feature = "gui")]
+pub mod tier71_tests;
+#[cfg(feature = "gui")]
+pub mod tier72_tests;
+#[cfg(feature = "gui")]
+pub mod tier73_tests;
+#[cfg(feature = "gui")]
+pub mod tier74_tests;
+#[cfg(feature = "gui")]
+pub mod tier75_tests;
+#[cfg(feature = "gui")]
+pub mod tier76_tests;
+#[cfg(feature = "gui")]
+pub mod tier77_tests;
+#[cfg(feature = "gui")]
+pub mod tier78_tests;
+#[cfg(feature = "gui")]
+pub mod tier79_tests;
+#[cfg(feature = "gui")]
+pub mod tier80_redesign_tests;
+#[cfg(feature = "gui")]
+pub mod tier81_m33_tests;
+pub mod tier82_turn2_tests;
+pub mod tier83_turn3_tests;
+pub mod tier84_turn6_tests;
+pub mod tier85_turn11_tests;
+pub mod tier86_turn16_tests;
+#[cfg(feature = "gui")]
+pub mod tier87_turn17_tests;
+#[cfg(feature = "gui")]
+pub mod tier88_turn19_tests;
+#[cfg(feature = "gui")]
+pub mod tier89_turn20_tests;
+#[cfg(feature = "gui")]
+pub mod tier90_turn21_tests;
+#[cfg(feature = "gui")]
+pub mod tier91_turn23_tests;
+#[cfg(feature = "gui")]
+pub mod tier92_turn26_tests;
+#[cfg(feature = "gui")]
+pub mod tier93_turn28_tests;
+#[cfg(feature = "gui")]
+pub mod tier94_turn29_tests;
+#[cfg(feature = "gui")]
+pub mod tier95_turn30_tests;
+#[cfg(feature = "gui")]
+pub mod tier96_turn31_tests;
+#[cfg(feature = "gui")]
+pub mod tier97_turn32_tests;
+#[cfg(feature = "gui")]
+pub mod tier98_turn33_tests;
+#[cfg(feature = "gui")]
+pub mod tier99_turn34_tests;
+#[cfg(feature = "gui")]
 pub mod touch_gestures;
 #[cfg(feature = "gui")]
 pub mod transport_bar;
 #[cfg(feature = "gui")]
 pub mod views;
 
+pub use dsp_node_ui::*;
 #[cfg(feature = "gui")]
 pub use views::accessibility_announcer::AccessibilityAnnouncerView;
 #[cfg(feature = "gui")]
-pub use views::aether_synth_view::{AetherSynthPreset, AetherSynthView, CompositeSynthVoiceMode, AETHER_SYNTH_PUCK_HIT_RADIUS};
+pub use views::aether_synth_view::{
+    AetherSynthPreset, AetherSynthView, CompositeSynthVoiceMode, AETHER_SYNTH_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
-pub use views::ai_autonomous_mastering_view::{AiAutonomousMasteringView, AiMasteringPreset, MasteringTargetCurve, AI_MASTERING_PUCK_HIT_RADIUS};
+pub use views::ai_autonomous_mastering_view::{
+    AiAutonomousMasteringView, AiMasteringPreset, MasteringTargetCurve,
+    AI_MASTERING_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
 pub use views::air_reed_view::{AirReedPreset, AirReedView, AIR_REED_PUCK_HIT_RADIUS};
 #[cfg(feature = "gui")]
@@ -372,14 +379,6 @@ pub use views::auto_wah_view::*;
 #[cfg(feature = "gui")]
 pub use views::award_winning_gui_view::*;
 #[cfg(feature = "gui")]
-pub use views::modern_asset_browser::*;
-#[cfg(feature = "gui")]
-pub use views::modern_device_rack::*;
-#[cfg(feature = "gui")]
-pub use views::modern_inspector::*;
-#[cfg(feature = "gui")]
-pub use views::modern_top_bar::*;
-#[cfg(feature = "gui")]
 pub use views::bbd_chorus_view::BbdChorusView;
 #[cfg(feature = "gui")]
 pub use views::bellows_view::*;
@@ -396,7 +395,9 @@ pub use views::bowed_string_view::BowedStringView;
 #[cfg(feature = "gui")]
 pub use views::cadence_flow_view::CadenceFlowView;
 #[cfg(feature = "gui")]
-pub use views::chromatic_tuner_view::{ChromaticTunerPreset, ChromaticTunerView, CHROMATIC_TUNER_PUCK_HIT_RADIUS};
+pub use views::chromatic_tuner_view::{
+    ChromaticTunerPreset, ChromaticTunerView, CHROMATIC_TUNER_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
 pub use views::clavinet_view::*;
 #[cfg(feature = "gui")]
@@ -416,26 +417,17 @@ pub use views::device_catalog::*;
 #[cfg(feature = "gui")]
 pub use views::dialog_gating_view::DialogGatingView;
 #[cfg(feature = "gui")]
-pub use views::dither_quantizer_view::{DitherMode, DitherPreset, DitherQuantizerView, DITHER_PUCK_HIT_RADIUS};
-#[cfg(feature = "gui")]
 pub use views::diffractive_propagation_view::DiffractivePropagationView;
+#[cfg(feature = "gui")]
+pub use views::dither_quantizer_view::{
+    DitherMode, DitherPreset, DitherQuantizerView, DITHER_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
 pub use views::dpi_scale_panel::DpiScalePanelView;
 #[cfg(feature = "gui")]
-pub use views::drum_machine_view::{DrumMachinePadView, DrumMachinePreset, DrumPadSlotConfig, DRUM_MACHINE_PUCK_HIT_RADIUS};
-#[cfg(feature = "gui")]
-pub use views::hardware_control_surface_view::{HardwareControlPreset, HardwareControlSurfaceView, HardwareControllerProtocol, HARDWARE_SURFACE_PUCK_HIT_RADIUS};
-#[cfg(feature = "gui")]
-pub use views::live_session_recorder_view::{LiveRecordDiskFormat, LiveRecorderPreset, LiveSessionRecorderView, LIVE_RECORDER_PUCK_HIT_RADIUS};
-#[cfg(feature = "gui")]
-pub use views::parametric_eq_view::{BiquadFilterMode, ParametricBandConfig, ParametricEqPreset, ParametricEqView, PARAMETRIC_EQ_PUCK_HIT_RADIUS};
-#[cfg(feature = "gui")]
-pub use views::plugin_host_view::{HostedPluginFormat, PluginHostPreset, PluginHostView, PLUGIN_HOST_PUCK_HIT_RADIUS};
-#[cfg(feature = "gui")]
-pub use views::polyphase_oversampler_view::{OversampleFactorMode, PolyphaseOversamplerPreset, PolyphaseOversamplerView, FIR_TAPS_COUNT, HALF_BAND_FIR_COEFFS, OVERSAMPLER_PUCK_HIT_RADIUS};
-#[cfg(feature = "gui")]
-pub use views::sfz_sampler_view::{SfzLoopTopology, SfzRegionSlot, SfzSamplerPreset, SfzSamplerView, SFZ_SAMPLER_PUCK_HIT_RADIUS};
-pub use dsp_node_ui::*;
+pub use views::drum_machine_view::{
+    DrumMachinePadView, DrumMachinePreset, DrumPadSlotConfig, DRUM_MACHINE_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
 pub use views::dsp_rack_dock::DspRackDockView;
 #[cfg(feature = "gui")]
@@ -446,6 +438,8 @@ pub use views::dynamic_crest_shaper_view::{CrestTopology, DynamicCrestShaperView
 pub use views::dynamic_stereo_width_view::DynamicStereoWidthView;
 #[cfg(feature = "gui")]
 pub use views::ebu_loudness_radar_view::EbuLoudnessRadarView;
+#[cfg(feature = "gui")]
+pub use views::embouchure_angle_view::EmbouchureAngleView;
 #[cfg(feature = "gui")]
 pub use views::envelope_follower_view::EnvelopeFollowerView;
 #[cfg(feature = "gui")]
@@ -465,11 +459,18 @@ pub use views::gamelan_gender_view::GamelanGenderView;
 #[cfg(feature = "gui")]
 pub use views::glass_armonica_view::GlassArmonicaView;
 #[cfg(feature = "gui")]
+pub use views::grand_piano_view::GrandPianoView;
+#[cfg(feature = "gui")]
 pub use views::granular_cloud_view::GranularCloudView;
 #[cfg(feature = "gui")]
 pub use views::granular_freeze_view::GranularFreezeView;
 #[cfg(feature = "gui")]
 pub use views::granular_pitch_shifter_view::GranularPitchShifterView;
+#[cfg(feature = "gui")]
+pub use views::hardware_control_surface_view::{
+    HardwareControlPreset, HardwareControlSurfaceView, HardwareControllerProtocol,
+    HARDWARE_SURFACE_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
 pub use views::harmonic_exciter_view::HarmonicExciterView;
 #[cfg(feature = "gui")]
@@ -507,6 +508,11 @@ pub use views::linear_phase_crossover_view::{CrossoverSlope, LinearPhaseCrossove
 #[cfg(feature = "gui")]
 pub use views::live_macro_rack::LiveMacroRackView;
 #[cfg(feature = "gui")]
+pub use views::live_session_recorder_view::{
+    LiveRecordDiskFormat, LiveRecorderPreset, LiveSessionRecorderView,
+    LIVE_RECORDER_PUCK_HIT_RADIUS,
+};
+#[cfg(feature = "gui")]
 pub use views::loop_slicer_view::LoopSlicerView;
 #[cfg(feature = "gui")]
 pub use views::macro_rotary_dial::MacroRotaryDialView;
@@ -527,6 +533,14 @@ pub use views::meter_bridge_view::MeterBridgeView;
 #[cfg(feature = "gui")]
 pub use views::midside_focuser_view::MidSideFocuserView;
 #[cfg(feature = "gui")]
+pub use views::modern_asset_browser::*;
+#[cfg(feature = "gui")]
+pub use views::modern_device_rack::*;
+#[cfg(feature = "gui")]
+pub use views::modern_inspector::*;
+#[cfg(feature = "gui")]
+pub use views::modern_top_bar::*;
+#[cfg(feature = "gui")]
 pub use views::mpe_editor::{MpeCurveNode, MpeDimension, MpeEditorView, MpeNoteBlock};
 #[cfg(feature = "gui")]
 pub use views::mpegh_3d_spatializer_view::Mpegh3DSpatializerView;
@@ -536,6 +550,11 @@ pub use views::mpegh_spatializer_view::MpeghSpatializerView;
 pub use views::mpegh_trajectory_view::MpeghTrajectoryView;
 #[cfg(feature = "gui")]
 pub use views::multiband_clipper_view::MultibandClipperView;
+#[cfg(feature = "gui")]
+pub use views::multiband_compressor_view::{
+    MultibandCompBandSlot, MultibandCompressorPreset, MultibandCompressorView,
+    MULTIBAND_COMP_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
 pub use views::multiband_decompressor_view::MultibandDecompressorView;
 #[cfg(feature = "gui")]
@@ -589,6 +608,11 @@ pub use views::oversampled_limiter_view::OversampledLimiterView;
 #[cfg(feature = "gui")]
 pub use views::parallel_transient_saturator_view::ParallelTransientSaturatorView;
 #[cfg(feature = "gui")]
+pub use views::parametric_eq_view::{
+    BiquadFilterMode, ParametricBandConfig, ParametricEqPreset, ParametricEqView,
+    PARAMETRIC_EQ_PUCK_HIT_RADIUS,
+};
+#[cfg(feature = "gui")]
 pub use views::phase_align_view::PhaseAlignView;
 #[cfg(feature = "gui")]
 pub use views::pipe_organ_view::PipeOrganView;
@@ -601,7 +625,16 @@ pub use views::plate_dispersion_view::{
 #[cfg(feature = "gui")]
 pub use views::plucked_string_view::PluckedStringView;
 #[cfg(feature = "gui")]
+pub use views::plugin_host_view::{
+    HostedPluginFormat, PluginHostPreset, PluginHostView, PLUGIN_HOST_PUCK_HIT_RADIUS,
+};
+#[cfg(feature = "gui")]
 pub use views::polar_phase_correlator_view::PolarPhaseCorrelatorView;
+#[cfg(feature = "gui")]
+pub use views::polyphase_oversampler_view::{
+    OversampleFactorMode, PolyphaseOversamplerPreset, PolyphaseOversamplerView, FIR_TAPS_COUNT,
+    HALF_BAND_FIR_COEFFS, OVERSAMPLER_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
 pub use views::rank_voicing_view::*;
 #[cfg(feature = "gui")]
@@ -613,7 +646,9 @@ pub use views::reverb_space_view::ReverbSpaceView;
 #[cfg(feature = "gui")]
 pub use views::ribbon_controller_view::RibbonControllerView;
 #[cfg(feature = "gui")]
-pub use views::ring_mod_view::{RingModPreset, RingModulatorView, RingWaveformShape, RING_MOD_PUCK_HIT_RADIUS};
+pub use views::ring_mod_view::{
+    RingModPreset, RingModulatorView, RingWaveformShape, RING_MOD_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
 pub use views::rotary_doppler_view::RotaryDopplerView;
 #[cfg(feature = "gui")]
@@ -623,9 +658,24 @@ pub use views::sample_editor_view;
 #[cfg(feature = "gui")]
 pub use views::sample_editor_view::SampleEditorView;
 #[cfg(feature = "gui")]
+pub use views::sfz_sampler_view::{
+    SfzLoopTopology, SfzRegionSlot, SfzSamplerPreset, SfzSamplerView, SFZ_SAMPLER_PUCK_HIT_RADIUS,
+};
+#[cfg(feature = "gui")]
+pub use views::shakuhachi_view::ShakuhachiView;
+#[cfg(feature = "gui")]
 pub use views::sidechain_matrix_view::SidechainMatrixView;
 #[cfg(feature = "gui")]
+pub use views::simd_poly_wavetable_view::{
+    SimdPolyWavetablePreset, SimdPolyWavetableView, WavetableFrameShape, MAX_SIMD_POLY_VOICES,
+    SIMD_POLY_WAVETABLE_PUCK_HIT_RADIUS, WAVETABLE_FRAME_SIZE,
+};
+#[cfg(feature = "gui")]
+pub use views::sitar_view::SitarView;
+#[cfg(feature = "gui")]
 pub use views::sonar_hydrophone_view::SonarHydrophoneView;
+#[cfg(feature = "gui")]
+pub use views::soundboard_bridge_view::SoundboardBridgeView;
 #[cfg(feature = "gui")]
 pub use views::spatial_panner_view::SpatialPannerView;
 #[cfg(feature = "gui")]
@@ -659,16 +709,6 @@ pub use views::spectral_unmasker_view::SpectralUnmaskerView;
 #[cfg(feature = "gui")]
 pub use views::spectrogram_3d_view::Spectrogram3DView;
 #[cfg(feature = "gui")]
-pub use views::embouchure_angle_view::EmbouchureAngleView;
-#[cfg(feature = "gui")]
-pub use views::grand_piano_view::GrandPianoView;
-#[cfg(feature = "gui")]
-pub use views::shakuhachi_view::ShakuhachiView;
-#[cfg(feature = "gui")]
-pub use views::sitar_view::SitarView;
-#[cfg(feature = "gui")]
-pub use views::soundboard_bridge_view::SoundboardBridgeView;
-#[cfg(feature = "gui")]
 pub use views::spring_lattice_view::{
     SpringLatticeView, SpringLatticeViewProfile, SPRING_PUCK_HIT_RADIUS,
 };
@@ -677,7 +717,9 @@ pub use views::spring_reverb_view::SpringReverbView;
 #[cfg(feature = "gui")]
 pub use views::steelpan_drum_view::SteelpanDrumView;
 #[cfg(feature = "gui")]
-pub use views::stem_separator_view::{StemChannelConfig, StemSeparatorPreset, StemSeparatorView, STEM_SEPARATOR_PUCK_HIT_RADIUS};
+pub use views::stem_separator_view::{
+    StemChannelConfig, StemSeparatorPreset, StemSeparatorView, STEM_SEPARATOR_PUCK_HIT_RADIUS,
+};
 #[cfg(feature = "gui")]
 pub use views::step_sequencer_matrix::StepSequencerMatrixView;
 #[cfg(feature = "gui")]
@@ -744,16 +786,6 @@ pub use views::waveguide_mesh_view::WaveguideMeshView;
 pub use views::wfs_array_spatializer_view::WfsArraySpatializerView;
 #[cfg(feature = "gui")]
 pub use views::woodwind_jet_view::WoodwindJetView;
-#[cfg(feature = "gui")]
-pub use views::multiband_compressor_view::{
-    MultibandCompBandSlot, MultibandCompressorPreset, MultibandCompressorView,
-    MULTIBAND_COMP_PUCK_HIT_RADIUS,
-};
-#[cfg(feature = "gui")]
-pub use views::simd_poly_wavetable_view::{
-    SimdPolyWavetablePreset, SimdPolyWavetableView, WavetableFrameShape, MAX_SIMD_POLY_VOICES,
-    SIMD_POLY_WAVETABLE_PUCK_HIT_RADIUS, WAVETABLE_FRAME_SIZE,
-};
 
 #[cfg(feature = "gui")]
 pub fn launch(

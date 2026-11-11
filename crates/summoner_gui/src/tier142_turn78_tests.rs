@@ -5,11 +5,11 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::layout_math::Rect;
-    use crate::views::binaural_panner_view::{
-        BinauralPannerView, HrtfModel, BINAURAL_PUCK_HIT_RADIUS,
-    };
     use crate::views::binaural_brir_view::{
         BinauralBrirView, RoomAcousticProfile, BRIR_SOURCE_PUCK_HIT_RADIUS,
+    };
+    use crate::views::binaural_panner_view::{
+        BinauralPannerView, HrtfModel, BINAURAL_PUCK_HIT_RADIUS,
     };
     use summoner_core::param_bus::ParamId;
 
@@ -220,7 +220,11 @@ pub mod gui_tests {
     fn test_turn78_gui_live_parambus_slot_dispatch() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 

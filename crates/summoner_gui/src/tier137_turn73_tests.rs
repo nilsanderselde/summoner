@@ -204,7 +204,11 @@ pub mod gui_tests {
     fn test_turn73_gui_live_parambus_slot_dispatch() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -229,11 +233,15 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(0.25));
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("membrane_tension_n"),
+            view.device_rack_state
+                .node_param_values
+                .get("membrane_tension_n"),
             Some(&4500.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("membrane_tension_n"),
+            view.inspector_state
+                .node_param_values
+                .get("membrane_tension_n"),
             Some(&4500.0)
         );
 

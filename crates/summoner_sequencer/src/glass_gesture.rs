@@ -13,9 +13,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
-use summoner_core::glass_bus::{
-    GlassArticulation, GlassArmonicaBus, GlassArmonicaBusSnapshot,
-};
+use summoner_core::glass_bus::{GlassArmonicaBus, GlassArmonicaBusSnapshot, GlassArticulation};
 use summoner_core::param_bus::{ParamBus, ParamId};
 
 /// Interpolation curve between discrete Glass Armonica keyframe waypoints.
@@ -81,22 +79,16 @@ impl Default for GlassWaypoint {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GlassGesturePattern {
     /// 1761 Franklin Authentic continuous gentle spindle rubbing.
-    FranklinAuthenticContinuous {
-        phrase_length_beats: f64,
-    },
+    FranklinAuthenticContinuous { phrase_length_beats: f64 },
     /// Mesmer Magnetic Healing Chalice with slow rotation and heavy water modulation.
     MesmerMagneticHealing {
         phrase_length_beats: f64,
         water_swell_depth: f32,
     },
     /// Mozart Virtuoso Adagio with dynamic finger pressure accents.
-    MozartVirtuosoAdagio {
-        phrase_length_beats: f64,
-    },
+    MozartVirtuosoAdagio { phrase_length_beats: f64 },
     /// Ethereal Borosilicate Swell with expansive high-frequency sustain.
-    EtherealBorosilicateSwell {
-        phrase_length_beats: f64,
-    },
+    EtherealBorosilicateSwell { phrase_length_beats: f64 },
     /// Water-Tuned Crystal Glissando with dynamic fluid mass-loading pitch shifts.
     WaterTunedCrystalGlissando {
         phrase_length_beats: f64,
@@ -144,7 +136,11 @@ impl GlassGestureEngine {
     }
 
     pub fn sort_waypoints(&mut self) {
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     pub fn clear(&mut self) {
@@ -155,7 +151,9 @@ impl GlassGestureEngine {
         self.clear();
 
         match &pattern {
-            GlassGesturePattern::FranklinAuthenticContinuous { phrase_length_beats } => {
+            GlassGesturePattern::FranklinAuthenticContinuous {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(GlassWaypoint {
@@ -201,7 +199,10 @@ impl GlassGestureEngine {
                 });
             }
 
-            GlassGesturePattern::MesmerMagneticHealing { phrase_length_beats, water_swell_depth } => {
+            GlassGesturePattern::MesmerMagneticHealing {
+                phrase_length_beats,
+                water_swell_depth,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
                 let depth = *water_swell_depth;
 
@@ -248,7 +249,9 @@ impl GlassGestureEngine {
                 });
             }
 
-            GlassGesturePattern::MozartVirtuosoAdagio { phrase_length_beats } => {
+            GlassGesturePattern::MozartVirtuosoAdagio {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(GlassWaypoint {
@@ -308,7 +311,9 @@ impl GlassGestureEngine {
                 });
             }
 
-            GlassGesturePattern::EtherealBorosilicateSwell { phrase_length_beats } => {
+            GlassGesturePattern::EtherealBorosilicateSwell {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(GlassWaypoint {
@@ -354,7 +359,10 @@ impl GlassGestureEngine {
                 });
             }
 
-            GlassGesturePattern::WaterTunedCrystalGlissando { phrase_length_beats, max_water_level } => {
+            GlassGesturePattern::WaterTunedCrystalGlissando {
+                phrase_length_beats,
+                max_water_level,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
                 let max_w = *max_water_level;
 
@@ -401,7 +409,10 @@ impl GlassGestureEngine {
                 });
             }
 
-            GlassGesturePattern::CrystalSingingBowlMeditation { phrase_length_beats, mallet_interval_beats } => {
+            GlassGesturePattern::CrystalSingingBowlMeditation {
+                phrase_length_beats,
+                mallet_interval_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
                 let interval = mallet_interval_beats.max(0.5);
 
@@ -557,17 +568,71 @@ impl GlassGestureEngine {
         };
 
         let curve = wp2.curve;
-        let speed = interp(wp0.spindle_speed_rad_s, wp1.spindle_speed_rad_s, wp2.spindle_speed_rad_s, wp3.spindle_speed_rad_s, curve).clamp(0.0, 6.0 * PI);
-        let force = interp(wp0.normal_force_n, wp1.normal_force_n, wp2.normal_force_n, wp3.normal_force_n, curve).clamp(0.05, 2.50);
-        let water = interp(wp0.water_fill_level, wp1.water_fill_level, wp2.water_fill_level, wp3.water_fill_level, curve).clamp(0.0, 1.0);
-        let strike = interp(wp0.strike_velocity, wp1.strike_velocity, wp2.strike_velocity, wp3.strike_velocity, curve).clamp(0.0, 1.5);
-        let moist = interp(wp0.moisture_lubrication, wp1.moisture_lubrication, wp2.moisture_lubrication, wp3.moisture_lubrication, curve).clamp(0.1, 1.0);
-        let chassis = interp(wp0.chassis_resonance, wp1.chassis_resonance, wp2.chassis_resonance, wp3.chassis_resonance, curve).clamp(0.0, 1.0);
-        let qscale = interp(wp0.q_scale, wp1.q_scale, wp2.q_scale, wp3.q_scale, curve).clamp(0.2, 2.5);
-        let mgain = interp(wp0.master_gain, wp1.master_gain, wp2.master_gain, wp3.master_gain, curve).clamp(0.0, 2.0);
+        let speed = interp(
+            wp0.spindle_speed_rad_s,
+            wp1.spindle_speed_rad_s,
+            wp2.spindle_speed_rad_s,
+            wp3.spindle_speed_rad_s,
+            curve,
+        )
+        .clamp(0.0, 6.0 * PI);
+        let force = interp(
+            wp0.normal_force_n,
+            wp1.normal_force_n,
+            wp2.normal_force_n,
+            wp3.normal_force_n,
+            curve,
+        )
+        .clamp(0.05, 2.50);
+        let water = interp(
+            wp0.water_fill_level,
+            wp1.water_fill_level,
+            wp2.water_fill_level,
+            wp3.water_fill_level,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let strike = interp(
+            wp0.strike_velocity,
+            wp1.strike_velocity,
+            wp2.strike_velocity,
+            wp3.strike_velocity,
+            curve,
+        )
+        .clamp(0.0, 1.5);
+        let moist = interp(
+            wp0.moisture_lubrication,
+            wp1.moisture_lubrication,
+            wp2.moisture_lubrication,
+            wp3.moisture_lubrication,
+            curve,
+        )
+        .clamp(0.1, 1.0);
+        let chassis = interp(
+            wp0.chassis_resonance,
+            wp1.chassis_resonance,
+            wp2.chassis_resonance,
+            wp3.chassis_resonance,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let qscale =
+            interp(wp0.q_scale, wp1.q_scale, wp2.q_scale, wp3.q_scale, curve).clamp(0.2, 2.5);
+        let mgain = interp(
+            wp0.master_gain,
+            wp1.master_gain,
+            wp2.master_gain,
+            wp3.master_gain,
+            curve,
+        )
+        .clamp(0.0, 2.0);
 
         GlassArmonicaBusSnapshot {
-            articulation: if t > 0.5 { wp2.articulation } else { wp1.articulation },
+            articulation: if t > 0.5 {
+                wp2.articulation
+            } else {
+                wp1.articulation
+            },
             spindle_speed_rad_s: speed,
             normal_force_n: force,
             water_fill_level: water,
@@ -619,12 +684,27 @@ mod tests {
     #[test]
     fn test_glass_gesture_patterns_and_catmull_rom_evaluation() {
         for pattern in [
-            GlassGesturePattern::FranklinAuthenticContinuous { phrase_length_beats: 4.0 },
-            GlassGesturePattern::MesmerMagneticHealing { phrase_length_beats: 4.0, water_swell_depth: 0.3 },
-            GlassGesturePattern::MozartVirtuosoAdagio { phrase_length_beats: 6.0 },
-            GlassGesturePattern::EtherealBorosilicateSwell { phrase_length_beats: 4.0 },
-            GlassGesturePattern::WaterTunedCrystalGlissando { phrase_length_beats: 4.0, max_water_level: 0.6 },
-            GlassGesturePattern::CrystalSingingBowlMeditation { phrase_length_beats: 8.0, mallet_interval_beats: 2.0 },
+            GlassGesturePattern::FranklinAuthenticContinuous {
+                phrase_length_beats: 4.0,
+            },
+            GlassGesturePattern::MesmerMagneticHealing {
+                phrase_length_beats: 4.0,
+                water_swell_depth: 0.3,
+            },
+            GlassGesturePattern::MozartVirtuosoAdagio {
+                phrase_length_beats: 6.0,
+            },
+            GlassGesturePattern::EtherealBorosilicateSwell {
+                phrase_length_beats: 4.0,
+            },
+            GlassGesturePattern::WaterTunedCrystalGlissando {
+                phrase_length_beats: 4.0,
+                max_water_level: 0.6,
+            },
+            GlassGesturePattern::CrystalSingingBowlMeditation {
+                phrase_length_beats: 8.0,
+                mallet_interval_beats: 2.0,
+            },
         ] {
             let engine = GlassGestureEngine::with_pattern(pattern);
             assert!(!engine.waypoints.is_empty());
@@ -644,9 +724,10 @@ mod tests {
 
     #[test]
     fn test_glass_gesture_dispatch_to_bus() {
-        let engine = GlassGestureEngine::with_pattern(GlassGesturePattern::FranklinAuthenticContinuous {
-            phrase_length_beats: 4.0,
-        });
+        let engine =
+            GlassGestureEngine::with_pattern(GlassGesturePattern::FranklinAuthenticContinuous {
+                phrase_length_beats: 4.0,
+            });
         let bus = GlassArmonicaBus::new();
         let mut param_bus = ParamBus::new();
         summoner_core::glass_bus::register_glass_armonica_params(

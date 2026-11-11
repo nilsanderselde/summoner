@@ -273,10 +273,7 @@ impl TapeFluxMasterView {
         ));
         output.push_str(&format!(
             " Drive: +{:<4.1} dB | Bias: {:<+4.1} dB | Speed: {:<4.1} ips | THD: {:<4.2}%\n",
-            self.flux_drive_db,
-            self.bias_trim_db,
-            self.tape_speed_ips,
-            self.thd_distortion_pct
+            self.flux_drive_db, self.bias_trim_db, self.tape_speed_ips, self.thd_distortion_pct
         ));
         output.push_str("------------------------------------------------------------\n");
         for line in lines {

@@ -112,11 +112,7 @@ mod tests {
             );
 
             for param in params {
-                assert!(
-                    !param.id.is_empty(),
-                    "Parameter ID empty on node {}",
-                    name
-                );
+                assert!(!param.id.is_empty(), "Parameter ID empty on node {}", name);
                 assert!(
                     !param.name.is_empty(),
                     "Parameter Name empty on {}.{}",
@@ -280,7 +276,11 @@ mod tests {
 
         // Check modules have reflected parameters
         for module in &dock.modules {
-            assert!(!module.params.is_empty(), "Rack module {} must have parameters", module.name);
+            assert!(
+                !module.params.is_empty(),
+                "Rack module {} must have parameters",
+                module.name
+            );
         }
 
         // Test module reordering
@@ -308,7 +308,9 @@ mod tests {
         // Test dynamic node selection
         rack_state.selected_node_kind = Some("TubeSaturationNode".to_string());
         let registry = DspNodeRegistry::new();
-        let desc = registry.get("TubeSaturationNode").expect("TubeSaturationNode must exist in registry");
+        let desc = registry
+            .get("TubeSaturationNode")
+            .expect("TubeSaturationNode must exist in registry");
         assert_eq!(desc.kind_id, "TubeSaturationNode");
     }
 }

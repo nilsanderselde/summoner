@@ -147,12 +147,10 @@ impl BbdChorusView {
 
     /// Deterministic ASCII snapshot with metadata banner.
     pub fn render_ascii_snapshot_str(&self) -> String {
-        let mut lines = vec![
-            format!(
-                "=== MULTI-VOICE BBD CHORUS & LISSAJOUS MATRIX HUD [MODE: {}] ===",
-                self.mode.mode_name()
-            ),
-        ];
+        let mut lines = vec![format!(
+            "=== MULTI-VOICE BBD CHORUS & LISSAJOUS MATRIX HUD [MODE: {}] ===",
+            self.mode.mode_name()
+        )];
         lines.extend(self.render_ascii(80, 14));
         lines.push("[PASS] Multi-Voice BBD Chorus Matrix Verification".into());
         lines.join("\n")
@@ -164,7 +162,12 @@ impl BbdChorusView {
         let w = avail.x.max(760.0);
         let h = avail.y.max(520.0);
         let (rect_allocated, _) = ui.allocate_exact_size(egui::vec2(w, h), egui::Sense::hover());
-        let r = Rect::new(rect_allocated.min.x, rect_allocated.min.y, rect_allocated.width(), rect_allocated.height());
+        let r = Rect::new(
+            rect_allocated.min.x,
+            rect_allocated.min.y,
+            rect_allocated.width(),
+            rect_allocated.height(),
+        );
         self.show(ui, r);
     }
 

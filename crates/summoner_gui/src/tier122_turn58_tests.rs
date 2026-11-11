@@ -4,15 +4,15 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::layout_math::Rect;
-    use crate::views::dulcimer_cimbalom_view::{
-        DulcimerCimbalomView, DulcimerType, DULCIMER_PUCK_HIT_RADIUS,
-        MIN_STRIKE_POS, MAX_STRIKE_POS, MIN_HAMMER_HARDNESS, MAX_HAMMER_HARDNESS,
-    };
     use crate::views::clavinet_view::{
-        ClavinetView, GuiClavinetProfile, GuiClavinetPickupMode, CLAV_PUCK_HIT_RADIUS,
+        ClavinetView, GuiClavinetPickupMode, GuiClavinetProfile, CLAV_PUCK_HIT_RADIUS,
     };
+    use crate::views::dulcimer_cimbalom_view::{
+        DulcimerCimbalomView, DulcimerType, DULCIMER_PUCK_HIT_RADIUS, MAX_HAMMER_HARDNESS,
+        MAX_STRIKE_POS, MIN_HAMMER_HARDNESS, MIN_STRIKE_POS,
+    };
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn58_pure_dulcimer_cimbalom_instruments_and_simulation() {
@@ -28,7 +28,10 @@ pub mod pure_tests {
 
         // Preset switching
         view.set_instrument_type(DulcimerType::AppalachianHammeredDulcimer);
-        assert_eq!(view.instrument_type, DulcimerType::AppalachianHammeredDulcimer);
+        assert_eq!(
+            view.instrument_type,
+            DulcimerType::AppalachianHammeredDulcimer
+        );
         assert!((view.strike_pos_ratio - 0.18).abs() < 1e-4);
         assert!((view.hammer_hardness - 0.50).abs() < 1e-4);
         assert_eq!(view.string_courses, 31);
@@ -165,11 +168,11 @@ pub mod pure_tests {
 
                 // Dulcimer parameter slot addresses: 0..=5
                 let pid_strike = ParamId(base);
-                let pid_hard   = ParamId(base + 1);
+                let pid_hard = ParamId(base + 1);
                 let pid_inharm = ParamId(base + 2);
-                let pid_decay  = ParamId(base + 3);
-                let pid_coup   = ParamId(base + 4);
-                let pid_damp   = ParamId(base + 5);
+                let pid_decay = ParamId(base + 3);
+                let pid_coup = ParamId(base + 4);
+                let pid_damp = ParamId(base + 5);
 
                 bus.register(pid_strike, 0.16);
                 bus.register(pid_hard, 0.70);
@@ -219,11 +222,11 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
+    use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::command_palette::CommandPalette;
 
     #[test]
     fn test_turn58_gui_award_winning_view_modals_lifecycle() {
@@ -266,7 +269,11 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
 
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -287,10 +294,34 @@ pub mod gui_tests {
 
         view.sync_dulcimer_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("strike_pos_ratio").copied(), Some(0.22));
-        assert_eq!(view.device_rack_state.node_param_values.get("hammer_hardness").copied(), Some(0.80));
-        assert_eq!(view.inspector_state.node_param_values.get("strike_pos_ratio").copied(), Some(0.22));
-        assert_eq!(view.inspector_state.node_param_values.get("hammer_hardness").copied(), Some(0.80));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("strike_pos_ratio")
+                .copied(),
+            Some(0.22)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("hammer_hardness")
+                .copied(),
+            Some(0.80)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("strike_pos_ratio")
+                .copied(),
+            Some(0.22)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("hammer_hardness")
+                .copied(),
+            Some(0.80)
+        );
 
         assert_eq!(arc_bus.get(ParamId(base)), Some(0.22));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(0.80));
@@ -309,8 +340,20 @@ pub mod gui_tests {
 
         view.sync_clavinet_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("anvil_hardness").copied(), Some(0.92));
-        assert_eq!(view.device_rack_state.node_param_values.get("pickup_phase_deg").copied(), Some(120.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("anvil_hardness")
+                .copied(),
+            Some(0.92)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("pickup_phase_deg")
+                .copied(),
+            Some(120.0)
+        );
         assert_eq!(arc_bus.get(ParamId(base)), Some(0.92));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(0.68));
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(0.60));
@@ -326,7 +369,9 @@ pub mod gui_tests {
         // Trigger Dulcimer via inspector
         assert!(!view.is_dulcimer_hud_open());
         view.inspector_state.requested_open_dulcimer_hud = true;
-        if view.inspector_state.requested_open_dulcimer_hud || view.device_rack_state.requested_open_dulcimer_hud {
+        if view.inspector_state.requested_open_dulcimer_hud
+            || view.device_rack_state.requested_open_dulcimer_hud
+        {
             view.inspector_state.requested_open_dulcimer_hud = false;
             view.device_rack_state.requested_open_dulcimer_hud = false;
             view.open_dulcimer_hud();
@@ -338,7 +383,9 @@ pub mod gui_tests {
 
         // Trigger Dulcimer via device rack
         view.device_rack_state.requested_open_dulcimer_hud = true;
-        if view.inspector_state.requested_open_dulcimer_hud || view.device_rack_state.requested_open_dulcimer_hud {
+        if view.inspector_state.requested_open_dulcimer_hud
+            || view.device_rack_state.requested_open_dulcimer_hud
+        {
             view.inspector_state.requested_open_dulcimer_hud = false;
             view.device_rack_state.requested_open_dulcimer_hud = false;
             view.open_dulcimer_hud();
@@ -350,7 +397,9 @@ pub mod gui_tests {
         // Trigger Clavinet via inspector
         assert!(!view.is_clavinet_hud_open());
         view.inspector_state.requested_open_clavinet_hud = true;
-        if view.inspector_state.requested_open_clavinet_hud || view.device_rack_state.requested_open_clavinet_hud {
+        if view.inspector_state.requested_open_clavinet_hud
+            || view.device_rack_state.requested_open_clavinet_hud
+        {
             view.inspector_state.requested_open_clavinet_hud = false;
             view.device_rack_state.requested_open_clavinet_hud = false;
             view.open_clavinet_hud();
@@ -361,7 +410,9 @@ pub mod gui_tests {
 
         // Trigger Clavinet via device rack
         view.device_rack_state.requested_open_clavinet_hud = true;
-        if view.inspector_state.requested_open_clavinet_hud || view.device_rack_state.requested_open_clavinet_hud {
+        if view.inspector_state.requested_open_clavinet_hud
+            || view.device_rack_state.requested_open_clavinet_hud
+        {
             view.inspector_state.requested_open_clavinet_hud = false;
             view.device_rack_state.requested_open_clavinet_hud = false;
             view.open_clavinet_hud();
@@ -376,10 +427,20 @@ pub mod gui_tests {
         let palette = CommandPalette::new();
         let actions = &palette.actions;
 
-        let has_dulcimer = actions.iter().any(|a| a.action_id == "open_dulcimer_hud" && a.category == "Physical Modeling");
-        assert!(has_dulcimer, "open_dulcimer_hud command action must be registered in command palette");
+        let has_dulcimer = actions
+            .iter()
+            .any(|a| a.action_id == "open_dulcimer_hud" && a.category == "Physical Modeling");
+        assert!(
+            has_dulcimer,
+            "open_dulcimer_hud command action must be registered in command palette"
+        );
 
-        let has_clavinet = actions.iter().any(|a| a.action_id == "open_clavinet_hud" && a.category == "Physical Modeling");
-        assert!(has_clavinet, "open_clavinet_hud command action must be registered in command palette");
+        let has_clavinet = actions
+            .iter()
+            .any(|a| a.action_id == "open_clavinet_hud" && a.category == "Physical Modeling");
+        assert!(
+            has_clavinet,
+            "open_clavinet_hud command action must be registered in command palette"
+        );
     }
 }

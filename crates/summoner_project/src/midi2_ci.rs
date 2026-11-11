@@ -362,7 +362,10 @@ impl Midi2ProfileEditor {
     }
 
     /// Discover peer device handshake.
-    pub fn handle_discovery_inquiry(&mut self, sender_muid: Muid) -> (DeviceIdentity, SupportedInquiries) {
+    pub fn handle_discovery_inquiry(
+        &mut self,
+        sender_muid: Muid,
+    ) -> (DeviceIdentity, SupportedInquiries) {
         if !self.peer_muids.contains(&sender_muid) {
             self.peer_muids.push(sender_muid);
         }
@@ -488,7 +491,9 @@ mod tests {
         assert!(info.contains("Summoner Audio"));
 
         let updated = r#"{"manufacturer":"Summoner Audio","model":"Summoner Pro V2"}"#;
-        editor.set_property("DeviceInfo", updated).expect("set failed");
+        editor
+            .set_property("DeviceInfo", updated)
+            .expect("set failed");
 
         let fetched = editor.get_property("DeviceInfo").unwrap();
         assert!(fetched.contains("Summoner Pro V2"));
@@ -506,4 +511,3 @@ mod tests {
         assert_eq!(bytes.last(), Some(&0xF7));
     }
 }
-

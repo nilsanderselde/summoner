@@ -10,8 +10,8 @@
 //! Enforces zero heap allocations in audio loops under `AllocGuard`.
 
 use serde::{Deserialize, Serialize};
-use std::collections::BinaryHeap;
 use std::cmp::Ordering as CmpOrdering;
+use std::collections::BinaryHeap;
 use summoner_core::cadence_bus::{CadenceBus, CadenceResolutionType, ChordQuality};
 use summoner_core::param_bus::{ParamBus, ParamId};
 
@@ -115,26 +115,110 @@ impl CadenceGraph {
         let mut graph = Self::new();
 
         // Diatonic major scale nodes (C Major reference: root 0 = C)
-        let idx_i = graph.add_node(HarmonicNode::new(0, ChordQuality::Major, "I", HarmonicFunction::Tonic, 0.05));
-        let idx_ii = graph.add_node(HarmonicNode::new(2, ChordQuality::Minor, "ii", HarmonicFunction::Subdominant, 0.40));
-        let idx_ii7 = graph.add_node(HarmonicNode::new(2, ChordQuality::Minor7, "ii7", HarmonicFunction::Subdominant, 0.50));
-        let idx_iii = graph.add_node(HarmonicNode::new(4, ChordQuality::Minor, "iii", HarmonicFunction::Tonic, 0.30));
-        let idx_iv = graph.add_node(HarmonicNode::new(5, ChordQuality::Major, "IV", HarmonicFunction::Subdominant, 0.35));
-        let idx_v = graph.add_node(HarmonicNode::new(7, ChordQuality::Major, "V", HarmonicFunction::Dominant, 0.75));
-        let idx_v7 = graph.add_node(HarmonicNode::new(7, ChordQuality::Dominant7, "V7", HarmonicFunction::Dominant, 0.90));
-        let idx_vi = graph.add_node(HarmonicNode::new(9, ChordQuality::Minor, "vi", HarmonicFunction::Tonic, 0.25));
-        let idx_viio = graph.add_node(HarmonicNode::new(11, ChordQuality::Diminished, "vii°", HarmonicFunction::Dominant, 0.85));
+        let idx_i = graph.add_node(HarmonicNode::new(
+            0,
+            ChordQuality::Major,
+            "I",
+            HarmonicFunction::Tonic,
+            0.05,
+        ));
+        let idx_ii = graph.add_node(HarmonicNode::new(
+            2,
+            ChordQuality::Minor,
+            "ii",
+            HarmonicFunction::Subdominant,
+            0.40,
+        ));
+        let idx_ii7 = graph.add_node(HarmonicNode::new(
+            2,
+            ChordQuality::Minor7,
+            "ii7",
+            HarmonicFunction::Subdominant,
+            0.50,
+        ));
+        let idx_iii = graph.add_node(HarmonicNode::new(
+            4,
+            ChordQuality::Minor,
+            "iii",
+            HarmonicFunction::Tonic,
+            0.30,
+        ));
+        let idx_iv = graph.add_node(HarmonicNode::new(
+            5,
+            ChordQuality::Major,
+            "IV",
+            HarmonicFunction::Subdominant,
+            0.35,
+        ));
+        let idx_v = graph.add_node(HarmonicNode::new(
+            7,
+            ChordQuality::Major,
+            "V",
+            HarmonicFunction::Dominant,
+            0.75,
+        ));
+        let idx_v7 = graph.add_node(HarmonicNode::new(
+            7,
+            ChordQuality::Dominant7,
+            "V7",
+            HarmonicFunction::Dominant,
+            0.90,
+        ));
+        let idx_vi = graph.add_node(HarmonicNode::new(
+            9,
+            ChordQuality::Minor,
+            "vi",
+            HarmonicFunction::Tonic,
+            0.25,
+        ));
+        let idx_viio = graph.add_node(HarmonicNode::new(
+            11,
+            ChordQuality::Diminished,
+            "vii°",
+            HarmonicFunction::Dominant,
+            0.85,
+        ));
 
         // Chromatic & secondary dominant nodes
-        let idx_v_v = graph.add_node(HarmonicNode::new(2, ChordQuality::Dominant7, "V7/V", HarmonicFunction::PreDominant, 0.80));
-        let idx_neapolitan = graph.add_node(HarmonicNode::new(1, ChordQuality::Major, "N6 (bII)", HarmonicFunction::PreDominant, 0.70));
-        let idx_ger6 = graph.add_node(HarmonicNode::new(8, ChordQuality::Dominant7, "Ger+6", HarmonicFunction::PreDominant, 0.88));
-        let idx_iv_min = graph.add_node(HarmonicNode::new(5, ChordQuality::Minor, "iv (minor)", HarmonicFunction::Subdominant, 0.60));
+        let idx_v_v = graph.add_node(HarmonicNode::new(
+            2,
+            ChordQuality::Dominant7,
+            "V7/V",
+            HarmonicFunction::PreDominant,
+            0.80,
+        ));
+        let idx_neapolitan = graph.add_node(HarmonicNode::new(
+            1,
+            ChordQuality::Major,
+            "N6 (bII)",
+            HarmonicFunction::PreDominant,
+            0.70,
+        ));
+        let idx_ger6 = graph.add_node(HarmonicNode::new(
+            8,
+            ChordQuality::Dominant7,
+            "Ger+6",
+            HarmonicFunction::PreDominant,
+            0.88,
+        ));
+        let idx_iv_min = graph.add_node(HarmonicNode::new(
+            5,
+            ChordQuality::Minor,
+            "iv (minor)",
+            HarmonicFunction::Subdominant,
+            0.60,
+        ));
 
         // Authentic cadences (Dominant -> Tonic)
         graph.add_edge(idx_v, idx_i, 1.0, CadenceResolutionType::Authentic, -0.70);
         graph.add_edge(idx_v7, idx_i, 0.8, CadenceResolutionType::Authentic, -0.85);
-        graph.add_edge(idx_viio, idx_i, 1.2, CadenceResolutionType::Authentic, -0.80);
+        graph.add_edge(
+            idx_viio,
+            idx_i,
+            1.2,
+            CadenceResolutionType::Authentic,
+            -0.80,
+        );
 
         // Plagal cadences (Subdominant -> Tonic)
         graph.add_edge(idx_iv, idx_i, 1.4, CadenceResolutionType::Plagal, -0.30);
@@ -165,12 +249,30 @@ impl CadenceGraph {
         graph.add_edge(idx_iv, idx_ii, 1.3, CadenceResolutionType::Half, 0.05);
 
         // Chromatic pre-dominant routing
-        graph.add_edge(idx_i, idx_neapolitan, 2.2, CadenceResolutionType::Half, 0.65);
-        graph.add_edge(idx_neapolitan, idx_v7, 1.1, CadenceResolutionType::Half, 0.20);
+        graph.add_edge(
+            idx_i,
+            idx_neapolitan,
+            2.2,
+            CadenceResolutionType::Half,
+            0.65,
+        );
+        graph.add_edge(
+            idx_neapolitan,
+            idx_v7,
+            1.1,
+            CadenceResolutionType::Half,
+            0.20,
+        );
         graph.add_edge(idx_iv, idx_ger6, 1.5, CadenceResolutionType::Half, 0.53);
         graph.add_edge(idx_ger6, idx_v7, 1.0, CadenceResolutionType::Half, 0.02);
         graph.add_edge(idx_ii, idx_v_v, 1.3, CadenceResolutionType::Half, 0.40);
-        graph.add_edge(idx_v_v, idx_v7, 0.9, CadenceResolutionType::Modulatory, 0.10);
+        graph.add_edge(
+            idx_v_v,
+            idx_v7,
+            0.9,
+            CadenceResolutionType::Modulatory,
+            0.10,
+        );
         graph.add_edge(idx_iv, idx_iv_min, 1.2, CadenceResolutionType::Half, 0.25);
 
         graph
@@ -204,7 +306,9 @@ impl CadenceGraph {
     /// Finds node index matching root step and quality.
     pub fn find_node(&self, root_step: i32, quality: ChordQuality) -> Option<usize> {
         let r = root_step.rem_euclid(12);
-        self.nodes.iter().position(|n| n.root_step == r && n.quality == quality)
+        self.nodes
+            .iter()
+            .position(|n| n.root_step == r && n.quality == quality)
     }
 
     /// Computes circle-of-fifths distance in semitones (0 to 6 fifths).
@@ -228,7 +332,10 @@ impl Eq for State {}
 impl Ord for State {
     fn cmp(&self, other: &Self) -> CmpOrdering {
         // Reverse for min-heap
-        other.cost.partial_cmp(&self.cost).unwrap_or(CmpOrdering::Equal)
+        other
+            .cost
+            .partial_cmp(&self.cost)
+            .unwrap_or(CmpOrdering::Equal)
     }
 }
 
@@ -288,7 +395,11 @@ impl VoiceLeadingOptimizer {
                 let motion_j = next[j] - prev[j];
 
                 // If both voices move in same direction into octave (0) or fifth (7)
-                if motion_i != 0 && motion_i == motion_j && (interval_next == 0 || interval_next == 7) && interval_prev == interval_next {
+                if motion_i != 0
+                    && motion_i == motion_j
+                    && (interval_next == 0 || interval_next == 7)
+                    && interval_prev == interval_next
+                {
                     parallel_penalty += 4.0;
                 }
             }
@@ -298,7 +409,11 @@ impl VoiceLeadingOptimizer {
     }
 
     /// Finds the smoothest voice-leading transition from `prev_voicing` to target chord.
-    pub fn optimize_next_voicing(prev_voicing: &[i32; 4], next_root: i32, next_quality: ChordQuality) -> ([i32; 4], f32) {
+    pub fn optimize_next_voicing(
+        prev_voicing: &[i32; 4],
+        next_root: i32,
+        next_quality: ChordQuality,
+    ) -> ([i32; 4], f32) {
         let r = next_root.rem_euclid(12);
         let bass = 36 + r;
 
@@ -317,7 +432,12 @@ impl VoiceLeadingOptimizer {
             ChordQuality::AlteredDominant => [r, (r + 4) % 12, (r + 8) % 12, (r + 10) % 12],
         };
 
-        let mut best_voicing = [bass, 48 + chord_pitch_classes[0], 48 + chord_pitch_classes[1], 48 + chord_pitch_classes[2]];
+        let mut best_voicing = [
+            bass,
+            48 + chord_pitch_classes[0],
+            48 + chord_pitch_classes[1],
+            48 + chord_pitch_classes[2],
+        ];
         let mut min_cost = f32::MAX;
 
         // Try octave permutations for upper 3 voices to minimize distance to prev_voicing
@@ -372,11 +492,15 @@ impl CadencePathResolver {
         target_quality: ChordQuality,
     ) -> Vec<HarmonicPathStep> {
         let start_idx = self.graph.find_node(start_root, start_quality).unwrap_or(0);
-        let target_idx = self.graph.find_node(target_root, target_quality).unwrap_or(0);
+        let target_idx = self
+            .graph
+            .find_node(target_root, target_quality)
+            .unwrap_or(0);
 
         if start_idx == target_idx {
             let node = &self.graph.nodes[start_idx];
-            let voicing = VoiceLeadingOptimizer::generate_initial_voicing(node.root_step, node.quality);
+            let voicing =
+                VoiceLeadingOptimizer::generate_initial_voicing(node.root_step, node.quality);
             return vec![HarmonicPathStep {
                 node_idx: start_idx,
                 root_step: node.root_step,
@@ -397,7 +521,10 @@ impl CadencePathResolver {
         let mut heap = BinaryHeap::new();
 
         dist[start_idx] = 0.0;
-        heap.push(State { cost: 0.0, node: start_idx });
+        heap.push(State {
+            cost: 0.0,
+            node: start_idx,
+        });
 
         while let Some(State { cost, node }) = heap.pop() {
             if node == target_idx {
@@ -415,7 +542,10 @@ impl CadencePathResolver {
                         dist[next_node] = next_cost;
                         prev[next_node] = Some(node);
                         prev_edge[next_node] = Some(edge.clone());
-                        heap.push(State { cost: next_cost, node: next_node });
+                        heap.push(State {
+                            cost: next_cost,
+                            node: next_node,
+                        });
                     }
                 }
             }
@@ -443,13 +573,20 @@ impl CadencePathResolver {
             let (voicing, vl_cost) = if i == 0 {
                 (curr_voicing, 0.0)
             } else {
-                let (opt_voicing, cost) = VoiceLeadingOptimizer::optimize_next_voicing(&curr_voicing, node.root_step, node.quality);
+                let (opt_voicing, cost) = VoiceLeadingOptimizer::optimize_next_voicing(
+                    &curr_voicing,
+                    node.root_step,
+                    node.quality,
+                );
                 curr_voicing = opt_voicing;
                 (opt_voicing, cost)
             };
 
             let cadence_type = if i > 0 {
-                prev_edge[node_idx].as_ref().map(|e| e.cadence_type).unwrap_or(CadenceResolutionType::Authentic)
+                prev_edge[node_idx]
+                    .as_ref()
+                    .map(|e| e.cadence_type)
+                    .unwrap_or(CadenceResolutionType::Authentic)
             } else {
                 CadenceResolutionType::Authentic
             };
@@ -530,7 +667,8 @@ mod tests {
     #[test]
     fn test_voice_leading_cost_optimization() {
         let v_init = VoiceLeadingOptimizer::generate_initial_voicing(7, ChordQuality::Dominant7); // G7
-        let (v_next, cost) = VoiceLeadingOptimizer::optimize_next_voicing(&v_init, 0, ChordQuality::Major); // C
+        let (v_next, cost) =
+            VoiceLeadingOptimizer::optimize_next_voicing(&v_init, 0, ChordQuality::Major); // C
 
         assert!(cost.is_finite());
         assert!(cost > 0.0);
@@ -554,7 +692,14 @@ mod tests {
         {
             let _guard = AllocGuard::new();
             for (idx, step) in path.iter().enumerate() {
-                resolver.dispatch_step(step, idx, path.len(), &cadence_bus, &param_bus, ParamId(200));
+                resolver.dispatch_step(
+                    step,
+                    idx,
+                    path.len(),
+                    &cadence_bus,
+                    &param_bus,
+                    ParamId(200),
+                );
             }
         }
 

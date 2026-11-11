@@ -185,7 +185,9 @@ impl AirReedView {
 
     /// Continuous pitch multiplier from Meri/Kari cent offset: 2^(cents / 1200).
     pub fn pitch_multiplier(&self) -> f32 {
-        let clamped_cents = self.meri_kari_cents.clamp(MIN_MERI_KARI_CENTS, MAX_MERI_KARI_CENTS);
+        let clamped_cents = self
+            .meri_kari_cents
+            .clamp(MIN_MERI_KARI_CENTS, MAX_MERI_KARI_CENTS);
         2.0_f32.powf(clamped_cents / 1200.0)
     }
 
@@ -242,12 +244,35 @@ impl AirReedView {
         out.push_str(" SUMMONER DAW -- AIR-JET REED & UTAGUCHI FLUE VORTEX HUD SNAPSHOT\n");
         out.push_str("======================================================================\n");
         out.push_str(&format!(" Preset:           {}\n", self.preset.name()));
-        out.push_str(&format!(" Blowing Pressure: {:.1} Pa (v_jet: {:.2} m/s)\n", self.blowing_pressure_pa, self.jet_velocity_mps()));
-        out.push_str(&format!(" Meri/Kari Bend:   {:+.1} cents (Pitch Mult: {:.4}x)\n", self.meri_kari_cents, self.pitch_multiplier()));
-        out.push_str(&format!(" Effective Angle:  {:.1} deg | Jet Distance: {:.1} mm\n", self.effective_angle_deg(), self.jet_distance_mm));
-        out.push_str(&format!(" Edge Sharpness:   {:.2} | Jet Delay: {:.1} samples\n", self.edge_sharpness, self.calculate_jet_delay_samples()));
-        out.push_str(&format!(" Turbulence:       {:.2} | Murai-Iki Burst: {:.0} %\n", self.turbulence_gain, self.murai_iki_intensity * 100.0));
-        out.push_str(&format!(" Puck Coord:       ({:.3}, {:.3}) [PASS: >=44pt Hit Target]\n", self.puck_pos.0, self.puck_pos.1));
+        out.push_str(&format!(
+            " Blowing Pressure: {:.1} Pa (v_jet: {:.2} m/s)\n",
+            self.blowing_pressure_pa,
+            self.jet_velocity_mps()
+        ));
+        out.push_str(&format!(
+            " Meri/Kari Bend:   {:+.1} cents (Pitch Mult: {:.4}x)\n",
+            self.meri_kari_cents,
+            self.pitch_multiplier()
+        ));
+        out.push_str(&format!(
+            " Effective Angle:  {:.1} deg | Jet Distance: {:.1} mm\n",
+            self.effective_angle_deg(),
+            self.jet_distance_mm
+        ));
+        out.push_str(&format!(
+            " Edge Sharpness:   {:.2} | Jet Delay: {:.1} samples\n",
+            self.edge_sharpness,
+            self.calculate_jet_delay_samples()
+        ));
+        out.push_str(&format!(
+            " Turbulence:       {:.2} | Murai-Iki Burst: {:.0} %\n",
+            self.turbulence_gain,
+            self.murai_iki_intensity * 100.0
+        ));
+        out.push_str(&format!(
+            " Puck Coord:       ({:.3}, {:.3}) [PASS: >=44pt Hit Target]\n",
+            self.puck_pos.0, self.puck_pos.1
+        ));
         out.push_str("----------------------------------------------------------------------\n");
         out.push_str(" Utaguchi Non-Linear Splitting Curve [-1.5 .. +1.5]:\n ");
 
@@ -303,10 +328,18 @@ impl AirReedView {
                     let is_active = self.preset == p;
                     let btn = egui::Button::new(
                         RichText::new(label)
-                            .color(if is_active { Color32::BLACK } else { Color32::from_rgb(203, 213, 225) })
+                            .color(if is_active {
+                                Color32::BLACK
+                            } else {
+                                Color32::from_rgb(203, 213, 225)
+                            })
                             .size(11.0),
                     )
-                    .fill(if is_active { Color32::from_rgb(52, 211, 153) } else { Color32::from_rgb(30, 41, 59) })
+                    .fill(if is_active {
+                        Color32::from_rgb(52, 211, 153)
+                    } else {
+                        Color32::from_rgb(30, 41, 59)
+                    })
                     .min_size(Vec2::new(80.0, 24.0));
 
                     if ui.add(btn).clicked() {
@@ -319,13 +352,18 @@ impl AirReedView {
 
             // Interactive 2D Dynamics Puck Canvas
             let canvas_size = Vec2::new(ui.available_width().max(280.0), 145.0);
-            let (response, painter) = ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
+            let (response, painter) =
+                ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
             let rect = response.rect;
             let canvas = Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height());
 
             // Background
             painter.rect_filled(rect, Rounding::same(4.0), Color32::from_rgb(10, 22, 18));
-            painter.rect_stroke(rect, Rounding::same(4.0), Stroke::new(1.0_f32, Color32::from_rgb(45, 85, 70)));
+            painter.rect_stroke(
+                rect,
+                Rounding::same(4.0),
+                Stroke::new(1.0_f32, Color32::from_rgb(45, 85, 70)),
+            );
 
             // Grid lines
             for i in 1..4 {
@@ -363,8 +401,12 @@ impl AirReedView {
             if response.dragged() || response.clicked() {
                 if let Some(pos) = response.interact_pointer_pos() {
                     let padding = 15.0;
-                    let norm_x = ((pos.x - (rect.min.x + padding)) / (rect.width() - 2.0 * padding)).clamp(0.0, 1.0);
-                    let norm_y = (1.0 - ((pos.y - (rect.min.y + padding)) / (rect.height() - 2.0 * padding))).clamp(0.0, 1.0);
+                    let norm_x = ((pos.x - (rect.min.x + padding))
+                        / (rect.width() - 2.0 * padding))
+                        .clamp(0.0, 1.0);
+                    let norm_y = (1.0
+                        - ((pos.y - (rect.min.y + padding)) / (rect.height() - 2.0 * padding)))
+                        .clamp(0.0, 1.0);
                     self.update_from_puck(norm_x, norm_y);
                 }
             }
@@ -373,10 +415,22 @@ impl AirReedView {
             let (puck_x, puck_y) = self.puck_to_canvas_pos(&canvas);
             let puck_pos = egui::pos2(puck_x, puck_y);
 
-            painter.circle_filled(puck_pos, AIR_REED_PUCK_HIT_RADIUS, Color32::from_rgba_unmultiplied(16, 185, 129, 45));
-            painter.circle_stroke(puck_pos, AIR_REED_PUCK_HIT_RADIUS, Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)));
+            painter.circle_filled(
+                puck_pos,
+                AIR_REED_PUCK_HIT_RADIUS,
+                Color32::from_rgba_unmultiplied(16, 185, 129, 45),
+            );
+            painter.circle_stroke(
+                puck_pos,
+                AIR_REED_PUCK_HIT_RADIUS,
+                Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)),
+            );
             painter.circle_filled(puck_pos, 6.0, Color32::from_rgb(209, 250, 229));
-            painter.circle_stroke(puck_pos, 8.0, Stroke::new(1.5_f32, Color32::from_rgb(16, 185, 129)));
+            painter.circle_stroke(
+                puck_pos,
+                8.0,
+                Stroke::new(1.5_f32, Color32::from_rgb(16, 185, 129)),
+            );
 
             // Text Telemetry Readouts inside Canvas
             painter.text(
@@ -410,7 +464,16 @@ impl AirReedView {
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Blowing Pressure:").size(11.0));
                 let mut p = self.blowing_pressure_pa;
-                if ui.add(egui::Slider::new(&mut p, MIN_BLOWING_PRESSURE_PA..=MAX_BLOWING_PRESSURE_PA).suffix(" Pa")).changed() {
+                if ui
+                    .add(
+                        egui::Slider::new(
+                            &mut p,
+                            MIN_BLOWING_PRESSURE_PA..=MAX_BLOWING_PRESSURE_PA,
+                        )
+                        .suffix(" Pa"),
+                    )
+                    .changed()
+                {
                     self.blowing_pressure_pa = p;
                     self.sync_puck_from_params();
                 }
@@ -419,7 +482,13 @@ impl AirReedView {
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Meri/Kari Head Tilt:").size(11.0));
                 let mut c = self.meri_kari_cents;
-                if ui.add(egui::Slider::new(&mut c, MIN_MERI_KARI_CENTS..=MAX_MERI_KARI_CENTS).suffix(" cents")).changed() {
+                if ui
+                    .add(
+                        egui::Slider::new(&mut c, MIN_MERI_KARI_CENTS..=MAX_MERI_KARI_CENTS)
+                            .suffix(" cents"),
+                    )
+                    .changed()
+                {
                     self.meri_kari_cents = c;
                     self.sync_puck_from_params();
                 }
@@ -427,12 +496,21 @@ impl AirReedView {
 
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Jet Distance:").size(11.0));
-                ui.add(egui::Slider::new(&mut self.jet_distance_mm, MIN_JET_DISTANCE_MM..=MAX_JET_DISTANCE_MM).suffix(" mm"));
+                ui.add(
+                    egui::Slider::new(
+                        &mut self.jet_distance_mm,
+                        MIN_JET_DISTANCE_MM..=MAX_JET_DISTANCE_MM,
+                    )
+                    .suffix(" mm"),
+                );
             });
 
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Utaguchi Sharpness:").size(11.0));
-                ui.add(egui::Slider::new(&mut self.edge_sharpness, MIN_EDGE_SHARPNESS..=MAX_EDGE_SHARPNESS));
+                ui.add(egui::Slider::new(
+                    &mut self.edge_sharpness,
+                    MIN_EDGE_SHARPNESS..=MAX_EDGE_SHARPNESS,
+                ));
             });
 
             ui.horizontal(|ui| {

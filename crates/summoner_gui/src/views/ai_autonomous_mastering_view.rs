@@ -245,8 +245,7 @@ impl AiAutonomousMasteringView {
         let ceiling_linear = 10.0_f32.powf(self.ceiling_db / 20.0);
 
         let limited = if processed.abs() > ceiling_linear {
-            processed.signum()
-                * (ceiling_linear + (processed.abs() - ceiling_linear).tanh() * 0.05)
+            processed.signum() * (ceiling_linear + (processed.abs() - ceiling_linear).tanh() * 0.05)
         } else {
             processed
         };
@@ -463,7 +462,10 @@ impl AiAutonomousMasteringView {
                 ui.label(RichText::new("Target Loudness (LUFS):").size(11.0));
                 let mut l = self.target_lufs;
                 if ui
-                    .add(egui::Slider::new(&mut l, MIN_TARGET_LUFS..=MAX_TARGET_LUFS).suffix(" LUFS"))
+                    .add(
+                        egui::Slider::new(&mut l, MIN_TARGET_LUFS..=MAX_TARGET_LUFS)
+                            .suffix(" LUFS"),
+                    )
                     .changed()
                 {
                     self.target_lufs = l;

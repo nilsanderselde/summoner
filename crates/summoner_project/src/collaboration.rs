@@ -20,10 +20,10 @@
 //! - [`CollaborationPacket`]: Wire protocol packet carrying peer presence and causal CRDT ops.
 //! - [`ProjectDiffResult`]: Summary of remote changes applied to the active project session.
 
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::crdt::{CrdtEngine, CrdtOp, OfflineChangeQueue};
 use crate::schema::ProjectConfig;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Connection and synchronization state of the collaboration session.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -53,7 +53,11 @@ pub struct PeerPresence {
 }
 
 impl PeerPresence {
-    pub fn new(peer_id: impl Into<String>, user_name: impl Into<String>, color_rgba: [u8; 4]) -> Self {
+    pub fn new(
+        peer_id: impl Into<String>,
+        user_name: impl Into<String>,
+        color_rgba: [u8; 4],
+    ) -> Self {
         Self {
             peer_id: peer_id.into(),
             user_name: user_name.into(),
@@ -100,7 +104,11 @@ pub struct CollaborationSessionManager {
 }
 
 impl CollaborationSessionManager {
-    pub fn new(session_id: impl Into<String>, local_peer_id: impl Into<String>, user_name: impl Into<String>) -> Self {
+    pub fn new(
+        session_id: impl Into<String>,
+        local_peer_id: impl Into<String>,
+        user_name: impl Into<String>,
+    ) -> Self {
         let peer_id = local_peer_id.into();
         let name = user_name.into();
         let local_presence = PeerPresence::new(&peer_id, &name, [66, 133, 244, 255]); // Summoner blue
@@ -235,12 +243,17 @@ impl CollaborationSessionManager {
         packet: CollaborationPacket,
         project: &mut ProjectConfig,
     ) -> ProjectDiffResult {
-        if packet.session_id != self.session_id || packet.sender_presence.peer_id == self.local_peer_id {
+        if packet.session_id != self.session_id
+            || packet.sender_presence.peer_id == self.local_peer_id
+        {
             return ProjectDiffResult::default();
         }
 
         // 1. Update peer presence
-        self.active_peers.insert(packet.sender_presence.peer_id.clone(), packet.sender_presence);
+        self.active_peers.insert(
+            packet.sender_presence.peer_id.clone(),
+            packet.sender_presence,
+        );
 
         // 2. Merge incoming CRDT delta ops
         let mut diff_result = ProjectDiffResult::default();
@@ -258,11 +271,13 @@ impl CollaborationSessionManager {
                         }
                     }
                     CrdtOp::AddTrack { track_id, .. }
-                        if !diff_result.added_tracks.contains(track_id) => {
+                        if !diff_result.added_tracks.contains(track_id) =>
+                    {
                         diff_result.added_tracks.push(*track_id);
                     }
                     CrdtOp::RemoveTrack { track_id, .. }
-                        if !diff_result.removed_tracks.contains(track_id) => {
+                        if !diff_result.removed_tracks.contains(track_id) =>
+                    {
                         diff_result.removed_tracks.push(*track_id);
                     }
                     _ => {}

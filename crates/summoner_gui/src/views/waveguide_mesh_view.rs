@@ -201,13 +201,42 @@ impl WaveguideMeshView {
         }
 
         // Header Panel (y: 10..46, x: 20..width-20)
-        fill_rounded_rect_wg(&mut pixels, width, height, 20, 10, width - 40, 36, 4, [18, 24, 38, 255]);
+        fill_rounded_rect_wg(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            4,
+            [18, 24, 38, 255],
+        );
 
         // Main 3D Mesh Canvas (x: 20..width-20, y: 56..height-70)
         let canvas_w = width - 40;
         let canvas_h = height - 130;
-        fill_rounded_rect_wg(&mut pixels, width, height, 20, 56, canvas_w, canvas_h, 6, [14, 20, 32, 255]);
-        draw_rect_border_wg(&mut pixels, width, height, 20, 56, canvas_w, canvas_h, [45, 60, 85, 255]);
+        fill_rounded_rect_wg(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            canvas_w,
+            canvas_h,
+            6,
+            [14, 20, 32, 255],
+        );
+        draw_rect_border_wg(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            canvas_w,
+            canvas_h,
+            [45, 60, 85, 255],
+        );
 
         let center_x = 20.0 + canvas_w as f32 * 0.5;
         let center_y = 56.0 + canvas_h as f32 * 0.55;
@@ -219,20 +248,56 @@ impl WaveguideMeshView {
         for y in 0..MESH_DIM {
             for x in 0..MESH_DIM {
                 let disp = grid[y][x];
-                let (px, py) = self.project_3d_to_canvas(x as f32, y as f32, disp, (center_x, center_y), scale);
+                let (px, py) = self.project_3d_to_canvas(
+                    x as f32,
+                    y as f32,
+                    disp,
+                    (center_x, center_y),
+                    scale,
+                );
 
                 // Connect to right neighbor
                 if x + 1 < MESH_DIM {
                     let disp_r = grid[y][x + 1];
-                    let (rx, ry) = self.project_3d_to_canvas((x + 1) as f32, y as f32, disp_r, (center_x, center_y), scale);
-                    draw_line_segment_wg(&mut pixels, width, height, px, py, rx, ry, [0, 229, 255, 180]);
+                    let (rx, ry) = self.project_3d_to_canvas(
+                        (x + 1) as f32,
+                        y as f32,
+                        disp_r,
+                        (center_x, center_y),
+                        scale,
+                    );
+                    draw_line_segment_wg(
+                        &mut pixels,
+                        width,
+                        height,
+                        px,
+                        py,
+                        rx,
+                        ry,
+                        [0, 229, 255, 180],
+                    );
                 }
 
                 // Connect to bottom neighbor
                 if y + 1 < MESH_DIM {
                     let disp_b = grid[y + 1][x];
-                    let (bx, by) = self.project_3d_to_canvas(x as f32, (y + 1) as f32, disp_b, (center_x, center_y), scale);
-                    draw_line_segment_wg(&mut pixels, width, height, px, py, bx, by, [0, 255, 180, 180]);
+                    let (bx, by) = self.project_3d_to_canvas(
+                        x as f32,
+                        (y + 1) as f32,
+                        disp_b,
+                        (center_x, center_y),
+                        scale,
+                    );
+                    draw_line_segment_wg(
+                        &mut pixels,
+                        width,
+                        height,
+                        px,
+                        py,
+                        bx,
+                        by,
+                        [0, 255, 180, 180],
+                    );
                 }
             }
         }
@@ -246,14 +311,57 @@ impl WaveguideMeshView {
             scale,
         );
 
-        draw_circle_ring_wg(&mut pixels, width, height, puck_x, puck_y, WAVEGUIDE_PUCK_HIT_RADIUS, [255, 215, 0, 160]);
-        draw_circle_filled_wg(&mut pixels, width, height, puck_x, puck_y, WAVEGUIDE_PUCK_VISUAL_RADIUS, [255, 215, 0, 255]);
-        draw_circle_filled_wg(&mut pixels, width, height, puck_x, puck_y, 4.0, [255, 255, 255, 255]);
+        draw_circle_ring_wg(
+            &mut pixels,
+            width,
+            height,
+            puck_x,
+            puck_y,
+            WAVEGUIDE_PUCK_HIT_RADIUS,
+            [255, 215, 0, 160],
+        );
+        draw_circle_filled_wg(
+            &mut pixels,
+            width,
+            height,
+            puck_x,
+            puck_y,
+            WAVEGUIDE_PUCK_VISUAL_RADIUS,
+            [255, 215, 0, 255],
+        );
+        draw_circle_filled_wg(
+            &mut pixels,
+            width,
+            height,
+            puck_x,
+            puck_y,
+            4.0,
+            [255, 255, 255, 255],
+        );
 
         // Bottom Metrics Footer Bar (x: 20..width-20, y: height-60..height-15)
         let footer_y = height - 60;
-        fill_rounded_rect_wg(&mut pixels, width, height, 20, footer_y, canvas_w, 45, 4, [16, 35, 28, 255]);
-        draw_rect_border_wg(&mut pixels, width, height, 20, footer_y, canvas_w, 45, [0, 255, 180, 255]);
+        fill_rounded_rect_wg(
+            &mut pixels,
+            width,
+            height,
+            20,
+            footer_y,
+            canvas_w,
+            45,
+            4,
+            [16, 35, 28, 255],
+        );
+        draw_rect_border_wg(
+            &mut pixels,
+            width,
+            height,
+            20,
+            footer_y,
+            canvas_w,
+            45,
+            [0, 255, 180, 255],
+        );
 
         encode_minimal_png_wg(path, &pixels, width, height)
     }
@@ -299,19 +407,43 @@ impl WaveguideMeshView {
         for y in 0..MESH_DIM {
             for x in 0..MESH_DIM {
                 let disp = grid[y][x];
-                let (px, py) = self.project_3d_to_canvas(x as f32, y as f32, disp, (center_x, center_y), scale);
+                let (px, py) = self.project_3d_to_canvas(
+                    x as f32,
+                    y as f32,
+                    disp,
+                    (center_x, center_y),
+                    scale,
+                );
                 let pt = egui::pos2(px, py);
 
                 if x + 1 < MESH_DIM {
                     let disp_r = grid[y][x + 1];
-                    let (rx, ry) = self.project_3d_to_canvas((x + 1) as f32, y as f32, disp_r, (center_x, center_y), scale);
-                    painter.line_segment([pt, egui::pos2(rx, ry)], Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)));
+                    let (rx, ry) = self.project_3d_to_canvas(
+                        (x + 1) as f32,
+                        y as f32,
+                        disp_r,
+                        (center_x, center_y),
+                        scale,
+                    );
+                    painter.line_segment(
+                        [pt, egui::pos2(rx, ry)],
+                        Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)),
+                    );
                 }
 
                 if y + 1 < MESH_DIM {
                     let disp_b = grid[y + 1][x];
-                    let (bx, by) = self.project_3d_to_canvas(x as f32, (y + 1) as f32, disp_b, (center_x, center_y), scale);
-                    painter.line_segment([pt, egui::pos2(bx, by)], Stroke::new(1.5_f32, Color32::from_rgb(0, 255, 180)));
+                    let (bx, by) = self.project_3d_to_canvas(
+                        x as f32,
+                        (y + 1) as f32,
+                        disp_b,
+                        (center_x, center_y),
+                        scale,
+                    );
+                    painter.line_segment(
+                        [pt, egui::pos2(bx, by)],
+                        Stroke::new(1.5_f32, Color32::from_rgb(0, 255, 180)),
+                    );
                 }
             }
         }
@@ -331,7 +463,11 @@ impl WaveguideMeshView {
             WAVEGUIDE_PUCK_HIT_RADIUS,
             Stroke::new(2.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 140)),
         );
-        painter.circle_filled(puck_pt, WAVEGUIDE_PUCK_VISUAL_RADIUS, Color32::from_rgb(255, 215, 0));
+        painter.circle_filled(
+            puck_pt,
+            WAVEGUIDE_PUCK_VISUAL_RADIUS,
+            Color32::from_rgb(255, 215, 0),
+        );
         painter.circle_filled(puck_pt, 4.0, Color32::WHITE);
     }
 
@@ -357,15 +493,31 @@ impl WaveguideMeshView {
 
             for (mat, label) in materials {
                 let is_sel = self.mesh.material == mat;
-                let bg_col = if is_sel { Color32::from_rgb(12, 44, 60) } else { Color32::from_rgb(18, 24, 38) };
-                let txt_col = if is_sel { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(148, 163, 184) };
-                let stroke_col = if is_sel { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(36, 50, 74) };
+                let bg_col = if is_sel {
+                    Color32::from_rgb(12, 44, 60)
+                } else {
+                    Color32::from_rgb(18, 24, 38)
+                };
+                let txt_col = if is_sel {
+                    Color32::from_rgb(0, 229, 255)
+                } else {
+                    Color32::from_rgb(148, 163, 184)
+                };
+                let stroke_col = if is_sel {
+                    Color32::from_rgb(0, 229, 255)
+                } else {
+                    Color32::from_rgb(36, 50, 74)
+                };
 
-                let btn = egui::Button::new(RichText::new(label).font(FontId::proportional(10.5)).color(txt_col))
-                    .min_size(Vec2::new(90.0, MIN_HIT_TARGET_PT))
-                    .fill(bg_col)
-                    .stroke(Stroke::new(1.0_f32, stroke_col))
-                    .rounding(Rounding::same(4.0));
+                let btn = egui::Button::new(
+                    RichText::new(label)
+                        .font(FontId::proportional(10.5))
+                        .color(txt_col),
+                )
+                .min_size(Vec2::new(90.0, MIN_HIT_TARGET_PT))
+                .fill(bg_col)
+                .stroke(Stroke::new(1.0_f32, stroke_col))
+                .rounding(Rounding::same(4.0));
 
                 if ui.add(btn).clicked() {
                     self.set_material(mat);
@@ -391,15 +543,31 @@ impl WaveguideMeshView {
 
             for (bnd, label) in boundaries {
                 let is_sel = self.mesh.boundary == bnd;
-                let bg_col = if is_sel { Color32::from_rgb(36, 44, 20) } else { Color32::from_rgb(18, 24, 38) };
-                let txt_col = if is_sel { Color32::from_rgb(0, 255, 180) } else { Color32::from_rgb(148, 163, 184) };
-                let stroke_col = if is_sel { Color32::from_rgb(0, 255, 180) } else { Color32::from_rgb(36, 50, 74) };
+                let bg_col = if is_sel {
+                    Color32::from_rgb(36, 44, 20)
+                } else {
+                    Color32::from_rgb(18, 24, 38)
+                };
+                let txt_col = if is_sel {
+                    Color32::from_rgb(0, 255, 180)
+                } else {
+                    Color32::from_rgb(148, 163, 184)
+                };
+                let stroke_col = if is_sel {
+                    Color32::from_rgb(0, 255, 180)
+                } else {
+                    Color32::from_rgb(36, 50, 74)
+                };
 
-                let btn = egui::Button::new(RichText::new(label).font(FontId::proportional(10.5)).color(txt_col))
-                    .min_size(Vec2::new(80.0, MIN_HIT_TARGET_PT))
-                    .fill(bg_col)
-                    .stroke(Stroke::new(1.0_f32, stroke_col))
-                    .rounding(Rounding::same(4.0));
+                let btn = egui::Button::new(
+                    RichText::new(label)
+                        .font(FontId::proportional(10.5))
+                        .color(txt_col),
+                )
+                .min_size(Vec2::new(80.0, MIN_HIT_TARGET_PT))
+                .fill(bg_col)
+                .stroke(Stroke::new(1.0_f32, stroke_col))
+                .rounding(Rounding::same(4.0));
 
                 if ui.add(btn).clicked() {
                     self.set_boundary(bnd);
@@ -411,7 +579,10 @@ impl WaveguideMeshView {
             ui.add_space(8.0);
 
             let strike_btn = egui::Button::new(
-                RichText::new("💥 Strike").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(255, 215, 0))
+                RichText::new("💥 Strike")
+                    .font(FontId::proportional(11.0))
+                    .strong()
+                    .color(Color32::from_rgb(255, 215, 0)),
             )
             .min_size(Vec2::new(75.0, MIN_HIT_TARGET_PT))
             .fill(Color32::from_rgb(44, 36, 12))
@@ -423,7 +594,9 @@ impl WaveguideMeshView {
             }
 
             let reset_btn = egui::Button::new(
-                RichText::new("🔄 Reset").font(FontId::proportional(11.0)).color(Color32::from_rgb(244, 63, 94))
+                RichText::new("🔄 Reset")
+                    .font(FontId::proportional(11.0))
+                    .color(Color32::from_rgb(244, 63, 94)),
             )
             .min_size(Vec2::new(65.0, MIN_HIT_TARGET_PT))
             .fill(Color32::from_rgb(36, 16, 22))
@@ -439,10 +612,18 @@ impl WaveguideMeshView {
 
         // Control Sliders
         ui.horizontal(|ui| {
-            ui.label(RichText::new("Elevation:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+            ui.label(
+                RichText::new("Elevation:")
+                    .font(FontId::proportional(10.0))
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
             ui.add(egui::Slider::new(&mut self.view_elevation_deg, 10.0..=80.0).suffix("°"));
             ui.add_space(6.0);
-            ui.label(RichText::new("Azimuth:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+            ui.label(
+                RichText::new("Azimuth:")
+                    .font(FontId::proportional(10.0))
+                    .color(Color32::from_rgb(148, 163, 184)),
+            );
             ui.add(egui::Slider::new(&mut self.view_azimuth_deg, 0.0..=360.0).suffix("°"));
             ui.add_space(6.0);
             let energy = self.mesh.calculate_total_energy();
@@ -450,7 +631,11 @@ impl WaveguideMeshView {
                 RichText::new(format!("Energy: {:.3}", energy))
                     .font(FontId::proportional(10.0))
                     .strong()
-                    .color(if energy > 0.01 { Color32::from_rgb(0, 255, 180) } else { Color32::from_rgb(100, 116, 139) })
+                    .color(if energy > 0.01 {
+                        Color32::from_rgb(0, 255, 180)
+                    } else {
+                        Color32::from_rgb(100, 116, 139)
+                    }),
             );
         });
 
@@ -459,7 +644,8 @@ impl WaveguideMeshView {
         // Main 3D Waveguide Mesh Canvas
         let avail_w = ui.available_width().max(320.0);
         let avail_h = (ui.available_height() - 10.0).clamp(240.0, 520.0);
-        let (canvas_rect, canvas_resp) = ui.allocate_exact_size(Vec2::new(avail_w, avail_h), egui::Sense::click_and_drag());
+        let (canvas_rect, canvas_resp) =
+            ui.allocate_exact_size(Vec2::new(avail_w, avail_h), egui::Sense::click_and_drag());
 
         let center_x = canvas_rect.center().x;
         let center_y = canvas_rect.min.y + canvas_rect.height() * 0.52;
@@ -479,25 +665,53 @@ impl WaveguideMeshView {
         // Draw 3D Mesh
         let painter = ui.painter_at(canvas_rect);
         painter.rect_filled(canvas_rect, 6.0, Color32::from_rgb(10, 14, 24));
-        painter.rect_stroke(canvas_rect, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(30, 41, 59)));
+        painter.rect_stroke(
+            canvas_rect,
+            6.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(30, 41, 59)),
+        );
 
         let grid = self.mesh.displacement_grid();
         for y in 0..MESH_DIM {
             for x in 0..MESH_DIM {
                 let disp = grid[y][x];
-                let (px, py) = self.project_3d_to_canvas(x as f32, y as f32, disp, (center_x, center_y), scale);
+                let (px, py) = self.project_3d_to_canvas(
+                    x as f32,
+                    y as f32,
+                    disp,
+                    (center_x, center_y),
+                    scale,
+                );
                 let pt = egui::pos2(px, py);
 
                 if x + 1 < MESH_DIM {
                     let disp_r = grid[y][x + 1];
-                    let (rx, ry) = self.project_3d_to_canvas((x + 1) as f32, y as f32, disp_r, (center_x, center_y), scale);
-                    painter.line_segment([pt, egui::pos2(rx, ry)], Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)));
+                    let (rx, ry) = self.project_3d_to_canvas(
+                        (x + 1) as f32,
+                        y as f32,
+                        disp_r,
+                        (center_x, center_y),
+                        scale,
+                    );
+                    painter.line_segment(
+                        [pt, egui::pos2(rx, ry)],
+                        Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)),
+                    );
                 }
 
                 if y + 1 < MESH_DIM {
                     let disp_b = grid[y + 1][x];
-                    let (bx, by) = self.project_3d_to_canvas(x as f32, (y + 1) as f32, disp_b, (center_x, center_y), scale);
-                    painter.line_segment([pt, egui::pos2(bx, by)], Stroke::new(1.5_f32, Color32::from_rgb(0, 255, 180)));
+                    let (bx, by) = self.project_3d_to_canvas(
+                        x as f32,
+                        (y + 1) as f32,
+                        disp_b,
+                        (center_x, center_y),
+                        scale,
+                    );
+                    painter.line_segment(
+                        [pt, egui::pos2(bx, by)],
+                        Stroke::new(1.5_f32, Color32::from_rgb(0, 255, 180)),
+                    );
                 }
             }
         }
@@ -517,14 +731,21 @@ impl WaveguideMeshView {
             WAVEGUIDE_PUCK_HIT_RADIUS,
             Stroke::new(2.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 140)),
         );
-        painter.circle_filled(puck_pt, WAVEGUIDE_PUCK_VISUAL_RADIUS, Color32::from_rgb(255, 215, 0));
+        painter.circle_filled(
+            puck_pt,
+            WAVEGUIDE_PUCK_VISUAL_RADIUS,
+            Color32::from_rgb(255, 215, 0),
+        );
         painter.circle_filled(puck_pt, 4.0, Color32::WHITE);
 
         // Readout text on canvas
         painter.text(
             egui::pos2(canvas_rect.left() + 12.0, canvas_rect.top() + 10.0),
             egui::Align2::LEFT_TOP,
-            format!("Strike Position: ({:.2}, {:.2})", self.strike_puck_pos.0, self.strike_puck_pos.1),
+            format!(
+                "Strike Position: ({:.2}, {:.2})",
+                self.strike_puck_pos.0, self.strike_puck_pos.1
+            ),
             FontId::proportional(10.5),
             Color32::from_rgb(255, 215, 0),
         );
@@ -580,7 +801,16 @@ fn fill_rounded_rect_wg(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_rect_border_wg(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+fn draw_rect_border_wg(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    col: [u8; 4],
+) {
     for x in rx..(rx + rw).min(w) {
         if ry < h {
             let idx = ((ry * w + x) * 4) as usize;
@@ -604,7 +834,16 @@ fn draw_rect_border_wg(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_line_segment_wg(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+fn draw_line_segment_wg(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    col: [u8; 4],
+) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let steps = (dx.abs().max(dy.abs()) * 2.0).max(1.0) as u32;
@@ -658,7 +897,12 @@ fn draw_circle_ring_wg(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32,
     }
 }
 
-fn encode_minimal_png_wg(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_wg(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::new();
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

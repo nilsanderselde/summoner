@@ -22,14 +22,22 @@ pub mod pure_tests {
         let mut view = AwardWinningGuiView::new();
 
         // 1. Verify default nodes have faceplate parameters initialized
-        let osc = view.modular_nodes.iter().find(|n| n.id == "osc_1").expect("osc_1 must exist");
+        let osc = view
+            .modular_nodes
+            .iter()
+            .find(|n| n.id == "osc_1")
+            .expect("osc_1 must exist");
         assert_eq!(osc.params.len(), 2);
         assert_eq!(osc.params[0].id, "freq");
         assert_eq!(osc.params[0].value, 440.0);
         assert_eq!(osc.params[1].id, "shape");
         assert_eq!(osc.params[1].value, 0.5);
 
-        let filter = view.modular_nodes.iter().find(|n| n.id == "filter_1").expect("filter_1 must exist");
+        let filter = view
+            .modular_nodes
+            .iter()
+            .find(|n| n.id == "filter_1")
+            .expect("filter_1 must exist");
         assert_eq!(filter.params.len(), 2);
         assert_eq!(filter.params[0].id, "cutoff");
         assert_eq!(filter.params[0].value, 1200.0);
@@ -42,8 +50,14 @@ pub mod pure_tests {
         assert_eq!(view.get_modular_node_param("osc_1", "freq"), Some(880.0));
 
         // 3. Duplicate osc_1 and ensure cloned node retains modified parameter values
-        let dup_id = view.duplicate_modular_node("osc_1").expect("Duplication must succeed");
-        let dup_node = view.modular_nodes.iter().find(|n| n.id == dup_id).expect("Duplicate node must exist");
+        let dup_id = view
+            .duplicate_modular_node("osc_1")
+            .expect("Duplication must succeed");
+        let dup_node = view
+            .modular_nodes
+            .iter()
+            .find(|n| n.id == dup_id)
+            .expect("Duplicate node must exist");
         assert_eq!(dup_node.params.len(), 2);
         assert_eq!(dup_node.params[0].id, "freq");
         assert_eq!(dup_node.params[0].value, 880.0); // Retains adjusted value!
@@ -57,20 +71,32 @@ pub mod pure_tests {
 
         // Bounds clamping tests for filter cutoff (20.0 to 20000.0)
         assert!(view.set_modular_node_param("filter_1", "cutoff", 5000.0));
-        assert_eq!(view.get_modular_node_param("filter_1", "cutoff"), Some(5000.0));
+        assert_eq!(
+            view.get_modular_node_param("filter_1", "cutoff"),
+            Some(5000.0)
+        );
 
         // Upper clamp
         view.set_modular_node_param("filter_1", "cutoff", 99999.0);
-        assert_eq!(view.get_modular_node_param("filter_1", "cutoff"), Some(20000.0));
+        assert_eq!(
+            view.get_modular_node_param("filter_1", "cutoff"),
+            Some(20000.0)
+        );
 
         // Lower clamp
         view.set_modular_node_param("filter_1", "cutoff", -500.0);
-        assert_eq!(view.get_modular_node_param("filter_1", "cutoff"), Some(20.0));
+        assert_eq!(
+            view.get_modular_node_param("filter_1", "cutoff"),
+            Some(20.0)
+        );
 
         // Non-existent node or param safety
         assert!(!view.set_modular_node_param("non_existent_node", "cutoff", 100.0));
         assert!(!view.set_modular_node_param("filter_1", "invalid_param", 100.0));
-        assert_eq!(view.get_modular_node_param("filter_1", "invalid_param"), None);
+        assert_eq!(
+            view.get_modular_node_param("filter_1", "invalid_param"),
+            None
+        );
     }
 
     #[test]
@@ -79,12 +105,18 @@ pub mod pure_tests {
 
         // Change filter cutoff away from default 1200.0
         view.set_modular_node_param("filter_1", "cutoff", 6400.0);
-        assert_eq!(view.get_modular_node_param("filter_1", "cutoff"), Some(6400.0));
+        assert_eq!(
+            view.get_modular_node_param("filter_1", "cutoff"),
+            Some(6400.0)
+        );
 
         // Reset to default
         let res = view.reset_modular_node_param("filter_1", "cutoff");
         assert_eq!(res, Some(1200.0));
-        assert_eq!(view.get_modular_node_param("filter_1", "cutoff"), Some(1200.0));
+        assert_eq!(
+            view.get_modular_node_param("filter_1", "cutoff"),
+            Some(1200.0)
+        );
 
         // Reset non-existent
         assert_eq!(view.reset_modular_node_param("filter_1", "foo"), None);
@@ -94,7 +126,11 @@ pub mod pure_tests {
     fn test_turn21_m33_modular_node_param_bus_and_automation_bridge() {
         let mut view = AwardWinningGuiView::new();
         let project = ProjectConfig::default();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1) as u32;
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1) as u32;
         let mut bus = ParamBus::new();
         let mut reg = AutomationRegistry::new();
         let mut timeline = AutomationTimeline::new();
@@ -126,10 +162,16 @@ pub mod pure_tests {
         assert_eq!(bus.get(freq_pid), Some(523.25));
 
         // Verify AutomationRegistry has registered and updated key
-        assert_eq!(reg.get_param("modular_osc_1_freq").map(|p| p.get()), Some(523.25));
+        assert_eq!(
+            reg.get_param("modular_osc_1_freq").map(|p| p.get()),
+            Some(523.25)
+        );
 
         // Verify AutomationTimeline recorded the live point
-        let lane = timeline.lanes.get("modular_osc_1_freq").expect("Lane must be recorded");
+        let lane = timeline
+            .lanes
+            .get("modular_osc_1_freq")
+            .expect("Lane must be recorded");
         assert_eq!(lane.curve.points.len(), 1);
         assert_eq!(lane.curve.points[0].beat, 4.0);
         assert_eq!(lane.curve.points[0].value, 523.25);
@@ -147,7 +189,11 @@ pub mod pure_tests {
 
         // Verify default connection exists in matrix
         let osc_to_filter = ("osc_1:out".to_string(), "filter_1:in".to_string());
-        let conn = view.patch_matrix.connections.get(&osc_to_filter).expect("Connection must exist in matrix");
+        let conn = view
+            .patch_matrix
+            .connections
+            .get(&osc_to_filter)
+            .expect("Connection must exist in matrix");
         assert!(conn.active);
         assert_eq!(conn.intensity, 1.0);
 
@@ -157,17 +203,28 @@ pub mod pure_tests {
         // 3. Sync routing matrix back to modular cords
         view.sync_routing_matrix_to_modular();
 
-        let cord = view.patch_cords.iter().find(|c| {
-            c.from_node_id == "osc_1" && c.from_port_id == "out" && c.to_node_id == "vca_1" && c.to_port_id == "audio"
-        }).expect("New cord must have been created from matrix");
+        let cord = view
+            .patch_cords
+            .iter()
+            .find(|c| {
+                c.from_node_id == "osc_1"
+                    && c.from_port_id == "out"
+                    && c.to_node_id == "vca_1"
+                    && c.to_port_id == "audio"
+            })
+            .expect("New cord must have been created from matrix");
         assert!((cord.intensity - 0.85).abs() < 0.001);
 
         // 4. Disconnect in routing matrix and sync back
-        view.patch_matrix.toggle_connection("osc_1:out", "vca_1:audio");
+        view.patch_matrix
+            .toggle_connection("osc_1:out", "vca_1:audio");
         view.sync_routing_matrix_to_modular();
 
         let cord_still_exists = view.patch_cords.iter().any(|c| {
-            c.from_node_id == "osc_1" && c.from_port_id == "out" && c.to_node_id == "vca_1" && c.to_port_id == "audio"
+            c.from_node_id == "osc_1"
+                && c.from_port_id == "out"
+                && c.to_node_id == "vca_1"
+                && c.to_port_id == "audio"
         });
         assert!(!cord_still_exists);
     }

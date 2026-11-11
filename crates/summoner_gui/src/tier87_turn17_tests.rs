@@ -24,13 +24,25 @@ pub mod pure_tests {
         assert_eq!(pitches12[12], "C4");
 
         let c4_hz = edo12.pitch_to_hz(12, 13);
-        assert!((c4_hz - 261.6256).abs() < 0.01, "C4 should be ~261.63 Hz, got {}", c4_hz);
+        assert!(
+            (c4_hz - 261.6256).abs() < 0.01,
+            "C4 should be ~261.63 Hz, got {}",
+            c4_hz
+        );
         let c5_hz = edo12.pitch_to_hz(0, 13);
-        assert!((c5_hz - 523.2512).abs() < 0.02, "C5 should be exactly double C4, got {}", c5_hz);
+        assert!(
+            (c5_hz - 523.2512).abs() < 0.02,
+            "C5 should be exactly double C4, got {}",
+            c5_hz
+        );
 
         // A4 is index 3 in ["C5", "B4", "A#4", "A4", ...] (9 semitones above C4)
         let a4_hz = edo12.pitch_to_hz(3, 13);
-        assert!((a4_hz - 440.0).abs() < 0.05, "A4 should be ~440.0 Hz, got {}", a4_hz);
+        assert!(
+            (a4_hz - 440.0).abs() < 0.05,
+            "A4 should be ~440.0 Hz, got {}",
+            a4_hz
+        );
 
         // 2. 19-EDO (Microtonal 19 Divisions of the Octave)
         let edo19 = PianoRollTuningSystem::Edo19;
@@ -66,7 +78,11 @@ pub mod pure_tests {
         let c_bp = bp.pitch_to_hz(13, 14);
         assert!((c_bp - 261.6256).abs() < 0.01);
         let c_prime_bp = bp.pitch_to_hz(0, 14);
-        assert!((c_prime_bp - (261.6256 * 3.0)).abs() < 0.05, "Top note of BP should be 3:1 ratio, got {}", c_prime_bp);
+        assert!(
+            (c_prime_bp - (261.6256 * 3.0)).abs() < 0.05,
+            "Top note of BP should be 3:1 ratio, got {}",
+            c_prime_bp
+        );
     }
 
     #[test]
@@ -140,9 +156,11 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod tests {
-    use eframe::egui;
-    use crate::views::award_winning_gui_view::{AwardWinningGuiView, PianoRollNote, PianoRollSnapResolution, PianoRollTuningSystem};
+    use crate::views::award_winning_gui_view::{
+        AwardWinningGuiView, PianoRollNote, PianoRollSnapResolution, PianoRollTuningSystem,
+    };
     use crate::views::modern_top_bar::ModernViewTab;
+    use eframe::egui;
     use summoner_core::param_bus::{ParamBus, ParamId};
     use summoner_project::create_default_project;
     use summoner_sequencer::automation::AutomationRegistry;
@@ -210,8 +228,20 @@ pub mod tests {
 
         // Setup notes with unaligned start beats
         view.piano_roll_notes = vec![
-            PianoRollNote { id: 101, pitch_idx: 3, start_beat: 0.35, length_beats: 1.0, velocity: 0.8 },
-            PianoRollNote { id: 102, pitch_idx: 5, start_beat: 1.85, length_beats: 1.5, velocity: 0.9 },
+            PianoRollNote {
+                id: 101,
+                pitch_idx: 3,
+                start_beat: 0.35,
+                length_beats: 1.0,
+                velocity: 0.8,
+            },
+            PianoRollNote {
+                id: 102,
+                pitch_idx: 5,
+                start_beat: 1.85,
+                length_beats: 1.5,
+                velocity: 0.9,
+            },
         ];
         view.selected_note_id = Some(101);
 
@@ -241,7 +271,8 @@ pub mod tests {
         // 3. Transpose Octave (+12 in 12-EDO)
         view.piano_roll_notes[0].pitch_idx = 12;
         let oct_steps = 12;
-        view.piano_roll_notes[0].pitch_idx = view.piano_roll_notes[0].pitch_idx.saturating_sub(oct_steps);
+        view.piano_roll_notes[0].pitch_idx =
+            view.piano_roll_notes[0].pitch_idx.saturating_sub(oct_steps);
         assert_eq!(view.piano_roll_notes[0].pitch_idx, 0);
 
         // 4. Duplicate Note
@@ -258,7 +289,10 @@ pub mod tests {
             velocity: n_clone.velocity,
         });
         assert_eq!(view.piano_roll_notes.len(), orig_len + 1);
-        assert_eq!(view.piano_roll_notes.last().unwrap().start_beat, n_clone.start_beat + 1.0);
+        assert_eq!(
+            view.piano_roll_notes.last().unwrap().start_beat,
+            n_clone.start_beat + 1.0
+        );
 
         // 5. Humanize notes
         for (idx, n) in view.piano_roll_notes.iter_mut().enumerate() {
@@ -267,7 +301,9 @@ pub mod tests {
             let jitter_v = ((idx * 11 + 5) % 9) as f32 * 0.02 - 0.08;
             n.velocity = (n.velocity + jitter_v).clamp(0.2, 1.0);
         }
-        assert!(view.piano_roll_notes[0].velocity >= 0.2 && view.piano_roll_notes[0].velocity <= 1.0);
+        assert!(
+            view.piano_roll_notes[0].velocity >= 0.2 && view.piano_roll_notes[0].velocity <= 1.0
+        );
 
         // 6. Delete Note
         view.selected_note_id = Some(new_id);
@@ -277,7 +313,10 @@ pub mod tests {
 
     #[test]
     fn test_turn17_piano_roll_m33_live_parameter_bridge_audition() {
-        let mut view = AwardWinningGuiView { selected_track_idx: 0, ..Default::default() };
+        let mut view = AwardWinningGuiView {
+            selected_track_idx: 0,
+            ..Default::default()
+        };
         let project = create_default_project("Turn17Test");
         let mut param_bus = ParamBus::new();
         let mut auto_registry = AutomationRegistry::new();
@@ -293,7 +332,14 @@ pub mod tests {
         param_bus.register(vel_pid, 0.0);
 
         // 1. Initial State: Gate is 0.0 (Note Off)
-        view.sync_with_param_bus(&project, &param_bus, &mut auto_registry, &mut auto_timeline, 0.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut auto_registry,
+            &mut auto_timeline,
+            0.0,
+            false,
+        );
         assert_eq!(param_bus.get(gate_pid), Some(0.0));
 
         // 2. Note Audition Trigger: User presses pitch key or note block
@@ -301,14 +347,31 @@ pub mod tests {
         view.last_auditioned_gate = 1.0;
         view.selected_note_id = Some(view.piano_roll_notes[0].id);
 
-        view.sync_with_param_bus(&project, &param_bus, &mut auto_registry, &mut auto_timeline, 0.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut auto_registry,
+            &mut auto_timeline,
+            0.0,
+            false,
+        );
         assert_eq!(param_bus.get(pitch_pid), Some(523.25));
         assert_eq!(param_bus.get(gate_pid), Some(1.0));
-        assert_eq!(param_bus.get(vel_pid), Some(view.piano_roll_notes[0].velocity));
+        assert_eq!(
+            param_bus.get(vel_pid),
+            Some(view.piano_roll_notes[0].velocity)
+        );
 
         // 3. Note Release: Mouse button released
         view.last_auditioned_gate = 0.0;
-        view.sync_with_param_bus(&project, &param_bus, &mut auto_registry, &mut auto_timeline, 0.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut auto_registry,
+            &mut auto_timeline,
+            0.0,
+            false,
+        );
         assert_eq!(param_bus.get(gate_pid), Some(0.0));
         assert_eq!(param_bus.get(pitch_pid), Some(523.25)); // Retains last frequency
     }

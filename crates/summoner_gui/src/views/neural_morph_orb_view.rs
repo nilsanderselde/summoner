@@ -324,29 +324,38 @@ impl NeuralMorphOrbView {
         self.ripple_phase = (self.ripple_phase + dt_sec * 1.2) % 1.0;
 
         if self.orbit_mode != NeuralOrbitMode::ManualStatic {
-            self.orbit_phase = (self.orbit_phase + dt_sec * self.orbit_speed_hz * 2.0 * PI) % (2.0 * PI);
+            self.orbit_phase =
+                (self.orbit_phase + dt_sec * self.orbit_speed_hz * 2.0 * PI) % (2.0 * PI);
 
             match self.orbit_mode {
                 NeuralOrbitMode::LissajousFigure8 => {
-                    self.morph_x = (self.orbit_phase.sin() * 0.75).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
-                    self.morph_y = ((self.orbit_phase * 2.0).cos() * 0.65).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
+                    self.morph_x =
+                        (self.orbit_phase.sin() * 0.75).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
+                    self.morph_y = ((self.orbit_phase * 2.0).cos() * 0.65)
+                        .clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
                 }
                 NeuralOrbitMode::EllipticalVortex => {
                     let r = 0.60 + 0.15 * (self.orbit_phase * 3.0).sin();
-                    self.morph_x = (self.orbit_phase.cos() * r).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
-                    self.morph_y = (self.orbit_phase.sin() * r * 0.85).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
+                    self.morph_x =
+                        (self.orbit_phase.cos() * r).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
+                    self.morph_y =
+                        (self.orbit_phase.sin() * r * 0.85).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
                 }
                 NeuralOrbitMode::BrownianDrift => {
-                    let drift_x = (self.orbit_phase * 1.3).sin() * (self.orbit_phase * 0.7).cos() * 0.70;
-                    let drift_y = (self.orbit_phase * 1.1).cos() * (self.orbit_phase * 0.9).sin() * 0.70;
+                    let drift_x =
+                        (self.orbit_phase * 1.3).sin() * (self.orbit_phase * 0.7).cos() * 0.70;
+                    let drift_y =
+                        (self.orbit_phase * 1.1).cos() * (self.orbit_phase * 0.9).sin() * 0.70;
                     self.morph_x = drift_x.clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
                     self.morph_y = drift_y.clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
                 }
                 NeuralOrbitMode::EnvelopeReactive => {
                     let env = self.envelope_follower_level;
                     let radius = 0.20 + env * 0.65;
-                    self.morph_x = (self.orbit_phase.cos() * radius).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
-                    self.morph_y = (self.orbit_phase.sin() * radius).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
+                    self.morph_x =
+                        (self.orbit_phase.cos() * radius).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
+                    self.morph_y =
+                        (self.orbit_phase.sin() * radius).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
                 }
                 NeuralOrbitMode::ManualStatic => {}
             }
@@ -407,7 +416,8 @@ impl NeuralMorphOrbView {
 
         // Draggable Timbre Orb Puck
         let orb_col = ((self.morph_x + 1.0) * 0.5 * (WIDTH - 4) as f32 + 2.0).round() as usize;
-        let orb_row = ((1.0 - (self.morph_y + 1.0) * 0.5) * (HEIGHT - 4) as f32 + 2.0).round() as usize;
+        let orb_row =
+            ((1.0 - (self.morph_y + 1.0) * 0.5) * (HEIGHT - 4) as f32 + 2.0).round() as usize;
         let orb_c = orb_col.clamp(1, WIDTH - 2);
         let orb_r = orb_row.clamp(1, HEIGHT - 2);
         grid[orb_r][orb_c] = '@';
@@ -467,7 +477,14 @@ impl NeuralMorphOrbView {
                     } else {
                         Color32::from_rgb(30, 41, 59)
                     };
-                    if ui.add(egui::Button::new(text).fill(fill).min_size(Vec2::new(76.0, 24.0))).clicked() {
+                    if ui
+                        .add(
+                            egui::Button::new(text)
+                                .fill(fill)
+                                .min_size(Vec2::new(76.0, 24.0)),
+                        )
+                        .clicked()
+                    {
                         self.set_preset(p);
                     }
                 }
@@ -492,13 +509,13 @@ impl NeuralMorphOrbView {
 
                 for (m, lbl) in modes {
                     let is_active = self.orbit_mode == m;
-                    let text = egui::RichText::new(lbl).font(FontId::proportional(10.5)).color(
-                        if is_active {
+                    let text = egui::RichText::new(lbl)
+                        .font(FontId::proportional(10.5))
+                        .color(if is_active {
                             Color32::from_rgb(255, 255, 255)
                         } else {
                             Color32::from_rgb(148, 163, 184)
-                        },
-                    );
+                        });
                     let fill = if is_active {
                         Color32::from_rgb(168, 85, 247)
                     } else {
@@ -520,12 +537,17 @@ impl NeuralMorphOrbView {
 
             // Main 2D Latent Morph Canvas
             let canvas_size = Vec2::new(ui.available_width().max(380.0), 320.0);
-            let (response, painter) = ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
+            let (response, painter) =
+                ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
             let rect = response.rect;
 
             // Background Deep Slate
             painter.rect_filled(rect, 4.0, Color32::from_rgb(8, 12, 22));
-            painter.rect_stroke(rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(30, 41, 59)));
+            painter.rect_stroke(
+                rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(30, 41, 59)),
+            );
 
             // Coordinate grid & crosshairs
             let center = rect.center();
@@ -533,11 +555,17 @@ impl NeuralMorphOrbView {
             let half_h = rect.height() * 0.44;
 
             painter.line_segment(
-                [Pos2::new(center.x - half_w, center.y), Pos2::new(center.x + half_w, center.y)],
+                [
+                    Pos2::new(center.x - half_w, center.y),
+                    Pos2::new(center.x + half_w, center.y),
+                ],
                 Stroke::new(0.8_f32, Color32::from_rgb(30, 48, 75)),
             );
             painter.line_segment(
-                [Pos2::new(center.x, center.y - half_h), Pos2::new(center.x, center.y + half_h)],
+                [
+                    Pos2::new(center.x, center.y - half_h),
+                    Pos2::new(center.x, center.y + half_h),
+                ],
                 Stroke::new(0.8_f32, Color32::from_rgb(30, 48, 75)),
             );
 
@@ -552,11 +580,19 @@ impl NeuralMorphOrbView {
                 // Attraction radius circle
                 let w = self.anchor_weights[i];
                 let halo_rad = 12.0 + w * 22.0;
-                painter.circle_stroke(apos, halo_rad, Stroke::new(1.0_f32, col.gamma_multiply(0.4)));
+                painter.circle_stroke(
+                    apos,
+                    halo_rad,
+                    Stroke::new(1.0_f32, col.gamma_multiply(0.4)),
+                );
 
                 // Solid center dot
                 painter.circle_filled(apos, 6.0, col);
-                painter.circle_stroke(apos, 6.0, Stroke::new(1.5_f32, Color32::from_rgb(255, 255, 255)));
+                painter.circle_stroke(
+                    apos,
+                    6.0,
+                    Stroke::new(1.5_f32, Color32::from_rgb(255, 255, 255)),
+                );
 
                 // Anchor label
                 painter.text(
@@ -580,14 +616,16 @@ impl NeuralMorphOrbView {
                 let apos = Pos2::new(ax, ay);
                 let w = self.anchor_weights[i];
                 if w > 0.04 {
-                    let col = Color32::from_rgb(a.rgb.0, a.rgb.1, a.rgb.2).gamma_multiply(w.clamp(0.15, 0.95));
+                    let col = Color32::from_rgb(a.rgb.0, a.rgb.1, a.rgb.2)
+                        .gamma_multiply(w.clamp(0.15, 0.95));
                     let stroke_w = (w * 4.5).clamp(1.0, 4.0);
                     painter.line_segment([puck_pos, apos], Stroke::new(stroke_w, col));
                 }
             }
 
             // Interactive Puck Dragging (WCAG AAA touch targets >= 44x44pt)
-            let puck_hit_rect = EguiRect::from_center_size(puck_pos, Vec2::splat(NEURAL_ORB_PUCK_HIT_RADIUS * 2.0));
+            let puck_hit_rect =
+                EguiRect::from_center_size(puck_pos, Vec2::splat(NEURAL_ORB_PUCK_HIT_RADIUS * 2.0));
 
             if response.drag_started() {
                 if let Some(pos) = response.interact_pointer_pos() {
@@ -600,8 +638,10 @@ impl NeuralMorphOrbView {
 
             if self.is_dragging_orb && response.dragged() {
                 if let Some(pos) = response.interact_pointer_pos() {
-                    let norm_x = ((pos.x - center.x) / half_w).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
-                    let norm_y = -((pos.y - center.y) / half_h).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
+                    let norm_x =
+                        ((pos.x - center.x) / half_w).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
+                    let norm_y =
+                        -((pos.y - center.y) / half_h).clamp(MIN_MORPH_COORD, MAX_MORPH_COORD);
                     self.set_morph_coords(norm_x, norm_y);
                 }
             }
@@ -620,7 +660,11 @@ impl NeuralMorphOrbView {
 
             // Orb Visual Body
             painter.circle_filled(puck_pos, 11.0, Color32::from_rgb(244, 63, 94));
-            painter.circle_stroke(puck_pos, 11.0, Stroke::new(2.0_f32, Color32::from_rgb(255, 255, 255)));
+            painter.circle_stroke(
+                puck_pos,
+                11.0,
+                Stroke::new(2.0_f32, Color32::from_rgb(255, 255, 255)),
+            );
             painter.circle_filled(puck_pos, 4.0, Color32::from_rgb(255, 255, 255));
 
             // Telemetry Readouts Panel below Canvas
@@ -634,10 +678,13 @@ impl NeuralMorphOrbView {
                                 .color(Color32::from_rgb(148, 163, 184)),
                         );
                         ui.label(
-                            egui::RichText::new(format!("X: {:+.2} | Y: {:+.2}", self.morph_x, self.morph_y))
-                                .font(FontId::monospace(13.0))
-                                .strong()
-                                .color(Color32::from_rgb(244, 63, 94)),
+                            egui::RichText::new(format!(
+                                "X: {:+.2} | Y: {:+.2}",
+                                self.morph_x, self.morph_y
+                            ))
+                            .font(FontId::monospace(13.0))
+                            .strong()
+                            .color(Color32::from_rgb(244, 63, 94)),
                         );
                     });
                 });

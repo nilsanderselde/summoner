@@ -85,7 +85,10 @@ pub mod pure_tests {
 
         // 2. Transpose up 1 step (note: in grid canvas, up moves to lower pitch index)
         assert!(view.transpose_selected_piano_roll_note(1));
-        assert_eq!(view.piano_roll_notes[0].pitch_idx, orig_pitch_idx.saturating_sub(1));
+        assert_eq!(
+            view.piano_roll_notes[0].pitch_idx,
+            orig_pitch_idx.saturating_sub(1)
+        );
 
         // 3. Transpose down 1 step
         assert!(view.transpose_selected_piano_roll_note(-1));
@@ -164,7 +167,11 @@ pub mod pure_tests {
         view.inspector_state.requested_automation_param = Some("pan".to_string());
         // Simulate event consumption dispatch
         let track_id = view.tracks[view.selected_track_idx].id;
-        let param = view.inspector_state.requested_automation_param.take().unwrap();
+        let param = view
+            .inspector_state
+            .requested_automation_param
+            .take()
+            .unwrap();
         assert!(view.open_track_automation_editor(track_id, &param));
         assert!(view.show_automation_editor_window);
         assert_eq!(
@@ -174,7 +181,11 @@ pub mod pure_tests {
 
         // 2. Device Rack automation request
         view.device_rack_state.requested_automation_param = Some("cutoff".to_string());
-        let rack_param = view.device_rack_state.requested_automation_param.take().unwrap();
+        let rack_param = view
+            .device_rack_state
+            .requested_automation_param
+            .take()
+            .unwrap();
         assert!(view.open_track_automation_editor(track_id, &rack_param));
         assert_eq!(
             view.requested_modular_automation_param,
@@ -237,7 +248,10 @@ pub mod gui_tests {
         assert!(view.show_automation_editor_window);
         assert_eq!(
             view.requested_modular_automation_param,
-            Some(format!("track_{}_gain", view.tracks[view.selected_track_idx].id))
+            Some(format!(
+                "track_{}_gain",
+                view.tracks[view.selected_track_idx].id
+            ))
         );
         assert_eq!(view.inspector_state.requested_automation_param, None);
     }

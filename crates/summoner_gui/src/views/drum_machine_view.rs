@@ -207,7 +207,11 @@ impl DrumMachinePadView {
 
     /// Pitch playback ratio from semitone transpose: 2^(st / 12).
     pub fn pitch_ratio(&self) -> f32 {
-        2.0_f32.powf(self.pitch_semitones.clamp(MIN_PITCH_SEMITONES, MAX_PITCH_SEMITONES) / 12.0)
+        2.0_f32.powf(
+            self.pitch_semitones
+                .clamp(MIN_PITCH_SEMITONES, MAX_PITCH_SEMITONES)
+                / 12.0,
+        )
     }
 
     /// Evaluates the ADSR + VCA amplitude envelope at normalized time t in [0.0..=1.0].
@@ -218,7 +222,8 @@ impl DrumMachinePadView {
             (t / attack_frac).clamp(0.0, 1.0)
         } else {
             let decay_t = (t - attack_frac) / (1.0 - attack_frac).max(0.01);
-            let rate = (2.4 / self.decay_scale.clamp(MIN_DECAY_SCALE, MAX_DECAY_SCALE)).clamp(0.5, 12.0);
+            let rate =
+                (2.4 / self.decay_scale.clamp(MIN_DECAY_SCALE, MAX_DECAY_SCALE)).clamp(0.5, 12.0);
             (-decay_t * rate).exp().clamp(0.0, 1.0)
         }
     }
@@ -415,17 +420,13 @@ impl DrumMachinePadView {
                     let is_sel = self.selected_pad_idx == idx;
                     let muted = self.pads[idx].muted;
                     let label = format!("{}\nN{}", self.pads[idx].name, self.pads[idx].midi_note);
-                    let btn = egui::Button::new(
-                        RichText::new(label)
-                            .size(10.0)
-                            .color(if muted {
-                                Color32::from_rgb(100, 116, 139)
-                            } else if is_sel {
-                                Color32::BLACK
-                            } else {
-                                Color32::WHITE
-                            }),
-                    )
+                    let btn = egui::Button::new(RichText::new(label).size(10.0).color(if muted {
+                        Color32::from_rgb(100, 116, 139)
+                    } else if is_sel {
+                        Color32::BLACK
+                    } else {
+                        Color32::WHITE
+                    }))
                     .fill(if muted {
                         Color32::from_rgb(15, 23, 42)
                     } else if is_sel {

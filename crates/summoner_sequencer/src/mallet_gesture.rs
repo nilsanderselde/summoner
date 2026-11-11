@@ -55,7 +55,8 @@ pub struct MalletWaypoint {
 
 impl Default for MalletWaypoint {
     fn default() -> Self {
-        let (r, vel, hard, rim, roll, tens) = MalletArticulation::EdgeSweetSpot.nominal_parameters();
+        let (r, vel, hard, rim, roll, tens) =
+            MalletArticulation::EdgeSweetSpot.nominal_parameters();
         Self {
             beat: 0.0,
             radial_strike_pos: r,
@@ -209,7 +210,11 @@ impl MalletGestureEngine {
                         kettle_tension_cents: tens,
                         air_cavity_depth: 0.85,
                         membrane_tension: 0.50 + 0.30 * frac as f32,
-                        articulation: if frac > 0.0 { MalletArticulation::MalletRollTremolo } else { MalletArticulation::EdgeSweetSpot },
+                        articulation: if frac > 0.0 {
+                            MalletArticulation::MalletRollTremolo
+                        } else {
+                            MalletArticulation::EdgeSweetSpot
+                        },
                         curve: MalletInterpolationCurve::CubicCatmullRom,
                     });
                 }
@@ -226,7 +231,11 @@ impl MalletGestureEngine {
                 for (i, &pos) in positions.iter().enumerate() {
                     let beat = i as f64 * (measure_length_beats / 4.0);
                     let is_outer = i == 0 || i == 3;
-                    let hard = if is_outer { *outer_hardness } else { *inner_hardness };
+                    let hard = if is_outer {
+                        *outer_hardness
+                    } else {
+                        *inner_hardness
+                    };
                     let vel = velocity_dynamics * (if i % 2 == 0 { 0.85 } else { 0.70 });
 
                     self.waypoints.push(MalletWaypoint {
@@ -259,9 +268,19 @@ impl MalletGestureEngine {
                     let beat = step as f64 * step_beat;
                     let is_accent = step == 0 || step == 6 || step == 10 || step == 14;
                     let is_rimshot = step == 10;
-                    let vel = if is_accent { *accent_velocity } else { *ghost_velocity };
+                    let vel = if is_accent {
+                        *accent_velocity
+                    } else {
+                        *ghost_velocity
+                    };
                     let hard = if is_accent { 0.85 } else { 0.45 };
-                    let r = if is_rimshot { 0.95 } else if is_accent { 0.75 } else { 0.35 };
+                    let r = if is_rimshot {
+                        0.95
+                    } else if is_accent {
+                        0.75
+                    } else {
+                        0.35
+                    };
 
                     self.waypoints.push(MalletWaypoint {
                         beat,
@@ -269,7 +288,11 @@ impl MalletGestureEngine {
                         strike_velocity: vel,
                         mallet_hardness: hard,
                         rimshot_damping: if is_rimshot { 0.80 } else { 0.10 },
-                        roll_tremolo_rate_hz: if !is_accent && step % 4 == 3 { 18.0 } else { 0.0 },
+                        roll_tremolo_rate_hz: if !is_accent && step % 4 == 3 {
+                            18.0
+                        } else {
+                            0.0
+                        },
                         kettle_tension_cents: 0.0,
                         air_cavity_depth: 0.40,
                         membrane_tension: 0.60,
@@ -342,7 +365,11 @@ impl MalletGestureEngine {
                 for i in 0..notes {
                     let beat = i as f64 * (measure_length_beats / notes as f64);
                     let is_accent = i % 3 == 0;
-                    let vel = if is_accent { *accent_velocity } else { *base_velocity };
+                    let vel = if is_accent {
+                        *accent_velocity
+                    } else {
+                        *base_velocity
+                    };
 
                     self.waypoints.push(MalletWaypoint {
                         beat,
@@ -372,14 +399,70 @@ impl MalletGestureEngine {
                 // 3: Heel, 3&: Tip
                 // 4: Open tone (sweet spot ring), 4&: Open tone
                 let tumbao_steps = [
-                    (0.0, 0.15, 0.40, 0.30, 0.70, MalletArticulation::DeadStrokeMuted), // Heel
-                    (0.5, 0.85, 0.35, 0.30, 0.70, MalletArticulation::DeadStrokeMuted), // Tip
-                    (1.0, 0.90, 0.90, *slap_hardness, 0.85, MalletArticulation::Rimshot), // Slap
-                    (1.5, 0.85, 0.35, 0.30, 0.70, MalletArticulation::DeadStrokeMuted), // Tip
-                    (2.0, 0.15, 0.40, 0.30, 0.70, MalletArticulation::DeadStrokeMuted), // Heel
-                    (2.5, 0.85, 0.35, 0.30, 0.70, MalletArticulation::DeadStrokeMuted), // Tip
-                    (3.0, 0.70, *open_velocity, 0.45, 0.05, MalletArticulation::EdgeSweetSpot), // Open 1
-                    (3.5, 0.70, *open_velocity * 0.95, 0.45, 0.05, MalletArticulation::EdgeSweetSpot), // Open 2
+                    (
+                        0.0,
+                        0.15,
+                        0.40,
+                        0.30,
+                        0.70,
+                        MalletArticulation::DeadStrokeMuted,
+                    ), // Heel
+                    (
+                        0.5,
+                        0.85,
+                        0.35,
+                        0.30,
+                        0.70,
+                        MalletArticulation::DeadStrokeMuted,
+                    ), // Tip
+                    (
+                        1.0,
+                        0.90,
+                        0.90,
+                        *slap_hardness,
+                        0.85,
+                        MalletArticulation::Rimshot,
+                    ), // Slap
+                    (
+                        1.5,
+                        0.85,
+                        0.35,
+                        0.30,
+                        0.70,
+                        MalletArticulation::DeadStrokeMuted,
+                    ), // Tip
+                    (
+                        2.0,
+                        0.15,
+                        0.40,
+                        0.30,
+                        0.70,
+                        MalletArticulation::DeadStrokeMuted,
+                    ), // Heel
+                    (
+                        2.5,
+                        0.85,
+                        0.35,
+                        0.30,
+                        0.70,
+                        MalletArticulation::DeadStrokeMuted,
+                    ), // Tip
+                    (
+                        3.0,
+                        0.70,
+                        *open_velocity,
+                        0.45,
+                        0.05,
+                        MalletArticulation::EdgeSweetSpot,
+                    ), // Open 1
+                    (
+                        3.5,
+                        0.70,
+                        *open_velocity * 0.95,
+                        0.45,
+                        0.05,
+                        MalletArticulation::EdgeSweetSpot,
+                    ), // Open 2
                 ];
 
                 for &(beat, r, vel, hard, rim, art) in &tumbao_steps {
@@ -435,7 +518,11 @@ impl MalletGestureEngine {
                 self.loop_length_beats
             } else {
                 let b = beat % self.loop_length_beats;
-                if b < 0.0 { b + self.loop_length_beats } else { b }
+                if b < 0.0 {
+                    b + self.loop_length_beats
+                } else {
+                    b
+                }
             }
         } else {
             beat
@@ -508,14 +595,62 @@ impl MalletGestureEngine {
                 )
             }
             MalletInterpolationCurve::CubicCatmullRom => (
-                catmull_rom_1d(w0.radial_strike_pos, w1.radial_strike_pos, w2.radial_strike_pos, w3.radial_strike_pos, t),
-                catmull_rom_1d(w0.strike_velocity, w1.strike_velocity, w2.strike_velocity, w3.strike_velocity, t),
-                catmull_rom_1d(w0.mallet_hardness, w1.mallet_hardness, w2.mallet_hardness, w3.mallet_hardness, t),
-                catmull_rom_1d(w0.rimshot_damping, w1.rimshot_damping, w2.rimshot_damping, w3.rimshot_damping, t),
-                catmull_rom_1d(w0.roll_tremolo_rate_hz, w1.roll_tremolo_rate_hz, w2.roll_tremolo_rate_hz, w3.roll_tremolo_rate_hz, t),
-                catmull_rom_1d(w0.kettle_tension_cents, w1.kettle_tension_cents, w2.kettle_tension_cents, w3.kettle_tension_cents, t),
-                catmull_rom_1d(w0.air_cavity_depth, w1.air_cavity_depth, w2.air_cavity_depth, w3.air_cavity_depth, t),
-                catmull_rom_1d(w0.membrane_tension, w1.membrane_tension, w2.membrane_tension, w3.membrane_tension, t),
+                catmull_rom_1d(
+                    w0.radial_strike_pos,
+                    w1.radial_strike_pos,
+                    w2.radial_strike_pos,
+                    w3.radial_strike_pos,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.strike_velocity,
+                    w1.strike_velocity,
+                    w2.strike_velocity,
+                    w3.strike_velocity,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.mallet_hardness,
+                    w1.mallet_hardness,
+                    w2.mallet_hardness,
+                    w3.mallet_hardness,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.rimshot_damping,
+                    w1.rimshot_damping,
+                    w2.rimshot_damping,
+                    w3.rimshot_damping,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.roll_tremolo_rate_hz,
+                    w1.roll_tremolo_rate_hz,
+                    w2.roll_tremolo_rate_hz,
+                    w3.roll_tremolo_rate_hz,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.kettle_tension_cents,
+                    w1.kettle_tension_cents,
+                    w2.kettle_tension_cents,
+                    w3.kettle_tension_cents,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.air_cavity_depth,
+                    w1.air_cavity_depth,
+                    w2.air_cavity_depth,
+                    w3.air_cavity_depth,
+                    t,
+                ),
+                catmull_rom_1d(
+                    w0.membrane_tension,
+                    w1.membrane_tension,
+                    w2.membrane_tension,
+                    w3.membrane_tension,
+                    t,
+                ),
             ),
         };
 
@@ -526,7 +661,11 @@ impl MalletGestureEngine {
         };
 
         MalletBusSnapshot {
-            articulation: if t < 0.5 { w1.articulation } else { w2.articulation },
+            articulation: if t < 0.5 {
+                w1.articulation
+            } else {
+                w2.articulation
+            },
             radial_strike_pos: r.clamp(0.0, 1.0),
             strike_velocity: vel.clamp(0.0, 1.0),
             mallet_hardness: hard.clamp(0.0, 1.0),
@@ -675,7 +814,9 @@ mod tests {
     #[test]
     fn test_mallet_gesture_toml_roundtrip() {
         let engine = MalletGestureEngine::new(MalletGesturePattern::default());
-        let toml_str = engine.to_toml().expect("Failed to serialize mallet gesture TOML");
+        let toml_str = engine
+            .to_toml()
+            .expect("Failed to serialize mallet gesture TOML");
         assert!(toml_str.contains("TimpaniGlissandoRoll"));
 
         let restored: MalletGestureEngine = MalletGestureEngine::from_toml(&toml_str)

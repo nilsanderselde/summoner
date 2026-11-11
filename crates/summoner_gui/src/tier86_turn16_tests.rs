@@ -46,7 +46,11 @@ pub mod pure_tests {
     fn test_turn16_dsp_catalog_category_filtering() {
         let registry = DspNodeRegistry::new();
         let all_nodes = registry.list_all();
-        assert!(all_nodes.len() >= 1000, "Registry must contain reflected DSP nodes, found {}", all_nodes.len());
+        assert!(
+            all_nodes.len() >= 1000,
+            "Registry must contain reflected DSP nodes, found {}",
+            all_nodes.len()
+        );
 
         let categories = [
             DspCategory::Oscillator,
@@ -66,28 +70,41 @@ pub mod pure_tests {
 
         for cat in categories {
             let cat_nodes: Vec<_> = all_nodes.iter().filter(|n| n.category == cat).collect();
-            assert!(!cat_nodes.is_empty(), "Category {:?} must have registered DSP modules", cat);
+            assert!(
+                !cat_nodes.is_empty(),
+                "Category {:?} must have registered DSP modules",
+                cat
+            );
 
             // Verify search within category
             let sample_name = &cat_nodes[0].display_name.to_lowercase();
             let query = &sample_name[..3.min(sample_name.len())];
-            let search_matches: Vec<_> = cat_nodes.iter().filter(|n| {
-                n.display_name.to_lowercase().contains(query) || n.kind_id.to_lowercase().contains(query)
-            }).collect();
-            assert!(!search_matches.is_empty(), "Search within category must find matches");
+            let search_matches: Vec<_> = cat_nodes
+                .iter()
+                .filter(|n| {
+                    n.display_name.to_lowercase().contains(query)
+                        || n.kind_id.to_lowercase().contains(query)
+                })
+                .collect();
+            assert!(
+                !search_matches.is_empty(),
+                "Search within category must find matches"
+            );
         }
     }
 }
 
 #[cfg(all(test, feature = "gui"))]
 mod tests {
-    use eframe::egui;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::modern_top_bar::ModernViewTab;
+    use eframe::egui;
     use summoner_core::param_bus::ParamBus;
     use summoner_project::create_default_project;
     use summoner_sequencer::automation::AutomationRegistry;
-    use summoner_sequencer::automation_timeline::{AutomationCurve, AutomationLane, AutomationPoint, AutomationTimeline, Interpolation};
+    use summoner_sequencer::automation_timeline::{
+        AutomationCurve, AutomationLane, AutomationPoint, AutomationTimeline, Interpolation,
+    };
 
     #[test]
     fn test_turn16_arranger_track_pro_launchers_and_toggles() {
@@ -165,7 +182,11 @@ mod tests {
 
         // 2. Insert a node from catalog
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-        let reverb_desc = registry.list_all().into_iter().find(|d| d.kind_id.to_lowercase().contains("reverb")).unwrap();
+        let reverb_desc = registry
+            .list_all()
+            .into_iter()
+            .find(|d| d.kind_id.to_lowercase().contains("reverb"))
+            .unwrap();
         let initial_node_count = view.modular_nodes.len();
 
         view.add_modular_node_from_descriptor(reverb_desc);
@@ -201,7 +222,9 @@ mod tests {
         view.tracks[0].is_soloed = true;
         view.selected_modular_node_id = Some("node_test_1".to_string());
         view.inspector_state.node_param_values.clear();
-        view.inspector_state.node_param_values.insert("resonance".to_string(), 0.77);
+        view.inspector_state
+            .node_param_values
+            .insert("resonance".to_string(), 0.77);
 
         // 2. Dispatch with ParamBus
         view.sync_with_param_bus(&project, &bus, &mut auto_reg, &mut timeline, 0.0, false);
@@ -212,20 +235,34 @@ mod tests {
 
         // 3. Automation curve playback evaluation
         let mute_lane_key = format!("track_{}_mute", track_id);
-        timeline.lanes.insert(mute_lane_key.clone(), AutomationLane {
-            param_id: mute_lane_key.clone(),
-            curve: AutomationCurve {
-                points: vec![
-                    AutomationPoint { beat: 0.0, value: 0.0, interp: Interpolation::Step },
-                    AutomationPoint { beat: 4.0, value: 1.0, interp: Interpolation::Step },
-                ],
+        timeline.lanes.insert(
+            mute_lane_key.clone(),
+            AutomationLane {
+                param_id: mute_lane_key.clone(),
+                curve: AutomationCurve {
+                    points: vec![
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 0.0,
+                            interp: Interpolation::Step,
+                        },
+                        AutomationPoint {
+                            beat: 4.0,
+                            value: 1.0,
+                            interp: Interpolation::Step,
+                        },
+                    ],
+                },
             },
-        });
+        );
 
         // Transport is playing at beat 1.0 -> should evaluate mute to 0.0
         view.top_bar_state.is_playing = true;
         view.sync_with_param_bus(&project, &bus, &mut auto_reg, &mut timeline, 1.0, false);
-        assert!(!view.tracks[0].is_muted, "Beat 1.0 should evaluate to unmuted");
+        assert!(
+            !view.tracks[0].is_muted,
+            "Beat 1.0 should evaluate to unmuted"
+        );
 
         // Transport is playing at beat 5.0 -> should evaluate mute to 1.0
         view.sync_with_param_bus(&project, &bus, &mut auto_reg, &mut timeline, 5.0, false);

@@ -8,11 +8,11 @@
 //! - Metronome directions and tempo map points.
 //! - Lossless round-trip conversion between MusicXML, SMF notes, and native [`ProjectConfig`].
 
+use crate::schema::{
+    ProjectConfig, SequenceConfig, TrackConfig, TrackerStepConfig, TransportConfig,
+};
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use crate::schema::{
-    ProjectConfig, SequenceConfig, TrackerStepConfig, TrackConfig, TransportConfig,
-};
 
 /// Lyric syllable connection type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -229,10 +229,12 @@ impl MusicXmlScore {
                 for step in &seq.steps {
                     if step.active && !step.muted {
                         let duration_divs = (step.gate as f64 * divisions as f64).round() as u32;
-                        let mut xml_note = MusicXmlNote::new_note(step.note.round() as u8, duration_divs.max(60));
+                        let mut xml_note =
+                            MusicXmlNote::new_note(step.note.round() as u8, duration_divs.max(60));
                         if let Some(meta) = &project.meta {
                             if let Some(lyric_txt) = &meta.notes {
-                                xml_note.lyric = Some(MusicXmlLyric::new(lyric_txt, Syllabic::Single));
+                                xml_note.lyric =
+                                    Some(MusicXmlLyric::new(lyric_txt, Syllabic::Single));
                             }
                         }
                         measure.notes.push(xml_note);
@@ -244,7 +246,8 @@ impl MusicXmlScore {
                 for step in &clip.steps {
                     if step.active && !step.muted {
                         let duration_divs = (step.gate as f64 * divisions as f64).round() as u32;
-                        let xml_note = MusicXmlNote::new_note(step.note.round() as u8, duration_divs.max(60));
+                        let xml_note =
+                            MusicXmlNote::new_note(step.note.round() as u8, duration_divs.max(60));
                         measure.notes.push(xml_note);
                     }
                 }
@@ -272,7 +275,9 @@ impl MusicXmlScore {
                 if let Some(b) = first_measure.tempo_bpm {
                     bpm = b;
                 }
-                if let (Some(num), Some(den)) = (first_measure.time_beats, first_measure.time_beat_type) {
+                if let (Some(num), Some(den)) =
+                    (first_measure.time_beats, first_measure.time_beat_type)
+                {
                     time_sig = format!("{}/{}", num, den);
                 }
             }
@@ -355,17 +360,26 @@ pub fn export_musicxml(score: &MusicXmlScore) -> String {
     xml.push_str("<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 3.1 Partwise//EN\" \"http://www.musicxml.org/dtds/partwise.dtd\">\n");
     xml.push_str("<score-partwise version=\"3.1\">\n");
     xml.push_str("  <work>\n");
-    xml.push_str(&format!("    <work-title>{}</work-title>\n", xml_escape(&score.title)));
+    xml.push_str(&format!(
+        "    <work-title>{}</work-title>\n",
+        xml_escape(&score.title)
+    ));
     xml.push_str("  </work>\n");
     xml.push_str("  <identification>\n");
-    xml.push_str(&format!("    <creator type=\"composer\">{}</creator>\n", xml_escape(&score.composer)));
+    xml.push_str(&format!(
+        "    <creator type=\"composer\">{}</creator>\n",
+        xml_escape(&score.composer)
+    ));
     xml.push_str("  </identification>\n");
 
     // Part list
     xml.push_str("  <part-list>\n");
     for part in &score.parts {
         xml.push_str(&format!("    <score-part id=\"{}\">\n", part.id));
-        xml.push_str(&format!("      <part-name>{}</part-name>\n", xml_escape(&part.name)));
+        xml.push_str(&format!(
+            "      <part-name>{}</part-name>\n",
+            xml_escape(&part.name)
+        ));
         xml.push_str("    </score-part>\n");
     }
     xml.push_str("  </part-list>\n");
@@ -378,7 +392,10 @@ pub fn export_musicxml(score: &MusicXmlScore) -> String {
 
             // Attributes
             xml.push_str("      <attributes>\n");
-            xml.push_str(&format!("        <divisions>{}</divisions>\n", measure.divisions));
+            xml.push_str(&format!(
+                "        <divisions>{}</divisions>\n",
+                measure.divisions
+            ));
             if let Some(fifths) = measure.key_fifths {
                 xml.push_str("        <key>\n");
                 xml.push_str(&format!("          <fifths>{}</fifths>\n", fifths));
@@ -419,12 +436,21 @@ pub fn export_musicxml(score: &MusicXmlScore) -> String {
                     xml.push_str(&format!("          <octave>{}</octave>\n", note.octave));
                     xml.push_str("        </pitch>\n");
                 }
-                xml.push_str(&format!("        <duration>{}</duration>\n", note.duration_divisions));
+                xml.push_str(&format!(
+                    "        <duration>{}</duration>\n",
+                    note.duration_divisions
+                ));
 
                 if let Some(lyric) = &note.lyric {
                     xml.push_str("        <lyric>\n");
-                    xml.push_str(&format!("          <syllabic>{}</syllabic>\n", lyric.syllabic));
-                    xml.push_str(&format!("          <text>{}</text>\n", xml_escape(&lyric.text)));
+                    xml.push_str(&format!(
+                        "          <syllabic>{}</syllabic>\n",
+                        lyric.syllabic
+                    ));
+                    xml.push_str(&format!(
+                        "          <text>{}</text>\n",
+                        xml_escape(&lyric.text)
+                    ));
                     xml.push_str("        </lyric>\n");
                 }
                 xml.push_str("      </note>\n");
@@ -600,9 +626,12 @@ mod tests {
         m1.key_fifths = Some(1); // G Major
 
         // Add note with lyric syllable
-        let note1 = MusicXmlNote::new_note(67, 480).with_lyric(MusicXmlLyric::new("Glo", Syllabic::Begin));
-        let note2 = MusicXmlNote::new_note(69, 480).with_lyric(MusicXmlLyric::new("ri", Syllabic::Middle));
-        let note3 = MusicXmlNote::new_note(71, 480).with_lyric(MusicXmlLyric::new("a", Syllabic::End));
+        let note1 =
+            MusicXmlNote::new_note(67, 480).with_lyric(MusicXmlLyric::new("Glo", Syllabic::Begin));
+        let note2 =
+            MusicXmlNote::new_note(69, 480).with_lyric(MusicXmlLyric::new("ri", Syllabic::Middle));
+        let note3 =
+            MusicXmlNote::new_note(71, 480).with_lyric(MusicXmlLyric::new("a", Syllabic::End));
         m1.notes.push(note1);
         m1.notes.push(note2);
         m1.notes.push(note3);
@@ -626,7 +655,11 @@ mod tests {
         assert_eq!(imported.parts[0].measures[0].notes.len(), 3);
         assert_eq!(imported.parts[0].measures[0].notes[0].midi_pitch, 67);
         assert_eq!(
-            imported.parts[0].measures[0].notes[0].lyric.as_ref().unwrap().text,
+            imported.parts[0].measures[0].notes[0]
+                .lyric
+                .as_ref()
+                .unwrap()
+                .text,
             "Glo"
         );
     }

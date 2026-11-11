@@ -339,7 +339,15 @@ impl ClavinetView {
         let wave = self.evaluate_pickup_waveform();
         let mut wave_str = String::from("│ Wave: ");
         for val in wave.iter().take(24) {
-            let ch = if *val > 0.5 { '▲' } else if *val > 0.05 { '─' } else if *val < -0.5 { '▼' } else { ' ' };
+            let ch = if *val > 0.5 {
+                '▲'
+            } else if *val > 0.05 {
+                '─'
+            } else if *val < -0.5 {
+                '▼'
+            } else {
+                ' '
+            };
             wave_str.push(ch);
         }
         wave_str.push_str(" │");
@@ -353,7 +361,12 @@ impl ClavinetView {
     }
 
     /// Renders a headless PNG snapshot to the specified path.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep slate #0A0E18
@@ -413,7 +426,9 @@ impl ClavinetView {
         for (i, &val) in wave.iter().enumerate() {
             let x_coord = w_x0 + (i * w_w) / 32;
             let y_offset = (val * (c_h as f32 * 0.35)) as isize;
-            let y_coord = (w_cy as isize - y_offset).clamp(margin as isize, (height - margin) as isize) as usize;
+            let y_coord = (w_cy as isize - y_offset)
+                .clamp(margin as isize, (height - margin) as isize)
+                as usize;
 
             for dy in 0..3 {
                 for dx in 0..3 {
@@ -553,7 +568,8 @@ impl ClavinetView {
             if let Some(pos) = response.interact_pointer_pos() {
                 if pad_rect.contains(pos) {
                     let norm_x = ((pos.x - pad_rect.min.x) / pad_rect.width()).clamp(0.0, 1.0);
-                    let norm_y = (1.0 - ((pos.y - pad_rect.min.y) / pad_rect.height())).clamp(0.0, 1.0);
+                    let norm_y =
+                        (1.0 - ((pos.y - pad_rect.min.y) / pad_rect.height())).clamp(0.0, 1.0);
                     self.update_physics_from_puck(norm_x, norm_y);
                 }
             }
@@ -584,7 +600,10 @@ impl ClavinetView {
         // Right side: Rubber Anvil Pulse & Pickup Cancellation Waveform
         let wave_rect = egui::Rect::from_min_size(
             egui::pos2(pad_rect.max.x + 15.0, main_canvas.min.y + 15.0),
-            egui::vec2(main_canvas.max.x - pad_rect.max.x - 30.0, main_canvas.height() - 30.0),
+            egui::vec2(
+                main_canvas.max.x - pad_rect.max.x - 30.0,
+                main_canvas.height() - 30.0,
+            ),
         );
         painter.rect_filled(wave_rect, 4.0, Color32::from_rgb(14, 18, 28));
         painter.rect_stroke(
@@ -604,7 +623,10 @@ impl ClavinetView {
         // Center zero line
         let wave_mid_y = wave_rect.center().y;
         painter.line_segment(
-            [egui::pos2(wave_rect.min.x, wave_mid_y), egui::pos2(wave_rect.max.x, wave_mid_y)],
+            [
+                egui::pos2(wave_rect.min.x, wave_mid_y),
+                egui::pos2(wave_rect.max.x, wave_mid_y),
+            ],
             Stroke::new(0.5_f32, Color32::from_rgb(50, 65, 90)),
         );
 
@@ -707,14 +729,22 @@ impl ClavinetView {
         painter.text(
             egui::pos2(metrics_x, dock_rect.min.y + 14.0),
             egui::Align2::LEFT_TOP,
-            format!("Hardness: {:.0}% | Damping: {:.0}%", self.anvil_hardness * 100.0, self.yarn_damping * 100.0),
+            format!(
+                "Hardness: {:.0}% | Damping: {:.0}%",
+                self.anvil_hardness * 100.0,
+                self.yarn_damping * 100.0
+            ),
             egui::FontId::proportional(11.0),
             Color32::from_rgb(254, 215, 170),
         );
         painter.text(
             egui::pos2(metrics_x, dock_rect.min.y + 34.0),
             egui::Align2::LEFT_TOP,
-            format!("Phase: {:.1}° | Mode: {}", self.pickup_phase_deg, self.pickup_mode.name()),
+            format!(
+                "Phase: {:.1}° | Mode: {}",
+                self.pickup_phase_deg,
+                self.pickup_mode.name()
+            ),
             egui::FontId::proportional(11.0),
             Color32::from_rgb(255, 209, 102),
         );
@@ -740,7 +770,12 @@ impl ClavinetView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

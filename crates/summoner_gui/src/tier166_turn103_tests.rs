@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
+    use crate::views::multiband_imager_view::{
+        MultibandImagerView, IMAGER_HANDLE_HIT_RADIUS, NUM_IMAGER_BANDS,
+    };
     use crate::views::multiband_saturator_view::{
         MultibandSaturatorView, SaturationModel, NUM_SATURATOR_BANDS, SATURATOR_PUCK_HIT_RADIUS,
     };
-    use crate::views::multiband_imager_view::{
-        MultibandImagerView, NUM_IMAGER_BANDS, IMAGER_HANDLE_HIT_RADIUS,
-    };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn103_pure_multiband_saturator_initialization_and_kinematics() {
@@ -177,8 +177,8 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -200,16 +200,24 @@ pub mod gui_tests {
         assert!(!view.is_multiband_imager_hud_open());
 
         // 3. Multiband Saturator Parameter Sync Bridge
-        view.multiband_saturator_view.bands[view.multiband_saturator_view.selected_band_idx].drive_gain_db = 12.5;
-        view.multiband_saturator_view.bands[view.multiband_saturator_view.selected_band_idx].bias_even_harmonics = 0.35;
+        view.multiband_saturator_view.bands[view.multiband_saturator_view.selected_band_idx]
+            .drive_gain_db = 12.5;
+        view.multiband_saturator_view.bands[view.multiband_saturator_view.selected_band_idx]
+            .bias_even_harmonics = 0.35;
         view.sync_multiband_saturator_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("drive_gain_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("drive_gain_db")
+                .copied(),
             Some(12.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("bias_even_harmonics").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("bias_even_harmonics")
+                .copied(),
             Some(0.35)
         );
         assert_eq!(
@@ -218,16 +226,23 @@ pub mod gui_tests {
         );
 
         // 4. Multiband Imager Parameter Sync Bridge
-        view.multiband_imager_view.bands[view.multiband_imager_view.active_band_idx].width_pct = 150.0;
+        view.multiband_imager_view.bands[view.multiband_imager_view.active_band_idx].width_pct =
+            150.0;
         view.multiband_imager_view.bands[view.multiband_imager_view.active_band_idx].pan_pct = 25.0;
         view.sync_multiband_imager_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("width_pct").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("width_pct")
+                .copied(),
             Some(150.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("pan_pct").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("pan_pct")
+                .copied(),
             Some(25.0)
         );
         assert_eq!(
@@ -269,14 +284,19 @@ pub mod gui_tests {
 
         // 3. Device Rack Trigger: Multiband Saturator
         view.device_rack_state.selected_node_kind = Some("MultibandSaturator".to_string());
-        view.device_rack_state.requested_open_multiband_saturator_hud = true;
+        view.device_rack_state
+            .requested_open_multiband_saturator_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
             });
         });
         assert!(view.is_multiband_saturator_hud_open());
-        assert!(!view.device_rack_state.requested_open_multiband_saturator_hud);
+        assert!(
+            !view
+                .device_rack_state
+                .requested_open_multiband_saturator_hud
+        );
         view.close_multiband_saturator_hud();
 
         // 4. Device Rack Trigger: Multiband Imager
@@ -295,10 +315,7 @@ pub mod gui_tests {
     #[test]
     fn test_turn103_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let target_ids = [
-            "open_multiband_saturator_hud",
-            "open_multiband_imager_hud",
-        ];
+        let target_ids = ["open_multiband_saturator_hud", "open_multiband_imager_hud"];
 
         for action_id in target_ids {
             let found = palette.actions.iter().any(|a| a.action_id == action_id);

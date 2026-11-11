@@ -33,9 +33,9 @@ impl MpeDimension {
 
     pub fn color_rgba(&self) -> [u8; 4] {
         match self {
-            MpeDimension::PitchBend => [0, 229, 255, 255],     // Electric Cyan
-            MpeDimension::Pressure => [255, 214, 0, 255],     // Neon Amber
-            MpeDimension::Timbre => [224, 64, 251, 255],      // Vivid Magenta
+            MpeDimension::PitchBend => [0, 229, 255, 255], // Electric Cyan
+            MpeDimension::Pressure => [255, 214, 0, 255],  // Neon Amber
+            MpeDimension::Timbre => [224, 64, 251, 255],   // Vivid Magenta
             MpeDimension::ReleaseVelocity => [100, 255, 100, 255], // Lime Green
         }
     }
@@ -149,7 +149,10 @@ impl MpeNoteBlock {
                 let y3 = p1.value;
 
                 let u = 1.0 - local_t;
-                return u * u * u * y0 + 3.0 * u * u * local_t * y1 + 3.0 * u * local_t * local_t * y2 + local_t * local_t * local_t * y3;
+                return u * u * u * y0
+                    + 3.0 * u * u * local_t * y1
+                    + 3.0 * u * local_t * local_t * y2
+                    + local_t * local_t * local_t * y3;
             }
         }
 
@@ -247,8 +250,10 @@ impl MpeEditorView {
         if note_count > 0 {
             for (idx, note) in self.notes.iter().enumerate() {
                 let note_y = 2 + (idx * 3).min(height - 4);
-                let start_x = 2 + ((note.start_beat / self.total_beats) * (width - 4) as f64) as usize;
-                let end_x = (start_x + ((note.duration_beats / self.total_beats) * (width - 4) as f64) as usize)
+                let start_x =
+                    2 + ((note.start_beat / self.total_beats) * (width - 4) as f64) as usize;
+                let end_x = (start_x
+                    + ((note.duration_beats / self.total_beats) * (width - 4) as f64) as usize)
                     .min(width - 2);
 
                 for cell in grid[note_y].iter_mut().take(end_x).skip(start_x) {
@@ -324,7 +329,10 @@ impl MpeEditorView {
                 for x in start_x as u32..end_x as u32 {
                     let idx = ((y * width + x) * 4) as usize;
                     if idx + 3 < img_buf.len() {
-                        let is_border = x == start_x as u32 || x == end_x as u32 - 1 || y == note_y as u32 || y == (note_y + note_lane_h) as u32 - 1;
+                        let is_border = x == start_x as u32
+                            || x == end_x as u32 - 1
+                            || y == note_y as u32
+                            || y == (note_y + note_lane_h) as u32 - 1;
                         if is_border {
                             img_buf[idx] = if note.is_selected { 255 } else { 60 };
                             img_buf[idx + 1] = if note.is_selected { 255 } else { 75 };
@@ -420,7 +428,11 @@ impl MpeEditorView {
 
         // 1. Background (Deep Slate/Navy #0A0E18)
         painter.rect_filled(rect, 4.0, Color32::from_rgb(10, 14, 24));
-        painter.rect_stroke(rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(40, 50, 70)));
+        painter.rect_stroke(
+            rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(40, 50, 70)),
+        );
 
         // 2. Timeline Grid Lines (Quarters)
         let num_bars = 4;
@@ -470,7 +482,11 @@ impl MpeEditorView {
                 6.0,
                 Stroke::new(
                     if note.is_selected { 2.0_f32 } else { 1.0_f32 },
-                    if note.is_selected { Color32::WHITE } else { Color32::from_rgb(60, 75, 110) },
+                    if note.is_selected {
+                        Color32::WHITE
+                    } else {
+                        Color32::from_rgb(60, 75, 110)
+                    },
                 ),
             );
 
@@ -502,7 +518,8 @@ impl MpeEditorView {
                     let current_pos = Pos2::new(px, py);
 
                     if let Some(p_prev) = prev_pos {
-                        painter.line_segment([p_prev, current_pos], Stroke::new(2.5_f32, dim_color));
+                        painter
+                            .line_segment([p_prev, current_pos], Stroke::new(2.5_f32, dim_color));
                     }
                     prev_pos = Some(current_pos);
                 }
@@ -519,9 +536,9 @@ impl MpeEditorView {
                 let py = note_rect.max.y - 6.0 - norm_y * (note_lane_h - 16.0);
                 let handle_pos = Pos2::new(px, py);
 
-                let is_hit = response.hover_pos().is_some_and(|pos| {
-                    (pos - handle_pos).length() <= MPE_NODE_HIT_RADIUS
-                });
+                let is_hit = response
+                    .hover_pos()
+                    .is_some_and(|pos| (pos - handle_pos).length() <= MPE_NODE_HIT_RADIUS);
 
                 if is_hit && response.clicked() {
                     hit_node = Some((note.note_id, pt_idx));
@@ -672,8 +689,14 @@ mod tests {
     #[test]
     fn test_mpe_editor_hit_target_dimensions() {
         const {
-            assert!(MPE_NODE_HIT_RADIUS >= 22.0, "Hit target radius must be >= 22pt for 44x44pt target");
-            assert!(MIN_HIT_TARGET_PT >= 44.0, "Minimum hit target must be at least 44pt");
+            assert!(
+                MPE_NODE_HIT_RADIUS >= 22.0,
+                "Hit target radius must be >= 22pt for 44x44pt target"
+            );
+            assert!(
+                MIN_HIT_TARGET_PT >= 44.0,
+                "Minimum hit target must be at least 44pt"
+            );
         }
     }
 

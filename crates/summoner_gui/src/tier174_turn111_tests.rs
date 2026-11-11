@@ -6,13 +6,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::transient_unwrapper_view::{
-        TransientUnwrapperView, UnwrapperMode, TRANSIENT_UNWRAPPER_PUCK_HIT_RADIUS,
-    };
+    use crate::layout_math::Rect;
     use crate::views::spectral_unmasker_view::{
         SpectralUnmaskerView, UnmaskerRouting, UNMASKER_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
+    use crate::views::transient_unwrapper_view::{
+        TransientUnwrapperView, UnwrapperMode, TRANSIENT_UNWRAPPER_PUCK_HIT_RADIUS,
+    };
 
     #[test]
     fn test_turn111_pure_transient_unwrapper_initialization_and_kinematics() {
@@ -22,11 +22,41 @@ pub mod pure_tests {
 
         // Modes and expected values
         let modes = [
-            (UnwrapperMode::WideStereoExpansion, "WIDE STEREO EXPANSION", 140.0, 4.5, 90.0),
-            (UnwrapperMode::BinauralDepthExtraction, "BINAURAL DEPTH EXTRACTION", 110.0, 8.2, 120.0),
-            (UnwrapperMode::DrumTransientDecomb, "DRUM TRANSIENT DE-COMB", 100.0, 1.8, 60.0),
-            (UnwrapperMode::MasteringSpatialUnwrap, "MASTERING SPATIAL UNWRAP", 125.0, 3.2, 140.0),
-            (UnwrapperMode::MicrotonalPhaseDecorrelate, "POLY DECORRELATE", 160.0, 12.0, 80.0),
+            (
+                UnwrapperMode::WideStereoExpansion,
+                "WIDE STEREO EXPANSION",
+                140.0,
+                4.5,
+                90.0,
+            ),
+            (
+                UnwrapperMode::BinauralDepthExtraction,
+                "BINAURAL DEPTH EXTRACTION",
+                110.0,
+                8.2,
+                120.0,
+            ),
+            (
+                UnwrapperMode::DrumTransientDecomb,
+                "DRUM TRANSIENT DE-COMB",
+                100.0,
+                1.8,
+                60.0,
+            ),
+            (
+                UnwrapperMode::MasteringSpatialUnwrap,
+                "MASTERING SPATIAL UNWRAP",
+                125.0,
+                3.2,
+                140.0,
+            ),
+            (
+                UnwrapperMode::MicrotonalPhaseDecorrelate,
+                "POLY DECORRELATE",
+                160.0,
+                12.0,
+                80.0,
+            ),
         ];
 
         for (m, expected_name, exp_width, exp_delay, exp_crossover) in modes {
@@ -89,7 +119,9 @@ pub mod pure_tests {
 
         // Deterministic ASCII snapshot string
         let snap = view.render_ascii_snapshot_str();
-        assert!(snap.contains("PSYCHOACOUSTIC DYNAMIC STEREO TRANSIENT UNWRAPPER & DECORRELATOR HUD"));
+        assert!(
+            snap.contains("PSYCHOACOUSTIC DYNAMIC STEREO TRANSIENT UNWRAPPER & DECORRELATOR HUD")
+        );
         assert!(snap.contains("[PASS: >=44pt]"));
     }
 
@@ -102,9 +134,27 @@ pub mod pure_tests {
         // Routings and expected values
         let routings = [
             (UnmaskerRouting::KickVsBass, "KICK vs BASS", 68.4, 3.5, 5.2),
-            (UnmaskerRouting::VocalVsSynth, "VOCAL vs SYNTH", 1850.0, 1.8, 4.0),
-            (UnmaskerRouting::SnareVsGuitar, "SNARE vs GUITAR", 240.0, 2.2, 3.5),
-            (UnmaskerRouting::DialogVsBgm, "DIALOG vs BGM", 1200.0, 1.2, 6.5),
+            (
+                UnmaskerRouting::VocalVsSynth,
+                "VOCAL vs SYNTH",
+                1850.0,
+                1.8,
+                4.0,
+            ),
+            (
+                UnmaskerRouting::SnareVsGuitar,
+                "SNARE vs GUITAR",
+                240.0,
+                2.2,
+                3.5,
+            ),
+            (
+                UnmaskerRouting::DialogVsBgm,
+                "DIALOG vs BGM",
+                1200.0,
+                1.2,
+                6.5,
+            ),
             (UnmaskerRouting::CustomBus, "CUSTOM BUS", 500.0, 2.0, 4.5),
         ];
 
@@ -171,8 +221,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -202,19 +252,31 @@ pub mod gui_tests {
         view.sync_transient_unwrapper_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("spatial_width_pct").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("spatial_width_pct")
+                .copied(),
             Some(145.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("decorrelation_delay_ms").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("decorrelation_delay_ms")
+                .copied(),
             Some(5.2)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("spatial_width_pct").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("spatial_width_pct")
+                .copied(),
             Some(145.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("decorrelation_delay_ms").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("decorrelation_delay_ms")
+                .copied(),
             Some(5.2)
         );
 
@@ -228,19 +290,31 @@ pub mod gui_tests {
         view.sync_spectral_unmasker_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("collision_freq_hz").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("collision_freq_hz")
+                .copied(),
             Some(1450.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("reduction_depth_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("reduction_depth_db")
+                .copied(),
             Some(6.5)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("collision_freq_hz").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("collision_freq_hz")
+                .copied(),
             Some(1450.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("reduction_depth_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("reduction_depth_db")
+                .copied(),
             Some(6.5)
         );
 
@@ -255,12 +329,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let tu_action = palette.actions.iter().find(|a| a.action_id == "open_transient_unwrapper_hud");
-        assert!(tu_action.is_some(), "open_transient_unwrapper_hud should be registered");
+        let tu_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_transient_unwrapper_hud");
+        assert!(
+            tu_action.is_some(),
+            "open_transient_unwrapper_hud should be registered"
+        );
         assert_eq!(tu_action.unwrap().category, "Spatial & Binaural");
 
-        let su_action = palette.actions.iter().find(|a| a.action_id == "open_spectral_unmasker_hud");
-        assert!(su_action.is_some(), "open_spectral_unmasker_hud should be registered");
+        let su_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_spectral_unmasker_hud");
+        assert!(
+            su_action.is_some(),
+            "open_spectral_unmasker_hud should be registered"
+        );
         assert_eq!(su_action.unwrap().category, "Spectral & Synthesis");
     }
 }

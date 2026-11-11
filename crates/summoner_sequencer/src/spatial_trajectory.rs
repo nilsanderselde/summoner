@@ -273,9 +273,7 @@ impl SpatialTrajectoryTrack {
 
                 SpatialVector3D::from_cartesian(x, y, z, self.spread)
             }
-            TrajectoryPathType::WaypointSpline => {
-                self.evaluate_waypoint_spline(effective_beat)
-            }
+            TrajectoryPathType::WaypointSpline => self.evaluate_waypoint_spline(effective_beat),
         }
     }
 
@@ -287,7 +285,12 @@ impl SpatialTrajectoryTrack {
 
         if self.waypoints.len() == 1 {
             let wp = &self.waypoints[0];
-            return SpatialVector3D::new_spherical(wp.azimuth_rad, wp.elevation_rad, wp.distance_m, wp.spread);
+            return SpatialVector3D::new_spherical(
+                wp.azimuth_rad,
+                wp.elevation_rad,
+                wp.distance_m,
+                wp.spread,
+            );
         }
 
         // Find surrounding waypoint segment [wp_idx, wp_idx + 1]
@@ -299,7 +302,12 @@ impl SpatialTrajectoryTrack {
 
         if idx + 1 >= n {
             let wp = &self.waypoints[n - 1];
-            return SpatialVector3D::new_spherical(wp.azimuth_rad, wp.elevation_rad, wp.distance_m, wp.spread);
+            return SpatialVector3D::new_spherical(
+                wp.azimuth_rad,
+                wp.elevation_rad,
+                wp.distance_m,
+                wp.spread,
+            );
         }
 
         let p1 = &self.waypoints[idx];
@@ -308,9 +316,12 @@ impl SpatialTrajectoryTrack {
         let t = ((beat - p1.beat) / span).clamp(0.0, 1.0) as f32;
 
         match p1.curve {
-            SpatialInterpolationCurve::Hold => {
-                SpatialVector3D::new_spherical(p1.azimuth_rad, p1.elevation_rad, p1.distance_m, p1.spread)
-            }
+            SpatialInterpolationCurve::Hold => SpatialVector3D::new_spherical(
+                p1.azimuth_rad,
+                p1.elevation_rad,
+                p1.distance_m,
+                p1.spread,
+            ),
             SpatialInterpolationCurve::Linear => {
                 let az = unwrap_lerp_angle(p1.azimuth_rad, p2.azimuth_rad, t);
                 let el = p1.elevation_rad + (p2.elevation_rad - p1.elevation_rad) * t;
@@ -327,14 +338,46 @@ impl SpatialTrajectoryTrack {
                 SpatialVector3D::new_spherical(az, el, dist, sp)
             }
             SpatialInterpolationCurve::CubicCatmullRom => {
-                let p0 = if idx > 0 { &self.waypoints[idx - 1] } else { p1 };
-                let p3 = if idx + 2 < n { &self.waypoints[idx + 2] } else { p2 };
+                let p0 = if idx > 0 {
+                    &self.waypoints[idx - 1]
+                } else {
+                    p1
+                };
+                let p3 = if idx + 2 < n {
+                    &self.waypoints[idx + 2]
+                } else {
+                    p2
+                };
 
                 // Evaluate Catmull-Rom cubic spline for Cartesian coordinates to avoid spherical singularities
-                let (x0, y0, z0) = SpatialVector3D::new_spherical(p0.azimuth_rad, p0.elevation_rad, p0.distance_m, p0.spread).to_cartesian();
-                let (x1, y1, z1) = SpatialVector3D::new_spherical(p1.azimuth_rad, p1.elevation_rad, p1.distance_m, p1.spread).to_cartesian();
-                let (x2, y2, z2) = SpatialVector3D::new_spherical(p2.azimuth_rad, p2.elevation_rad, p2.distance_m, p2.spread).to_cartesian();
-                let (x3, y3, z3) = SpatialVector3D::new_spherical(p3.azimuth_rad, p3.elevation_rad, p3.distance_m, p3.spread).to_cartesian();
+                let (x0, y0, z0) = SpatialVector3D::new_spherical(
+                    p0.azimuth_rad,
+                    p0.elevation_rad,
+                    p0.distance_m,
+                    p0.spread,
+                )
+                .to_cartesian();
+                let (x1, y1, z1) = SpatialVector3D::new_spherical(
+                    p1.azimuth_rad,
+                    p1.elevation_rad,
+                    p1.distance_m,
+                    p1.spread,
+                )
+                .to_cartesian();
+                let (x2, y2, z2) = SpatialVector3D::new_spherical(
+                    p2.azimuth_rad,
+                    p2.elevation_rad,
+                    p2.distance_m,
+                    p2.spread,
+                )
+                .to_cartesian();
+                let (x3, y3, z3) = SpatialVector3D::new_spherical(
+                    p3.azimuth_rad,
+                    p3.elevation_rad,
+                    p3.distance_m,
+                    p3.spread,
+                )
+                .to_cartesian();
 
                 let x = catmull_rom(x0, x1, x2, x3, t);
                 let y = catmull_rom(y0, y1, y2, y3, t);
@@ -377,12 +420,7 @@ impl SpatialAutomationEngine {
 
     /// Evaluates all spatial tracks at current song beat and atomically dispatches 3D coordinates
     /// into `SpatialBus` and `ParamBus` handles without heap allocation.
-    pub fn evaluate_and_dispatch(
-        &self,
-        beat: f64,
-        spatial_bus: &SpatialBus,
-        param_bus: &ParamBus,
-    ) {
+    pub fn evaluate_and_dispatch(&self, beat: f64, spatial_bus: &SpatialBus, param_bus: &ParamBus) {
         let _guard = AllocGuard::new();
         for track in &self.tracks {
             if !track.enabled {
@@ -416,12 +454,10 @@ impl SpatialAutomationEngine {
 fn catmull_rom(p0: f32, p1: f32, p2: f32, p3: f32, t: f32) -> f32 {
     let t2 = t * t;
     let t3 = t2 * t;
-    0.5 * (
-        (2.0 * p1)
-            + (-p0 + p2) * t
-            + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
-            + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
-    )
+    0.5 * ((2.0 * p1)
+        + (-p0 + p2) * t
+        + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
+        + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3)
 }
 
 /// Unwraps angles across the $[-\pi, +\pi]$ boundary to interpolate along the shortest circular arc.
@@ -530,8 +566,8 @@ mod tests {
         assert!(toml_str.contains("Synth 1 Orbit"));
         assert!(toml_str.contains("Drums Flyby"));
 
-        let restored = SpatialAutomationEngine::from_toml_str(&toml_str)
-            .expect("TOML deserialization failed");
+        let restored =
+            SpatialAutomationEngine::from_toml_str(&toml_str).expect("TOML deserialization failed");
         assert_eq!(engine, restored);
     }
 

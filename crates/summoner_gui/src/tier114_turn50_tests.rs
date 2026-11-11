@@ -1,5 +1,4 @@
 #![cfg(feature = "gui")]
-
 // Summoner - Deterministic, Headless-First DAW
 // Copyright (C) 2026 nilsanderselde - AGPLv3 License
 
@@ -19,16 +18,34 @@ pub mod pure_tests {
         let inv = DspNodeRegistry::inventory();
 
         assert_eq!(catalog.total_count(), inv.len());
-        assert!(catalog.total_count() >= 670, "Catalog should have >= 670 reflected DSP modules");
+        assert!(
+            catalog.total_count() >= 670,
+            "Catalog should have >= 670 reflected DSP modules"
+        );
 
         // Verify key modules exist in index
         assert!(catalog.entries.iter().any(|e| e.kind_id == "AetherSynth"));
-        assert!(catalog.entries.iter().any(|e| e.kind_id == "PlateReverbTank" || e.kind_id.contains("Plate")));
-        assert!(catalog.entries.iter().any(|e| e.kind_id == "ParametricEqNode" || e.kind_id == "ParametricEq"));
-        assert!(catalog.entries.iter().any(|e| e.kind_id == "TruePeakLimiter"));
-        assert!(catalog.entries.iter().any(|e| e.kind_id == "CrystalResonator"));
+        assert!(catalog
+            .entries
+            .iter()
+            .any(|e| e.kind_id == "PlateReverbTank" || e.kind_id.contains("Plate")));
+        assert!(catalog
+            .entries
+            .iter()
+            .any(|e| e.kind_id == "ParametricEqNode" || e.kind_id == "ParametricEq"));
+        assert!(catalog
+            .entries
+            .iter()
+            .any(|e| e.kind_id == "TruePeakLimiter"));
+        assert!(catalog
+            .entries
+            .iter()
+            .any(|e| e.kind_id == "CrystalResonator"));
         assert!(catalog.entries.iter().any(|e| e.kind_id == "GlassArmonica"));
-        assert!(catalog.entries.iter().any(|e| e.kind_id == "FrenchHurdyGurdy" || e.kind_id.contains("HurdyGurdy")));
+        assert!(catalog
+            .entries
+            .iter()
+            .any(|e| e.kind_id == "FrenchHurdyGurdy" || e.kind_id.contains("HurdyGurdy")));
     }
 
     #[test]
@@ -96,9 +113,18 @@ pub mod pure_tests {
         let filter_count = catalog.category_count(DspNodeCategory::FilterEq);
         let physical_count = catalog.category_count(DspNodeCategory::AcousticPhysicalModel);
 
-        assert!(osc_count > 0, "Oscillator category should have registered modules");
-        assert!(filter_count > 0, "Filter category should have registered modules");
-        assert!(physical_count > 0, "Physical modeling category should have registered modules");
+        assert!(
+            osc_count > 0,
+            "Oscillator category should have registered modules"
+        );
+        assert!(
+            filter_count > 0,
+            "Filter category should have registered modules"
+        );
+        assert!(
+            physical_count > 0,
+            "Physical modeling category should have registered modules"
+        );
 
         // Filter by category
         catalog.selected_category = Some(DspNodeCategory::AcousticPhysicalModel);
@@ -165,14 +191,21 @@ pub mod pure_tests {
         assert_eq!(catalog.take_requested_insert(), None);
 
         catalog.requested_insert_kind = Some("AetherSynth".to_string());
-        assert_eq!(catalog.take_requested_insert(), Some("AetherSynth".to_string()));
+        assert_eq!(
+            catalog.take_requested_insert(),
+            Some("AetherSynth".to_string())
+        );
         assert_eq!(catalog.take_requested_insert(), None);
     }
 
     #[test]
     fn test_turn50_device_catalog_touch_target_dimensions() {
-        const { assert!(CATALOG_TOUCH_TARGET_SIZE.x >= 44.0); }
-        const { assert!(CATALOG_TOUCH_TARGET_SIZE.y >= 44.0); }
+        const {
+            assert!(CATALOG_TOUCH_TARGET_SIZE.x >= 44.0);
+        }
+        const {
+            assert!(CATALOG_TOUCH_TARGET_SIZE.y >= 44.0);
+        }
     }
 
     #[test]
@@ -204,7 +237,10 @@ pub mod gui_tests {
         // Open catalog modal
         view.modular_add_modal_open = true;
         view.device_catalog.is_open = true;
-        assert_eq!(view.device_catalog.total_count(), view.device_catalog.entries.len());
+        assert_eq!(
+            view.device_catalog.total_count(),
+            view.device_catalog.entries.len()
+        );
 
         // Simulate choosing a module from catalog
         view.device_catalog.requested_insert_kind = Some("OscSine".to_string());

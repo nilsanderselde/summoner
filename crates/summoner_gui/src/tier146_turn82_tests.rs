@@ -41,11 +41,31 @@ pub mod pure_tests {
 
         // Profile switching
         let profiles = [
-            (MpeghTrajectoryProfile::Mpegh3DHelicalAscent, 45.0, 35.0, 4.5),
+            (
+                MpeghTrajectoryProfile::Mpegh3DHelicalAscent,
+                45.0,
+                35.0,
+                4.5,
+            ),
             (MpeghTrajectoryProfile::Mpegh3DOverheadFlyby, 0.0, 75.0, 2.0),
-            (MpeghTrajectoryProfile::Mpegh3DEquatorialOrbit, -90.0, 0.0, 5.0),
-            (MpeghTrajectoryProfile::Mpegh3DPendulumSwing, 30.0, -20.0, 3.5),
-            (MpeghTrajectoryProfile::Mpegh3DMultiObjectMaster, -45.0, 25.0, 6.0),
+            (
+                MpeghTrajectoryProfile::Mpegh3DEquatorialOrbit,
+                -90.0,
+                0.0,
+                5.0,
+            ),
+            (
+                MpeghTrajectoryProfile::Mpegh3DPendulumSwing,
+                30.0,
+                -20.0,
+                3.5,
+            ),
+            (
+                MpeghTrajectoryProfile::Mpegh3DMultiObjectMaster,
+                -45.0,
+                25.0,
+                6.0,
+            ),
         ];
 
         for (prof, exp_az, exp_el, exp_dist) in profiles {
@@ -66,7 +86,10 @@ pub mod pure_tests {
         // 8 groups: [fl, fr, c, lfe, sl, sr, tf, tb]
         let gains = view.speaker_group_gains;
         assert_eq!(gains.len(), 8);
-        assert!(gains[2] > 0.5, "Center channel should receive dominant front energy");
+        assert!(
+            gains[2] > 0.5,
+            "Center channel should receive dominant front energy"
+        );
         assert!(view.vbap_energy_focus >= 0.3 && view.vbap_energy_focus <= 1.0);
 
         // Puck hit testing
@@ -130,13 +153,19 @@ pub mod pure_tests {
         view.update_nhk222_simulation();
         let top_e = view.top_layer_energy;
         let bot_e = view.bottom_layer_energy;
-        assert!(top_e > bot_e, "Top layer energy should exceed bottom layer for high elevation");
+        assert!(
+            top_e > bot_e,
+            "Top layer energy should exceed bottom layer for high elevation"
+        );
 
         view.elevation_deg = -60.0; // Bottom layer floor
         view.update_nhk222_simulation();
         let top_e2 = view.top_layer_energy;
         let bot_e2 = view.bottom_layer_energy;
-        assert!(bot_e2 > top_e2, "Bottom layer energy should exceed top layer for negative elevation");
+        assert!(
+            bot_e2 > top_e2,
+            "Bottom layer energy should exceed top layer for negative elevation"
+        );
 
         assert_eq!(view.speaker_energies.len(), 24);
 
@@ -205,8 +234,12 @@ pub mod pure_tests {
 pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_device_rack::{show_modern_device_rack_with_context, ModernDeviceRackState};
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
+    use crate::views::modern_device_rack::{
+        show_modern_device_rack_with_context, ModernDeviceRackState,
+    };
+    use crate::views::modern_inspector::{
+        show_modern_inspector_with_context, ModernInspectorState,
+    };
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
@@ -359,8 +392,14 @@ pub mod gui_tests {
             .iter()
             .any(|a| a.action_id == "open_nhk222_immersion_hud" && a.category == "Spatial");
 
-        assert!(has_trj, "MPEG-H Trajectory HUD command action must be registered in CommandPalette");
-        assert!(has_nhk, "NHK 22.2 Immersion HUD command action must be registered in CommandPalette");
+        assert!(
+            has_trj,
+            "MPEG-H Trajectory HUD command action must be registered in CommandPalette"
+        );
+        assert!(
+            has_nhk,
+            "NHK 22.2 Immersion HUD command action must be registered in CommandPalette"
+        );
     }
 
     #[test]

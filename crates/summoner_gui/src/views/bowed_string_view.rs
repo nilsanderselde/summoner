@@ -639,7 +639,15 @@ impl BowedStringView {
         let puck_y = canvas_y1 as f32 - self.bow_puck_pos.1 * c_height;
 
         // Draw Touch target boundary (>= 44x44pt bounding box, radius 22pt)
-        draw_circle_ring_bs(&mut pixels, w, h, puck_x, puck_y, BOWED_STRING_PUCK_HIT_RADIUS, [0, 229, 255, 180]);
+        draw_circle_ring_bs(
+            &mut pixels,
+            w,
+            h,
+            puck_x,
+            puck_y,
+            BOWED_STRING_PUCK_HIT_RADIUS,
+            [0, 229, 255, 180],
+        );
         draw_circle_filled_bs(&mut pixels, w, h, puck_x, puck_y, 12.0, [0, 229, 255, 255]);
         draw_circle_filled_bs(&mut pixels, w, h, puck_x, puck_y, 4.0, [255, 255, 255, 255]);
 
@@ -773,7 +781,12 @@ fn draw_circle_ring_bs(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32,
     }
 }
 
-fn encode_minimal_png_bs(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_bs(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 
@@ -880,4 +893,3 @@ mod tests {
         assert!(res.is_ok());
     }
 }
-

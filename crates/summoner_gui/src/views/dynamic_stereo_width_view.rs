@@ -250,9 +250,15 @@ impl DynamicStereoWidthView {
     /// Render deterministic ASCII snapshot banner string.
     pub fn render_ascii_snapshot_str(&self) -> String {
         let mut out = String::new();
-        out.push_str("================================================================================\n");
-        out.push_str("SUMMONER DAW — MASTERING DYNAMIC STEREO WIDTH & BASS MONO HUD [PASS: >=44pt]\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
+        out.push_str(
+            "SUMMONER DAW — MASTERING DYNAMIC STEREO WIDTH & BASS MONO HUD [PASS: >=44pt]\n",
+        );
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str(&format!(
             "Profile: {} | Bass Cutoff: {:.0} Hz | Width: {:.0}%\n",
             self.profile.profile_name(),
@@ -272,13 +278,19 @@ impl DynamicStereoWidthView {
             self.band_widths[2] * 100.0,
             self.band_widths[3] * 100.0
         ));
-        out.push_str("--------------------------------------------------------------------------------\n");
+        out.push_str(
+            "--------------------------------------------------------------------------------\n",
+        );
         for line in self.render_ascii(80, 20) {
             out.push_str(&line);
             out.push('\n');
         }
-        out.push_str("================================================================================\n");
-        out.push_str("[VERIFIED: Minimum 44x44pt Touch Hit Targets | WCAG AAA Contrast Compliant]\n");
+        out.push_str(
+            "================================================================================\n",
+        );
+        out.push_str(
+            "[VERIFIED: Minimum 44x44pt Touch Hit Targets | WCAG AAA Contrast Compliant]\n",
+        );
         out
     }
 

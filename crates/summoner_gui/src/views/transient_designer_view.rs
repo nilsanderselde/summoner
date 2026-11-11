@@ -237,9 +237,13 @@ impl TransientDesignerView {
                         self.attack_handle_pos = (nx, ny);
                         self.attack_length_ms = Self::normalized_to_attack_time(nx);
                         self.attack_gain_db = Self::normalized_to_gain(ny);
-                    } else if self.hit_test_sustain_handle(pos_t, env_rect) || self.is_dragging_sustain {
+                    } else if self.hit_test_sustain_handle(pos_t, env_rect)
+                        || self.is_dragging_sustain
+                    {
                         self.is_dragging_sustain = true;
-                        let nx = ((pos.x - (env_rect.x + env_rect.width * 0.35)) / (env_rect.width * 0.65)).clamp(0.0, 1.0);
+                        let nx = ((pos.x - (env_rect.x + env_rect.width * 0.35))
+                            / (env_rect.width * 0.65))
+                            .clamp(0.0, 1.0);
                         let ny = ((plot_top + plot_h - pos.y) / plot_h).clamp(0.0, 1.0);
                         self.sustain_handle_pos = (nx, ny);
                         self.sustain_length_ms = Self::normalized_to_sustain_time(nx);
@@ -250,7 +254,8 @@ impl TransientDesignerView {
                             egui::vec2(mode_rect.width - 30.0, 24.0),
                         );
                         if punch_box.contains(pos) {
-                            let np = ((pos.x - punch_box.min.x) / punch_box.width()).clamp(0.0, 1.0);
+                            let np =
+                                ((pos.x - punch_box.min.x) / punch_box.width()).clamp(0.0, 1.0);
                             self.punch_freq_hz = Self::normalized_to_punch_freq(np);
                         }
                     }

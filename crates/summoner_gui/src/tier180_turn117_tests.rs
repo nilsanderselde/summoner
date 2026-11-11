@@ -6,15 +6,14 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::windchest_reservoir_view::{
-        WindchestPreset, WindchestReservoirView, WINDCHEST_PUCK_HIT_RADIUS,
-        NUM_PRESSURE_PLOT_POINTS, MMH2O_TO_PASCALS, AIR_DENSITY_RHO,
-    };
-    use crate::views::tape_stop_glitch_view::{
-        TapeStopPreset, TapeStopGlitchView, TAPESTOP_PUCK_HIT_RADIUS,
-        NUM_CURVE_PLOT_POINTS,
-    };
     use crate::layout_math::Rect;
+    use crate::views::tape_stop_glitch_view::{
+        TapeStopGlitchView, TapeStopPreset, NUM_CURVE_PLOT_POINTS, TAPESTOP_PUCK_HIT_RADIUS,
+    };
+    use crate::views::windchest_reservoir_view::{
+        WindchestPreset, WindchestReservoirView, AIR_DENSITY_RHO, MMH2O_TO_PASCALS,
+        NUM_PRESSURE_PLOT_POINTS, WINDCHEST_PUCK_HIT_RADIUS,
+    };
 
     #[test]
     fn test_turn117_pure_windchest_reservoir_initialization_and_physics() {
@@ -24,10 +23,42 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (WindchestPreset::BaroqueSchnitger, "Baroque Schnitger (Wedge Bellows, 1690)", 68.0, 0.012, 0.18, 4.5, 0.15),
-            (WindchestPreset::RomanticCavailleColl, "Romantic Cavaillé-Coll (Barker Lever, 1880)", 115.0, 0.005, 0.08, 5.8, 0.08),
-            (WindchestPreset::EnglishCathedral, "English Cathedral (Heavy Regulator, 1895)", 95.0, 0.003, 0.05, 3.8, 0.10),
-            (WindchestPreset::ModernChamberPortative, "Modern Portative (Direct Hand Bellows)", 48.0, 0.035, 0.32, 6.2, 0.22),
+            (
+                WindchestPreset::BaroqueSchnitger,
+                "Baroque Schnitger (Wedge Bellows, 1690)",
+                68.0,
+                0.012,
+                0.18,
+                4.5,
+                0.15,
+            ),
+            (
+                WindchestPreset::RomanticCavailleColl,
+                "Romantic Cavaillé-Coll (Barker Lever, 1880)",
+                115.0,
+                0.005,
+                0.08,
+                5.8,
+                0.08,
+            ),
+            (
+                WindchestPreset::EnglishCathedral,
+                "English Cathedral (Heavy Regulator, 1895)",
+                95.0,
+                0.003,
+                0.05,
+                3.8,
+                0.10,
+            ),
+            (
+                WindchestPreset::ModernChamberPortative,
+                "Modern Portative (Direct Hand Bellows)",
+                48.0,
+                0.035,
+                0.32,
+                6.2,
+                0.22,
+            ),
         ];
 
         for (p, exp_name, exp_pres, exp_sag, exp_rec, exp_rate, exp_depth) in presets {
@@ -48,7 +79,9 @@ pub mod pure_tests {
             assert!(view.dynamic_pressure_mmh2o > 0.0);
             assert!(view.dynamic_pressure_pascals > 0.0);
             assert!(view.flue_jet_velocity_mps > 0.0);
-            assert!(view.reservoir_bellows_sag_pct >= 0.0 && view.reservoir_bellows_sag_pct <= 100.0);
+            assert!(
+                view.reservoir_bellows_sag_pct >= 0.0 && view.reservoir_bellows_sag_pct <= 100.0
+            );
         }
 
         // Normalization round-trips for Pressure [40.0 ..= 160.0 mmH2O]
@@ -104,10 +137,42 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (TapeStopPreset::DirectDriveVinylBrake, "Direct Drive Vinyl Brake (SL-1200 Classic)", 650.0, 350.0, 16.0, 0.50, 1.8),
-            (TapeStopPreset::FastTapeSlamStop, "Fast Tape Slam Stop (Reel-to-Reel Pinch)", 120.0, 80.0, 32.0, 0.70, 0.9),
-            (TapeStopPreset::SlowDubSpinDown, "Slow Dub Spin Down (Belt-Drive Momentum)", 1450.0, 750.0, 8.0, 0.35, 2.4),
-            (TapeStopPreset::HyperStutterGlitch, "Hyper Stutter Glitch (Buffer Override)", 250.0, 100.0, 48.0, 0.85, 1.2),
+            (
+                TapeStopPreset::DirectDriveVinylBrake,
+                "Direct Drive Vinyl Brake (SL-1200 Classic)",
+                650.0,
+                350.0,
+                16.0,
+                0.50,
+                1.8,
+            ),
+            (
+                TapeStopPreset::FastTapeSlamStop,
+                "Fast Tape Slam Stop (Reel-to-Reel Pinch)",
+                120.0,
+                80.0,
+                32.0,
+                0.70,
+                0.9,
+            ),
+            (
+                TapeStopPreset::SlowDubSpinDown,
+                "Slow Dub Spin Down (Belt-Drive Momentum)",
+                1450.0,
+                750.0,
+                8.0,
+                0.35,
+                2.4,
+            ),
+            (
+                TapeStopPreset::HyperStutterGlitch,
+                "Hyper Stutter Glitch (Buffer Override)",
+                250.0,
+                100.0,
+                48.0,
+                0.85,
+                1.2,
+            ),
         ];
 
         for (p, exp_name, exp_brk, exp_strt, exp_div, exp_pw, exp_crv) in presets {
@@ -189,8 +254,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -219,19 +284,31 @@ pub mod gui_tests {
         view.sync_windchest_reservoir_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("nominal_pressure_mmh2o").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("nominal_pressure_mmh2o")
+                .copied(),
             Some(110.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("sag_coefficient").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("sag_coefficient")
+                .copied(),
             Some(0.008)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("nominal_pressure_mmh2o").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("nominal_pressure_mmh2o")
+                .copied(),
             Some(110.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("sag_coefficient").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("sag_coefficient")
+                .copied(),
             Some(0.008)
         );
 
@@ -243,19 +320,31 @@ pub mod gui_tests {
         view.sync_tape_stop_glitch_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("brake_duration_ms").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("brake_duration_ms")
+                .copied(),
             Some(450.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("stutter_division").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("stutter_division")
+                .copied(),
             Some(32.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("brake_duration_ms").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("brake_duration_ms")
+                .copied(),
             Some(450.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("stutter_division").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("stutter_division")
+                .copied(),
             Some(32.0)
         );
 
@@ -270,12 +359,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let wind_action = palette.actions.iter().find(|a| a.action_id == "open_windchest_reservoir_hud");
-        assert!(wind_action.is_some(), "open_windchest_reservoir_hud should be registered");
+        let wind_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_windchest_reservoir_hud");
+        assert!(
+            wind_action.is_some(),
+            "open_windchest_reservoir_hud should be registered"
+        );
         assert_eq!(wind_action.unwrap().category, "Physical Modeling");
 
-        let tapestop_action = palette.actions.iter().find(|a| a.action_id == "open_tape_stop_glitch_hud");
-        assert!(tapestop_action.is_some(), "open_tape_stop_glitch_hud should be registered");
+        let tapestop_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_tape_stop_glitch_hud");
+        assert!(
+            tapestop_action.is_some(),
+            "open_tape_stop_glitch_hud should be registered"
+        );
         assert_eq!(tapestop_action.unwrap().category, "Creative & Glitch");
     }
 }

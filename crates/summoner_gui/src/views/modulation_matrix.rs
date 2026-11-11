@@ -71,17 +71,17 @@ impl MatrixModSource {
 
     pub fn color_rgba(&self) -> [u8; 4] {
         match self {
-            MatrixModSource::Lfo1 => [0, 229, 255, 255],        // Electric Cyan
-            MatrixModSource::Lfo2 => [33, 150, 243, 255],       // Dodger Blue
-            MatrixModSource::Env1Amp => [255, 214, 0, 255],     // Amber
-            MatrixModSource::Env2Filter => [255, 152, 0, 255],  // Deep Orange
-            MatrixModSource::Macro1 => [224, 64, 251, 255],     // Vivid Magenta
-            MatrixModSource::Macro2 => [186, 104, 200, 255],    // Soft Purple
-            MatrixModSource::Macro3 => [233, 30, 99, 255],      // Neon Pink
-            MatrixModSource::Macro4 => [156, 39, 176, 255],     // Purple
-            MatrixModSource::Velocity => [0, 230, 118, 255],    // Spring Lime
-            MatrixModSource::PitchBend => [118, 255, 3, 255],   // Chartreuse
-            MatrixModSource::Pressure => [255, 82, 82, 255],    // Coral Red
+            MatrixModSource::Lfo1 => [0, 229, 255, 255], // Electric Cyan
+            MatrixModSource::Lfo2 => [33, 150, 243, 255], // Dodger Blue
+            MatrixModSource::Env1Amp => [255, 214, 0, 255], // Amber
+            MatrixModSource::Env2Filter => [255, 152, 0, 255], // Deep Orange
+            MatrixModSource::Macro1 => [224, 64, 251, 255], // Vivid Magenta
+            MatrixModSource::Macro2 => [186, 104, 200, 255], // Soft Purple
+            MatrixModSource::Macro3 => [233, 30, 99, 255], // Neon Pink
+            MatrixModSource::Macro4 => [156, 39, 176, 255], // Purple
+            MatrixModSource::Velocity => [0, 230, 118, 255], // Spring Lime
+            MatrixModSource::PitchBend => [118, 255, 3, 255], // Chartreuse
+            MatrixModSource::Pressure => [255, 82, 82, 255], // Coral Red
             MatrixModSource::RandomSampleHold => [178, 235, 242, 255], // Ice Blue
             MatrixModSource::SidechainBus1 => [255, 171, 64, 255], // Peach
             MatrixModSource::SidechainBus2 => [255, 110, 64, 255], // Sunset Orange
@@ -221,7 +221,10 @@ impl LfoWaveShape {
             }
             LfoWaveShape::SampleAndHold => {
                 let step = (p * 8.0).floor() as u32;
-                let pseudo = ((step.wrapping_mul(1664525).wrapping_add(1013904223) >> 16) & 0xFF) as f32 / 128.0 - 1.0;
+                let pseudo = ((step.wrapping_mul(1664525).wrapping_add(1013904223) >> 16) & 0xFF)
+                    as f32
+                    / 128.0
+                    - 1.0;
                 pseudo.clamp(-1.0, 1.0)
             }
             LfoWaveShape::SmoothRandom => {
@@ -281,7 +284,11 @@ impl ModulationMatrixView {
     pub fn new() -> Self {
         let routes = vec![
             MatrixModRoute::new(MatrixModSource::Lfo1, MatrixModDest::FilterCutoff, 0.65),
-            MatrixModRoute::new(MatrixModSource::Env2Filter, MatrixModDest::FilterCutoff, 0.85),
+            MatrixModRoute::new(
+                MatrixModSource::Env2Filter,
+                MatrixModDest::FilterCutoff,
+                0.85,
+            ),
             MatrixModRoute::new(MatrixModSource::Macro1, MatrixModDest::MorphBlend, 1.0),
             MatrixModRoute::new(MatrixModSource::Velocity, MatrixModDest::VcaLevel, 0.5),
             MatrixModRoute::new(MatrixModSource::Lfo2, MatrixModDest::StereoPan, 0.4),
@@ -317,7 +324,9 @@ impl ModulationMatrixView {
             let src_val = match route.source {
                 MatrixModSource::Lfo1 => self.lfo1_config.shape.evaluate(p1),
                 MatrixModSource::Lfo2 => self.lfo2_config.shape.evaluate(p2),
-                MatrixModSource::Env1Amp | MatrixModSource::Env2Filter => (self.animated_time * 2.0).sin().abs(),
+                MatrixModSource::Env1Amp | MatrixModSource::Env2Filter => {
+                    (self.animated_time * 2.0).sin().abs()
+                }
                 MatrixModSource::Macro1 => 0.75,
                 MatrixModSource::Macro2 => 0.5,
                 MatrixModSource::Macro3 => 0.25,
@@ -326,7 +335,9 @@ impl ModulationMatrixView {
                 MatrixModSource::PitchBend => 0.0,
                 MatrixModSource::Pressure => 0.3,
                 MatrixModSource::RandomSampleHold => self.lfo1_config.shape.evaluate(p1 * 0.5),
-                MatrixModSource::SidechainBus1 | MatrixModSource::SidechainBus2 => (self.animated_time * 4.0).sin().abs() * 0.8,
+                MatrixModSource::SidechainBus1 | MatrixModSource::SidechainBus2 => {
+                    (self.animated_time * 4.0).sin().abs() * 0.8
+                }
             };
             route.current_animated_val = src_val * route.depth;
         }
@@ -334,7 +345,11 @@ impl ModulationMatrixView {
 
     /// Find or add route.
     pub fn set_route_depth(&mut self, source: MatrixModSource, dest: MatrixModDest, depth: f32) {
-        if let Some(route) = self.routes.iter_mut().find(|r| r.source == source && r.dest == dest) {
+        if let Some(route) = self
+            .routes
+            .iter_mut()
+            .find(|r| r.source == source && r.dest == dest)
+        {
             route.depth = depth.clamp(-1.0, 1.0);
         } else {
             self.routes.push(MatrixModRoute::new(source, dest, depth));
@@ -343,7 +358,8 @@ impl ModulationMatrixView {
 
     /// Remove route.
     pub fn remove_route(&mut self, source: MatrixModSource, dest: MatrixModDest) {
-        self.routes.retain(|r| !(r.source == source && r.dest == dest));
+        self.routes
+            .retain(|r| !(r.source == source && r.dest == dest));
     }
 
     /// Render ASCII inspection preview.
@@ -356,22 +372,41 @@ impl ModulationMatrixView {
         let title = " MODULATION MATRIX & LFO INSPECTOR (WCAG AA) ";
         let pad_left = (width - 2 - title.len()) / 2;
         let pad_right = width - 2 - title.len() - pad_left;
-        lines.push(format!("║{}{}{}║", " ".repeat(pad_left), title, " ".repeat(pad_right)));
+        lines.push(format!(
+            "║{}{}{}║",
+            " ".repeat(pad_left),
+            title,
+            " ".repeat(pad_right)
+        ));
         lines.push(format!("╠{}╣", "═".repeat(width - 2)));
 
         lines.push(format!("║ ACTIVE ROUTES: {:<45} ║", self.routes.len()));
         for (i, r) in self.routes.iter().take(6).enumerate() {
             let bar_len = 16;
             let norm_depth = ((r.depth + 1.0) * 0.5 * bar_len as f32).round() as usize;
-            let bar = format!("[{}{}]", "█".repeat(norm_depth.min(bar_len)), "-".repeat(bar_len.saturating_sub(norm_depth)));
-            let r_str = format!("#{} {:<12} -> {:<14} {:>5.1}% {}", i + 1, r.source.display_name(), r.dest.display_name(), r.depth * 100.0, bar);
+            let bar = format!(
+                "[{}{}]",
+                "█".repeat(norm_depth.min(bar_len)),
+                "-".repeat(bar_len.saturating_sub(norm_depth))
+            );
+            let r_str = format!(
+                "#{} {:<12} -> {:<14} {:>5.1}% {}",
+                i + 1,
+                r.source.display_name(),
+                r.dest.display_name(),
+                r.depth * 100.0,
+                bar
+            );
             let pad = width.saturating_sub(r_str.len() + 4);
             lines.push(format!("║ {}{} ║", r_str, " ".repeat(pad)));
         }
 
         lines.push(format!("╠{}╣", "═".repeat(width - 2)));
-        lines.push(format!("║ LFO 1 WAVE PREVIEW ({:?}, {:.1} Hz) {:<24} ║", self.lfo1_config.shape, self.lfo1_config.rate_hz, " "));
-        
+        lines.push(format!(
+            "║ LFO 1 WAVE PREVIEW ({:?}, {:.1} Hz) {:<24} ║",
+            self.lfo1_config.shape, self.lfo1_config.rate_hz, " "
+        ));
+
         let wave_cols = width - 6;
         let wave_rows = 5;
         for r in 0..wave_rows {
@@ -433,16 +468,27 @@ impl ModulationMatrixView {
         let num_sources = 6u32;
         let num_dests = 6u32;
 
-        for (s_idx, source) in MatrixModSource::ALL.iter().take(num_sources as usize).enumerate() {
+        for (s_idx, source) in MatrixModSource::ALL
+            .iter()
+            .take(num_sources as usize)
+            .enumerate()
+        {
             let s_u32 = s_idx as u32;
             let col_rgba = source.color_rgba();
 
-            for (d_idx, dest) in MatrixModDest::ALL.iter().take(num_dests as usize).enumerate() {
+            for (d_idx, dest) in MatrixModDest::ALL
+                .iter()
+                .take(num_dests as usize)
+                .enumerate()
+            {
                 let d_u32 = d_idx as u32;
                 let cx = start_x + d_u32 * (cell_size + 8);
                 let cy = start_y + s_u32 * (cell_size + 8);
 
-                let has_route = self.routes.iter().find(|r| r.source == *source && r.dest == *dest);
+                let has_route = self
+                    .routes
+                    .iter()
+                    .find(|r| r.source == *source && r.dest == *dest);
 
                 // Cell background
                 for y in cy..(cy + cell_size).min(height) {
@@ -474,7 +520,8 @@ impl ModulationMatrixView {
 
                             if (dist - radius).abs() < 2.5 {
                                 let angle = dy.atan2(dx); // -PI to PI
-                                let norm_angle = (angle + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
+                                let norm_angle =
+                                    (angle + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
                                 if norm_angle <= (route.depth.abs()) {
                                     let idx = ((y * width + x) * 4) as usize;
                                     pixels[idx] = col_rgba[0];
@@ -582,7 +629,8 @@ impl ModulationMatrixView {
         for (s_idx, source) in MatrixModSource::ALL.iter().take(6).enumerate() {
             let row_y = grid_start.y + (s_idx as f32) * (cell_size + pad);
             let s_rgba = source.color_rgba();
-            let src_col = Color32::from_rgba_unmultiplied(s_rgba[0], s_rgba[1], s_rgba[2], s_rgba[3]);
+            let src_col =
+                Color32::from_rgba_unmultiplied(s_rgba[0], s_rgba[1], s_rgba[2], s_rgba[3]);
 
             // Source Label Pill (>= 44x44pt target)
             let pill_rect = Rect::from_min_size(
@@ -607,7 +655,10 @@ impl ModulationMatrixView {
                 );
                 let cell_rect = Rect::from_min_size(cell_pos, Vec2::new(cell_size, cell_size));
 
-                let has_route = self.routes.iter().find(|r| r.source == *source && r.dest == *dest);
+                let has_route = self
+                    .routes
+                    .iter()
+                    .find(|r| r.source == *source && r.dest == *dest);
 
                 painter.rect_filled(
                     cell_rect,
@@ -618,7 +669,11 @@ impl ModulationMatrixView {
                         Color32::from_rgb(18, 24, 38)
                     },
                 );
-                painter.rect_stroke(cell_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(50, 65, 90)));
+                painter.rect_stroke(
+                    cell_rect,
+                    4.0,
+                    Stroke::new(1.0_f32, Color32::from_rgb(50, 65, 90)),
+                );
 
                 if let Some(route) = has_route {
                     // Depth Ring Arc
@@ -641,7 +696,11 @@ impl ModulationMatrixView {
             Vec2::new(rect.width() - 500.0, 380.0),
         );
         painter.rect_filled(inspector_rect, 8.0, Color32::from_rgb(20, 28, 46));
-        painter.rect_stroke(inspector_rect, 8.0, Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)));
+        painter.rect_stroke(
+            inspector_rect,
+            8.0,
+            Stroke::new(1.5_f32, Color32::from_rgb(0, 229, 255)),
+        );
 
         painter.text(
             Pos2::new(inspector_rect.min.x + 16.0, inspector_rect.min.y + 16.0),
@@ -655,7 +714,12 @@ impl ModulationMatrixView {
     }
 }
 
-fn save_png_direct_mod(path: &str, width: u32, height: u32, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_direct_mod(
+    path: &str,
+    width: u32,
+    height: u32,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     if let Some(parent) = std::path::Path::new(path).parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -749,7 +813,11 @@ mod tests {
         let mut view = ModulationMatrixView::new();
         view.set_route_depth(MatrixModSource::Lfo1, MatrixModDest::FilterCutoff, 0.75);
 
-        let route = view.routes.iter().find(|r| r.source == MatrixModSource::Lfo1 && r.dest == MatrixModDest::FilterCutoff).unwrap();
+        let route = view
+            .routes
+            .iter()
+            .find(|r| r.source == MatrixModSource::Lfo1 && r.dest == MatrixModDest::FilterCutoff)
+            .unwrap();
         assert_eq!(route.depth, 0.75);
 
         let lin = ModCurveShape::Linear.apply(0.5);
@@ -773,7 +841,12 @@ mod tests {
     #[test]
     fn test_modulation_matrix_hit_targets_and_grid() {
         use crate::touch_controls::MIN_HIT_TARGET_PT;
-        const { assert!(MIN_HIT_TARGET_PT >= 44.0, "Hit target must be >= 44pt for touch accessibility") };
+        const {
+            assert!(
+                MIN_HIT_TARGET_PT >= 44.0,
+                "Hit target must be >= 44pt for touch accessibility"
+            )
+        };
     }
 
     #[test]

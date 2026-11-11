@@ -555,4 +555,3 @@ impl NeuralChoirFormantView {
         )
     }
 }
-

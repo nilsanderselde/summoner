@@ -4,18 +4,17 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::layout_math::Rect;
     use crate::views::grand_piano_view::{
-        GrandPianoView, GrandPianoHudPreset, GRAND_PIANO_PUCK_HIT_RADIUS,
-        MIN_GRAND_PIANO_STRIKE_VELOCITY, MAX_GRAND_PIANO_STRIKE_VELOCITY,
-        MIN_HAMMER_HARDNESS, MAX_HAMMER_HARDNESS,
+        GrandPianoHudPreset, GrandPianoView, GRAND_PIANO_PUCK_HIT_RADIUS,
+        MAX_GRAND_PIANO_STRIKE_VELOCITY, MAX_HAMMER_HARDNESS, MIN_GRAND_PIANO_STRIKE_VELOCITY,
+        MIN_HAMMER_HARDNESS,
     };
     use crate::views::pipe_organ_view::{
-        PipeOrganView, PipeType, PIPE_ORGAN_PUCK_HIT_RADIUS,
-        MIN_WIND_PRESSURE_MMH2O, MAX_WIND_PRESSURE_MMH2O,
-        MIN_CUTUP_RATIO, MAX_CUTUP_RATIO,
+        PipeOrganView, PipeType, MAX_CUTUP_RATIO, MAX_WIND_PRESSURE_MMH2O, MIN_CUTUP_RATIO,
+        MIN_WIND_PRESSURE_MMH2O, PIPE_ORGAN_PUCK_HIT_RADIUS,
     };
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn59_pure_grand_piano_instruments_and_simulation() {
@@ -157,12 +156,12 @@ pub mod pure_tests {
                 let base = track_id as u32 * 1000 + slot as u32 * 20;
 
                 // Register Grand Piano channels
-                let pid_vel     = ParamId(base);
-                let pid_hard    = ParamId(base + 1);
-                let pid_damper  = ParamId(base + 2);
-                let pid_una     = ParamId(base + 3);
-                let pid_sost    = ParamId(base + 4);
-                let pid_detune  = ParamId(base + 5);
+                let pid_vel = ParamId(base);
+                let pid_hard = ParamId(base + 1);
+                let pid_damper = ParamId(base + 2);
+                let pid_una = ParamId(base + 3);
+                let pid_sost = ParamId(base + 4);
+                let pid_detune = ParamId(base + 5);
 
                 bus.register(pid_vel, 0.75);
                 bus.register(pid_hard, 0.65);
@@ -180,10 +179,10 @@ pub mod pure_tests {
 
                 // Register Pipe Organ channels
                 let pid_press = ParamId(base);
-                let pid_cut   = ParamId(base + 1);
-                let pid_len   = ParamId(base + 2);
+                let pid_cut = ParamId(base + 1);
+                let pid_len = ParamId(base + 2);
                 let pid_chiff = ParamId(base + 3);
-                let pid_turb  = ParamId(base + 4);
+                let pid_turb = ParamId(base + 4);
                 let pid_vel_a = ParamId(base + 5);
 
                 bus.set(pid_press, 85.0);
@@ -220,11 +219,11 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
+    use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::command_palette::CommandPalette;
 
     #[test]
     fn test_turn59_gui_award_winning_view_modals_lifecycle() {
@@ -267,7 +266,11 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
 
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -288,10 +291,34 @@ pub mod gui_tests {
 
         view.sync_grand_piano_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("strike_velocity").copied(), Some(0.88));
-        assert_eq!(view.device_rack_state.node_param_values.get("hammer_hardness").copied(), Some(0.72));
-        assert_eq!(view.inspector_state.node_param_values.get("strike_velocity").copied(), Some(0.88));
-        assert_eq!(view.inspector_state.node_param_values.get("hammer_hardness").copied(), Some(0.72));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("strike_velocity")
+                .copied(),
+            Some(0.88)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("hammer_hardness")
+                .copied(),
+            Some(0.72)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("strike_velocity")
+                .copied(),
+            Some(0.88)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("hammer_hardness")
+                .copied(),
+            Some(0.72)
+        );
 
         assert_eq!(arc_bus.get(ParamId(base)), Some(0.88));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(0.72));
@@ -310,8 +337,20 @@ pub mod gui_tests {
 
         view.sync_pipe_organ_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("wind_pressure_mmh2o").copied(), Some(115.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("cutup_ratio").copied(), Some(0.32));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("wind_pressure_mmh2o")
+                .copied(),
+            Some(115.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("cutup_ratio")
+                .copied(),
+            Some(0.32)
+        );
         assert_eq!(arc_bus.get(ParamId(base)), Some(115.0));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(0.32));
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(16.0));
@@ -327,7 +366,9 @@ pub mod gui_tests {
         // Trigger Grand Piano via inspector
         assert!(!view.is_grand_piano_hud_open());
         view.inspector_state.requested_open_grand_piano_hud = true;
-        if view.inspector_state.requested_open_grand_piano_hud || view.device_rack_state.requested_open_grand_piano_hud {
+        if view.inspector_state.requested_open_grand_piano_hud
+            || view.device_rack_state.requested_open_grand_piano_hud
+        {
             view.inspector_state.requested_open_grand_piano_hud = false;
             view.device_rack_state.requested_open_grand_piano_hud = false;
             view.open_grand_piano_hud();
@@ -339,7 +380,9 @@ pub mod gui_tests {
 
         // Trigger Grand Piano via device rack
         view.device_rack_state.requested_open_grand_piano_hud = true;
-        if view.inspector_state.requested_open_grand_piano_hud || view.device_rack_state.requested_open_grand_piano_hud {
+        if view.inspector_state.requested_open_grand_piano_hud
+            || view.device_rack_state.requested_open_grand_piano_hud
+        {
             view.inspector_state.requested_open_grand_piano_hud = false;
             view.device_rack_state.requested_open_grand_piano_hud = false;
             view.open_grand_piano_hud();
@@ -351,7 +394,9 @@ pub mod gui_tests {
         // Trigger Pipe Organ via inspector
         assert!(!view.is_pipe_organ_hud_open());
         view.inspector_state.requested_open_pipe_organ_hud = true;
-        if view.inspector_state.requested_open_pipe_organ_hud || view.device_rack_state.requested_open_pipe_organ_hud {
+        if view.inspector_state.requested_open_pipe_organ_hud
+            || view.device_rack_state.requested_open_pipe_organ_hud
+        {
             view.inspector_state.requested_open_pipe_organ_hud = false;
             view.device_rack_state.requested_open_pipe_organ_hud = false;
             view.open_pipe_organ_hud();
@@ -362,7 +407,9 @@ pub mod gui_tests {
 
         // Trigger Pipe Organ via device rack
         view.device_rack_state.requested_open_pipe_organ_hud = true;
-        if view.inspector_state.requested_open_pipe_organ_hud || view.device_rack_state.requested_open_pipe_organ_hud {
+        if view.inspector_state.requested_open_pipe_organ_hud
+            || view.device_rack_state.requested_open_pipe_organ_hud
+        {
             view.inspector_state.requested_open_pipe_organ_hud = false;
             view.device_rack_state.requested_open_pipe_organ_hud = false;
             view.open_pipe_organ_hud();
@@ -377,10 +424,20 @@ pub mod gui_tests {
         let palette = CommandPalette::new();
         let actions = &palette.actions;
 
-        let has_piano = actions.iter().any(|a| a.action_id == "open_grand_piano_hud" && a.category == "Physical Modeling");
-        assert!(has_piano, "open_grand_piano_hud command action must be registered in command palette");
+        let has_piano = actions
+            .iter()
+            .any(|a| a.action_id == "open_grand_piano_hud" && a.category == "Physical Modeling");
+        assert!(
+            has_piano,
+            "open_grand_piano_hud command action must be registered in command palette"
+        );
 
-        let has_organ = actions.iter().any(|a| a.action_id == "open_pipe_organ_hud" && a.category == "Physical Modeling");
-        assert!(has_organ, "open_pipe_organ_hud command action must be registered in command palette");
+        let has_organ = actions
+            .iter()
+            .any(|a| a.action_id == "open_pipe_organ_hud" && a.category == "Physical Modeling");
+        assert!(
+            has_organ,
+            "open_pipe_organ_hud command action must be registered in command palette"
+        );
     }
 }

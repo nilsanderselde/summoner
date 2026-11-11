@@ -43,10 +43,14 @@ impl CompositeSynthVoiceMode {
     pub fn label(&self) -> &'static str {
         match self {
             Self::AetherSubtractive => "AetherSynth (2-Osc Saw/Pulse + Ladder + Dual ADSR)",
-            Self::GlitchAetherMachine => "GlitchAetherMachine (Tube Overdrive + GlitchGate + TapeStop)",
+            Self::GlitchAetherMachine => {
+                "GlitchAetherMachine (Tube Overdrive + GlitchGate + TapeStop)"
+            }
             Self::CyberpunkSubSynth => "CyberpunkSubSynth (Sub Sine + Wavefolder + Pitch LFO)",
             Self::AtmosphericPadSynth => "AtmosphericPadSynth (Detuned Saw/Tri + SVF + Space)",
-            Self::GlitchPercussionSynth => "GlitchPercussionSynth (Noise + Comb + Bitcrusher + Stutter)",
+            Self::GlitchPercussionSynth => {
+                "GlitchPercussionSynth (Noise + Comb + Bitcrusher + Stutter)"
+            }
         }
     }
 
@@ -245,9 +249,8 @@ impl AetherSynthView {
     /// Logarithmic cutoff normalization [20 Hz ..= 20000 Hz] -> [0.0 ..= 1.0].
     pub fn cutoff_to_normalized(cutoff_hz: f32) -> f32 {
         let clamped = cutoff_hz.clamp(MIN_AETHER_CUTOFF_HZ, MAX_AETHER_CUTOFF_HZ);
-        ((clamped / MIN_AETHER_CUTOFF_HZ).ln()
-            / (MAX_AETHER_CUTOFF_HZ / MIN_AETHER_CUTOFF_HZ).ln())
-        .clamp(0.0, 1.0)
+        ((clamped / MIN_AETHER_CUTOFF_HZ).ln() / (MAX_AETHER_CUTOFF_HZ / MIN_AETHER_CUTOFF_HZ).ln())
+            .clamp(0.0, 1.0)
     }
 
     /// Logarithmic cutoff de-normalization [0.0 ..= 1.0] -> [20 Hz ..= 20000 Hz].
@@ -372,9 +375,11 @@ impl AetherSynthView {
                         .strong(),
                 );
                 ui.label(
-                    RichText::new("M33 / M34 AetherSynth + GlitchAetherMachine + CyberpunkSubSynth")
-                        .color(Color32::from_rgb(148, 163, 184))
-                        .small(),
+                    RichText::new(
+                        "M33 / M34 AetherSynth + GlitchAetherMachine + CyberpunkSubSynth",
+                    )
+                    .color(Color32::from_rgb(148, 163, 184))
+                    .small(),
                 );
             });
 
@@ -538,11 +543,8 @@ impl AetherSynthView {
             ui.horizontal(|ui| {
                 ui.label(RichText::new("PWM / Pitch LFO Rate (Hz):").size(11.0));
                 ui.add(
-                    egui::Slider::new(
-                        &mut self.lfo_rate_hz,
-                        MIN_AETHER_LFO_HZ..=MAX_AETHER_LFO_HZ,
-                    )
-                    .suffix(" Hz"),
+                    egui::Slider::new(&mut self.lfo_rate_hz, MIN_AETHER_LFO_HZ..=MAX_AETHER_LFO_HZ)
+                        .suffix(" Hz"),
                 );
             });
 

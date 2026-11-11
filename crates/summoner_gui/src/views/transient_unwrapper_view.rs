@@ -285,10 +285,15 @@ impl TransientUnwrapperView {
     pub fn render_ascii_snapshot_str(&self) -> String {
         let lines = self.render_ascii(64, 18);
         let mut banner = String::new();
-        banner.push_str("=== PSYCHOACOUSTIC DYNAMIC STEREO TRANSIENT UNWRAPPER & DECORRELATOR HUD ===\n");
+        banner.push_str(
+            "=== PSYCHOACOUSTIC DYNAMIC STEREO TRANSIENT UNWRAPPER & DECORRELATOR HUD ===\n",
+        );
         banner.push_str(&format!(
             "Mode: {} | Width: {:.0}% | Delay: {:.1} ms | IACC: {:.2}\n",
-            self.mode.name(), self.spatial_width_pct, self.decorrelation_delay_ms, self.iacc_correlation
+            self.mode.name(),
+            self.spatial_width_pct,
+            self.decorrelation_delay_ms,
+            self.iacc_correlation
         ));
         banner.push_str("Touch Target Compliance: [PASS: >=44pt] Bounding Radius: 22.0pt\n");
         banner.push_str(&lines.join("\n"));

@@ -5,13 +5,13 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::layout_math::Rect;
-    use crate::views::plate_dispersion_view::{
-        PlateDispersionView, PlateReverbViewProfile, PLATE_PUCK_HIT_RADIUS,
-        NUM_DISPERSION_CURVE_POINTS,
-    };
     use crate::views::membrane_cavity_view::{
-        MembraneCavityView, MembraneInstrumentViewProfile, MEMBRANE_PUCK_HIT_RADIUS,
-        MIN_STRIKE_VELOCITY, MAX_STRIKE_VELOCITY,
+        MembraneCavityView, MembraneInstrumentViewProfile, MAX_STRIKE_VELOCITY,
+        MEMBRANE_PUCK_HIT_RADIUS, MIN_STRIKE_VELOCITY,
+    };
+    use crate::views::plate_dispersion_view::{
+        PlateDispersionView, PlateReverbViewProfile, NUM_DISPERSION_CURVE_POINTS,
+        PLATE_PUCK_HIT_RADIUS,
     };
     use summoner_core::param_bus::ParamId;
 
@@ -58,7 +58,12 @@ pub mod pure_tests {
         assert!(curve[NUM_DISPERSION_CURVE_POINTS - 1] >= curve[0]);
 
         // Hit testing
-        let canvas = Rect { x: 30.0, y: 60.0, width: 240.0, height: 180.0 };
+        let canvas = Rect {
+            x: 30.0,
+            y: 60.0,
+            width: 240.0,
+            height: 180.0,
+        };
         let puck_x = canvas.x + view.puck_pos.0 * canvas.width;
         let puck_y = canvas.y + (1.0 - view.puck_pos.1) * canvas.height;
         assert!(view.hit_test_plate_puck((puck_x, puck_y), canvas));
@@ -75,7 +80,10 @@ pub mod pure_tests {
     #[test]
     fn test_turn68_pure_membrane_cavity_view_initialization_and_instruments() {
         let mut view = MembraneCavityView::new();
-        assert_eq!(view.instrument, MembraneInstrumentViewProfile::TimpaniKettle);
+        assert_eq!(
+            view.instrument,
+            MembraneInstrumentViewProfile::TimpaniKettle
+        );
         assert!((view.radial_strike_pos - 0.70).abs() < 1e-3);
         assert!((view.strike_velocity - 0.80).abs() < 1e-3);
         assert!((view.air_cavity_depth - 0.85).abs() < 1e-3);
@@ -84,7 +92,10 @@ pub mod pure_tests {
 
         // Test instruments
         view.set_instrument(MembraneInstrumentViewProfile::ConcertBassDrum);
-        assert_eq!(view.instrument, MembraneInstrumentViewProfile::ConcertBassDrum);
+        assert_eq!(
+            view.instrument,
+            MembraneInstrumentViewProfile::ConcertBassDrum
+        );
         assert!((view.air_cavity_depth - 0.95).abs() < 1e-3);
 
         view.set_instrument(MembraneInstrumentViewProfile::SnareDrum);
@@ -100,7 +111,10 @@ pub mod pure_tests {
         assert!((view.rimshot_damping - 0.35).abs() < 1e-3);
 
         view.set_instrument(MembraneInstrumentViewProfile::DjembeFramedrum);
-        assert_eq!(view.instrument, MembraneInstrumentViewProfile::DjembeFramedrum);
+        assert_eq!(
+            view.instrument,
+            MembraneInstrumentViewProfile::DjembeFramedrum
+        );
         assert!((view.air_cavity_depth - 0.75).abs() < 1e-3);
 
         // Normalized conversions
@@ -111,7 +125,10 @@ pub mod pure_tests {
         let norm_v = MembraneCavityView::velocity_to_normalized(view.strike_velocity);
         let back_v = MembraneCavityView::normalized_to_velocity(norm_v);
         assert!((back_v - view.strike_velocity).abs() < 1e-3);
-        assert!(view.strike_velocity >= MIN_STRIKE_VELOCITY && view.strike_velocity <= MAX_STRIKE_VELOCITY);
+        assert!(
+            view.strike_velocity >= MIN_STRIKE_VELOCITY
+                && view.strike_velocity <= MAX_STRIKE_VELOCITY
+        );
 
         // Bessel membrane displacement evaluation
         let z_center = view.evaluate_membrane_displacement(0.0, 0.0);
@@ -120,7 +137,12 @@ pub mod pure_tests {
         assert!(z_edge.is_finite());
 
         // Hit testing
-        let canvas = Rect { x: 40.0, y: 70.0, width: 200.0, height: 160.0 };
+        let canvas = Rect {
+            x: 40.0,
+            y: 70.0,
+            width: 200.0,
+            height: 160.0,
+        };
         let puck_x = canvas.x + view.puck_pos.0 * canvas.width;
         let puck_y = canvas.y + (1.0 - view.puck_pos.1) * canvas.height;
         assert!(view.hit_test_membrane_puck((puck_x, puck_y), canvas));
@@ -142,7 +164,7 @@ pub mod pure_tests {
 
         let pid_disp = ParamId(base_id);
         let pid_damp = ParamId(base_id + 1);
-        let pid_t60  = ParamId(base_id + 2);
+        let pid_t60 = ParamId(base_id + 2);
         let pid_high = ParamId(base_id + 3);
 
         assert_eq!(pid_disp.0, 2020);
@@ -162,8 +184,8 @@ pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn68_gui_award_winning_plate_dispersion_and_membrane_cavity_hud_lifecycles() {
@@ -204,7 +226,11 @@ pub mod gui_tests {
     fn test_turn68_gui_live_parambus_atomic_sync_plate_and_membrane() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -226,9 +252,24 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(2.80));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(0.65));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("dispersion_factor"), Some(&0.85));
-        assert_eq!(view.device_rack_state.node_param_values.get("damper_position"), Some(&0.45));
-        assert_eq!(view.inspector_state.node_param_values.get("dispersion_factor"), Some(&0.85));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("dispersion_factor"),
+            Some(&0.85)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("damper_position"),
+            Some(&0.45)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("dispersion_factor"),
+            Some(&0.85)
+        );
 
         // 2. Sync Membrane Cavity HUD
         view.membrane_cavity_view.radial_strike_pos = 0.55;
@@ -242,9 +283,24 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(0.80));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(0.12));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("radial_strike_pos"), Some(&0.55));
-        assert_eq!(view.device_rack_state.node_param_values.get("strike_velocity"), Some(&0.90));
-        assert_eq!(view.inspector_state.node_param_values.get("radial_strike_pos"), Some(&0.55));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("radial_strike_pos"),
+            Some(&0.55)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("strike_velocity"),
+            Some(&0.90)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("radial_strike_pos"),
+            Some(&0.55)
+        );
     }
 
     #[test]
@@ -277,13 +333,19 @@ pub mod gui_tests {
     #[test]
     fn test_turn68_gui_command_palette_action_registration() {
         let palette = CommandPalette::new();
-        let plate_action = palette.actions.iter().find(|a| a.action_id == "open_plate_dispersion_hud");
+        let plate_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_plate_dispersion_hud");
         assert!(plate_action.is_some());
         let plate = plate_action.unwrap();
         assert_eq!(plate.category, "Physical Modeling");
         assert!(plate.label.contains("Plate Dispersion"));
 
-        let membrane_action = palette.actions.iter().find(|a| a.action_id == "open_membrane_cavity_hud");
+        let membrane_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_membrane_cavity_hud");
         assert!(membrane_action.is_some());
         let membrane = membrane_action.unwrap();
         assert_eq!(membrane.category, "Physical Modeling");

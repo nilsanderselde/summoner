@@ -4,16 +4,16 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::layout_math::Rect;
-    use crate::views::koto_view::{
-        KotoView, KotoHudPreset, KOTO_PUCK_HIT_RADIUS,
-        MIN_OSHI_ITE_FORCE_N, MAX_OSHI_ITE_FORCE_N, MIN_KOTO_TSUME_VELOCITY, MAX_KOTO_TSUME_VELOCITY,
-    };
     use crate::views::gamelan_gender_view::{
-        GamelanGenderView, GamelanInstrumentType, GAMELAN_PUCK_HIT_RADIUS,
-        MIN_MALLET_HARDNESS, MAX_MALLET_HARDNESS, MIN_OMBAK_RATE_HZ, MAX_OMBAK_RATE_HZ,
+        GamelanGenderView, GamelanInstrumentType, GAMELAN_PUCK_HIT_RADIUS, MAX_MALLET_HARDNESS,
+        MAX_OMBAK_RATE_HZ, MIN_MALLET_HARDNESS, MIN_OMBAK_RATE_HZ,
     };
+    use crate::views::koto_view::{
+        KotoHudPreset, KotoView, KOTO_PUCK_HIT_RADIUS, MAX_KOTO_TSUME_VELOCITY,
+        MAX_OSHI_ITE_FORCE_N, MIN_KOTO_TSUME_VELOCITY, MIN_OSHI_ITE_FORCE_N,
+    };
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn57_pure_koto_zither_instruments_and_simulation() {
@@ -80,7 +80,10 @@ pub mod pure_tests {
     #[test]
     fn test_turn57_pure_gamelan_instruments_and_simulation() {
         let mut view = GamelanGenderView::new();
-        assert_eq!(view.instrument_type, GamelanInstrumentType::GenderWayang10Bar);
+        assert_eq!(
+            view.instrument_type,
+            GamelanInstrumentType::GenderWayang10Bar
+        );
         assert!((view.mallet_hardness - 0.45).abs() < 1e-4);
         assert!((view.ombak_rate_hz - 7.2).abs() < 1e-4);
         assert_eq!(view.bar_count, 10);
@@ -97,17 +100,26 @@ pub mod pure_tests {
         assert!((view.resonator_coupling_q - 65.0).abs() < 1e-4);
 
         view.set_instrument_type(GamelanInstrumentType::GamelanCalungPemade);
-        assert_eq!(view.instrument_type, GamelanInstrumentType::GamelanCalungPemade);
+        assert_eq!(
+            view.instrument_type,
+            GamelanInstrumentType::GamelanCalungPemade
+        );
         assert_eq!(view.bar_count, 10);
         assert!((view.bronze_thickness_mm - 10.0).abs() < 1e-4);
 
         view.set_instrument_type(GamelanInstrumentType::GamelanKanthilTrompong);
-        assert_eq!(view.instrument_type, GamelanInstrumentType::GamelanKanthilTrompong);
+        assert_eq!(
+            view.instrument_type,
+            GamelanInstrumentType::GamelanKanthilTrompong
+        );
         assert!((view.mallet_hardness - 0.85).abs() < 1e-4);
         assert!((view.ombak_rate_hz - 8.5).abs() < 1e-4);
 
         view.set_instrument_type(GamelanInstrumentType::GamelanUgalLeader);
-        assert_eq!(view.instrument_type, GamelanInstrumentType::GamelanUgalLeader);
+        assert_eq!(
+            view.instrument_type,
+            GamelanInstrumentType::GamelanUgalLeader
+        );
         assert_eq!(view.bar_count, 10);
 
         // Normalization roundtrips
@@ -148,12 +160,12 @@ pub mod pure_tests {
                 let base = track_id as u32 * 1000 + slot_idx as u32 * 20;
 
                 // Koto parameter slot addresses: 0..=5
-                let pid_tsume    = ParamId(base);
+                let pid_tsume = ParamId(base);
                 let pid_oshi_ite = ParamId(base + 1);
-                let pid_release  = ParamId(base + 2);
-                let pid_bridge   = ParamId(base + 3);
-                let pid_bleed    = ParamId(base + 4);
-                let pid_wood     = ParamId(base + 5);
+                let pid_release = ParamId(base + 2);
+                let pid_bridge = ParamId(base + 3);
+                let pid_bleed = ParamId(base + 4);
+                let pid_wood = ParamId(base + 5);
 
                 bus.register(pid_tsume, 0.82);
                 bus.register(pid_oshi_ite, 18.5);
@@ -203,11 +215,11 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
+    use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::command_palette::CommandPalette;
 
     #[test]
     fn test_turn57_gui_award_winning_view_modals_lifecycle() {
@@ -250,7 +262,11 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
 
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -270,10 +286,34 @@ pub mod gui_tests {
 
         view.sync_koto_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("tsume_velocity").copied(), Some(0.88));
-        assert_eq!(view.device_rack_state.node_param_values.get("oshi_ite_force_n").copied(), Some(22.0));
-        assert_eq!(view.inspector_state.node_param_values.get("tsume_velocity").copied(), Some(0.88));
-        assert_eq!(view.inspector_state.node_param_values.get("oshi_ite_force_n").copied(), Some(22.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("tsume_velocity")
+                .copied(),
+            Some(0.88)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("oshi_ite_force_n")
+                .copied(),
+            Some(22.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("tsume_velocity")
+                .copied(),
+            Some(0.88)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("oshi_ite_force_n")
+                .copied(),
+            Some(22.0)
+        );
 
         assert_eq!(arc_bus.get(ParamId(base)), Some(0.88));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(22.0));
@@ -292,8 +332,20 @@ pub mod gui_tests {
 
         view.sync_gamelan_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("mallet_hardness").copied(), Some(0.78));
-        assert_eq!(view.device_rack_state.node_param_values.get("ombak_rate_hz").copied(), Some(8.2));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("mallet_hardness")
+                .copied(),
+            Some(0.78)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("ombak_rate_hz")
+                .copied(),
+            Some(8.2)
+        );
         assert_eq!(arc_bus.get(ParamId(base)), Some(0.78));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(8.2));
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(10.0));
@@ -309,7 +361,9 @@ pub mod gui_tests {
         // Trigger Koto via inspector
         assert!(!view.is_koto_hud_open());
         view.inspector_state.requested_open_koto_hud = true;
-        if view.inspector_state.requested_open_koto_hud || view.device_rack_state.requested_open_koto_hud {
+        if view.inspector_state.requested_open_koto_hud
+            || view.device_rack_state.requested_open_koto_hud
+        {
             view.inspector_state.requested_open_koto_hud = false;
             view.device_rack_state.requested_open_koto_hud = false;
             view.open_koto_hud();
@@ -321,7 +375,9 @@ pub mod gui_tests {
 
         // Trigger Koto via device rack
         view.device_rack_state.requested_open_koto_hud = true;
-        if view.inspector_state.requested_open_koto_hud || view.device_rack_state.requested_open_koto_hud {
+        if view.inspector_state.requested_open_koto_hud
+            || view.device_rack_state.requested_open_koto_hud
+        {
             view.inspector_state.requested_open_koto_hud = false;
             view.device_rack_state.requested_open_koto_hud = false;
             view.open_koto_hud();
@@ -333,7 +389,9 @@ pub mod gui_tests {
         // Trigger Gamelan via inspector
         assert!(!view.is_gamelan_hud_open());
         view.inspector_state.requested_open_gamelan_hud = true;
-        if view.inspector_state.requested_open_gamelan_hud || view.device_rack_state.requested_open_gamelan_hud {
+        if view.inspector_state.requested_open_gamelan_hud
+            || view.device_rack_state.requested_open_gamelan_hud
+        {
             view.inspector_state.requested_open_gamelan_hud = false;
             view.device_rack_state.requested_open_gamelan_hud = false;
             view.open_gamelan_hud();
@@ -344,7 +402,9 @@ pub mod gui_tests {
 
         // Trigger Gamelan via device rack
         view.device_rack_state.requested_open_gamelan_hud = true;
-        if view.inspector_state.requested_open_gamelan_hud || view.device_rack_state.requested_open_gamelan_hud {
+        if view.inspector_state.requested_open_gamelan_hud
+            || view.device_rack_state.requested_open_gamelan_hud
+        {
             view.inspector_state.requested_open_gamelan_hud = false;
             view.device_rack_state.requested_open_gamelan_hud = false;
             view.open_gamelan_hud();
@@ -359,10 +419,20 @@ pub mod gui_tests {
         let palette = CommandPalette::new();
         let actions = &palette.actions;
 
-        let has_koto = actions.iter().any(|a| a.action_id == "open_koto_hud" && a.category == "Physical Modeling");
-        assert!(has_koto, "open_koto_hud command action must be registered in command palette");
+        let has_koto = actions
+            .iter()
+            .any(|a| a.action_id == "open_koto_hud" && a.category == "Physical Modeling");
+        assert!(
+            has_koto,
+            "open_koto_hud command action must be registered in command palette"
+        );
 
-        let has_gamelan = actions.iter().any(|a| a.action_id == "open_gamelan_hud" && a.category == "Physical Modeling");
-        assert!(has_gamelan, "open_gamelan_hud command action must be registered in command palette");
+        let has_gamelan = actions
+            .iter()
+            .any(|a| a.action_id == "open_gamelan_hud" && a.category == "Physical Modeling");
+        assert!(
+            has_gamelan,
+            "open_gamelan_hud command action must be registered in command palette"
+        );
     }
 }

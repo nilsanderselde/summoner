@@ -50,7 +50,10 @@ pub mod pure_tests {
         assert_eq!(state.requested_automation_param, Some("cutoff".to_string()));
 
         state.request_automation("lfo_speed");
-        assert_eq!(state.requested_automation_param, Some("lfo_speed".to_string()));
+        assert_eq!(
+            state.requested_automation_param,
+            Some("lfo_speed".to_string())
+        );
     }
 
     #[test]
@@ -93,28 +96,47 @@ pub mod pure_tests {
         // 1. Direct standard parameter lookup
         assert!(view.open_track_automation_editor(track_id, "cutoff"));
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param, Some(format!("track_{}_cutoff", track_id)));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some(format!("track_{}_cutoff", track_id))
+        );
 
         // 2. Fallback to device rack's active DSP node (e.g. AetherSynth params)
         view.device_rack_state.selected_node_kind = Some("AetherSynth".to_string());
-        view.device_rack_state.node_param_values.insert("osc_wave".to_string(), 0.75);
+        view.device_rack_state
+            .node_param_values
+            .insert("osc_wave".to_string(), 0.75);
         assert!(view.open_track_automation_editor(track_id, "osc_wave"));
-        assert_eq!(view.requested_modular_automation_param, Some(format!("track_{}_osc_wave", track_id)));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some(format!("track_{}_osc_wave", track_id))
+        );
 
         // 3. Fallback to inspector's active DSP node (e.g. DemucsV4Separator or FilterSVF)
         view.device_rack_state.selected_node_kind = Some("AetherSynth".to_string());
         view.inspector_state.selected_node_kind = Some("FilterSVF".to_string());
-        view.inspector_state.node_param_values.insert("q_factor".to_string(), 0.82);
+        view.inspector_state
+            .node_param_values
+            .insert("q_factor".to_string(), 0.82);
         assert!(view.open_track_automation_editor(track_id, "q_factor"));
-        assert_eq!(view.requested_modular_automation_param, Some(format!("track_{}_q_factor", track_id)));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some(format!("track_{}_q_factor", track_id))
+        );
 
         // 4. Fallback to universal DSP node registry across any registered DSP module
         // (e.g. NavierStokesFluidNode param "viscosity" or PluckedStringNode param "damping")
         assert!(view.open_track_automation_editor(track_id, "viscosity"));
-        assert_eq!(view.requested_modular_automation_param, Some(format!("track_{}_viscosity", track_id)));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some(format!("track_{}_viscosity", track_id))
+        );
 
         assert!(view.open_track_automation_editor(track_id, "damping"));
-        assert_eq!(view.requested_modular_automation_param, Some(format!("track_{}_damping", track_id)));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some(format!("track_{}_damping", track_id))
+        );
 
         // 5. Non-existent parameter returns false cleanly
         assert!(!view.open_track_automation_editor(track_id, "completely_invalid_param_xyz"));
@@ -154,16 +176,40 @@ pub mod pure_tests {
         );
 
         // Verify ParamBus received values at correct offsets
-        assert_eq!(param_bus.get(ParamId(track_id as u32 * 1000 + 107)), Some(0.42)); // osc_mix
-        assert_eq!(param_bus.get(ParamId(track_id as u32 * 1000 + 108)), Some(0.68)); // shape
-        assert_eq!(param_bus.get(ParamId(track_id as u32 * 1000 + 109)), Some(0.77)); // lfo_speed
-        assert_eq!(param_bus.get(ParamId(track_id as u32 * 1000 + 110)), Some(0.88)); // lfo_depth
+        assert_eq!(
+            param_bus.get(ParamId(track_id as u32 * 1000 + 107)),
+            Some(0.42)
+        ); // osc_mix
+        assert_eq!(
+            param_bus.get(ParamId(track_id as u32 * 1000 + 108)),
+            Some(0.68)
+        ); // shape
+        assert_eq!(
+            param_bus.get(ParamId(track_id as u32 * 1000 + 109)),
+            Some(0.77)
+        ); // lfo_speed
+        assert_eq!(
+            param_bus.get(ParamId(track_id as u32 * 1000 + 110)),
+            Some(0.88)
+        ); // lfo_depth
 
         // Verify AutomationTimeline has recorded the automated curves
-        assert_eq!(timeline.evaluate(&format!("track_{}_osc_mix", track_id), 8.0), Some(0.42));
-        assert_eq!(timeline.evaluate(&format!("track_{}_shape", track_id), 8.0), Some(0.68));
-        assert_eq!(timeline.evaluate(&format!("track_{}_lfo_speed", track_id), 8.0), Some(0.77));
-        assert_eq!(timeline.evaluate(&format!("track_{}_lfo_depth", track_id), 8.0), Some(0.88));
+        assert_eq!(
+            timeline.evaluate(&format!("track_{}_osc_mix", track_id), 8.0),
+            Some(0.42)
+        );
+        assert_eq!(
+            timeline.evaluate(&format!("track_{}_shape", track_id), 8.0),
+            Some(0.68)
+        );
+        assert_eq!(
+            timeline.evaluate(&format!("track_{}_lfo_speed", track_id), 8.0),
+            Some(0.77)
+        );
+        assert_eq!(
+            timeline.evaluate(&format!("track_{}_lfo_depth", track_id), 8.0),
+            Some(0.88)
+        );
 
         // 2. Playback pass
         view.top_bar_state.is_playing = true;
@@ -193,7 +239,9 @@ pub mod pure_tests {
 pub mod gui_tests {
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::modern_device_rack::{show_modern_device_rack, ModernDeviceRackState};
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
+    use crate::views::modern_inspector::{
+        show_modern_inspector_with_context, ModernInspectorState,
+    };
     use summoner_core::param_bus::ParamBus;
 
     #[test]
@@ -232,6 +280,12 @@ pub mod gui_tests {
         // Automation request consumed and editor opened
         assert_eq!(view.device_rack_state.requested_automation_param, None);
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param, Some(format!("track_{}_cutoff", view.tracks[view.selected_track_idx].id)));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some(format!(
+                "track_{}_cutoff",
+                view.tracks[view.selected_track_idx].id
+            ))
+        );
     }
 }

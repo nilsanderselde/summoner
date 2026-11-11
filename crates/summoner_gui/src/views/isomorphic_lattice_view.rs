@@ -34,14 +34,14 @@ pub enum LatticeIntervalCategory {
 impl LatticeIntervalCategory {
     pub fn color_rgb(&self) -> [u8; 4] {
         match self {
-            Self::RootUnison => [0, 255, 180, 255],           // Mint green
-            Self::PerfectFifth => [0, 229, 255, 255],         // Cyan
-            Self::MajorThird => [255, 215, 0, 255],           // Gold
-            Self::MinorThird => [255, 140, 60, 255],          // Amber orange
-            Self::NeutralThird => [255, 64, 129, 255],        // Rose violet
+            Self::RootUnison => [0, 255, 180, 255],    // Mint green
+            Self::PerfectFifth => [0, 229, 255, 255],  // Cyan
+            Self::MajorThird => [255, 215, 0, 255],    // Gold
+            Self::MinorThird => [255, 140, 60, 255],   // Amber orange
+            Self::NeutralThird => [255, 64, 129, 255], // Rose violet
             Self::SubminorSupermajor => [179, 136, 255, 255], // Lavender
-            Self::Octave => [0, 255, 180, 255],               // Mint green
-            Self::OtherMicrotonal => [76, 201, 240, 255],     // Light blue
+            Self::Octave => [0, 255, 180, 255],        // Mint green
+            Self::OtherMicrotonal => [76, 201, 240, 255], // Light blue
         }
     }
 
@@ -270,13 +270,42 @@ impl IsomorphicLatticeView {
         }
 
         // Header Panel (y: 10..46, x: 20..width-20)
-        fill_rounded_rect_iso(&mut pixels, width, height, 20, 10, width - 40, 36, 4, [18, 24, 38, 255]);
+        fill_rounded_rect_iso(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            4,
+            [18, 24, 38, 255],
+        );
 
         // Main Lattice Canvas (x: 20..width-20, y: 56..height-60)
         let canvas_w = width - 40;
         let canvas_h = height - 120;
-        fill_rounded_rect_iso(&mut pixels, width, height, 20, 56, canvas_w, canvas_h, 6, [14, 20, 32, 255]);
-        draw_rect_border_iso(&mut pixels, width, height, 20, 56, canvas_w, canvas_h, [45, 60, 85, 255]);
+        fill_rounded_rect_iso(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            canvas_w,
+            canvas_h,
+            6,
+            [14, 20, 32, 255],
+        );
+        draw_rect_border_iso(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            canvas_w,
+            canvas_h,
+            [45, 60, 85, 255],
+        );
 
         let center_x = 20.0 + canvas_w as f32 * 0.5;
         let center_y = 56.0 + canvas_h as f32 * 0.5;
@@ -299,17 +328,52 @@ impl IsomorphicLatticeView {
 
             // Outer Hit-Target Ring (Radius >= 24pt -> Diameter >= 48pt >= 44pt)
             draw_circle_ring_iso(&mut pixels, width, height, cx, cy, self.hex_radius, col);
-            draw_circle_filled_iso(&mut pixels, width, height, cx, cy, self.hex_radius - 2.0, bg_col);
+            draw_circle_filled_iso(
+                &mut pixels,
+                width,
+                height,
+                cx,
+                cy,
+                self.hex_radius - 2.0,
+                bg_col,
+            );
 
             if node.is_active {
-                draw_circle_ring_iso(&mut pixels, width, height, cx, cy, self.hex_radius + 4.0, [255, 215, 0, 220]);
+                draw_circle_ring_iso(
+                    &mut pixels,
+                    width,
+                    height,
+                    cx,
+                    cy,
+                    self.hex_radius + 4.0,
+                    [255, 215, 0, 220],
+                );
             }
         }
 
         // Bottom Footer Bar (x: 20..width-20, y: height-54..height-14)
         let footer_y = height - 54;
-        fill_rounded_rect_iso(&mut pixels, width, height, 20, footer_y, canvas_w, 40, 4, [16, 35, 28, 255]);
-        draw_rect_border_iso(&mut pixels, width, height, 20, footer_y, canvas_w, 40, [0, 255, 180, 255]);
+        fill_rounded_rect_iso(
+            &mut pixels,
+            width,
+            height,
+            20,
+            footer_y,
+            canvas_w,
+            40,
+            4,
+            [16, 35, 28, 255],
+        );
+        draw_rect_border_iso(
+            &mut pixels,
+            width,
+            height,
+            20,
+            footer_y,
+            canvas_w,
+            40,
+            [0, 255, 180, 255],
+        );
 
         encode_minimal_png_iso(path, &pixels, width, height)
     }
@@ -358,7 +422,11 @@ impl IsomorphicLatticeView {
             } else if node.is_root {
                 Color32::from_rgb(0, 255, 180)
             } else {
-                Color32::from_rgb(col_rgb[0] / 3 + 12, col_rgb[1] / 3 + 16, col_rgb[2] / 3 + 24)
+                Color32::from_rgb(
+                    col_rgb[0] / 3 + 12,
+                    col_rgb[1] / 3 + 16,
+                    col_rgb[2] / 3 + 24,
+                )
             };
 
             // Hit target circle (Radius >= 24pt -> Diameter >= 48pt >= 44pt)
@@ -447,7 +515,16 @@ fn fill_rounded_rect_iso(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_rect_border_iso(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+fn draw_rect_border_iso(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    col: [u8; 4],
+) {
     for x in rx..(rx + rw).min(w) {
         if ry < h {
             let idx = ((ry * w + x) * 4) as usize;
@@ -509,7 +586,12 @@ fn draw_circle_ring_iso(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32
     }
 }
 
-fn encode_minimal_png_iso(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_iso(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::new();
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 
@@ -603,7 +685,10 @@ mod tests {
     #[test]
     fn test_isomorphic_lattice_view_hit_target_dimensions() {
         let view = IsomorphicLatticeView::default();
-        assert!(view.hex_radius * 2.0 >= MIN_HIT_TARGET_PT, "Hit target diameter must be >= 44pt");
+        assert!(
+            view.hex_radius * 2.0 >= MIN_HIT_TARGET_PT,
+            "Hit target diameter must be >= 44pt"
+        );
     }
 
     #[test]

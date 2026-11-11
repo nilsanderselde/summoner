@@ -5,15 +5,14 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::quantum_bloch_sphere_view::{
-        QuantumStatePreset, QuantumBlochSphereView, QUANTUM_PUCK_HIT_RADIUS,
-        NUM_BLOCH_ORBIT_POINTS,
-    };
+    use crate::layout_math::Rect;
     use crate::views::chaotic_attractor_view::{
         AttractorSystemType, ChaoticAttractorPreset, ChaoticAttractorView,
         ATTRACTOR_PUCK_HIT_RADIUS, NUM_TRAJECTORY_POINTS,
     };
-    use crate::layout_math::Rect;
+    use crate::views::quantum_bloch_sphere_view::{
+        QuantumBlochSphereView, QuantumStatePreset, NUM_BLOCH_ORBIT_POINTS, QUANTUM_PUCK_HIT_RADIUS,
+    };
     use std::f32::consts::PI;
 
     #[test]
@@ -24,10 +23,38 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (QuantumStatePreset::HadamardSuperposition, "Hadamard Superposition |+⟩ (Equator)", 0.50, 0.0, 440.0, 0.02),
-            (QuantumStatePreset::ExcitedStatePauliX, "Excited State Pauli-X |1⟩ (South Pole)", 0.00, 0.0, 220.0, 0.01),
-            (QuantumStatePreset::BellPhaseEntangled, "Bell Phase Entangled |+i⟩ (Y Axis)", 0.50, PI * 0.5, 550.0, 0.05),
-            (QuantumStatePreset::GroundCoherentState, "Ground Coherent State |0⟩ (North Pole)", 1.00, 0.0, 440.0, 0.00),
+            (
+                QuantumStatePreset::HadamardSuperposition,
+                "Hadamard Superposition |+⟩ (Equator)",
+                0.50,
+                0.0,
+                440.0,
+                0.02,
+            ),
+            (
+                QuantumStatePreset::ExcitedStatePauliX,
+                "Excited State Pauli-X |1⟩ (South Pole)",
+                0.00,
+                0.0,
+                220.0,
+                0.01,
+            ),
+            (
+                QuantumStatePreset::BellPhaseEntangled,
+                "Bell Phase Entangled |+i⟩ (Y Axis)",
+                0.50,
+                PI * 0.5,
+                550.0,
+                0.05,
+            ),
+            (
+                QuantumStatePreset::GroundCoherentState,
+                "Ground Coherent State |0⟩ (North Pole)",
+                1.00,
+                0.0,
+                440.0,
+                0.00,
+            ),
         ];
 
         for (p, exp_name, exp_alpha, exp_phi, exp_freq, exp_decoh) in presets {
@@ -107,10 +134,42 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (ChaoticAttractorPreset::ClassicLorenzButterfly, "Classic Lorenz Butterfly (ρ=28.0, σ=10.0)", AttractorSystemType::LorenzSystem, 28.0, 10.0, 2.667, 0.010),
-            (ChaoticAttractorPreset::RosslerStrangeAttractor, "Rössler Strange Attractor (Folded Band)", AttractorSystemType::RosslerSystem, 15.0, 6.0, 2.000, 0.015),
-            (ChaoticAttractorPreset::HyperchaoticConvection, "Hyperchaotic Convection (ρ=45.0, σ=18.0)", AttractorSystemType::LorenzSystem, 45.0, 18.0, 3.200, 0.008),
-            (ChaoticAttractorPreset::SubcriticalLimitCycle, "Subcritical Limit Cycle (ρ=22.0, σ=8.0)", AttractorSystemType::LorenzSystem, 22.0, 8.0, 2.000, 0.012),
+            (
+                ChaoticAttractorPreset::ClassicLorenzButterfly,
+                "Classic Lorenz Butterfly (ρ=28.0, σ=10.0)",
+                AttractorSystemType::LorenzSystem,
+                28.0,
+                10.0,
+                2.667,
+                0.010,
+            ),
+            (
+                ChaoticAttractorPreset::RosslerStrangeAttractor,
+                "Rössler Strange Attractor (Folded Band)",
+                AttractorSystemType::RosslerSystem,
+                15.0,
+                6.0,
+                2.000,
+                0.015,
+            ),
+            (
+                ChaoticAttractorPreset::HyperchaoticConvection,
+                "Hyperchaotic Convection (ρ=45.0, σ=18.0)",
+                AttractorSystemType::LorenzSystem,
+                45.0,
+                18.0,
+                3.200,
+                0.008,
+            ),
+            (
+                ChaoticAttractorPreset::SubcriticalLimitCycle,
+                "Subcritical Limit Cycle (ρ=22.0, σ=8.0)",
+                AttractorSystemType::LorenzSystem,
+                22.0,
+                8.0,
+                2.000,
+                0.012,
+            ),
         ];
 
         for (p, exp_name, exp_type, exp_rho, exp_sigma, exp_beta, exp_dt) in presets {
@@ -178,8 +237,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -208,19 +267,31 @@ pub mod gui_tests {
         view.sync_quantum_bloch_sphere_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("alpha_prob").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("alpha_prob")
+                .copied(),
             Some(0.65)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("relative_phase_rad").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("relative_phase_rad")
+                .copied(),
             Some(1.57)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("alpha_prob").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("alpha_prob")
+                .copied(),
             Some(0.65)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("relative_phase_rad").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("relative_phase_rad")
+                .copied(),
             Some(1.57)
         );
 
@@ -232,19 +303,31 @@ pub mod gui_tests {
         view.sync_chaotic_attractor_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("rayleigh_rho").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("rayleigh_rho")
+                .copied(),
             Some(35.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("prandtl_sigma").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("prandtl_sigma")
+                .copied(),
             Some(12.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("rayleigh_rho").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("rayleigh_rho")
+                .copied(),
             Some(35.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("prandtl_sigma").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("prandtl_sigma")
+                .copied(),
             Some(12.0)
         );
 
@@ -259,12 +342,27 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let quantum_action = palette.actions.iter().find(|a| a.action_id == "open_quantum_bloch_sphere_hud");
-        assert!(quantum_action.is_some(), "open_quantum_bloch_sphere_hud should be registered");
-        assert_eq!(quantum_action.unwrap().category, "Quantum & Spectral Synthesis");
+        let quantum_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_quantum_bloch_sphere_hud");
+        assert!(
+            quantum_action.is_some(),
+            "open_quantum_bloch_sphere_hud should be registered"
+        );
+        assert_eq!(
+            quantum_action.unwrap().category,
+            "Quantum & Spectral Synthesis"
+        );
 
-        let chaos_action = palette.actions.iter().find(|a| a.action_id == "open_chaotic_attractor_hud");
-        assert!(chaos_action.is_some(), "open_chaotic_attractor_hud should be registered");
+        let chaos_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_chaotic_attractor_hud");
+        assert!(
+            chaos_action.is_some(),
+            "open_chaotic_attractor_hud should be registered"
+        );
         assert_eq!(chaos_action.unwrap().category, "Modulation & Dynamics");
     }
 }

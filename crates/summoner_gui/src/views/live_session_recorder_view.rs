@@ -83,7 +83,9 @@ impl LiveRecorderPreset {
         match self {
             Self::MasterStereoWav44k => (0.0, -0.1, 44100, LiveRecordDiskFormat::Wav16BitPcm, 2.0),
             Self::ArchivalFlac48k => (0.0, -0.3, 48000, LiveRecordDiskFormat::FlacLossless24, 3.5),
-            Self::BroadcastSafeMaster => (-1.5, -1.0, 48000, LiveRecordDiskFormat::Wav24BitPcm, 1.5),
+            Self::BroadcastSafeMaster => {
+                (-1.5, -1.0, 48000, LiveRecordDiskFormat::Wav24BitPcm, 1.5)
+            }
             Self::ModularJamHeadroom => (-6.0, -0.5, 44100, LiveRecordDiskFormat::Wav24BitPcm, 4.0),
         }
     }
@@ -232,7 +234,8 @@ impl LiveSessionRecorderView {
     /// Evaluates synthetic master stereo waveform envelope at normalized time t in [0.0..=1.0].
     pub fn evaluate_waveform_envelope(&self, norm_t: f32) -> f32 {
         let t = norm_t.clamp(0.0, 1.0);
-        let raw = ((t * 6.0 * PI).sin() * 0.65 + (t * 14.0 * PI).cos() * 0.35) * self.linear_trim_gain();
+        let raw =
+            ((t * 6.0 * PI).sin() * 0.65 + (t * 14.0 * PI).cos() * 0.35) * self.linear_trim_gain();
         let ceil = self.linear_ceiling_limit();
         raw.clamp(-ceil, ceil)
     }
@@ -264,7 +267,11 @@ impl LiveSessionRecorderView {
         out.push_str(&format!(" Preset:           {}\n", self.preset.name()));
         out.push_str(&format!(
             " Status:           {} | Format: {} @ {} Hz\n",
-            if self.is_recording { "RECORDING [ON-AIR]" } else { "STANDBY [READY]" },
+            if self.is_recording {
+                "RECORDING [ON-AIR]"
+            } else {
+                "STANDBY [READY]"
+            },
             self.format.label(),
             self.sample_rate
         ));
@@ -339,7 +346,11 @@ impl LiveSessionRecorderView {
                     }
                 }
 
-                let rec_label = if self.is_recording { "⏹ STOP REC" } else { "⏺ ARM & RECORD" };
+                let rec_label = if self.is_recording {
+                    "⏹ STOP REC"
+                } else {
+                    "⏺ ARM & RECORD"
+                };
                 let rec_btn = egui::Button::new(
                     RichText::new(rec_label)
                         .color(Color32::WHITE)
@@ -452,7 +463,10 @@ impl LiveSessionRecorderView {
                 ui.label(RichText::new("Input Trim Gain:").size(11.0));
                 let mut t = self.input_trim_db;
                 if ui
-                    .add(egui::Slider::new(&mut t, MIN_INPUT_TRIM_DB..=MAX_INPUT_TRIM_DB).suffix(" dB"))
+                    .add(
+                        egui::Slider::new(&mut t, MIN_INPUT_TRIM_DB..=MAX_INPUT_TRIM_DB)
+                            .suffix(" dB"),
+                    )
                     .changed()
                 {
                     self.input_trim_db = t;

@@ -205,10 +205,7 @@ impl HurdyGurdyView {
         let border = format!("+{}+", "-".repeat(width.saturating_sub(2)));
         lines.push(border.clone());
 
-        let title = format!(
-            "| HURDY-GURDY HUD | Preset: {} |",
-            self.preset.name()
-        );
+        let title = format!("| HURDY-GURDY HUD | Preset: {} |", self.preset.name());
         let title_padded = format!("{:<width$}|", title, width = width - 1);
         lines.push(title_padded);
 
@@ -264,7 +261,12 @@ impl HurdyGurdyView {
     }
 
     /// Render headless PNG snapshot visualizer for layout alignment, touch target verification, and WCAG contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep Slate (#0A0E18)
@@ -336,10 +338,9 @@ impl HurdyGurdyView {
             for x_px in c_left..c_right {
                 let x_norm = (x_px - c_left) as f32 / canvas_w;
                 let wave_freq = (3.0 + str_idx as f32 * 2.0) * PI * speed_norm;
-                let wave = (x_norm * wave_freq * pulse_factor).sin()
-                    * (x_norm * PI).sin()
-                    * 12.0;
-                let y_px = (center_y + wave).clamp(c_top as f32 + 2.0, c_bottom as f32 - 2.0) as usize;
+                let wave = (x_norm * wave_freq * pulse_factor).sin() * (x_norm * PI).sin() * 12.0;
+                let y_px =
+                    (center_y + wave).clamp(c_top as f32 + 2.0, c_bottom as f32 - 2.0) as usize;
 
                 let idx = (y_px * width + x_px) * 4;
                 if str_idx < 2 {
@@ -404,7 +405,8 @@ impl HurdyGurdyView {
             }
         }
 
-        let mix_split_x = bar_left + ((bar_right - bar_left) as f32 * (1.0 - self.drone_melody_mix)) as usize;
+        let mix_split_x =
+            bar_left + ((bar_right - bar_left) as f32 * (1.0 - self.drone_melody_mix)) as usize;
         for y in bar_y_start..bar_y_end {
             for x in bar_left..=mix_split_x.min(bar_right) {
                 let idx = (y * width + x) * 4;
@@ -433,22 +435,58 @@ impl HurdyGurdyView {
 
             ui.horizontal(|ui| {
                 ui.label("Preset:");
-                if ui.selectable_label(self.preset == HurdyGurdyHudPreset::BourbonnaisTraditional, "Bourbonnais Vielle").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == HurdyGurdyHudPreset::BourbonnaisTraditional,
+                        "Bourbonnais Vielle",
+                    )
+                    .clicked()
+                {
                     self.set_preset(HurdyGurdyHudPreset::BourbonnaisTraditional);
                 }
-                if ui.selectable_label(self.preset == HurdyGurdyHudPreset::MedievalSymphonia, "Medieval Symphonia").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == HurdyGurdyHudPreset::MedievalSymphonia,
+                        "Medieval Symphonia",
+                    )
+                    .clicked()
+                {
                     self.set_preset(HurdyGurdyHudPreset::MedievalSymphonia);
                 }
-                if ui.selectable_label(self.preset == HurdyGurdyHudPreset::BaroqueVirtuoso, "Baroque Virtuoso").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == HurdyGurdyHudPreset::BaroqueVirtuoso,
+                        "Baroque Virtuoso",
+                    )
+                    .clicked()
+                {
                     self.set_preset(HurdyGurdyHudPreset::BaroqueVirtuoso);
                 }
-                if ui.selectable_label(self.preset == HurdyGurdyHudPreset::AuvergneFolkSnarl, "Auvergne Folk").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == HurdyGurdyHudPreset::AuvergneFolkSnarl,
+                        "Auvergne Folk",
+                    )
+                    .clicked()
+                {
                     self.set_preset(HurdyGurdyHudPreset::AuvergneFolkSnarl);
                 }
-                if ui.selectable_label(self.preset == HurdyGurdyHudPreset::GothicPaganDrone, "Gothic Pagan").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == HurdyGurdyHudPreset::GothicPaganDrone,
+                        "Gothic Pagan",
+                    )
+                    .clicked()
+                {
                     self.set_preset(HurdyGurdyHudPreset::GothicPaganDrone);
                 }
-                if ui.selectable_label(self.preset == HurdyGurdyHudPreset::ElectroAcousticModern, "Electro Hybrid").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == HurdyGurdyHudPreset::ElectroAcousticModern,
+                        "Electro Hybrid",
+                    )
+                    .clicked()
+                {
                     self.set_preset(HurdyGurdyHudPreset::ElectroAcousticModern);
                 }
             });
@@ -458,25 +496,54 @@ impl HurdyGurdyView {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.label("Crank Wheel & Coup de Poignet Dynamics:");
-                    ui.add(egui::Slider::new(&mut self.crank_speed_rad_s, MIN_CRANK_SPEED_RAD_S..=MAX_CRANK_SPEED_RAD_S).text("Crank Speed (rad/s)"));
-                    ui.add(egui::Slider::new(&mut self.wrist_acceleration_pulse, MIN_WRIST_ACCEL_IMPULSE..=MAX_WRIST_ACCEL_IMPULSE).text("Coup de Poignet"));
-                    ui.add(egui::Slider::new(&mut self.wheel_pressure, 0.01..=1.0).text("Wheel Pressure"));
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.crank_speed_rad_s,
+                            MIN_CRANK_SPEED_RAD_S..=MAX_CRANK_SPEED_RAD_S,
+                        )
+                        .text("Crank Speed (rad/s)"),
+                    );
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.wrist_acceleration_pulse,
+                            MIN_WRIST_ACCEL_IMPULSE..=MAX_WRIST_ACCEL_IMPULSE,
+                        )
+                        .text("Coup de Poignet"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.wheel_pressure, 0.01..=1.0)
+                            .text("Wheel Pressure"),
+                    );
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
                     ui.label("Chien & Acoustic Mix:");
-                    ui.add(egui::Slider::new(&mut self.chien_clearance_mm, 0.05..=1.20).text("Chien Clearance (mm)"));
-                    ui.add(egui::Slider::new(&mut self.drone_melody_mix, 0.0..=1.0).text("Drone/Melody Mix"));
-                    ui.add(egui::Slider::new(&mut self.trompette_buzz_level, 0.0..=2.0).text("Trompette Buzz"));
+                    ui.add(
+                        egui::Slider::new(&mut self.chien_clearance_mm, 0.05..=1.20)
+                            .text("Chien Clearance (mm)"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.drone_melody_mix, 0.0..=1.0)
+                            .text("Drone/Melody Mix"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.trompette_buzz_level, 0.0..=2.0)
+                            .text("Trompette Buzz"),
+                    );
                 });
             });
         });
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 

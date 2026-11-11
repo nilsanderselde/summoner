@@ -5,11 +5,11 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::views::rank_voicing_view::{
-        RankVoicingView, VoicingRankType, RANK_VOICING_PUCK_HIT_RADIUS,
-        MIN_CUTUP, MAX_CUTUP, MIN_TOE_HOLE, MAX_TOE_HOLE,
+        RankVoicingView, VoicingRankType, MAX_CUTUP, MAX_TOE_HOLE, MIN_CUTUP, MIN_TOE_HOLE,
+        RANK_VOICING_PUCK_HIT_RADIUS,
     };
     use crate::views::tine_resonator_view::{
-        TineResonatorView, TineResonatorProfile, TINE_PUCK_HIT_RADIUS,
+        TineResonatorProfile, TineResonatorView, TINE_PUCK_HIT_RADIUS,
     };
     use summoner_core::param_bus::ParamId;
 
@@ -140,8 +140,8 @@ pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn70_gui_award_winning_view_headless_rendering_without_panic() {
@@ -185,7 +185,11 @@ pub mod gui_tests {
     fn test_turn70_gui_live_parambus_slot_dispatch() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -208,9 +212,20 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(0.50));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(110.0));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("cutup_ratio"), Some(&0.35));
-        assert_eq!(view.device_rack_state.node_param_values.get("toe_hole_aperture"), Some(&0.75));
-        assert_eq!(view.inspector_state.node_param_values.get("cutup_ratio"), Some(&0.35));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("cutup_ratio"),
+            Some(&0.35)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("toe_hole_aperture"),
+            Some(&0.75)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("cutup_ratio"),
+            Some(&0.35)
+        );
 
         // 2. Sync Electromechanical Tine Resonator HUD
         view.tine_resonator_view.tonebar_coupling = 0.82;
@@ -224,9 +239,24 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(6.4));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(0.72));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("tonebar_coupling"), Some(&0.82));
-        assert_eq!(view.device_rack_state.node_param_values.get("beam_stiffness"), Some(&0.44));
-        assert_eq!(view.inspector_state.node_param_values.get("tonebar_coupling"), Some(&0.82));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("tonebar_coupling"),
+            Some(&0.82)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("beam_stiffness"),
+            Some(&0.44)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("tonebar_coupling"),
+            Some(&0.82)
+        );
     }
 
     #[test]
@@ -259,13 +289,19 @@ pub mod gui_tests {
     #[test]
     fn test_turn70_gui_command_palette_action_registration() {
         let palette = CommandPalette::new();
-        let rank_action = palette.actions.iter().find(|a| a.action_id == "open_rank_voicing_hud");
+        let rank_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_rank_voicing_hud");
         assert!(rank_action.is_some());
         let rank = rank_action.unwrap();
         assert_eq!(rank.category, "Physical Modeling");
         assert!(rank.label.contains("Voicing"));
 
-        let tine_action = palette.actions.iter().find(|a| a.action_id == "open_tine_resonator_hud");
+        let tine_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_tine_resonator_hud");
         assert!(tine_action.is_some());
         let tine = tine_action.unwrap();
         assert_eq!(tine.category, "Physical Modeling");

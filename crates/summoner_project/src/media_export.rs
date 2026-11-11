@@ -545,7 +545,8 @@ fn tokenize_lua_expr(expr: &str) -> Vec<LuaToken> {
             i += 1;
             continue;
         }
-        if c.is_ascii_digit() || (c == '.' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit()) {
+        if c.is_ascii_digit() || (c == '.' && i + 1 < chars.len() && chars[i + 1].is_ascii_digit())
+        {
             let start = i;
             i += 1;
             while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
@@ -944,7 +945,11 @@ impl LuaScriptEngine {
         let num_points = (duration_beats * 2.0) as usize;
         for i in 0..=num_points {
             let beat = i as f64 * 0.5;
-            let norm_t = if duration_beats > 0.0 { beat / duration_beats } else { 0.0 };
+            let norm_t = if duration_beats > 0.0 {
+                beat / duration_beats
+            } else {
+                0.0
+            };
             let val = match self.evaluate_curve(clean, norm_t) {
                 Ok(v) => v as f32,
                 Err(_) => (beat * 0.5).sin() as f32 * 0.5 + 0.5,

@@ -6,27 +6,65 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::transient_clipper_view::{
-        TransientClipperView, ClipperProfileType, CLIPPER_PUCK_HIT_RADIUS,
-    };
+    use crate::layout_math::Rect;
     use crate::views::tape_flux_master_view::{
         TapeFluxMasterView, TapeFormulation, TAPE_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
+    use crate::views::transient_clipper_view::{
+        ClipperProfileType, TransientClipperView, CLIPPER_PUCK_HIT_RADIUS,
+    };
 
     #[test]
     fn test_turn108_pure_transient_clipper_initialization_and_kinematics() {
         let mut view = TransientClipperView::new();
-        assert_eq!(view.profile_type, ClipperProfileType::LinearPhase4BandMaster);
+        assert_eq!(
+            view.profile_type,
+            ClipperProfileType::LinearPhase4BandMaster
+        );
         assert_eq!(CLIPPER_PUCK_HIT_RADIUS, 22.0); // >= 44x44pt bounding target
 
         // Profiles and nominal values
         let profiles = [
-            (ClipperProfileType::LinearPhase4BandMaster, "4-BAND LINEAR-PHASE MASTER CLIPPER", 6.0, 3.5, 8, -0.1),
-            (ClipperProfileType::Oversampled16xPcmCeiling, "16x OVERSAMPLED TRUE-PEAK CEILING", 8.5, 1.5, 16, -0.3),
-            (ClipperProfileType::TapeSoftSaturatingClipper, "TAPE SOFT-SATURATING KNEE", 4.5, 8.0, 4, -0.2),
-            (ClipperProfileType::HardPunchEDMClipper, "HARD PUNCH BRICKWALL CLIPPER", 11.0, 0.0, 8, 0.0),
-            (ClipperProfileType::BroadcastMultiStageClipper, "BROADCAST MULTI-STAGE PEAK CONTROL", 5.0, 4.0, 16, -0.5),
+            (
+                ClipperProfileType::LinearPhase4BandMaster,
+                "4-BAND LINEAR-PHASE MASTER CLIPPER",
+                6.0,
+                3.5,
+                8,
+                -0.1,
+            ),
+            (
+                ClipperProfileType::Oversampled16xPcmCeiling,
+                "16x OVERSAMPLED TRUE-PEAK CEILING",
+                8.5,
+                1.5,
+                16,
+                -0.3,
+            ),
+            (
+                ClipperProfileType::TapeSoftSaturatingClipper,
+                "TAPE SOFT-SATURATING KNEE",
+                4.5,
+                8.0,
+                4,
+                -0.2,
+            ),
+            (
+                ClipperProfileType::HardPunchEDMClipper,
+                "HARD PUNCH BRICKWALL CLIPPER",
+                11.0,
+                0.0,
+                8,
+                0.0,
+            ),
+            (
+                ClipperProfileType::BroadcastMultiStageClipper,
+                "BROADCAST MULTI-STAGE PEAK CONTROL",
+                5.0,
+                4.0,
+                16,
+                -0.5,
+            ),
         ];
 
         for (p, expected_name, nom_drive, nom_knee, nom_os, nom_ceil) in profiles {
@@ -95,11 +133,51 @@ pub mod pure_tests {
 
         // Formulations and nominal values
         let formulations = [
-            (TapeFormulation::Ampex456GrandMaster, "AMPEX 456 GRAND MASTER (+6)", 6.0, 1.5, 15.0, 55.0, 0.85),
-            (TapeFormulation::StuderA800MasterTape, "STUDER A800 MASTER (+9)", 9.0, 3.0, 30.0, 42.0, 0.25),
-            (TapeFormulation::QuantegyGP9, "QUANTEGY GP9 (+9 MAX)", 11.5, 4.5, 30.0, 38.0, 0.35),
-            (TapeFormulation::CassetteTypeIVMetal, "CASSETTE TYPE IV METAL", 3.5, 0.5, 3.75, 95.0, 1.95),
-            (TapeFormulation::VintageTubeTape1958, "VINTAGE TUBE TAPE (1958)", 4.0, -1.5, 15.0, 68.0, 2.40),
+            (
+                TapeFormulation::Ampex456GrandMaster,
+                "AMPEX 456 GRAND MASTER (+6)",
+                6.0,
+                1.5,
+                15.0,
+                55.0,
+                0.85,
+            ),
+            (
+                TapeFormulation::StuderA800MasterTape,
+                "STUDER A800 MASTER (+9)",
+                9.0,
+                3.0,
+                30.0,
+                42.0,
+                0.25,
+            ),
+            (
+                TapeFormulation::QuantegyGP9,
+                "QUANTEGY GP9 (+9 MAX)",
+                11.5,
+                4.5,
+                30.0,
+                38.0,
+                0.35,
+            ),
+            (
+                TapeFormulation::CassetteTypeIVMetal,
+                "CASSETTE TYPE IV METAL",
+                3.5,
+                0.5,
+                3.75,
+                95.0,
+                1.95,
+            ),
+            (
+                TapeFormulation::VintageTubeTape1958,
+                "VINTAGE TUBE TAPE (1958)",
+                4.0,
+                -1.5,
+                15.0,
+                68.0,
+                2.40,
+            ),
         ];
 
         for (f, expected_name, nom_drive, nom_bias, nom_speed, nom_bump, nom_thd) in formulations {
@@ -164,8 +242,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -195,31 +273,52 @@ pub mod gui_tests {
         view.sync_transient_clipper_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("clip_drive_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("clip_drive_db")
+                .copied(),
             Some(7.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("knee_softness_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("knee_softness_db")
+                .copied(),
             Some(4.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("ceiling_dbfs").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("ceiling_dbfs")
+                .copied(),
             Some(-0.2)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("oversampling_order").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("oversampling_order")
+                .copied(),
             Some(16.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("threshold_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("threshold_db")
+                .copied(),
             Some(7.5)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("clip_hardness").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("clip_hardness")
+                .copied(),
             Some(4.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("ceiling_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("ceiling_db")
+                .copied(),
             Some(-0.2)
         );
 
@@ -232,23 +331,38 @@ pub mod gui_tests {
         view.sync_tape_flux_master_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("flux_drive_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("flux_drive_db")
+                .copied(),
             Some(10.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("bias_trim_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("bias_trim_db")
+                .copied(),
             Some(2.2)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("tape_speed_ips").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("tape_speed_ips")
+                .copied(),
             Some(30.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("tape_flux_nanoweber").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("tape_flux_nanoweber")
+                .copied(),
             Some(10.5)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("bias_hf_saturation").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("bias_hf_saturation")
+                .copied(),
             Some(2.2)
         );
 
@@ -263,12 +377,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let clip_action = palette.actions.iter().find(|a| a.action_id == "open_transient_clipper_hud");
-        assert!(clip_action.is_some(), "open_transient_clipper_hud should be registered");
+        let clip_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_transient_clipper_hud");
+        assert!(
+            clip_action.is_some(),
+            "open_transient_clipper_hud should be registered"
+        );
         assert_eq!(clip_action.unwrap().category, "Mastering & Dynamics");
 
-        let tape_action = palette.actions.iter().find(|a| a.action_id == "open_tape_flux_master_hud");
-        assert!(tape_action.is_some(), "open_tape_flux_master_hud should be registered");
+        let tape_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_tape_flux_master_hud");
+        assert!(
+            tape_action.is_some(),
+            "open_tape_flux_master_hud should be registered"
+        );
         assert_eq!(tape_action.unwrap().category, "Dynamics & Saturation");
     }
 }

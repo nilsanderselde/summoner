@@ -490,7 +490,16 @@ impl RotarySpeakerView {
         let drum_y1 = cy + d_angle.sin() * 70.0;
         let drum_x2 = cx - d_angle.cos() * 70.0;
         let drum_y2 = cy - d_angle.sin() * 70.0;
-        draw_line_segment_rot(&mut pixels, width, height, drum_x1, drum_y1, drum_x2, drum_y2, cyan);
+        draw_line_segment_rot(
+            &mut pixels,
+            width,
+            height,
+            drum_x1,
+            drum_y1,
+            drum_x2,
+            drum_y2,
+            cyan,
+        );
 
         // Treble Horn rotor vector
         let h_angle = self.horn_angle_rad;
@@ -498,7 +507,16 @@ impl RotarySpeakerView {
         let horn_y1 = cy + h_angle.sin() * 55.0;
         let horn_x2 = cx - h_angle.cos() * 55.0;
         let horn_y2 = cy - h_angle.sin() * 55.0;
-        draw_line_segment_rot(&mut pixels, width, height, horn_x1, horn_y1, horn_x2, horn_y2, orange);
+        draw_line_segment_rot(
+            &mut pixels,
+            width,
+            height,
+            horn_x1,
+            horn_y1,
+            horn_x2,
+            horn_y2,
+            orange,
+        );
         draw_circle_filled_rot(&mut pixels, width, height, horn_x1, horn_y1, 8.0, orange);
         draw_circle_filled_rot(&mut pixels, width, height, cx, cy, 6.0, amber);
 
@@ -511,16 +529,41 @@ impl RotarySpeakerView {
         let mic_r_y = cy - spread_rad.cos() * mic_r;
 
         draw_circle_filled_rot(&mut pixels, width, height, mic_l_x, mic_l_y, 6.0, green);
-        draw_circle_stroke_rot(&mut pixels, width, height, mic_l_x, mic_l_y, ROTARY_HANDLE_HIT_RADIUS, cyan);
+        draw_circle_stroke_rot(
+            &mut pixels,
+            width,
+            height,
+            mic_l_x,
+            mic_l_y,
+            ROTARY_HANDLE_HIT_RADIUS,
+            cyan,
+        );
         draw_circle_filled_rot(&mut pixels, width, height, mic_r_x, mic_r_y, 6.0, green);
-        draw_circle_stroke_rot(&mut pixels, width, height, mic_r_x, mic_r_y, ROTARY_HANDLE_HIT_RADIUS, cyan);
+        draw_circle_stroke_rot(
+            &mut pixels,
+            width,
+            height,
+            mic_r_x,
+            mic_r_y,
+            ROTARY_HANDLE_HIT_RADIUS,
+            cyan,
+        );
 
         // Doppler scope curve on right side
         let scope_x0 = (width as f32) * 0.55;
         let scope_x1 = (width as f32) * 0.95;
         let scope_mid_y = cy;
 
-        draw_line_segment_rot(&mut pixels, width, height, scope_x0, scope_mid_y, scope_x1, scope_mid_y, slate);
+        draw_line_segment_rot(
+            &mut pixels,
+            width,
+            height,
+            scope_x0,
+            scope_mid_y,
+            scope_x1,
+            scope_mid_y,
+            slate,
+        );
 
         let mut prev_pt: Option<(f32, f32)> = None;
         for i in 0..64 {
@@ -539,7 +582,16 @@ impl RotarySpeakerView {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_line_segment_rot(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+fn draw_line_segment_rot(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    col: [u8; 4],
+) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let steps = (dx.abs().max(dy.abs()) as usize).max(1);
@@ -587,7 +639,12 @@ fn draw_circle_stroke_rot(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f
     }
 }
 
-fn encode_minimal_png_rot(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_rot(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

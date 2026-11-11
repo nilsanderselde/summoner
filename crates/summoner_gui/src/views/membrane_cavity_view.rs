@@ -61,13 +61,13 @@ impl MembraneInstrumentViewProfile {
 #[derive(Debug, Clone)]
 pub struct MembraneCavityView {
     pub instrument: MembraneInstrumentViewProfile,
-    pub radial_strike_pos: f32, // [0.0 center ..= 1.0 rim]
-    pub strike_velocity: f32,   // [0.05 ..= 1.00]
-    pub mallet_hardness: f32,   // [0.0 ..= 1.0]
-    pub air_cavity_depth: f32,  // [0.0 ..= 1.0]
+    pub radial_strike_pos: f32,    // [0.0 center ..= 1.0 rim]
+    pub strike_velocity: f32,      // [0.05 ..= 1.00]
+    pub mallet_hardness: f32,      // [0.0 ..= 1.0]
+    pub air_cavity_depth: f32,     // [0.0 ..= 1.0]
     pub kettle_tension_cents: f32, // [-1200.0 ..= 1200.0]
-    pub rimshot_damping: f32,   // [0.0 ..= 1.0]
-    pub puck_pos: (f32, f32),   // Normalized (X: radial_strike_pos, Y: strike_velocity)
+    pub rimshot_damping: f32,      // [0.0 ..= 1.0]
+    pub puck_pos: (f32, f32),      // Normalized (X: radial_strike_pos, Y: strike_velocity)
     pub is_dragging_puck: bool,
     pub peak_cavity_pressure_pa: f32,
     pub active_bessel_modes: usize,
@@ -151,9 +151,11 @@ impl MembraneCavityView {
         // Mode (1,1) Dipole
         let a11 = (strike_r * 1.2) * bessel_j1_approx(3.8317 * r_clamped) * theta.cos();
         // Mode (2,1) Quadrupole
-        let a21 = (strike_r.powi(2) * 1.1) * bessel_j2_approx(5.1356 * r_clamped) * (2.0 * theta).cos();
+        let a21 =
+            (strike_r.powi(2) * 1.1) * bessel_j2_approx(5.1356 * r_clamped) * (2.0 * theta).cos();
         // Mode (0,2) Second radial
-        let a02 = (1.0 - (strike_r - 0.5).abs() * 1.5).max(0.0) * bessel_j0_approx(5.5201 * r_clamped);
+        let a02 =
+            (1.0 - (strike_r - 0.5).abs() * 1.5).max(0.0) * bessel_j0_approx(5.5201 * r_clamped);
 
         let total = (a01 + a11 * 0.85 + a21 * 0.60 + a02 * 0.40) * self.strike_velocity;
         total.clamp(-1.5, 1.5)
@@ -262,10 +264,7 @@ impl MembraneCavityView {
         painter.circle_stroke(
             egui::pos2(center_x, center_y),
             radius,
-            Stroke::new(
-                4.0_f32,
-                Color32::from_rgb(255, 170, 0),
-            ),
+            Stroke::new(4.0_f32, Color32::from_rgb(255, 170, 0)),
         );
 
         // Concentric Nodal Rings (alpha 0.30)
@@ -273,10 +272,7 @@ impl MembraneCavityView {
             painter.circle_stroke(
                 egui::pos2(center_x, center_y),
                 radius * ring_frac,
-                Stroke::new(
-                    1.0_f32,
-                    Color32::from_rgba_unmultiplied(60, 75, 100, 75),
-                ),
+                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(60, 75, 100, 75)),
             );
         }
 
@@ -304,7 +300,11 @@ impl MembraneCavityView {
         let metrics_x = rect.min.x + rect.width() * 0.68;
         let metrics_y = rect.min.y + 45.0;
         let metrics = [
-            format!("STRIKE RADIUS r: {:.2} ({:.0}%)", self.radial_strike_pos, self.radial_strike_pos * 100.0),
+            format!(
+                "STRIKE RADIUS r: {:.2} ({:.0}%)",
+                self.radial_strike_pos,
+                self.radial_strike_pos * 100.0
+            ),
             format!("STRIKE VELOCITY: {:.2}", self.strike_velocity),
             format!("MALLET HARDNESS: {:.2}", self.mallet_hardness),
             format!("AIR CAVITY DEPTH: {:.2}", self.air_cavity_depth),
@@ -445,12 +445,20 @@ fn bessel_j1_approx(x: f32) -> f32 {
         x * (0.5 + y * (-0.5624998 + y * 0.2109357))
     } else {
         let ans = (1.0 / ax.sqrt()) * (ax - 2.356194).cos() * 0.79788;
-        if x < 0.0 { -ans } else { ans }
+        if x < 0.0 {
+            -ans
+        } else {
+            ans
+        }
     }
 }
 
 fn bessel_j2_approx(x: f32) -> f32 {
-    if x.abs() < 1e-4 { 0.0 } else { (2.0 / x) * bessel_j1_approx(x) - bessel_j0_approx(x) }
+    if x.abs() < 1e-4 {
+        0.0
+    } else {
+        (2.0 / x) * bessel_j1_approx(x) - bessel_j0_approx(x)
+    }
 }
 
 fn draw_circle_filled_mem(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32, col: [u8; 4]) {
@@ -492,7 +500,12 @@ fn draw_circle_ring_mem(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32
     }
 }
 
-fn encode_minimal_png_mem(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_mem(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

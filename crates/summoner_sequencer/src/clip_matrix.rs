@@ -50,9 +50,9 @@ impl LaunchQuantize {
 pub enum LaunchMode {
     #[default]
     Trigger, // Starts on downbeat and loops continuously until stopped
-    Gate,    // Plays only while held down; stops on release
-    Toggle,  // First trigger starts, second trigger stops
-    Repeat,  // Retriggers continuously at the quantize interval
+    Gate,   // Plays only while held down; stops on release
+    Toggle, // First trigger starts, second trigger stops
+    Repeat, // Retriggers continuously at the quantize interval
 }
 
 /// Follow action target behavior after a clip finishes playing.
@@ -164,9 +164,19 @@ impl ClipSlot {
 /// Command event emitted by the matrix engine when clip state transitions occur.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum MatrixEvent {
-    ClipStarted { track_idx: usize, scene_idx: usize, start_beat: f64 },
-    ClipStopped { track_idx: usize, scene_idx: usize },
-    SceneLaunched { scene_idx: usize, beat: f64 },
+    ClipStarted {
+        track_idx: usize,
+        scene_idx: usize,
+        start_beat: f64,
+    },
+    ClipStopped {
+        track_idx: usize,
+        scene_idx: usize,
+    },
+    SceneLaunched {
+        scene_idx: usize,
+        beat: f64,
+    },
 }
 
 /// A recorded clip performance captured from Session View into the timeline Arrangement.
@@ -384,20 +394,26 @@ impl ClipMatrix {
     fn execute_clip_launch(&mut self, track_idx: usize, scene_idx: usize, current_beat: f64) {
         // Track live performance if arrangement recording is active
         if self.arrangement_recorder.is_recording {
-            let slot_name = self.slots[self.slot_index(track_idx, scene_idx)].name.clone();
+            let slot_name = self.slots[self.slot_index(track_idx, scene_idx)]
+                .name
+                .clone();
             let slot_len = self.slots[self.slot_index(track_idx, scene_idx)].length_beats;
-            if let Some((old_scene, old_name, start_beat, loop_len)) =
-                self.arrangement_recorder.active_track_clips.remove(&track_idx)
+            if let Some((old_scene, old_name, start_beat, loop_len)) = self
+                .arrangement_recorder
+                .active_track_clips
+                .remove(&track_idx)
             {
                 let length = (current_beat - start_beat).max(0.25);
-                self.arrangement_recorder.recorded_clips.push(ArrangementRecordedClip {
-                    track_idx,
-                    scene_idx: old_scene,
-                    clip_name: old_name,
-                    timeline_start_beat: start_beat,
-                    timeline_length_beats: length,
-                    loop_length_beats: loop_len,
-                });
+                self.arrangement_recorder
+                    .recorded_clips
+                    .push(ArrangementRecordedClip {
+                        track_idx,
+                        scene_idx: old_scene,
+                        clip_name: old_name,
+                        timeline_start_beat: start_beat,
+                        timeline_length_beats: length,
+                        loop_length_beats: loop_len,
+                    });
             }
             self.arrangement_recorder
                 .active_track_clips
@@ -632,14 +648,16 @@ impl ClipMatrix {
         let active = std::mem::take(&mut self.arrangement_recorder.active_track_clips);
         for (track_idx, (scene_idx, name, start_beat, loop_len)) in active {
             let length = (end_beat - start_beat).max(0.25);
-            self.arrangement_recorder.recorded_clips.push(ArrangementRecordedClip {
-                track_idx,
-                scene_idx,
-                clip_name: name,
-                timeline_start_beat: start_beat,
-                timeline_length_beats: length,
-                loop_length_beats: loop_len,
-            });
+            self.arrangement_recorder
+                .recorded_clips
+                .push(ArrangementRecordedClip {
+                    track_idx,
+                    scene_idx,
+                    clip_name: name,
+                    timeline_start_beat: start_beat,
+                    timeline_length_beats: length,
+                    loop_length_beats: loop_len,
+                });
         }
         self.arrangement_recorder.recorded_clips.clone()
     }
@@ -665,7 +683,10 @@ mod tests {
         // Queue Scene 0 at beat 0.5
         matrix.trigger_scene(0, false);
         assert_eq!(matrix.queued_scene_idx, Some(0));
-        assert_eq!(matrix.get_slot(0, 0).unwrap().state, SlotState::QueuedToPlay);
+        assert_eq!(
+            matrix.get_slot(0, 0).unwrap().state,
+            SlotState::QueuedToPlay
+        );
 
         // Advance to beat 3.9 (before 1 bar = 4 beats)
         matrix.evaluate_tick(3.9, 4.0, 3.4);

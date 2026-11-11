@@ -165,10 +165,7 @@ pub mod pure_tests {
     #[test]
     fn test_turn127_pure_multiband_compressor_initialization_and_svf_crossover_physics() {
         let mut view = MultibandCompressorView::new();
-        assert_eq!(
-            view.preset,
-            MultibandCompressorPreset::StudioThreeBandGlue
-        );
+        assert_eq!(view.preset, MultibandCompressorPreset::StudioThreeBandGlue);
         assert_eq!(MULTIBAND_COMP_PUCK_HIT_RADIUS, 22.0); // >= 44x44pt touch bounding target
 
         // Presets and expected parameters

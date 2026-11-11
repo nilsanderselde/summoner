@@ -84,9 +84,17 @@ pub mod pure_tests {
 
         // Ambisonic Format channel counts and names
         let formats = [
-            (AmbisonicFormat::FirstOrderBFormat, 4, "1st Order (FOA / 4-ch)"),
+            (
+                AmbisonicFormat::FirstOrderBFormat,
+                4,
+                "1st Order (FOA / 4-ch)",
+            ),
             (AmbisonicFormat::SecondOrderHOA, 9, "2nd Order (HOA / 9-ch)"),
-            (AmbisonicFormat::ThirdOrderHOA, 16, "3rd Order (HOA / 16-ch)"),
+            (
+                AmbisonicFormat::ThirdOrderHOA,
+                16,
+                "3rd Order (HOA / 16-ch)",
+            ),
             (AmbisonicFormat::Surround51, 6, "5.1 Surround"),
             (AmbisonicFormat::Atmos714, 12, "7.1.4 Dolby Atmos"),
             (AmbisonicFormat::Immersive916, 16, "9.1.6 Immersive 3D"),
@@ -190,8 +198,12 @@ pub mod pure_tests {
 pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_device_rack::{show_modern_device_rack_with_context, ModernDeviceRackState};
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
+    use crate::views::modern_device_rack::{
+        show_modern_device_rack_with_context, ModernDeviceRackState,
+    };
+    use crate::views::modern_inspector::{
+        show_modern_inspector_with_context, ModernInspectorState,
+    };
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
@@ -238,7 +250,11 @@ pub mod gui_tests {
     fn test_turn84_gui_lock_free_param_bus_dispatch_spatial_trajectory_and_ambisonic_radar() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -261,10 +277,26 @@ pub mod gui_tests {
 
         view.sync_spatial_trajectory_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("distance_m"), Some(&5.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("grain_density"), Some(&50.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("grain_duration_ms"), Some(&75.0));
-        assert_eq!(view.inspector_state.node_param_values.get("grain_spray"), Some(&0.25));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("distance_m"),
+            Some(&5.5)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("grain_density"),
+            Some(&50.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("grain_duration_ms"),
+            Some(&75.0)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("grain_spray"),
+            Some(&0.25)
+        );
 
         let pid_dist = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 2);
         assert_eq!(arc_bus.get(pid_dist), Some(5.5));
@@ -281,11 +313,30 @@ pub mod gui_tests {
 
         view.sync_ambisonic_radar_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("azimuth_deg"), Some(&-45.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("elevation_deg"), Some(&20.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("distance_m"), Some(&3.2));
-        assert_eq!(view.device_rack_state.node_param_values.get("gain_db"), Some(&-3.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("master_elevation_offset_deg"), Some(&5.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("azimuth_deg"),
+            Some(&-45.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("elevation_deg"),
+            Some(&20.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("distance_m"),
+            Some(&3.2)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("gain_db"),
+            Some(&-3.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("master_elevation_offset_deg"),
+            Some(&5.0)
+        );
 
         let pid_az = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_gain = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 4);
@@ -335,11 +386,12 @@ pub mod gui_tests {
         }];
 
         inspector_state.selected_node_kind = Some("AmbisonicRadarView".to_string());
-        inspector_state.chain_devices = vec![crate::views::modern_device_rack::RackChainDeviceVisual {
-            kind: "AmbisonicRadarView".to_string(),
-            display_name: "Ambisonic Radar".to_string(),
-            is_bypassed: false,
-        }];
+        inspector_state.chain_devices =
+            vec![crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind: "AmbisonicRadarView".to_string(),
+                display_name: "Ambisonic Radar".to_string(),
+                is_bypassed: false,
+            }];
 
         let bus = ParamBus::new();
 
@@ -355,10 +407,22 @@ pub mod gui_tests {
     #[test]
     fn test_turn84_gui_command_palette_registration_spatial_trajectory_and_ambisonic_radar() {
         let palette = CommandPalette::new();
-        let has_spatial_traj = palette.actions.iter().any(|a| a.action_id == "open_spatial_trajectory_hud");
-        let has_ambisonic_radar = palette.actions.iter().any(|a| a.action_id == "open_ambisonic_radar_hud");
+        let has_spatial_traj = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_spatial_trajectory_hud");
+        let has_ambisonic_radar = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_ambisonic_radar_hud");
 
-        assert!(has_spatial_traj, "Expected open_spatial_trajectory_hud in CommandPalette");
-        assert!(has_ambisonic_radar, "Expected open_ambisonic_radar_hud in CommandPalette");
+        assert!(
+            has_spatial_traj,
+            "Expected open_spatial_trajectory_hud in CommandPalette"
+        );
+        assert!(
+            has_ambisonic_radar,
+            "Expected open_ambisonic_radar_hud in CommandPalette"
+        );
     }
 }

@@ -70,7 +70,8 @@ impl RenderWorkerNode {
 
     pub fn available_slots(&self) -> usize {
         if self.status == WorkerNodeStatus::Idle {
-            self.max_parallel_stems.saturating_sub(self.active_job_ids.len())
+            self.max_parallel_stems
+                .saturating_sub(self.active_job_ids.len())
         } else {
             0
         }
@@ -244,7 +245,11 @@ impl CloudRenderFarmCoordinator {
                 continue;
             }
 
-            for task in job.stem_tasks.iter_mut().filter(|t| !t.is_completed && t.assigned_worker_id.is_none()) {
+            for task in job
+                .stem_tasks
+                .iter_mut()
+                .filter(|t| !t.is_completed && t.assigned_worker_id.is_none())
+            {
                 // Find worker with highest remaining capacity
                 available_workers.sort_by_key(|b| std::cmp::Reverse(b.1));
                 if let Some((worker_id, ref mut slots)) = available_workers.first_mut() {
@@ -256,7 +261,11 @@ impl CloudRenderFarmCoordinator {
                 }
             }
 
-            if job.stem_tasks.iter().any(|t| t.assigned_worker_id.is_some() && !t.is_completed) {
+            if job
+                .stem_tasks
+                .iter()
+                .any(|t| t.assigned_worker_id.is_some() && !t.is_completed)
+            {
                 job.status = RenderJobStatus::Rendering;
             }
         }
@@ -272,7 +281,10 @@ impl CloudRenderFarmCoordinator {
         output_file: &str,
         byte_size: usize,
     ) -> Result<(), String> {
-        let job = self.jobs.get_mut(job_id).ok_or_else(|| format!("Job {} not found", job_id))?;
+        let job = self
+            .jobs
+            .get_mut(job_id)
+            .ok_or_else(|| format!("Job {} not found", job_id))?;
 
         let task = job
             .stem_tasks
@@ -290,7 +302,10 @@ impl CloudRenderFarmCoordinator {
             job.completed_at_timestamp = Some(1700000100);
 
             // Generate delivery manifest
-            let mut manifest = format!("DELIVERY MANIFEST: {}\nFORMAT: {:?}\nSTEMS:\n", job.project_name, job.target_format);
+            let mut manifest = format!(
+                "DELIVERY MANIFEST: {}\nFORMAT: {:?}\nSTEMS:\n",
+                job.project_name, job.target_format
+            );
             for t in &job.stem_tasks {
                 manifest.push_str(&format!(
                     " - {} [{} ch, {} bytes] -> {}\n",
@@ -367,7 +382,12 @@ mod tests {
         coordinator.register_worker(w1);
         coordinator.register_worker(w2);
 
-        let mut job = DistributedRenderJob::new("job_002", "Electronic Stems", RenderTargetFormat::StemsArchiveZip, 44100);
+        let mut job = DistributedRenderJob::new(
+            "job_002",
+            "Electronic Stems",
+            RenderTargetFormat::StemsArchiveZip,
+            44100,
+        );
         for i in 1..=6 {
             job.add_stem_task(i, &format!("Track {}", i), 2, 120.0);
         }
@@ -389,7 +409,12 @@ mod tests {
         let w = RenderWorkerNode::new("w_single", "node.local", 8);
         coordinator.register_worker(w);
 
-        let mut job = DistributedRenderJob::new("job_003", "Mini Mix", RenderTargetFormat::StereoMasterWav, 96000);
+        let mut job = DistributedRenderJob::new(
+            "job_003",
+            "Mini Mix",
+            RenderTargetFormat::StereoMasterWav,
+            96000,
+        );
         job.add_stem_task(1, "Master Stereo", 2, 60.0);
         coordinator.submit_job(job);
 
@@ -416,12 +441,19 @@ mod tests {
         w1.last_heartbeat_timestamp = 100;
         coordinator.register_worker(w1);
 
-        let mut job = DistributedRenderJob::new("job_failover", "Failover Test", RenderTargetFormat::StemsArchiveZip, 48000);
+        let mut job = DistributedRenderJob::new(
+            "job_failover",
+            "Failover Test",
+            RenderTargetFormat::StemsArchiveZip,
+            48000,
+        );
         job.add_stem_task(10, "Synths", 2, 60.0);
         coordinator.submit_job(job);
 
         coordinator.schedule_pending_tasks();
-        assert!(coordinator.get_job("job_failover").unwrap().stem_tasks[0].assigned_worker_id.is_some());
+        assert!(coordinator.get_job("job_failover").unwrap().stem_tasks[0]
+            .assigned_worker_id
+            .is_some());
 
         // Heartbeat timeout occurs at timestamp 200 (> 30s timeout)
         let rescheduled = coordinator.prune_dead_workers(200);
@@ -433,4 +465,3 @@ mod tests {
         assert!(!task.is_completed);
     }
 }
-

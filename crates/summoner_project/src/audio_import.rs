@@ -95,9 +95,8 @@ impl DecodedAudio {
 /// Decode any supported audio file from disk into a `DecodedAudio` structure.
 pub fn decode_audio_file<P: AsRef<Path>>(path: P) -> Result<DecodedAudio, String> {
     let path_ref = path.as_ref();
-    let file = fs::File::open(path_ref).map_err(|e| {
-        format!("Failed to open audio file '{}': {}", path_ref.display(), e)
-    })?;
+    let file = fs::File::open(path_ref)
+        .map_err(|e| format!("Failed to open audio file '{}': {}", path_ref.display(), e))?;
 
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
 
@@ -111,7 +110,13 @@ pub fn decode_audio_file<P: AsRef<Path>>(path: P) -> Result<DecodedAudio, String
 
     let probed = symphonia::default::get_probe()
         .format(&hint, mss, &fmt_opts, &meta_opts)
-        .map_err(|e| format!("Failed to probe audio format of '{}': {}", path_ref.display(), e))?;
+        .map_err(|e| {
+            format!(
+                "Failed to probe audio format of '{}': {}",
+                path_ref.display(),
+                e
+            )
+        })?;
 
     let mut format = probed.format;
 
@@ -123,7 +128,11 @@ pub fn decode_audio_file<P: AsRef<Path>>(path: P) -> Result<DecodedAudio, String
 
     let track_id = track.id;
     let sample_rate = track.codec_params.sample_rate.unwrap_or(44100);
-    let channels = track.codec_params.channels.map(|c| c.count() as u16).unwrap_or(2);
+    let channels = track
+        .codec_params
+        .channels
+        .map(|c| c.count() as u16)
+        .unwrap_or(2);
     let codec_name = format!("{:?}", track.codec_params.codec);
 
     let dec_opts: DecoderOptions = Default::default();
@@ -137,7 +146,9 @@ pub fn decode_audio_file<P: AsRef<Path>>(path: P) -> Result<DecodedAudio, String
         let packet = match format.next_packet() {
             Ok(p) => p,
             Err(Error::ResetRequired) => continue,
-            Err(Error::IoError(ref err)) if err.kind() == std::io::ErrorKind::UnexpectedEof => break,
+            Err(Error::IoError(ref err)) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
+                break
+            }
             Err(Error::IoError(_)) => break,
             Err(err) => return Err(format!("Error reading packet: {}", err)),
         };
@@ -192,7 +203,9 @@ pub fn decode_audio_file<P: AsRef<Path>>(path: P) -> Result<DecodedAudio, String
                 }
                 _ => {}
             },
-            Err(Error::IoError(ref err)) if err.kind() == std::io::ErrorKind::UnexpectedEof => break,
+            Err(Error::IoError(ref err)) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
+                break
+            }
             Err(Error::DecodeError(_)) => continue,
             Err(err) => return Err(format!("Decode error: {}", err)),
         }
@@ -230,7 +243,8 @@ mod tests {
         let mut writer = WavWriter::create(&wav_path, spec).unwrap();
         // Write 480 frames of 1 kHz sine wave
         for i in 0..480 {
-            let s = ((i as f32 * 1000.0 * std::f32::consts::TAU / 48000.0).sin() * 8_000_000.0) as i32;
+            let s =
+                ((i as f32 * 1000.0 * std::f32::consts::TAU / 48000.0).sin() * 8_000_000.0) as i32;
             writer.write_sample(s).unwrap();
             writer.write_sample(s).unwrap();
         }
@@ -281,4 +295,3 @@ mod tests {
         let _ = fs::remove_dir(temp_dir);
     }
 }
-

@@ -4,14 +4,15 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::layout_math::Rect;
     use crate::views::electric_piano_view::{
-        ElectricPianoView, GuiEpProfile, GuiEpModel, EP_PUCK_HIT_RADIUS,
+        ElectricPianoView, GuiEpModel, GuiEpProfile, EP_PUCK_HIT_RADIUS,
     };
     use crate::views::tonewheel_organ_view::{
-        TonewheelOrganView, GuiVibratoMode, DrawbarColorGroup, DRAWBAR_INFO, DRAWBAR_HANDLE_HIT_RADIUS,
+        DrawbarColorGroup, GuiVibratoMode, TonewheelOrganView, DRAWBAR_HANDLE_HIT_RADIUS,
+        DRAWBAR_INFO,
     };
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn60_pure_electric_piano_models_and_simulation() {
@@ -125,8 +126,14 @@ pub mod pure_tests {
 
         // Hit testing
         assert!(view.hit_test_drawbar_handle((100.0, 100.0), (100.0, 100.0)));
-        assert!(view.hit_test_drawbar_handle((100.0 + DRAWBAR_HANDLE_HIT_RADIUS * 0.8, 100.0), (100.0, 100.0)));
-        assert!(!view.hit_test_drawbar_handle((100.0 + DRAWBAR_HANDLE_HIT_RADIUS * 1.5, 100.0), (100.0, 100.0)));
+        assert!(view.hit_test_drawbar_handle(
+            (100.0 + DRAWBAR_HANDLE_HIT_RADIUS * 0.8, 100.0),
+            (100.0, 100.0)
+        ));
+        assert!(!view.hit_test_drawbar_handle(
+            (100.0 + DRAWBAR_HANDLE_HIT_RADIUS * 1.5, 100.0),
+            (100.0, 100.0)
+        ));
 
         assert_eq!(DRAWBAR_INFO.len(), 9);
         assert_eq!(DRAWBAR_INFO[0].2, DrawbarColorGroup::BrownSubOctave);
@@ -155,7 +162,8 @@ pub mod pure_tests {
                 let base = track_id * 1000 + slot_idx * 20;
                 for offset in 0..6 {
                     let pid = ParamId(base + offset);
-                    let expected = (track_id as f32) * 100.0 + (slot_idx as f32) * 10.0 + offset as f32;
+                    let expected =
+                        (track_id as f32) * 100.0 + (slot_idx as f32) * 10.0 + offset as f32;
                     assert_eq!(bus.get(pid), Some(expected));
                 }
             }
@@ -178,11 +186,11 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
+    use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::command_palette::CommandPalette;
 
     #[test]
     fn test_turn60_gui_award_winning_view_modals_lifecycle() {
@@ -225,7 +233,11 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
 
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -246,10 +258,34 @@ pub mod gui_tests {
 
         view.sync_electric_piano_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("air_gap_mm").copied(), Some(2.2));
-        assert_eq!(view.device_rack_state.node_param_values.get("alignment_offset_mm").copied(), Some(0.8));
-        assert_eq!(view.inspector_state.node_param_values.get("air_gap_mm").copied(), Some(2.2));
-        assert_eq!(view.inspector_state.node_param_values.get("alignment_offset_mm").copied(), Some(0.8));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("air_gap_mm")
+                .copied(),
+            Some(2.2)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("alignment_offset_mm")
+                .copied(),
+            Some(0.8)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("air_gap_mm")
+                .copied(),
+            Some(2.2)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("alignment_offset_mm")
+                .copied(),
+            Some(0.8)
+        );
 
         assert_eq!(arc_bus.get(ParamId(base)), Some(2.2));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(0.8));
@@ -268,10 +304,34 @@ pub mod gui_tests {
 
         view.sync_tonewheel_organ_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("drawbar_16").copied(), Some(7.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("drawbar_8").copied(), Some(6.0));
-        assert_eq!(view.inspector_state.node_param_values.get("drawbar_16").copied(), Some(7.0));
-        assert_eq!(view.inspector_state.node_param_values.get("drawbar_8").copied(), Some(6.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("drawbar_16")
+                .copied(),
+            Some(7.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("drawbar_8")
+                .copied(),
+            Some(6.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("drawbar_16")
+                .copied(),
+            Some(7.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("drawbar_8")
+                .copied(),
+            Some(6.0)
+        );
 
         assert_eq!(arc_bus.get(ParamId(base)), Some(7.0));
         assert_eq!(arc_bus.get(ParamId(base + 1)), Some(6.0));
@@ -311,13 +371,19 @@ pub mod gui_tests {
     #[test]
     fn test_turn60_gui_command_palette_actions_registered() {
         let palette = CommandPalette::new();
-        let ep_action = palette.actions.iter().find(|a| a.action_id == "open_electric_piano_hud");
+        let ep_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_electric_piano_hud");
         assert!(ep_action.is_some());
         let ep = ep_action.unwrap();
         assert_eq!(ep.category, "Physical Modeling");
         assert!(ep.label.contains("Electric Piano"));
 
-        let organ_action = palette.actions.iter().find(|a| a.action_id == "open_tonewheel_organ_hud");
+        let organ_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_tonewheel_organ_hud");
         assert!(organ_action.is_some());
         let organ = organ_action.unwrap();
         assert_eq!(organ.category, "Physical Modeling");

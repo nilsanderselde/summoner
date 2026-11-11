@@ -4,16 +4,16 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::layout_math::Rect;
-    use crate::views::steelpan_drum_view::{
-        SteelpanDrumView, SteelpanType, STEELPAN_PUCK_HIT_RADIUS,
-        MIN_RADIAL_POS, MAX_RADIAL_POS, MIN_STRIKE_VELOCITY, MAX_STRIKE_VELOCITY,
-    };
     use crate::views::mbira_kalimba_view::{
-        MbiraKalimbaView, MbiraType, MBIRA_PUCK_HIT_RADIUS,
-        MIN_PLUCK_FORCE_N, MAX_PLUCK_FORCE_N, MIN_BUZZ_INTENSITY, MAX_BUZZ_INTENSITY,
+        MbiraKalimbaView, MbiraType, MAX_BUZZ_INTENSITY, MAX_PLUCK_FORCE_N, MBIRA_PUCK_HIT_RADIUS,
+        MIN_BUZZ_INTENSITY, MIN_PLUCK_FORCE_N,
     };
+    use crate::views::steelpan_drum_view::{
+        SteelpanDrumView, SteelpanType, MAX_RADIAL_POS, MAX_STRIKE_VELOCITY, MIN_RADIAL_POS,
+        MIN_STRIKE_VELOCITY, STEELPAN_PUCK_HIT_RADIUS,
+    };
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn56_pure_steelpan_drum_instruments_and_simulation() {
@@ -142,19 +142,19 @@ pub mod pure_tests {
         let mut bus = ParamBus::new();
 
         // Track 4, Slot 0: Caribbean Steelpan
-        let pid_pan_rad   = ParamId(4 * 1000 + 0 * 20 + 0);
-        let pid_pan_vel   = ParamId(4 * 1000 + 0 * 20 + 1);
+        let pid_pan_rad = ParamId(4 * 1000 + 0 * 20 + 0);
+        let pid_pan_vel = ParamId(4 * 1000 + 0 * 20 + 1);
         let pid_pan_gauge = ParamId(4 * 1000 + 0 * 20 + 2);
-        let pid_pan_damp  = ParamId(4 * 1000 + 0 * 20 + 3);
-        let pid_pan_ring  = ParamId(4 * 1000 + 0 * 20 + 4);
+        let pid_pan_damp = ParamId(4 * 1000 + 0 * 20 + 3);
+        let pid_pan_ring = ParamId(4 * 1000 + 0 * 20 + 4);
         let pid_pan_rings = ParamId(4 * 1000 + 0 * 20 + 5);
 
         // Track 4, Slot 1: Lamellophone Mbira
         let pid_mbi_force = ParamId(4 * 1000 + 1 * 20 + 0);
-        let pid_mbi_buzz  = ParamId(4 * 1000 + 1 * 20 + 1);
-        let pid_mbi_disp  = ParamId(4 * 1000 + 1 * 20 + 2);
+        let pid_mbi_buzz = ParamId(4 * 1000 + 1 * 20 + 1);
+        let pid_mbi_disp = ParamId(4 * 1000 + 1 * 20 + 2);
         let pid_mbi_decay = ParamId(4 * 1000 + 1 * 20 + 3);
-        let pid_mbi_q     = ParamId(4 * 1000 + 1 * 20 + 4);
+        let pid_mbi_q = ParamId(4 * 1000 + 1 * 20 + 4);
         let pid_mbi_tines = ParamId(4 * 1000 + 1 * 20 + 5);
 
         bus.register(pid_pan_rad, 0.45);
@@ -210,11 +210,11 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use std::sync::Arc;
-    use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use eframe::egui;
+    use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn56_gui_modal_lifecycle() {
@@ -238,7 +238,11 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
 
-        let cur_track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let cur_track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let cur_slot = view.device_rack_state.selected_chain_idx;
 
         // Register ParamBus slots for Steelpan
@@ -249,7 +253,7 @@ pub mod gui_tests {
 
         // Register ParamBus slots for Mbira
         let pid_mbi_force = ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20);
-        let pid_mbi_buzz  = ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
+        let pid_mbi_buzz = ParamId(cur_track_id as u32 * 1000 + cur_slot as u32 * 20 + 1);
         bus.register(pid_mbi_force, 2.4);
         bus.register(pid_mbi_buzz, 0.85);
 
@@ -263,8 +267,18 @@ pub mod gui_tests {
 
         assert_eq!(arc_bus.get(pid_pan_rad), Some(0.82));
         assert_eq!(arc_bus.get(pid_pan_vel), Some(0.92));
-        assert_eq!(view.device_rack_state.node_param_values.get("strike_radial_pos"), Some(&0.82));
-        assert_eq!(view.inspector_state.node_param_values.get("strike_velocity"), Some(&0.92));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("strike_radial_pos"),
+            Some(&0.82)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("strike_velocity"),
+            Some(&0.92)
+        );
 
         // Mutate Mbira
         view.mbira_view.pluck_force_n = 3.8;
@@ -273,8 +287,18 @@ pub mod gui_tests {
 
         assert_eq!(arc_bus.get(pid_mbi_force), Some(3.8));
         assert_eq!(arc_bus.get(pid_mbi_buzz), Some(0.42));
-        assert_eq!(view.device_rack_state.node_param_values.get("pluck_force_n"), Some(&3.8));
-        assert_eq!(view.inspector_state.node_param_values.get("buzz_intensity_pct"), Some(&0.42));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("pluck_force_n"),
+            Some(&3.8)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("buzz_intensity_pct"),
+            Some(&0.42)
+        );
     }
 
     #[test]
@@ -284,7 +308,9 @@ pub mod gui_tests {
         // Test Steelpan inspector trigger propagation
         assert!(!view.is_steelpan_hud_open());
         view.inspector_state.requested_open_steelpan_hud = true;
-        if view.inspector_state.requested_open_steelpan_hud || view.device_rack_state.requested_open_steelpan_hud {
+        if view.inspector_state.requested_open_steelpan_hud
+            || view.device_rack_state.requested_open_steelpan_hud
+        {
             view.inspector_state.requested_open_steelpan_hud = false;
             view.device_rack_state.requested_open_steelpan_hud = false;
             view.open_steelpan_hud();
@@ -296,7 +322,9 @@ pub mod gui_tests {
         // Test Mbira device rack trigger propagation
         assert!(!view.is_mbira_hud_open());
         view.device_rack_state.requested_open_mbira_hud = true;
-        if view.inspector_state.requested_open_mbira_hud || view.device_rack_state.requested_open_mbira_hud {
+        if view.inspector_state.requested_open_mbira_hud
+            || view.device_rack_state.requested_open_mbira_hud
+        {
             view.inspector_state.requested_open_mbira_hud = false;
             view.device_rack_state.requested_open_mbira_hud = false;
             view.open_mbira_hud();
@@ -311,11 +339,21 @@ pub mod gui_tests {
         let palette = CommandPalette::new();
         let actions = &palette.actions;
 
-        let has_steelpan = actions.iter().any(|a| a.action_id == "open_steelpan_hud" && a.category == "Physical Modeling");
-        assert!(has_steelpan, "open_steelpan_hud command action must be registered in command palette");
+        let has_steelpan = actions
+            .iter()
+            .any(|a| a.action_id == "open_steelpan_hud" && a.category == "Physical Modeling");
+        assert!(
+            has_steelpan,
+            "open_steelpan_hud command action must be registered in command palette"
+        );
 
-        let has_mbira = actions.iter().any(|a| a.action_id == "open_mbira_hud" && a.category == "Physical Modeling");
-        assert!(has_mbira, "open_mbira_hud command action must be registered in command palette");
+        let has_mbira = actions
+            .iter()
+            .any(|a| a.action_id == "open_mbira_hud" && a.category == "Physical Modeling");
+        assert!(
+            has_mbira,
+            "open_mbira_hud command action must be registered in command palette"
+        );
     }
 
     #[test]

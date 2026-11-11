@@ -206,9 +206,13 @@ impl TapeStopGlitchView {
 
     pub fn render_ascii_snapshot(&self) -> String {
         let mut out = String::new();
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str("   SUMMONER DAW — VINYL TURNTABLE TAPE STOP & STUTTER CHOPPER HUD\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str(&format!(" Preset: {}\n", self.preset.name()));
         out.push_str(" Touch Target: [PASS: >=44pt]\n");
         out.push_str(&format!(
@@ -224,11 +228,17 @@ impl TapeStopGlitchView {
         ));
         out.push_str(&format!(
             " Status: {} | Speed Ratio: {:.1}% | Pitch Dive: {:.1} semitones\n",
-            if self.is_stopped { "STOPPED" } else { "RUNNING" },
+            if self.is_stopped {
+                "STOPPED"
+            } else {
+                "RUNNING"
+            },
             self.current_speed_ratio * 100.0,
             self.pitch_drop_semitones
         ));
-        out.push_str("--------------------------------------------------------------------------------\n");
+        out.push_str(
+            "--------------------------------------------------------------------------------\n",
+        );
         out.push_str(" Deceleration Velocity Profile v(t):\n");
 
         let curve = self.evaluate_deceleration_curve();
@@ -247,8 +257,13 @@ impl TapeStopGlitchView {
             out.push('\n');
         }
         out.push_str("     +--------------------------------\n");
-        out.push_str(&format!("      0ms                            {:.0}ms\n", self.brake_duration_ms));
-        out.push_str("================================================================================\n");
+        out.push_str(&format!(
+            "      0ms                            {:.0}ms\n",
+            self.brake_duration_ms
+        ));
+        out.push_str(
+            "================================================================================\n",
+        );
         out
     }
 
@@ -293,9 +308,17 @@ impl TapeStopGlitchView {
                     let btn = egui::Button::new(
                         RichText::new(label)
                             .font(FontId::proportional(11.0))
-                            .color(if is_active { Color32::WHITE } else { Color32::from_rgb(203, 213, 225) }),
+                            .color(if is_active {
+                                Color32::WHITE
+                            } else {
+                                Color32::from_rgb(203, 213, 225)
+                            }),
                     )
-                    .fill(if is_active { Color32::from_rgb(180, 83, 9) } else { Color32::from_rgb(30, 41, 59) })
+                    .fill(if is_active {
+                        Color32::from_rgb(180, 83, 9)
+                    } else {
+                        Color32::from_rgb(30, 41, 59)
+                    })
                     .rounding(Rounding::same(4.0));
 
                     if ui.add(btn).clicked() {
@@ -304,12 +327,23 @@ impl TapeStopGlitchView {
                 }
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(
-                        RichText::new(if self.is_stopped { "▶ Motor Start" } else { "⏹ Brake Stop" })
+                    if ui
+                        .button(
+                            RichText::new(if self.is_stopped {
+                                "▶ Motor Start"
+                            } else {
+                                "⏹ Brake Stop"
+                            })
                             .font(FontId::proportional(11.0))
                             .strong()
-                            .color(if self.is_stopped { Color32::from_rgb(34, 197, 94) } else { Color32::from_rgb(239, 68, 68) }),
-                    ).clicked() {
+                            .color(if self.is_stopped {
+                                Color32::from_rgb(34, 197, 94)
+                            } else {
+                                Color32::from_rgb(239, 68, 68)
+                            }),
+                        )
+                        .clicked()
+                    {
                         if self.is_stopped {
                             self.trigger_start();
                         } else {
@@ -317,11 +351,14 @@ impl TapeStopGlitchView {
                         }
                     }
 
-                    if ui.button(
-                        RichText::new("⚡ Tap Stutter")
-                            .font(FontId::proportional(11.0))
-                            .color(Color32::from_rgb(245, 158, 11)),
-                    ).clicked() {
+                    if ui
+                        .button(
+                            RichText::new("⚡ Tap Stutter")
+                                .font(FontId::proportional(11.0))
+                                .color(Color32::from_rgb(245, 158, 11)),
+                        )
+                        .clicked()
+                    {
                         self.toggle_stutter();
                     }
                 });
@@ -332,32 +369,61 @@ impl TapeStopGlitchView {
             // Two-Panel Interactive Canvas
             ui.horizontal(|ui| {
                 // Left Panel: 2D Puck Canvas (Brake Duration vs Stutter Division)
-                let (canvas_rect, response) = ui.allocate_exact_size(Vec2::new(380.0, 210.0), egui::Sense::click_and_drag());
+                let (canvas_rect, response) =
+                    ui.allocate_exact_size(Vec2::new(380.0, 210.0), egui::Sense::click_and_drag());
                 let painter = ui.painter_at(canvas_rect);
 
                 // Background & Frame
-                painter.rect_filled(canvas_rect, Rounding::same(6.0), Color32::from_rgb(15, 23, 42));
-                painter.rect_stroke(canvas_rect, Rounding::same(6.0), Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                painter.rect_filled(
+                    canvas_rect,
+                    Rounding::same(6.0),
+                    Color32::from_rgb(15, 23, 42),
+                );
+                painter.rect_stroke(
+                    canvas_rect,
+                    Rounding::same(6.0),
+                    Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+                );
 
                 // Concentric vinyl groove circles
                 let center = canvas_rect.center();
                 for r in [25.0, 50.0, 75.0, 95.0] {
-                    painter.circle_stroke(center, r, Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(245, 158, 11, 25)));
+                    painter.circle_stroke(
+                        center,
+                        r,
+                        Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(245, 158, 11, 25)),
+                    );
                 }
 
                 // Grid lines
                 for i in 1..4 {
                     let gx = canvas_rect.left() + (canvas_rect.width() / 4.0) * (i as f32);
                     let gy = canvas_rect.top() + (canvas_rect.height() / 4.0) * (i as f32);
-                    painter.line_segment([egui::pos2(gx, canvas_rect.top()), egui::pos2(gx, canvas_rect.bottom())], Stroke::new(0.4_f32, Color32::from_rgb(30, 41, 59)));
-                    painter.line_segment([egui::pos2(canvas_rect.left(), gy), egui::pos2(canvas_rect.right(), gy)], Stroke::new(0.4_f32, Color32::from_rgb(30, 41, 59)));
+                    painter.line_segment(
+                        [
+                            egui::pos2(gx, canvas_rect.top()),
+                            egui::pos2(gx, canvas_rect.bottom()),
+                        ],
+                        Stroke::new(0.4_f32, Color32::from_rgb(30, 41, 59)),
+                    );
+                    painter.line_segment(
+                        [
+                            egui::pos2(canvas_rect.left(), gy),
+                            egui::pos2(canvas_rect.right(), gy),
+                        ],
+                        Stroke::new(0.4_f32, Color32::from_rgb(30, 41, 59)),
+                    );
                 }
 
                 // Interaction Logic
                 if response.dragged() || response.clicked() {
                     if let Some(pos) = response.interact_pointer_pos() {
-                        let nx = ((pos.x - canvas_rect.left() - 10.0) / (canvas_rect.width() - 20.0)).clamp(0.0, 1.0);
-                        let ny = 1.0 - ((pos.y - canvas_rect.top() - 10.0) / (canvas_rect.height() - 20.0)).clamp(0.0, 1.0);
+                        let nx = ((pos.x - canvas_rect.left() - 10.0)
+                            / (canvas_rect.width() - 20.0))
+                            .clamp(0.0, 1.0);
+                        let ny = 1.0
+                            - ((pos.y - canvas_rect.top() - 10.0) / (canvas_rect.height() - 20.0))
+                                .clamp(0.0, 1.0);
                         self.puck_pos = (nx, ny);
                         self.brake_duration_ms = Self::normalized_to_brake(nx);
                         self.stutter_division = Self::normalized_to_division(ny);
@@ -366,13 +432,23 @@ impl TapeStopGlitchView {
                 }
 
                 // Puck Rendering
-                let puck_x = canvas_rect.left() + 10.0 + self.puck_pos.0 * (canvas_rect.width() - 20.0);
-                let puck_y = canvas_rect.bottom() - 10.0 - self.puck_pos.1 * (canvas_rect.height() - 20.0);
+                let puck_x =
+                    canvas_rect.left() + 10.0 + self.puck_pos.0 * (canvas_rect.width() - 20.0);
+                let puck_y =
+                    canvas_rect.bottom() - 10.0 - self.puck_pos.1 * (canvas_rect.height() - 20.0);
                 let puck_pos = egui::pos2(puck_x, puck_y);
 
-                painter.circle_filled(puck_pos, TAPESTOP_PUCK_HIT_RADIUS, Color32::from_rgba_unmultiplied(245, 158, 11, 45));
+                painter.circle_filled(
+                    puck_pos,
+                    TAPESTOP_PUCK_HIT_RADIUS,
+                    Color32::from_rgba_unmultiplied(245, 158, 11, 45),
+                );
                 painter.circle_filled(puck_pos, 7.0, Color32::from_rgb(245, 158, 11));
-                painter.circle_stroke(puck_pos, TAPESTOP_PUCK_HIT_RADIUS, Stroke::new(1.2_f32, Color32::from_rgb(245, 158, 11)));
+                painter.circle_stroke(
+                    puck_pos,
+                    TAPESTOP_PUCK_HIT_RADIUS,
+                    Stroke::new(1.2_f32, Color32::from_rgb(245, 158, 11)),
+                );
                 painter.circle_stroke(puck_pos, 8.5, Stroke::new(1.5_f32, Color32::WHITE));
 
                 // Canvas Labels
@@ -393,10 +469,19 @@ impl TapeStopGlitchView {
 
                 // Right Panel: Deceleration Profile Curve & Speed Gauge
                 ui.vertical(|ui| {
-                    let (curve_rect, _) = ui.allocate_exact_size(Vec2::new(380.0, 110.0), egui::Sense::hover());
+                    let (curve_rect, _) =
+                        ui.allocate_exact_size(Vec2::new(380.0, 110.0), egui::Sense::hover());
                     let cpainter = ui.painter_at(curve_rect);
-                    cpainter.rect_filled(curve_rect, Rounding::same(6.0), Color32::from_rgb(15, 23, 42));
-                    cpainter.rect_stroke(curve_rect, Rounding::same(6.0), Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                    cpainter.rect_filled(
+                        curve_rect,
+                        Rounding::same(6.0),
+                        Color32::from_rgb(15, 23, 42),
+                    );
+                    cpainter.rect_stroke(
+                        curve_rect,
+                        Rounding::same(6.0),
+                        Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+                    );
 
                     let curve = self.evaluate_deceleration_curve();
 
@@ -409,13 +494,19 @@ impl TapeStopGlitchView {
                     }
 
                     for w in pts.windows(2) {
-                        cpainter.line_segment([w[0], w[1]], Stroke::new(1.8_f32, Color32::from_rgb(245, 158, 11)));
+                        cpainter.line_segment(
+                            [w[0], w[1]],
+                            Stroke::new(1.8_f32, Color32::from_rgb(245, 158, 11)),
+                        );
                     }
 
                     cpainter.text(
                         egui::pos2(curve_rect.left() + 8.0, curve_rect.top() + 6.0),
                         egui::Align2::LEFT_TOP,
-                        format!("v(t) Brake Curve (p={:.1}) | Dur: {:.0} ms", self.deceleration_curvature, self.brake_duration_ms),
+                        format!(
+                            "v(t) Brake Curve (p={:.1}) | Dur: {:.0} ms",
+                            self.deceleration_curvature, self.brake_duration_ms
+                        ),
                         FontId::proportional(10.0),
                         Color32::from_rgb(226, 232, 240),
                     );
@@ -423,10 +514,19 @@ impl TapeStopGlitchView {
                     ui.add_space(6.0);
 
                     // Speed & Semitone Pitch Gauge
-                    let (gauge_rect, _) = ui.allocate_exact_size(Vec2::new(380.0, 84.0), egui::Sense::hover());
+                    let (gauge_rect, _) =
+                        ui.allocate_exact_size(Vec2::new(380.0, 84.0), egui::Sense::hover());
                     let gpainter = ui.painter_at(gauge_rect);
-                    gpainter.rect_filled(gauge_rect, Rounding::same(6.0), Color32::from_rgb(15, 23, 42));
-                    gpainter.rect_stroke(gauge_rect, Rounding::same(6.0), Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                    gpainter.rect_filled(
+                        gauge_rect,
+                        Rounding::same(6.0),
+                        Color32::from_rgb(15, 23, 42),
+                    );
+                    gpainter.rect_stroke(
+                        gauge_rect,
+                        Rounding::same(6.0),
+                        Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+                    );
 
                     // Speed Bar
                     let norm_speed = self.current_speed_ratio.clamp(0.0, 1.0);
@@ -435,12 +535,20 @@ impl TapeStopGlitchView {
                         egui::pos2(gauge_rect.left() + 15.0, gauge_rect.top() + 26.0),
                         Vec2::new(bar_w, 18.0),
                     );
-                    gpainter.rect_filled(bar_rect, Rounding::same(3.0), Color32::from_rgb(234, 88, 12));
+                    gpainter.rect_filled(
+                        bar_rect,
+                        Rounding::same(3.0),
+                        Color32::from_rgb(234, 88, 12),
+                    );
 
                     gpainter.text(
                         egui::pos2(gauge_rect.left() + 15.0, gauge_rect.top() + 8.0),
                         egui::Align2::LEFT_TOP,
-                        format!("Playback Speed: {:.1}% | Pitch Dive: {:.1} st", self.current_speed_ratio * 100.0, self.pitch_drop_semitones),
+                        format!(
+                            "Playback Speed: {:.1}% | Pitch Dive: {:.1} st",
+                            self.current_speed_ratio * 100.0,
+                            self.pitch_drop_semitones
+                        ),
                         FontId::proportional(10.5),
                         Color32::from_rgb(226, 232, 240),
                     );
@@ -448,7 +556,12 @@ impl TapeStopGlitchView {
                     gpainter.text(
                         egui::pos2(gauge_rect.left() + 15.0, gauge_rect.bottom() - 18.0),
                         egui::Align2::LEFT_BOTTOM,
-                        format!("Stutter Slice: {:.1} ms | Division: 1/{:.0} | Duty: {:.0}%", self.effective_stutter_ms, self.stutter_division, self.stutter_pulse_width * 100.0),
+                        format!(
+                            "Stutter Slice: {:.1} ms | Division: 1/{:.0} | Duty: {:.0}%",
+                            self.effective_stutter_ms,
+                            self.stutter_division,
+                            self.stutter_pulse_width * 100.0
+                        ),
                         FontId::proportional(9.5),
                         Color32::from_rgb(148, 163, 184),
                     );
@@ -458,45 +571,106 @@ impl TapeStopGlitchView {
             ui.add_space(10.0);
 
             // Tactile Secondary Parameter Sliders
-            egui::Grid::new("tapestop_params_grid").num_columns(2).spacing([16.0, 8.0]).show(ui, |ui| {
-                ui.label(RichText::new("Turntable Brake Duration:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.brake_duration_ms, 20.0..=2000.0).show_value(true).suffix(" ms")).changed() {
-                    self.puck_pos.0 = Self::brake_to_normalized(self.brake_duration_ms);
-                    self.update_physics();
-                }
-                ui.end_row();
+            egui::Grid::new("tapestop_params_grid")
+                .num_columns(2)
+                .spacing([16.0, 8.0])
+                .show(ui, |ui| {
+                    ui.label(
+                        RichText::new("Turntable Brake Duration:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.brake_duration_ms, 20.0..=2000.0)
+                                .show_value(true)
+                                .suffix(" ms"),
+                        )
+                        .changed()
+                    {
+                        self.puck_pos.0 = Self::brake_to_normalized(self.brake_duration_ms);
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Motor Spin-Up Start Duration:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.start_duration_ms, 20.0..=2000.0).show_value(true).suffix(" ms")).changed() {
-                    self.update_physics();
-                }
-                ui.end_row();
+                    ui.label(
+                        RichText::new("Motor Spin-Up Start Duration:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.start_duration_ms, 20.0..=2000.0)
+                                .show_value(true)
+                                .suffix(" ms"),
+                        )
+                        .changed()
+                    {
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Stutter Slice Division:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.stutter_division, 1.0..=64.0).step_by(1.0).show_value(true).prefix("1/")).changed() {
-                    self.puck_pos.1 = Self::division_to_normalized(self.stutter_division);
-                    self.update_physics();
-                }
-                ui.end_row();
+                    ui.label(
+                        RichText::new("Stutter Slice Division:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.stutter_division, 1.0..=64.0)
+                                .step_by(1.0)
+                                .show_value(true)
+                                .prefix("1/"),
+                        )
+                        .changed()
+                    {
+                        self.puck_pos.1 = Self::division_to_normalized(self.stutter_division);
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Stutter Gate Pulse Width:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.stutter_pulse_width, 0.01..=0.99).show_value(true)).changed() {
-                    self.update_physics();
-                }
-                ui.end_row();
+                    ui.label(
+                        RichText::new("Stutter Gate Pulse Width:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.stutter_pulse_width, 0.01..=0.99)
+                                .show_value(true),
+                        )
+                        .changed()
+                    {
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Deceleration Curvature:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.deceleration_curvature, 0.5..=3.0).show_value(true)).changed() {
-                    self.update_physics();
-                }
-                ui.end_row();
+                    ui.label(
+                        RichText::new("Deceleration Curvature:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.deceleration_curvature, 0.5..=3.0)
+                                .show_value(true),
+                        )
+                        .changed()
+                    {
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Rhythmic Stutter Chopping:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.checkbox(&mut self.stutter_enabled, "Enabled").changed() {
-                    self.update_physics();
-                }
-                ui.end_row();
-            });
+                    ui.label(
+                        RichText::new("Rhythmic Stutter Chopping:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui.checkbox(&mut self.stutter_enabled, "Enabled").changed() {
+                        self.update_physics();
+                    }
+                    ui.end_row();
+                });
 
             ui.add_space(6.0);
 

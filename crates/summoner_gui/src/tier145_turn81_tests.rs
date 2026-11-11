@@ -9,7 +9,8 @@ pub mod pure_tests {
         AtmosProximityProfile, AtmosProximityView, ATMOS_PROX_PUCK_HIT_RADIUS,
     };
     use crate::views::atmos_surround_view::{
-        AtmosChannel, AtmosDownmixMode, AtmosSurroundView, ATMOS_PUCK_HIT_RADIUS, NUM_ATMOS_CHANNELS,
+        AtmosChannel, AtmosDownmixMode, AtmosSurroundView, ATMOS_PUCK_HIT_RADIUS,
+        NUM_ATMOS_CHANNELS,
     };
     use summoner_core::param_bus::ParamId;
 
@@ -52,7 +53,10 @@ pub mod pure_tests {
         // Channel indices: 0: L, 1: C, 2: R, 3: LFE, 4: Lss, 5: Rss, 6: Lsr, 7: Rsr, 8: Ltf, 9: Rtf, 10: Ltr, 11: Rtr
         let gain_r = view.speaker_energy_gains[AtmosChannel::Right as usize];
         let gain_l = view.speaker_energy_gains[AtmosChannel::Left as usize];
-        assert!(gain_r > gain_l, "Right speaker gain should exceed Left speaker gain for positive X");
+        assert!(
+            gain_r > gain_l,
+            "Right speaker gain should exceed Left speaker gain for positive X"
+        );
 
         // Puck hit testing
         let canvas = Rect::new(20.0, 100.0, 420.0, 230.0);
@@ -119,8 +123,14 @@ pub mod pure_tests {
         let far_bass = view.proximity_bass_boost_db;
         let far_air = view.air_absorption_loss_db;
 
-        assert!(near_bass > far_bass, "Proximity bass boost should be stronger nearfield than farfield");
-        assert!(far_air > near_air, "Air absorption HF loss should be stronger farfield than nearfield");
+        assert!(
+            near_bass > far_bass,
+            "Proximity bass boost should be stronger nearfield than farfield"
+        );
+        assert!(
+            far_air > near_air,
+            "Air absorption HF loss should be stronger farfield than nearfield"
+        );
         assert!(view.itd_us.abs() <= 800.0);
 
         // Puck hit testing
@@ -184,8 +194,12 @@ pub mod pure_tests {
 pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_device_rack::{show_modern_device_rack_with_context, ModernDeviceRackState};
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
+    use crate::views::modern_device_rack::{
+        show_modern_device_rack_with_context, ModernDeviceRackState,
+    };
+    use crate::views::modern_inspector::{
+        show_modern_inspector_with_context, ModernInspectorState,
+    };
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
@@ -343,7 +357,10 @@ pub mod gui_tests {
                 show_modern_device_rack_with_context(ui, &mut state, None, Some(&bus), 1);
             });
         });
-        assert!(state.node_param_values.contains_key("object_x") || state.node_param_values.contains_key("surround_azimuth"));
+        assert!(
+            state.node_param_values.contains_key("object_x")
+                || state.node_param_values.contains_key("surround_azimuth")
+        );
 
         // Render Atmos Proximity
         state.selected_node_kind = Some("AtmosProximityNode".to_string());
@@ -353,7 +370,14 @@ pub mod gui_tests {
             });
         });
         assert!(state.node_param_values.contains_key("distance_m"));
-        assert!(state.node_param_values.contains_key("proximity_bass_boost_db") || state.node_param_values.contains_key("air_absorption_hf_loss_db"));
+        assert!(
+            state
+                .node_param_values
+                .contains_key("proximity_bass_boost_db")
+                || state
+                    .node_param_values
+                    .contains_key("air_absorption_hf_loss_db")
+        );
     }
 
     #[test]

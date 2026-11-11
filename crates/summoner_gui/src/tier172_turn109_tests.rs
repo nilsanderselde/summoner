@@ -6,13 +6,11 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::transient_declicker_view::{
         TransientDeclickerView, VinylRestorationMode, DECLICKER_PUCK_HIT_RADIUS,
     };
-    use crate::views::transient_gate_view::{
-        TransientGateView, GateMode, GATE_PUCK_HIT_RADIUS,
-    };
-    use crate::layout_math::Rect;
+    use crate::views::transient_gate_view::{GateMode, TransientGateView, GATE_PUCK_HIT_RADIUS};
 
     #[test]
     fn test_turn109_pure_transient_declicker_initialization_and_kinematics() {
@@ -22,11 +20,41 @@ pub mod pure_tests {
 
         // Modes and expected values
         let modes = [
-            (VinylRestorationMode::VinylMicrogroove, "VINYL 33/45", -18.5, 1.20, 2800.0),
-            (VinylRestorationMode::Shellac78Rpm, "78 RPM SHELLAC", -12.0, 2.80, 1200.0),
-            (VinylRestorationMode::DigitalClicks, "DIGITAL CLICKS", -24.0, 0.45, 6000.0),
-            (VinylRestorationMode::ThumpAndPlop, "THUMP & PLOP", -8.5, 4.50, 250.0),
-            (VinylRestorationMode::TapeDropout, "TAPE DROPOUT", -15.0, 3.20, 1800.0),
+            (
+                VinylRestorationMode::VinylMicrogroove,
+                "VINYL 33/45",
+                -18.5,
+                1.20,
+                2800.0,
+            ),
+            (
+                VinylRestorationMode::Shellac78Rpm,
+                "78 RPM SHELLAC",
+                -12.0,
+                2.80,
+                1200.0,
+            ),
+            (
+                VinylRestorationMode::DigitalClicks,
+                "DIGITAL CLICKS",
+                -24.0,
+                0.45,
+                6000.0,
+            ),
+            (
+                VinylRestorationMode::ThumpAndPlop,
+                "THUMP & PLOP",
+                -8.5,
+                4.50,
+                250.0,
+            ),
+            (
+                VinylRestorationMode::TapeDropout,
+                "TAPE DROPOUT",
+                -15.0,
+                3.20,
+                1800.0,
+            ),
         ];
 
         for (m, expected_name, def_thresh, def_width, def_xover) in modes {
@@ -161,8 +189,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -192,23 +220,38 @@ pub mod gui_tests {
         view.sync_transient_declicker_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("threshold_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("threshold_db")
+                .copied(),
             Some(-19.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("click_width_ms").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("click_width_ms")
+                .copied(),
             Some(1.35)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("crackle_density_pct").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("crackle_density_pct")
+                .copied(),
             Some(75.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("threshold_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("threshold_db")
+                .copied(),
             Some(-19.5)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("click_width_ms").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("click_width_ms")
+                .copied(),
             Some(1.35)
         );
 
@@ -222,27 +265,45 @@ pub mod gui_tests {
         view.sync_transient_gate_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("open_threshold_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("open_threshold_db")
+                .copied(),
             Some(-28.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("hysteresis_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("hysteresis_db")
+                .copied(),
             Some(7.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("attack_ms").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("attack_ms")
+                .copied(),
             Some(1.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("release_ms").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("release_ms")
+                .copied(),
             Some(120.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("open_threshold_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("open_threshold_db")
+                .copied(),
             Some(-28.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("hysteresis_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("hysteresis_db")
+                .copied(),
             Some(7.5)
         );
 
@@ -257,12 +318,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let declick_action = palette.actions.iter().find(|a| a.action_id == "open_transient_declicker_hud");
-        assert!(declick_action.is_some(), "open_transient_declicker_hud should be registered");
+        let declick_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_transient_declicker_hud");
+        assert!(
+            declick_action.is_some(),
+            "open_transient_declicker_hud should be registered"
+        );
         assert_eq!(declick_action.unwrap().category, "Restoration & Dynamics");
 
-        let gate_action = palette.actions.iter().find(|a| a.action_id == "open_transient_gate_hud");
-        assert!(gate_action.is_some(), "open_transient_gate_hud should be registered");
+        let gate_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_transient_gate_hud");
+        assert!(
+            gate_action.is_some(),
+            "open_transient_gate_hud should be registered"
+        );
         assert_eq!(gate_action.unwrap().category, "Dynamics & Saturation");
     }
 }

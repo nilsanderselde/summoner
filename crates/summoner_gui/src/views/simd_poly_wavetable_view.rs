@@ -410,9 +410,11 @@ impl SimdPolyWavetableView {
                         .strong(),
                 );
                 ui.label(
-                    RichText::new("M33 / M34 SimdPolyWavetableOscillator + 4-Pt Hermite AA (2048-pt)")
-                        .color(Color32::from_rgb(148, 163, 184))
-                        .small(),
+                    RichText::new(
+                        "M33 / M34 SimdPolyWavetableOscillator + 4-Pt Hermite AA (2048-pt)",
+                    )
+                    .color(Color32::from_rgb(148, 163, 184))
+                    .small(),
                 );
             });
 

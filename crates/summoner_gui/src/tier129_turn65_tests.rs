@@ -6,12 +6,12 @@
 pub mod pure_tests {
     use crate::layout_math::Rect;
     use crate::views::bellows_view::{
-        BellowsView, BellowsHudPreset, BELLOWS_PUCK_HIT_RADIUS,
-        MIN_BELLOWS_PRESSURE_PA, MAX_BELLOWS_PRESSURE_PA, MIN_VALVE_VELOCITY, MAX_VALVE_VELOCITY,
+        BellowsHudPreset, BellowsView, BELLOWS_PUCK_HIT_RADIUS, MAX_BELLOWS_PRESSURE_PA,
+        MAX_VALVE_VELOCITY, MIN_BELLOWS_PRESSURE_PA, MIN_VALVE_VELOCITY,
     };
     use crate::views::jawari_bridge_view::{
-        JawariBridgeView, JawariBridgeHudPreset, JAWARI_PUCK_HIT_RADIUS,
-        MIN_JAWARI_CLEARANCE_GAP, MAX_JAWARI_CLEARANCE_GAP,
+        JawariBridgeHudPreset, JawariBridgeView, JAWARI_PUCK_HIT_RADIUS, MAX_JAWARI_CLEARANCE_GAP,
+        MIN_JAWARI_CLEARANCE_GAP,
     };
     use summoner_core::param_bus::ParamId;
 
@@ -50,8 +50,14 @@ pub mod pure_tests {
         assert_eq!(view.register_mask, 0b00010);
 
         // Normalization checks
-        assert_eq!(BellowsView::pressure_to_normalized(MIN_BELLOWS_PRESSURE_PA), 0.0);
-        assert_eq!(BellowsView::pressure_to_normalized(MAX_BELLOWS_PRESSURE_PA), 1.0);
+        assert_eq!(
+            BellowsView::pressure_to_normalized(MIN_BELLOWS_PRESSURE_PA),
+            0.0
+        );
+        assert_eq!(
+            BellowsView::pressure_to_normalized(MAX_BELLOWS_PRESSURE_PA),
+            1.0
+        );
         assert!((BellowsView::normalized_to_pressure(0.5) - 0.0).abs() < 1e-3);
 
         assert_eq!(BellowsView::velocity_to_normalized(MIN_VALVE_VELOCITY), 0.0);
@@ -64,7 +70,12 @@ pub mod pure_tests {
         assert!(view.bellows_pressure_pa > 0.0);
 
         // Hit testing
-        let canvas_rect = Rect { x: 50.0, y: 100.0, width: 200.0, height: 150.0 };
+        let canvas_rect = Rect {
+            x: 50.0,
+            y: 100.0,
+            width: 200.0,
+            height: 150.0,
+        };
         let puck_x = canvas_rect.x + view.puck_pos.0 * canvas_rect.width;
         let puck_y = canvas_rect.y + (1.0 - view.puck_pos.1) * canvas_rect.height;
         assert!(view.hit_test_bellows_puck((puck_x, puck_y), canvas_rect));
@@ -123,7 +134,12 @@ pub mod pure_tests {
         assert!(view.clearance_gap_mm <= MAX_JAWARI_CLEARANCE_GAP);
 
         // Hit testing
-        let canvas_rect = Rect { x: 40.0, y: 80.0, width: 220.0, height: 160.0 };
+        let canvas_rect = Rect {
+            x: 40.0,
+            y: 80.0,
+            width: 220.0,
+            height: 160.0,
+        };
         let puck_x = canvas_rect.x + view.puck_pos.0 * canvas_rect.width;
         let puck_y = canvas_rect.y + (1.0 - view.puck_pos.1) * canvas_rect.height;
         assert!(view.hit_test_jawari_puck((puck_x, puck_y), canvas_rect));
@@ -144,10 +160,10 @@ pub mod pure_tests {
         let base_id = track_id * 1000 + slot_idx * 20;
 
         let pid_pres = ParamId(base_id);
-        let pid_vel  = ParamId(base_id + 1);
+        let pid_vel = ParamId(base_id + 1);
         let pid_cass = ParamId(base_id + 2);
-        let pid_mus  = ParamId(base_id + 3);
-        let pid_st   = ParamId(base_id + 4);
+        let pid_mus = ParamId(base_id + 3);
+        let pid_st = ParamId(base_id + 4);
 
         assert_eq!(pid_pres.0, 2020);
         assert_eq!(pid_vel.0, 2021);
@@ -167,8 +183,8 @@ pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn65_gui_award_winning_bellows_and_jawari_hud_lifecycles() {
@@ -209,7 +225,11 @@ pub mod gui_tests {
     fn test_turn65_gui_live_parambus_atomic_sync_bellows_and_jawari() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -233,9 +253,24 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(6.0));
         assert_eq!(arc_bus.get(ParamId(base + 4)), Some(1.30));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("bellows_pressure_pa"), Some(&720.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("valve_velocity"), Some(&0.85));
-        assert_eq!(view.inspector_state.node_param_values.get("bellows_pressure_pa"), Some(&720.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("bellows_pressure_pa"),
+            Some(&720.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("valve_velocity"),
+            Some(&0.85)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("bellows_pressure_pa"),
+            Some(&720.0)
+        );
 
         // 2. Sync Jawari Bridge HUD
         view.jawari_bridge_view.clearance_gap_mm = 0.28;
@@ -249,9 +284,24 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(140.0));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(0.45));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("clearance_gap_mm"), Some(&0.28));
-        assert_eq!(view.device_rack_state.node_param_values.get("jiva_thread_pos"), Some(&0.52));
-        assert_eq!(view.inspector_state.node_param_values.get("clearance_gap_mm"), Some(&0.28));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("clearance_gap_mm"),
+            Some(&0.28)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("jiva_thread_pos"),
+            Some(&0.52)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("clearance_gap_mm"),
+            Some(&0.28)
+        );
     }
 
     #[test]
@@ -306,10 +356,19 @@ pub mod gui_tests {
     #[test]
     fn test_turn65_gui_command_palette_actions_registered() {
         let palette = CommandPalette::new();
-        let has_bellows = palette.actions.iter().any(|a| a.action_id == "open_bellows_hud");
-        let has_jawari = palette.actions.iter().any(|a| a.action_id == "open_jawari_bridge_hud");
+        let has_bellows = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_bellows_hud");
+        let has_jawari = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_jawari_bridge_hud");
 
         assert!(has_bellows, "Expected open_bellows_hud in command palette");
-        assert!(has_jawari, "Expected open_jawari_bridge_hud in command palette");
+        assert!(
+            has_jawari,
+            "Expected open_jawari_bridge_hud in command palette"
+        );
     }
 }

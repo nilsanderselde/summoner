@@ -599,4 +599,3 @@ impl NeuralSpeechToSingingView {
         )
     }
 }
-

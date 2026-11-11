@@ -21,10 +21,22 @@ pub mod pure_tests {
             name: "Guitar Riff".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, ..Default::default() },
-                TrackerStepConfig { note: 62.0, ..Default::default() },
-                TrackerStepConfig { note: 64.0, ..Default::default() },
-                TrackerStepConfig { note: 65.0, ..Default::default() },
+                TrackerStepConfig {
+                    note: 60.0,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 62.0,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 64.0,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 65.0,
+                    ..Default::default()
+                },
             ],
             fade_in: 0.0,
             fade_out: 0.0,
@@ -131,7 +143,8 @@ pub mod gui_tests {
         view.process_modular_graph(&[], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
 
         // SineOscillatorNode at index 0 connected through filters and VCAs produces sound
-        let has_signal = out_l.iter().any(|&s| s.abs() > 1e-6) || out_r.iter().any(|&s| s.abs() > 1e-6);
+        let has_signal =
+            out_l.iter().any(|&s| s.abs() > 1e-6) || out_r.iter().any(|&s| s.abs() > 1e-6);
         assert!(has_signal, "Modular audio graph should render live audio");
     }
 
@@ -232,10 +245,22 @@ pub mod gui_tests {
             name: "Guitar Riff".to_string(),
             is_unique: true,
             steps: vec![
-                TrackerStepConfig { note: 60.0, ..Default::default() },
-                TrackerStepConfig { note: 62.0, ..Default::default() },
-                TrackerStepConfig { note: 64.0, ..Default::default() },
-                TrackerStepConfig { note: 65.0, ..Default::default() },
+                TrackerStepConfig {
+                    note: 60.0,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 62.0,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 64.0,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 65.0,
+                    ..Default::default()
+                },
             ],
             fade_in: 0.0,
             fade_out: 0.0,

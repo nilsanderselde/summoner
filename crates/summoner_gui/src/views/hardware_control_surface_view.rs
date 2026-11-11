@@ -79,15 +79,7 @@ impl HardwareControlPreset {
     /// Returns nominal (cv_voltage, clock_offset_ms, volts_per_oct, gate_high_v, din_sync_bpm, protocol, midi_learn).
     pub fn nominal_parameters(
         &self,
-    ) -> (
-        f32,
-        f32,
-        f32,
-        f32,
-        f32,
-        HardwareControllerProtocol,
-        bool,
-    ) {
+    ) -> (f32, f32, f32, f32, f32, HardwareControllerProtocol, bool) {
         match self {
             Self::Push3EurorackBridge => (
                 1.0,
@@ -295,7 +287,11 @@ impl HardwareControlSurfaceView {
         out.push_str(&format!(
             " Protocol:         {} | MIDI Learn: {}\n",
             self.protocol.label(),
-            if self.midi_learn_active { "ACTIVE" } else { "IDLE" }
+            if self.midi_learn_active {
+                "ACTIVE"
+            } else {
+                "IDLE"
+            }
         ));
         out.push_str(&format!(
             " CV Output:        {:+.2} V ({:.2} V/Oct) | Gate High: {:.1} V\n",
@@ -341,7 +337,10 @@ impl HardwareControlSurfaceView {
                     (HardwareControlPreset::Push3EurorackBridge, "Push 3 + CV"),
                     (HardwareControlPreset::McuMotorizedConsole, "Mackie MCU"),
                     (HardwareControlPreset::VintageDinSync24Rig, "DIN Sync24"),
-                    (HardwareControlPreset::NksOscBidirectionalStage, "NI NKS + OSC"),
+                    (
+                        HardwareControlPreset::NksOscBidirectionalStage,
+                        "NI NKS + OSC",
+                    ),
                 ];
                 for (p, label) in presets {
                     let is_active = self.preset == p;

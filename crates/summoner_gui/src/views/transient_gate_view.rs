@@ -259,7 +259,8 @@ impl TransientGateView {
             if let Some(pos) = response.interact_pointer_pos() {
                 for (i, (m, _)) in modes.iter().enumerate() {
                     let bx = custom_rect.x + 20.0 + i as f32 * (btn_w + 10.0);
-                    let tab_rect = egui::Rect::from_min_size(egui::pos2(bx, btn_y), egui::vec2(btn_w, 36.0));
+                    let tab_rect =
+                        egui::Rect::from_min_size(egui::pos2(bx, btn_y), egui::vec2(btn_w, 36.0));
                     if tab_rect.contains(pos) {
                         self.mode = *m;
                         match m {

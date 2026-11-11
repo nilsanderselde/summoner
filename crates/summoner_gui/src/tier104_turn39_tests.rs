@@ -74,7 +74,9 @@ pub mod pure_tests {
 #[cfg(all(test, feature = "gui"))]
 mod gui_tests {
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
+    use crate::views::modern_inspector::{
+        show_modern_inspector_with_context, ModernInspectorState,
+    };
     use eframe::egui;
     use summoner_core::param_bus::{ParamBus, ParamId};
 
@@ -199,11 +201,23 @@ mod gui_tests {
         view.sync_with_project(&mut project, &mut playhead, &mut transport, &mut sel_track);
 
         // Both device rack and inspector must be loaded with "LadderFilterNode"
-        assert_eq!(view.device_rack_state.selected_node_kind.as_deref(), Some("LadderFilterNode"));
-        assert_eq!(view.inspector_state.selected_node_kind.as_deref(), Some("LadderFilterNode"));
+        assert_eq!(
+            view.device_rack_state.selected_node_kind.as_deref(),
+            Some("LadderFilterNode")
+        );
+        assert_eq!(
+            view.inspector_state.selected_node_kind.as_deref(),
+            Some("LadderFilterNode")
+        );
         assert_eq!(view.device_rack_state.cutoff, 0.72);
         assert_eq!(view.device_rack_state.resonance, 0.55);
-        assert_eq!(view.inspector_state.node_param_values.get("cutoff"), Some(&0.72));
-        assert_eq!(view.inspector_state.node_param_values.get("resonance"), Some(&0.55));
+        assert_eq!(
+            view.inspector_state.node_param_values.get("cutoff"),
+            Some(&0.72)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("resonance"),
+            Some(&0.55)
+        );
     }
 }

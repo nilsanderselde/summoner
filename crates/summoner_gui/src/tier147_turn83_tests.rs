@@ -219,8 +219,12 @@ pub mod pure_tests {
 pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_device_rack::{show_modern_device_rack_with_context, ModernDeviceRackState};
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
+    use crate::views::modern_device_rack::{
+        show_modern_device_rack_with_context, ModernDeviceRackState,
+    };
+    use crate::views::modern_inspector::{
+        show_modern_inspector_with_context, ModernInspectorState,
+    };
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
@@ -289,10 +293,26 @@ pub mod gui_tests {
 
         view.sync_hoa4_spatializer_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("azimuth_deg"), Some(&35.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("elevation_deg"), Some(&15.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("distance_m"), Some(&4.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("energy_focus_order"), Some(&3.5));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("azimuth_deg"),
+            Some(&35.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("elevation_deg"),
+            Some(&15.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("distance_m"),
+            Some(&4.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("energy_focus_order"),
+            Some(&3.5)
+        );
 
         // Test MPEG-H spatial audio sync
         view.mpegh_spatializer_view.azimuth_deg = -45.0;
@@ -304,10 +324,26 @@ pub mod gui_tests {
 
         view.sync_mpegh_spatializer_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("azimuth_deg"), Some(&-45.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("elevation_deg"), Some(&-10.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("distance_m"), Some(&2.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("itd_microseconds"), Some(&-320.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("azimuth_deg"),
+            Some(&-45.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("elevation_deg"),
+            Some(&-10.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("distance_m"),
+            Some(&2.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("itd_microseconds"),
+            Some(&-320.0)
+        );
     }
 
     #[test]
@@ -361,12 +397,24 @@ pub mod gui_tests {
     #[test]
     fn test_turn83_gui_command_palette_registration_hoa4_and_mpegh_spatializer() {
         let palette = CommandPalette::new();
-        let hoa4_act = palette.actions.iter().find(|a| a.action_id == "open_hoa4_spatializer_hud");
-        assert!(hoa4_act.is_some(), "open_hoa4_spatializer_hud must be registered");
+        let hoa4_act = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_hoa4_spatializer_hud");
+        assert!(
+            hoa4_act.is_some(),
+            "open_hoa4_spatializer_hud must be registered"
+        );
         assert_eq!(hoa4_act.unwrap().category, "Spatial");
 
-        let mpegh_act = palette.actions.iter().find(|a| a.action_id == "open_mpegh_spatializer_hud");
-        assert!(mpegh_act.is_some(), "open_mpegh_spatializer_hud must be registered");
+        let mpegh_act = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_mpegh_spatializer_hud");
+        assert!(
+            mpegh_act.is_some(),
+            "open_mpegh_spatializer_hud must be registered"
+        );
         assert_eq!(mpegh_act.unwrap().category, "Spatial");
     }
 
@@ -383,11 +431,12 @@ pub mod gui_tests {
 
         let mut inspector_state = ModernInspectorState::default();
         inspector_state.selected_node_kind = Some("MpeghSpatializer".to_string());
-        inspector_state.chain_devices = vec![crate::views::modern_device_rack::RackChainDeviceVisual {
-            kind: "MpeghSpatializer".to_string(),
-            display_name: "MPEG-H 3D".to_string(),
-            is_bypassed: false,
-        }];
+        inspector_state.chain_devices =
+            vec![crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind: "MpeghSpatializer".to_string(),
+                display_name: "MPEG-H 3D".to_string(),
+                is_bypassed: false,
+            }];
 
         let bus = ParamBus::new();
 

@@ -436,9 +436,13 @@ pub fn humanize_notes(
     let mut rng_state = seed.wrapping_add(1);
     for (i, step) in sequence.steps.iter_mut().enumerate() {
         if selected.is_empty() || selected.contains(&i) {
-            rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            rng_state = rng_state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let rand_val = ((rng_state >> 33) as f32 / 2147483648.0) * 2.0 - 1.0;
-            rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            rng_state = rng_state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let rand_vel = ((rng_state >> 33) as f32 / 2147483648.0) * 2.0 - 1.0;
 
             let new_gate = (step.gate + rand_val * gate_jitter).max(0.05);
@@ -972,7 +976,11 @@ pub fn show_piano_roll(
                 .copied()
                 .next()
                 .unwrap_or(state.step_record_head);
-            let root_pitch = sequence.steps.get(target_idx).map(|s| s.note).unwrap_or(60.0);
+            let root_pitch = sequence
+                .steps
+                .get(target_idx)
+                .map(|s| s.note)
+                .unwrap_or(60.0);
             stamp_chord_notes(sequence, target_idx, root_pitch, state.selected_chord_stamp);
         }
 
@@ -1007,7 +1015,11 @@ pub fn show_piano_roll(
         ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::ModWheel, "Mod");
         ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Volume, "Vol");
         ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Pan, "Pan");
-        ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Expression, "Exp");
+        ui.selectable_value(
+            &mut state.bottom_lane_mode,
+            BottomLaneMode::Expression,
+            "Exp",
+        );
         ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Sustain, "Sus");
         ui.selectable_value(&mut state.bottom_lane_mode, BottomLaneMode::Timbre, "Tbr");
     });
@@ -1959,16 +1971,14 @@ mod tests {
         let mut sequence = SequenceConfig {
             start_beat: 0.0,
             step_division: 0.25,
-            steps: vec![
-                TrackerStepConfig {
-                    note: 60.0,
-                    velocity: 0.8,
-                    gate: 0.33,
-                    probability: 1.0,
-                    active: true,
-                    ..Default::default()
-                },
-            ],
+            steps: vec![TrackerStepConfig {
+                note: 60.0,
+                velocity: 0.8,
+                gate: 0.33,
+                probability: 1.0,
+                active: true,
+                ..Default::default()
+            }],
             ..Default::default()
         };
         let selected = HashSet::new();
@@ -2007,7 +2017,10 @@ mod tests {
 
         // Steps should have slight variations around original 0.5 gate and 0.8 velocity
         let gate_diff = sequence.steps.iter().any(|s| (s.gate - 0.5).abs() > 0.001);
-        let vel_diff = sequence.steps.iter().any(|s| (s.velocity - 0.8).abs() > 0.001);
+        let vel_diff = sequence
+            .steps
+            .iter()
+            .any(|s| (s.velocity - 0.8).abs() > 0.001);
         assert!(gate_diff, "Humanize should vary gates");
         assert!(vel_diff, "Humanize should vary velocities");
     }

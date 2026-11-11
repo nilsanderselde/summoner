@@ -8,8 +8,8 @@
 //! Janko, Harmonic Table, Rank-2 Generalized), scale degree filtering, and real-time
 //! polyphonic microtonal voice allocation with sample-accurate frequency output.
 
-use serde::{Deserialize, Serialize};
 use crate::scale::Scale;
+use serde::{Deserialize, Serialize};
 
 /// Standard isomorphic layout topologies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -31,10 +31,7 @@ pub enum IsomorphicLayoutType {
         period_steps: i32,
     },
     /// Custom user-defined coordinate displacement vector.
-    Custom {
-        col_steps: i32,
-        row_steps: i32,
-    },
+    Custom { col_steps: i32, row_steps: i32 },
 }
 
 impl IsomorphicLayoutType {
@@ -42,20 +39,56 @@ impl IsomorphicLayoutType {
     pub fn step_generators(&self, edo: u16) -> (i32, i32) {
         match self {
             Self::WickiHayden => {
-                let fifth = if edo == 19 { 11 } else if edo == 31 { 18 } else { 7 };
-                let wholetone = if edo == 19 { 3 } else if edo == 31 { 5 } else { 2 };
+                let fifth = if edo == 19 {
+                    11
+                } else if edo == 31 {
+                    18
+                } else {
+                    7
+                };
+                let wholetone = if edo == 19 {
+                    3
+                } else if edo == 31 {
+                    5
+                } else {
+                    2
+                };
                 (wholetone, fifth)
             }
             Self::Gerhard => {
-                let m3 = if edo == 19 { 5 } else if edo == 31 { 8 } else { 3 };
-                let m3_maj = if edo == 19 { 6 } else if edo == 31 { 10 } else { 4 };
+                let m3 = if edo == 19 {
+                    5
+                } else if edo == 31 {
+                    8
+                } else {
+                    3
+                };
+                let m3_maj = if edo == 19 {
+                    6
+                } else if edo == 31 {
+                    10
+                } else {
+                    4
+                };
                 (m3, m3_maj)
             }
             Self::Bosanquet => (1, if edo == 19 { 7 } else { 4 }),
             Self::Janko => (2, 1),
             Self::HarmonicTable => {
-                let m3 = if edo == 19 { 5 } else if edo == 31 { 8 } else { 3 };
-                let m3_maj = if edo == 19 { 6 } else if edo == 31 { 10 } else { 4 };
+                let m3 = if edo == 19 {
+                    5
+                } else if edo == 31 {
+                    8
+                } else {
+                    3
+                };
+                let m3_maj = if edo == 19 {
+                    6
+                } else if edo == 31 {
+                    10
+                } else {
+                    4
+                };
                 (m3_maj, m3)
             }
             Self::Rank2Temperament {
@@ -195,7 +228,11 @@ impl IsomorphicRouter {
         let freq = self.step_to_frequency(step);
 
         // If this coordinate is already held, retrigger the same voice
-        if let Some(voice_idx) = self.voices.iter().position(|v| v.active && v.coord == coord) {
+        if let Some(voice_idx) = self
+            .voices
+            .iter()
+            .position(|v| v.active && v.coord == coord)
+        {
             self.voices[voice_idx].velocity = velocity;
             self.voices[voice_idx].active = true;
             self.voices[voice_idx].age_samples = 0;
@@ -232,7 +269,11 @@ impl IsomorphicRouter {
 
     /// Releases note at hexagonal coordinate (q, r).
     pub fn note_off(&mut self, coord: HexCoordinate) -> Option<usize> {
-        if let Some(voice_idx) = self.voices.iter().position(|v| v.active && v.coord == coord) {
+        if let Some(voice_idx) = self
+            .voices
+            .iter()
+            .position(|v| v.active && v.coord == coord)
+        {
             self.voices[voice_idx].active = false;
             Some(voice_idx)
         } else {
@@ -312,7 +353,8 @@ mod tests {
     fn test_isomorphic_router_toml_roundtrip() {
         let router = IsomorphicRouter::new(IsomorphicLayoutType::Gerhard, 31, 261.63, 16);
         let toml_str = router.to_toml_string().expect("TOML serialization failed");
-        let restored = IsomorphicRouter::from_toml_str(&toml_str).expect("TOML deserialization failed");
+        let restored =
+            IsomorphicRouter::from_toml_str(&toml_str).expect("TOML deserialization failed");
 
         assert_eq!(router.edo, restored.edo);
         assert_eq!(router.layout, restored.layout);

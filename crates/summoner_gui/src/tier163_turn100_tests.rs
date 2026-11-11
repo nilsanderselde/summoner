@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::subharmonic_synth_view::{
         SubharmonicProfile, SubharmonicSynthView, SUBHARMONIC_PUCK_HIT_RADIUS,
     };
     use crate::views::tape_flutter_view::{
-        TapeFormula, TapeSpeed, TapeFlutterView, TAPE_PUCK_HIT_RADIUS,
+        TapeFlutterView, TapeFormula, TapeSpeed, TAPE_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn100_pure_subharmonic_synth_initialization_and_kinematics() {
@@ -29,7 +29,10 @@ pub mod pure_tests {
             (SubharmonicProfile::SubOctave24st, "SUB -2 OCT (-24st)"),
             (SubharmonicProfile::SubFifth19st, "SUB 5TH (-19st)"),
             (SubharmonicProfile::DualOctaveAligned, "DUAL SUB ALIGNED"),
-            (SubharmonicProfile::SaturatedTransient, "SATURATED TRANSIENT"),
+            (
+                SubharmonicProfile::SaturatedTransient,
+                "SATURATED TRANSIENT",
+            ),
         ];
 
         for (profile, expected_name) in profiles {
@@ -190,11 +193,11 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use crate::views::modern_inspector::show_modern_inspector_with_context;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_inspector::show_modern_inspector_with_context;
 
     #[test]
     fn test_turn100_gui_modal_window_lifecycles() {
@@ -234,7 +237,11 @@ pub mod gui_tests {
     fn test_turn100_gui_lock_free_param_bus_dispatch_subharmonic_and_tape_flutter() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -254,10 +261,28 @@ pub mod gui_tests {
 
         view.sync_subharmonic_synth_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("crossover_freq_hz"), Some(&95.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("sub_drive_db"), Some(&8.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("phase_alignment_deg"), Some(&30.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("dry_wet_mix_pct"), Some(&85.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("crossover_freq_hz"),
+            Some(&95.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("sub_drive_db"),
+            Some(&8.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("phase_alignment_deg"),
+            Some(&30.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("dry_wet_mix_pct"),
+            Some(&85.0)
+        );
 
         let pid_drive = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_freq = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -277,10 +302,30 @@ pub mod gui_tests {
 
         view.sync_tape_flutter_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("saturation_drive_db"), Some(&10.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("wow_depth_percent"), Some(&45.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("flutter_depth_percent"), Some(&30.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("bias_calibration_db"), Some(&2.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("saturation_drive_db"),
+            Some(&10.5)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("wow_depth_percent"),
+            Some(&45.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("flutter_depth_percent"),
+            Some(&30.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("bias_calibration_db"),
+            Some(&2.0)
+        );
 
         let pid_dr = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_wow = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);

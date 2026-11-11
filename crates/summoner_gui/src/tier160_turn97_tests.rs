@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
+    use crate::views::multitap_delay_view::{
+        MultitapDelayView, MAX_DELAY_TAPS, MULTITAP_HANDLE_HIT_RADIUS,
+    };
     use crate::views::through_zero_flanger_view::{
         TapeFlangerMode, ThroughZeroFlangerView, FLANGER_PUCK_HIT_RADIUS,
     };
-    use crate::views::multitap_delay_view::{
-        MultitapDelayView, MULTITAP_HANDLE_HIT_RADIUS, MAX_DELAY_TAPS,
-    };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn97_pure_through_zero_flanger_initialization_and_kinematics() {
@@ -126,7 +126,8 @@ pub mod pure_tests {
         let canvas = Rect::new(20.0, 56.0, 430.0, 224.0);
         let tap = &view.taps[0];
         let tap_x = canvas.x + MultitapDelayView::time_to_normalized(tap.time_ms) * canvas.width;
-        let tap_y = canvas.y + (1.0 - MultitapDelayView::pan_to_normalized(tap.pan)) * canvas.height;
+        let tap_y =
+            canvas.y + (1.0 - MultitapDelayView::pan_to_normalized(tap.pan)) * canvas.height;
         assert!(view.hit_test_tap((tap_x, tap_y), canvas, 0));
         assert!(!view.hit_test_tap((tap_x + 50.0, tap_y + 50.0), canvas, 0));
 
@@ -140,11 +141,11 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use crate::views::modern_inspector::show_modern_inspector_with_context;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_inspector::show_modern_inspector_with_context;
 
     #[test]
     fn test_turn97_gui_modal_window_lifecycles() {
@@ -184,7 +185,11 @@ pub mod gui_tests {
     fn test_turn97_gui_lock_free_param_bus_dispatch_flanger_and_multitap() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -207,13 +212,40 @@ pub mod gui_tests {
 
         view.sync_through_zero_flanger_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("manual_delay_ms"), Some(&-1.25));
-        assert_eq!(view.device_rack_state.node_param_values.get("lfo_rate_hz"), Some(&0.85));
-        assert_eq!(view.device_rack_state.node_param_values.get("lfo_depth_ms"), Some(&3.2));
-        assert_eq!(view.device_rack_state.node_param_values.get("feedback_pct"), Some(&-45.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("tape_saturation_pct"), Some(&60.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("wow_flutter_pct"), Some(&25.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("dry_wet_pct"), Some(&70.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("manual_delay_ms"),
+            Some(&-1.25)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("lfo_rate_hz"),
+            Some(&0.85)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("lfo_depth_ms"),
+            Some(&3.2)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("feedback_pct"),
+            Some(&-45.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("tape_saturation_pct"),
+            Some(&60.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("wow_flutter_pct"),
+            Some(&25.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("dry_wet_pct"),
+            Some(&70.0)
+        );
 
         let pid_delay = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_rate = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -231,11 +263,32 @@ pub mod gui_tests {
 
         view.sync_multitap_delay_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("tempo_bpm"), Some(&135.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("sync_to_bpm"), Some(&1.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("ping_pong_width_pct"), Some(&85.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("diffusion_pct"), Some(&55.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("master_dry_wet_pct"), Some(&65.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("tempo_bpm"),
+            Some(&135.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("sync_to_bpm"),
+            Some(&1.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("ping_pong_width_pct"),
+            Some(&85.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("diffusion_pct"),
+            Some(&55.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("master_dry_wet_pct"),
+            Some(&65.0)
+        );
 
         let pid_wet = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_width = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -302,7 +355,8 @@ pub mod gui_tests {
 
         // 3. Modern Device Rack Trigger Propagation for Flanger
         view.device_rack_state.selected_node_kind = Some("EffectFlanger".to_string());
-        view.device_rack_state.requested_open_through_zero_flanger_hud = true;
+        view.device_rack_state
+            .requested_open_through_zero_flanger_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);

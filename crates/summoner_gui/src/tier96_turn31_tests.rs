@@ -94,7 +94,10 @@ pub mod pure_tests {
     fn test_turn31_mixer_master_mono_audition_toggle() {
         let mut view = AwardWinningGuiView::new();
 
-        assert!(!view.is_master_mono, "Default master mono audition should be false");
+        assert!(
+            !view.is_master_mono,
+            "Default master mono audition should be false"
+        );
 
         // Toggle mono on
         let is_mono = view.toggle_master_mono();
@@ -127,8 +130,16 @@ pub mod pure_tests {
                 param_id: t1_gain_lane,
                 curve: AutomationCurve {
                     points: vec![
-                        AutomationPoint { beat: 0.0, value: 0.2, interp: Interpolation::Linear },
-                        AutomationPoint { beat: 16.0, value: 1.0, interp: Interpolation::Linear },
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 0.2,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 16.0,
+                            value: 1.0,
+                            interp: Interpolation::Linear,
+                        },
                     ],
                 },
             },
@@ -142,8 +153,16 @@ pub mod pure_tests {
                 param_id: t2_pan_lane,
                 curve: AutomationCurve {
                     points: vec![
-                        AutomationPoint { beat: 0.0, value: -1.0, interp: Interpolation::Linear },
-                        AutomationPoint { beat: 16.0, value: 1.0, interp: Interpolation::Linear },
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: -1.0,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 16.0,
+                            value: 1.0,
+                            interp: Interpolation::Linear,
+                        },
                     ],
                 },
             },
@@ -158,11 +177,19 @@ pub mod pure_tests {
 
         // Verify Track 1 gain evaluated (~0.6)
         let t1_gain = view.tracks[0].gain;
-        assert!((t1_gain - 0.6).abs() < 1e-3, "Expected Track 1 gain ~0.6, got {}", t1_gain);
+        assert!(
+            (t1_gain - 0.6).abs() < 1e-3,
+            "Expected Track 1 gain ~0.6, got {}",
+            t1_gain
+        );
 
         // Verify Track 2 pan evaluated even though Track 1 is selected! (~0.0)
         let t2_pan = view.tracks[1].pan;
-        assert!(t2_pan.abs() < 1e-3, "Expected Track 2 pan ~0.0, got {}", t2_pan);
+        assert!(
+            t2_pan.abs() < 1e-3,
+            "Expected Track 2 pan ~0.0, got {}",
+            t2_pan
+        );
     }
 
     #[test]
@@ -192,8 +219,7 @@ pub mod pure_tests {
         let mono_pid = ParamId(9998);
 
         for pid in [
-            t1_g_pid, t1_p_pid, t1_m_pid, t1_s_pid,
-            t2_g_pid, t2_p_pid, t2_m_pid, t2_s_pid,
+            t1_g_pid, t1_p_pid, t1_m_pid, t1_s_pid, t2_g_pid, t2_p_pid, t2_m_pid, t2_s_pid,
             master_pid, mono_pid,
         ] {
             bus.register(pid, 0.0);

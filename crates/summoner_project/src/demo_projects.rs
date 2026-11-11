@@ -143,10 +143,30 @@ impl DemoProjects {
         }
 
         let lead_steps = vec![
-            TrackerStepConfig { note: 69.0, velocity: 0.8, gate: 0.8, ..Default::default() },
-            TrackerStepConfig { note: 72.0, velocity: 0.85, gate: 0.8, ..Default::default() },
-            TrackerStepConfig { note: 76.0, velocity: 0.9, gate: 0.9, ..Default::default() },
-            TrackerStepConfig { note: 74.0, velocity: 0.8, gate: 0.8, ..Default::default() },
+            TrackerStepConfig {
+                note: 69.0,
+                velocity: 0.8,
+                gate: 0.8,
+                ..Default::default()
+            },
+            TrackerStepConfig {
+                note: 72.0,
+                velocity: 0.85,
+                gate: 0.8,
+                ..Default::default()
+            },
+            TrackerStepConfig {
+                note: 76.0,
+                velocity: 0.9,
+                gate: 0.9,
+                ..Default::default()
+            },
+            TrackerStepConfig {
+                note: 74.0,
+                velocity: 0.8,
+                gate: 0.8,
+                ..Default::default()
+            },
         ];
 
         let tracks = vec![

@@ -14,9 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 use summoner_core::param_bus::{ParamBus, ParamId};
-use summoner_core::shakuhachi_bus::{
-    ShakuhachiArticulation, ShakuhachiBus, ShakuhachiBusSnapshot,
-};
+use summoner_core::shakuhachi_bus::{ShakuhachiArticulation, ShakuhachiBus, ShakuhachiBusSnapshot};
 
 /// Interpolation curve between discrete Shakuhachi keyframe waypoints.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -94,13 +92,9 @@ pub enum ShakuhachiGesturePattern {
         max_cents: f32,
     },
     /// Deep Jinashi Zen meditation with slow breath pacing.
-    ZenJinashiFlutter {
-        phrase_length_beats: f64,
-    },
+    ZenJinashiFlutter { phrase_length_beats: f64 },
     /// Traditional pentatonic 5-hole scale melodic sequence (Ro -> Tsu -> Re -> Chi -> Ri).
-    PentatonicMelodicRun {
-        step_length_beats: f64,
-    },
+    PentatonicMelodicRun { step_length_beats: f64 },
     /// User-defined multi-keyframe Catmull-Rom spline trajectory.
     CustomSpline,
 }
@@ -173,7 +167,10 @@ impl ShakuhachiGestureEngine {
         self.pattern = pattern.clone();
 
         match pattern {
-            ShakuhachiGesturePattern::HonkyokuMeditation { phrase_length_beats, max_pressure_pa } => {
+            ShakuhachiGesturePattern::HonkyokuMeditation {
+                phrase_length_beats,
+                max_pressure_pa,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
                 let half = phrase_length_beats * 0.5;
 
@@ -230,7 +227,10 @@ impl ShakuhachiGestureEngine {
                 });
             }
 
-            ShakuhachiGesturePattern::MuraiIkiBurst { burst_length_beats, peak_intensity } => {
+            ShakuhachiGesturePattern::MuraiIkiBurst {
+                burst_length_beats,
+                peak_intensity,
+            } => {
                 self.loop_length_beats = *burst_length_beats;
 
                 self.waypoints.push(ShakuhachiWaypoint {
@@ -273,7 +273,11 @@ impl ShakuhachiGestureEngine {
                 });
             }
 
-            ShakuhachiGesturePattern::MeriKariGlissando { gliss_length_beats, min_cents, max_cents } => {
+            ShakuhachiGesturePattern::MeriKariGlissando {
+                gliss_length_beats,
+                min_cents,
+                max_cents,
+            } => {
                 self.loop_length_beats = *gliss_length_beats;
 
                 self.waypoints.push(ShakuhachiWaypoint {
@@ -316,7 +320,9 @@ impl ShakuhachiGestureEngine {
                 });
             }
 
-            ShakuhachiGesturePattern::ZenJinashiFlutter { phrase_length_beats } => {
+            ShakuhachiGesturePattern::ZenJinashiFlutter {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(ShakuhachiWaypoint {
@@ -386,7 +392,11 @@ impl ShakuhachiGestureEngine {
     /// Add a keyframe waypoint to the timeline.
     pub fn add_waypoint(&mut self, waypoint: ShakuhachiWaypoint) {
         self.waypoints.push(waypoint);
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     /// Sample-accurate interpolation evaluating all continuous Shakuhachi parameters at a given beat.
@@ -427,7 +437,11 @@ impl ShakuhachiGestureEngine {
                 self.loop_length_beats
             } else {
                 let b = beat % self.loop_length_beats;
-                if b < 0.0 { b + self.loop_length_beats } else { b }
+                if b < 0.0 {
+                    b + self.loop_length_beats
+                } else {
+                    b
+                }
             }
         } else {
             beat
@@ -454,15 +468,24 @@ impl ShakuhachiGestureEngine {
             ShakuhachiInterpolationCurve::Hold => 0.0,
             ShakuhachiInterpolationCurve::Linear => t,
             ShakuhachiInterpolationCurve::Exponential => t * t,
-            ShakuhachiInterpolationCurve::CubicBezier | ShakuhachiInterpolationCurve::CubicCatmullRom => {
+            ShakuhachiInterpolationCurve::CubicBezier
+            | ShakuhachiInterpolationCurve::CubicCatmullRom => {
                 t * t * (3.0 - 2.0 * t) // Smooth cubic hermite
             }
         };
 
         let interp = |a: f32, b: f32| a + (b - a) * interp_factor;
 
-        let active_art = if t >= 0.5 { wp2.articulation } else { wp1.articulation };
-        let active_mask = if t >= 0.5 { wp2.hole_mask } else { wp1.hole_mask };
+        let active_art = if t >= 0.5 {
+            wp2.articulation
+        } else {
+            wp1.articulation
+        };
+        let active_mask = if t >= 0.5 {
+            wp2.hole_mask
+        } else {
+            wp1.hole_mask
+        };
 
         ShakuhachiBusSnapshot {
             articulation: active_art,
@@ -523,11 +546,12 @@ mod tests {
 
     #[test]
     fn test_shakuhachi_gesture_engine_evaluation() {
-        let engine = ShakuhachiGestureEngine::with_pattern(ShakuhachiGesturePattern::MeriKariGlissando {
-            gliss_length_beats: 4.0,
-            min_cents: -200.0,
-            max_cents: 100.0,
-        });
+        let engine =
+            ShakuhachiGestureEngine::with_pattern(ShakuhachiGesturePattern::MeriKariGlissando {
+                gliss_length_beats: 4.0,
+                min_cents: -200.0,
+                max_cents: 100.0,
+            });
 
         let snap_start = engine.evaluate_at_beat(0.0);
         assert_eq!(snap_start.meri_kari_cents, -200.0);
@@ -542,7 +566,9 @@ mod tests {
     #[test]
     fn test_shakuhachi_gesture_engine_toml_round_trip() {
         let engine = ShakuhachiGestureEngine::default();
-        let toml_str = engine.to_toml().expect("Failed to serialize gesture engine");
+        let toml_str = engine
+            .to_toml()
+            .expect("Failed to serialize gesture engine");
         let restored: ShakuhachiGestureEngine =
             ShakuhachiGestureEngine::from_toml(&toml_str).expect("Failed to deserialize");
         assert_eq!(engine.waypoints.len(), restored.waypoints.len());

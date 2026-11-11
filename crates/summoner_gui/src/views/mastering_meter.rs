@@ -22,12 +22,12 @@ pub const MIN_HIT_TARGET_PT: f32 = 44.0;
 /// Target delivery standards for mastering.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MasteringStandard {
-    StreamingMusic,    // -14.0 LUFS Target, -1.0 dBTP Ceiling (Spotify, Apple Music, YouTube)
-    EbuR128Broadcast,  // -23.0 LUFS Target, -1.0 dBTP Ceiling (European Broadcast Union)
-    ItuBs1770Cinema,   // -24.0 LUFS Target, -2.0 dBTP Ceiling (ITU-R BS.1770 / ATSC A/85)
-    AesTd1004Club,     // -16.0 LUFS Target, -0.5 dBTP Ceiling (AES Performance Venue Standard)
-    ClubEdm,           // -9.0 LUFS Target, -0.1 dBTP Ceiling (High Energy Club Mastering)
-    PodcastVoice,      // -16.0 LUFS Target, -1.0 dBTP Ceiling (Spoken Word Podcasts)
+    StreamingMusic, // -14.0 LUFS Target, -1.0 dBTP Ceiling (Spotify, Apple Music, YouTube)
+    EbuR128Broadcast, // -23.0 LUFS Target, -1.0 dBTP Ceiling (European Broadcast Union)
+    ItuBs1770Cinema, // -24.0 LUFS Target, -2.0 dBTP Ceiling (ITU-R BS.1770 / ATSC A/85)
+    AesTd1004Club,  // -16.0 LUFS Target, -0.5 dBTP Ceiling (AES Performance Venue Standard)
+    ClubEdm,        // -9.0 LUFS Target, -0.1 dBTP Ceiling (High Energy Club Mastering)
+    PodcastVoice,   // -16.0 LUFS Target, -1.0 dBTP Ceiling (Spoken Word Podcasts)
 }
 
 impl MasteringStandard {
@@ -178,24 +178,23 @@ impl MasteringMeterView {
         ));
         out.push_str(&format!(
             "TRUE-PEAK L: {:.2} dBTP (Hold: {:.2}) | R: {:.2} dBTP (Hold: {:.2})\n",
-            self.state.true_peak_l_dbtp, self.state.peak_hold_l_dbtp,
-            self.state.true_peak_r_dbtp, self.state.peak_hold_r_dbtp
+            self.state.true_peak_l_dbtp,
+            self.state.peak_hold_l_dbtp,
+            self.state.true_peak_r_dbtp,
+            self.state.peak_hold_r_dbtp
         ));
         out.push_str(&format!(
             "LRA: {:.1} LU | PHASE CORR: {:.2} | PLR: {:.2} dB\n",
-            self.state.loudness_range_lra, self.state.phase_correlation, self.state.crest_factor_plr
+            self.state.loudness_range_lra,
+            self.state.phase_correlation,
+            self.state.crest_factor_plr
         ));
         out.push_str("============================================================\n");
         out
     }
 
     /// Render a high-resolution headless snapshot PNG file for visual verification.
-    pub fn render_snapshot_png(
-        &self,
-        path: &str,
-        width: u32,
-        height: u32,
-    ) -> Result<(), String> {
+    pub fn render_snapshot_png(&self, path: &str, width: u32, height: u32) -> Result<(), String> {
         if let Some(parent) = std::path::Path::new(path).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -206,7 +205,7 @@ impl MasteringMeterView {
         for y in 0..height {
             for x in 0..width {
                 let idx = ((y * width + x) * 4) as usize;
-                pixels[idx] = 12;     // Dark Navy R
+                pixels[idx] = 12; // Dark Navy R
                 pixels[idx + 1] = 15; // Dark Navy G
                 pixels[idx + 2] = 23; // Dark Navy B
                 pixels[idx + 3] = 255;
@@ -255,7 +254,7 @@ impl MasteringMeterView {
             let py = (radar_cy + target_r * rad.sin()).round() as u32;
             if px < width && py < height {
                 let idx = ((py * width + px) * 4) as usize;
-                pixels[idx] = 255;   // Amber highlight
+                pixels[idx] = 255; // Amber highlight
                 pixels[idx + 1] = 171;
                 pixels[idx + 2] = 0;
             }
@@ -278,7 +277,7 @@ impl MasteringMeterView {
                         let sy = py + dy;
                         if sx < width && sy < height {
                             let idx = ((sy * width + sx) * 4) as usize;
-                            pixels[idx] = 0;       // Electric Cyan
+                            pixels[idx] = 0; // Electric Cyan
                             pixels[idx + 1] = 229;
                             pixels[idx + 2] = 255;
                         }
@@ -295,11 +294,31 @@ impl MasteringMeterView {
         let meter_gap = 16u32;
 
         let meters = [
-            ("L TP", Self::normalize_dbtp(self.state.true_peak_l_dbtp), [0, 230, 118]),   // Green
-            ("R TP", Self::normalize_dbtp(self.state.true_peak_r_dbtp), [0, 230, 118]),   // Green
-            ("MOM", Self::normalize_lufs(self.state.momentary_lufs), [0, 229, 255]),     // Cyan
-            ("SHORT", Self::normalize_lufs(self.state.short_term_lufs), [33, 150, 243]),  // Blue
-            ("INT", Self::normalize_lufs(self.state.integrated_lufs), [255, 171, 0]),     // Amber
+            (
+                "L TP",
+                Self::normalize_dbtp(self.state.true_peak_l_dbtp),
+                [0, 230, 118],
+            ), // Green
+            (
+                "R TP",
+                Self::normalize_dbtp(self.state.true_peak_r_dbtp),
+                [0, 230, 118],
+            ), // Green
+            (
+                "MOM",
+                Self::normalize_lufs(self.state.momentary_lufs),
+                [0, 229, 255],
+            ), // Cyan
+            (
+                "SHORT",
+                Self::normalize_lufs(self.state.short_term_lufs),
+                [33, 150, 243],
+            ), // Blue
+            (
+                "INT",
+                Self::normalize_lufs(self.state.integrated_lufs),
+                [255, 171, 0],
+            ), // Amber
         ];
 
         for (m_idx, (_label, fill_norm, col)) in meters.iter().enumerate() {
@@ -371,7 +390,8 @@ impl MasteringMeterView {
         for std in MasteringStandard::ALL {
             let is_selected = self.standard == std;
             let btn_w = 120.0_f32;
-            let btn_rect = EguiRect::from_min_size(Pos2::new(btn_x, btn_y), Vec2::new(btn_w, btn_h));
+            let btn_rect =
+                EguiRect::from_min_size(Pos2::new(btn_x, btn_y), Vec2::new(btn_w, btn_h));
 
             let bg_col = if is_selected {
                 Color32::from_rgb(0, 150, 200)
@@ -383,7 +403,14 @@ impl MasteringMeterView {
             painter.rect_stroke(
                 btn_rect,
                 6.0,
-                Stroke::new(1.0_f32, if is_selected { Color32::WHITE } else { Color32::from_rgb(50, 70, 100) }),
+                Stroke::new(
+                    1.0_f32,
+                    if is_selected {
+                        Color32::WHITE
+                    } else {
+                        Color32::from_rgb(50, 70, 100)
+                    },
+                ),
             );
 
             painter.text(
@@ -428,20 +455,50 @@ impl MasteringMeterView {
         let bar_gap = 16.0_f32;
 
         let meter_data = [
-            ("L TP", Self::normalize_dbtp(self.state.true_peak_l_dbtp), format!("{:.1}", self.state.true_peak_l_dbtp), Color32::from_rgb(0, 230, 118)),
-            ("R TP", Self::normalize_dbtp(self.state.true_peak_r_dbtp), format!("{:.1}", self.state.true_peak_r_dbtp), Color32::from_rgb(0, 230, 118)),
-            ("MOM", Self::normalize_lufs(self.state.momentary_lufs), format!("{:.1}", self.state.momentary_lufs), Color32::from_rgb(0, 229, 255)),
-            ("SHORT", Self::normalize_lufs(self.state.short_term_lufs), format!("{:.1}", self.state.short_term_lufs), Color32::from_rgb(33, 150, 243)),
-            ("INT", Self::normalize_lufs(self.state.integrated_lufs), format!("{:.1}", self.state.integrated_lufs), Color32::from_rgb(255, 171, 0)),
+            (
+                "L TP",
+                Self::normalize_dbtp(self.state.true_peak_l_dbtp),
+                format!("{:.1}", self.state.true_peak_l_dbtp),
+                Color32::from_rgb(0, 230, 118),
+            ),
+            (
+                "R TP",
+                Self::normalize_dbtp(self.state.true_peak_r_dbtp),
+                format!("{:.1}", self.state.true_peak_r_dbtp),
+                Color32::from_rgb(0, 230, 118),
+            ),
+            (
+                "MOM",
+                Self::normalize_lufs(self.state.momentary_lufs),
+                format!("{:.1}", self.state.momentary_lufs),
+                Color32::from_rgb(0, 229, 255),
+            ),
+            (
+                "SHORT",
+                Self::normalize_lufs(self.state.short_term_lufs),
+                format!("{:.1}", self.state.short_term_lufs),
+                Color32::from_rgb(33, 150, 243),
+            ),
+            (
+                "INT",
+                Self::normalize_lufs(self.state.integrated_lufs),
+                format!("{:.1}", self.state.integrated_lufs),
+                Color32::from_rgb(255, 171, 0),
+            ),
         ];
 
         for (idx, (label, fill_norm, val_str, col)) in meter_data.iter().enumerate() {
             let bx = bar_start_x + idx as f32 * (bar_w + bar_gap);
-            let bar_rect = EguiRect::from_min_size(Pos2::new(bx, bar_start_y), Vec2::new(bar_w, bar_h));
+            let bar_rect =
+                EguiRect::from_min_size(Pos2::new(bx, bar_start_y), Vec2::new(bar_w, bar_h));
 
             // Background trough
             painter.rect_filled(bar_rect, 4.0, Color32::from_rgb(18, 24, 38));
-            painter.rect_stroke(bar_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)));
+            painter.rect_stroke(
+                bar_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)),
+            );
 
             // Fill
             let fill_height = bar_h * fill_norm.clamp(0.0, 1.0);
@@ -479,7 +536,9 @@ impl MasteringMeterView {
             egui::Align2::LEFT_CENTER,
             format!(
                 "LRA: {:.1} LU  |  PHASE: {:.2}  |  PLR: {:.1} dB",
-                self.state.loudness_range_lra, self.state.phase_correlation, self.state.crest_factor_plr
+                self.state.loudness_range_lra,
+                self.state.phase_correlation,
+                self.state.crest_factor_plr
             ),
             egui::FontId::proportional(12.0),
             Color32::WHITE,
@@ -490,7 +549,12 @@ impl MasteringMeterView {
 }
 
 // Uncompressed direct PNG encoder for headless snapshot generation
-fn save_png_direct_mastering(path: &str, width: u32, height: u32, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_direct_mastering(
+    path: &str,
+    width: u32,
+    height: u32,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out: Vec<u8> = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 
@@ -573,8 +637,14 @@ mod tests {
 
     #[test]
     fn test_mastering_standard_targets() {
-        assert_eq!(MasteringStandard::StreamingMusic.target_integrated_lufs(), -14.0);
-        assert_eq!(MasteringStandard::EbuR128Broadcast.target_integrated_lufs(), -23.0);
+        assert_eq!(
+            MasteringStandard::StreamingMusic.target_integrated_lufs(),
+            -14.0
+        );
+        assert_eq!(
+            MasteringStandard::EbuR128Broadcast.target_integrated_lufs(),
+            -23.0
+        );
         assert_eq!(MasteringStandard::StreamingMusic.ceiling_dbtp(), -1.0);
         assert_eq!(MasteringStandard::ItuBs1770Cinema.ceiling_dbtp(), -2.0);
     }
@@ -590,7 +660,12 @@ mod tests {
 
     #[test]
     fn test_mastering_meter_hit_target_dimensions() {
-        const { assert!(MIN_HIT_TARGET_PT >= 44.0, "Hit targets must be >= 44pt for touch accessibility") };
+        const {
+            assert!(
+                MIN_HIT_TARGET_PT >= 44.0,
+                "Hit targets must be >= 44pt for touch accessibility"
+            )
+        };
     }
 
     #[test]

@@ -98,9 +98,7 @@ pub enum GrandPianoGesturePattern {
         max_velocity: f32,
     },
     /// Impressionist Debussy passage with heavy Una Corda soft-pedal coloring and shimmer.
-    DebussyImpressionistUnaCorda {
-        phrase_length_beats: f64,
-    },
+    DebussyImpressionistUnaCorda { phrase_length_beats: f64 },
     /// Dynamic Half-Pedal atmospheric study with continuous damper hovering.
     HalfPedalAtmosphere {
         phrase_length_beats: f64,
@@ -108,9 +106,7 @@ pub enum GrandPianoGesturePattern {
         max_damper: f32,
     },
     /// Contrapuntal Sostenuto study with bass pedaled drone and staccato upper voices.
-    SostenutoContrapuntal {
-        phrase_length_beats: f64,
-    },
+    SostenutoContrapuntal { phrase_length_beats: f64 },
     /// Virtuoso Liszt bravura with high strike velocities and crisp prompt attacks.
     LisztVirtuosoBravura {
         phrase_length_beats: f64,
@@ -153,7 +149,11 @@ impl GrandPianoGestureEngine {
     }
 
     pub fn sort_waypoints(&mut self) {
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     pub fn clear(&mut self) {
@@ -164,7 +164,10 @@ impl GrandPianoGestureEngine {
         self.clear();
 
         match &pattern {
-            GrandPianoGesturePattern::ChopinRecitalNocturne { phrase_length_beats, max_velocity } => {
+            GrandPianoGesturePattern::ChopinRecitalNocturne {
+                phrase_length_beats,
+                max_velocity,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(GrandPianoWaypoint {
@@ -240,7 +243,9 @@ impl GrandPianoGestureEngine {
                 });
             }
 
-            GrandPianoGesturePattern::DebussyImpressionistUnaCorda { phrase_length_beats } => {
+            GrandPianoGesturePattern::DebussyImpressionistUnaCorda {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(GrandPianoWaypoint {
@@ -298,7 +303,11 @@ impl GrandPianoGestureEngine {
                 });
             }
 
-            GrandPianoGesturePattern::HalfPedalAtmosphere { phrase_length_beats, min_damper, max_damper } => {
+            GrandPianoGesturePattern::HalfPedalAtmosphere {
+                phrase_length_beats,
+                min_damper,
+                max_damper,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(GrandPianoWaypoint {
@@ -356,7 +365,9 @@ impl GrandPianoGestureEngine {
                 });
             }
 
-            GrandPianoGesturePattern::SostenutoContrapuntal { phrase_length_beats } => {
+            GrandPianoGesturePattern::SostenutoContrapuntal {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(GrandPianoWaypoint {
@@ -396,7 +407,10 @@ impl GrandPianoGestureEngine {
                 });
             }
 
-            GrandPianoGesturePattern::LisztVirtuosoBravura { phrase_length_beats, peak_velocity } => {
+            GrandPianoGesturePattern::LisztVirtuosoBravura {
+                phrase_length_beats,
+                peak_velocity,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(GrandPianoWaypoint {
@@ -561,51 +575,131 @@ impl GrandPianoGestureEngine {
         let span = (wp2.beat - wp1.beat).max(1e-6);
         let t = ((effective_beat - wp1.beat) / span).clamp(0.0, 1.0) as f32;
 
-        let interp = |v0: f32, v1: f32, v2: f32, v3: f32, curve: GrandPianoInterpolationCurve| -> f32 {
-            match curve {
-                GrandPianoInterpolationCurve::Hold => v1,
-                GrandPianoInterpolationCurve::Linear => v1 + t * (v2 - v1),
-                GrandPianoInterpolationCurve::Exponential => {
-                    let min_v = v1.min(v2).max(1e-5);
-                    let ratio = (v2.max(1e-5) / min_v).max(1e-5);
-                    v1 * ratio.powf(t)
+        let interp =
+            |v0: f32, v1: f32, v2: f32, v3: f32, curve: GrandPianoInterpolationCurve| -> f32 {
+                match curve {
+                    GrandPianoInterpolationCurve::Hold => v1,
+                    GrandPianoInterpolationCurve::Linear => v1 + t * (v2 - v1),
+                    GrandPianoInterpolationCurve::Exponential => {
+                        let min_v = v1.min(v2).max(1e-5);
+                        let ratio = (v2.max(1e-5) / min_v).max(1e-5);
+                        v1 * ratio.powf(t)
+                    }
+                    GrandPianoInterpolationCurve::CubicBezier => {
+                        let t2 = t * t;
+                        let t3 = t2 * t;
+                        let b = 3.0 * t2 - 2.0 * t3;
+                        v1 + b * (v2 - v1)
+                    }
+                    GrandPianoInterpolationCurve::CubicCatmullRom => {
+                        let t2 = t * t;
+                        let t3 = t2 * t;
+                        0.5 * ((2.0 * v1)
+                            + (-v0 + v2) * t
+                            + (2.0 * v0 - 5.0 * v1 + 4.0 * v2 - v3) * t2
+                            + (-v0 + 3.0 * v1 - 3.0 * v2 + v3) * t3)
+                    }
                 }
-                GrandPianoInterpolationCurve::CubicBezier => {
-                    let t2 = t * t;
-                    let t3 = t2 * t;
-                    let b = 3.0 * t2 - 2.0 * t3;
-                    v1 + b * (v2 - v1)
-                }
-                GrandPianoInterpolationCurve::CubicCatmullRom => {
-                    let t2 = t * t;
-                    let t3 = t2 * t;
-                    0.5 * ((2.0 * v1)
-                        + (-v0 + v2) * t
-                        + (2.0 * v0 - 5.0 * v1 + 4.0 * v2 - v3) * t2
-                        + (-v0 + 3.0 * v1 - 3.0 * v2 + v3) * t3)
-                }
-            }
-        };
+            };
 
         let curve = wp2.curve;
-        let strike_vel = interp(wp0.strike_velocity, wp1.strike_velocity, wp2.strike_velocity, wp3.strike_velocity, curve).clamp(0.0, 1.0);
-        let damper = interp(wp0.damper_lift_pos, wp1.damper_lift_pos, wp2.damper_lift_pos, wp3.damper_lift_pos, curve).clamp(0.0, 1.0);
-        let una = interp(wp0.una_corda_shift, wp1.una_corda_shift, wp2.una_corda_shift, wp3.una_corda_shift, curve).clamp(0.0, 1.0);
-        let bleed = interp(wp0.bridge_bleed, wp1.bridge_bleed, wp2.bridge_bleed, wp3.bridge_bleed, curve).clamp(0.0, 1.0);
-        let detune = interp(wp0.unison_detune_cents, wp1.unison_detune_cents, wp2.unison_detune_cents, wp3.unison_detune_cents, curve).clamp(0.0, 5.0);
-        let hard = interp(wp0.hammer_hardness, wp1.hammer_hardness, wp2.hammer_hardness, wp3.hammer_hardness, curve).clamp(0.0, 1.0);
-        let b = interp(wp0.inharmonicity_b, wp1.inharmonicity_b, wp2.inharmonicity_b, wp3.inharmonicity_b, curve).clamp(0.00001, 0.001);
-        let decay = interp(wp0.soundboard_decay, wp1.soundboard_decay, wp2.soundboard_decay, wp3.soundboard_decay, curve).clamp(0.1, 3.0);
-        let gain = interp(wp0.master_gain, wp1.master_gain, wp2.master_gain, wp3.master_gain, curve).clamp(0.0, 2.0);
+        let strike_vel = interp(
+            wp0.strike_velocity,
+            wp1.strike_velocity,
+            wp2.strike_velocity,
+            wp3.strike_velocity,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let damper = interp(
+            wp0.damper_lift_pos,
+            wp1.damper_lift_pos,
+            wp2.damper_lift_pos,
+            wp3.damper_lift_pos,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let una = interp(
+            wp0.una_corda_shift,
+            wp1.una_corda_shift,
+            wp2.una_corda_shift,
+            wp3.una_corda_shift,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let bleed = interp(
+            wp0.bridge_bleed,
+            wp1.bridge_bleed,
+            wp2.bridge_bleed,
+            wp3.bridge_bleed,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let detune = interp(
+            wp0.unison_detune_cents,
+            wp1.unison_detune_cents,
+            wp2.unison_detune_cents,
+            wp3.unison_detune_cents,
+            curve,
+        )
+        .clamp(0.0, 5.0);
+        let hard = interp(
+            wp0.hammer_hardness,
+            wp1.hammer_hardness,
+            wp2.hammer_hardness,
+            wp3.hammer_hardness,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let b = interp(
+            wp0.inharmonicity_b,
+            wp1.inharmonicity_b,
+            wp2.inharmonicity_b,
+            wp3.inharmonicity_b,
+            curve,
+        )
+        .clamp(0.00001, 0.001);
+        let decay = interp(
+            wp0.soundboard_decay,
+            wp1.soundboard_decay,
+            wp2.soundboard_decay,
+            wp3.soundboard_decay,
+            curve,
+        )
+        .clamp(0.1, 3.0);
+        let gain = interp(
+            wp0.master_gain,
+            wp1.master_gain,
+            wp2.master_gain,
+            wp3.master_gain,
+            curve,
+        )
+        .clamp(0.0, 2.0);
 
         GrandPianoBusSnapshot {
-            articulation: if t > 0.5 { wp2.articulation } else { wp1.articulation },
+            articulation: if t > 0.5 {
+                wp2.articulation
+            } else {
+                wp1.articulation
+            },
             strike_velocity: strike_vel,
             damper_lift_pos: damper,
             una_corda_shift: una,
-            sostenuto_latch_low: if t > 0.5 { wp2.sostenuto_latch_low } else { wp1.sostenuto_latch_low },
-            sostenuto_latch_mid: if t > 0.5 { wp2.sostenuto_latch_mid } else { wp1.sostenuto_latch_mid },
-            sostenuto_latch_high: if t > 0.5 { wp2.sostenuto_latch_high } else { wp1.sostenuto_latch_high },
+            sostenuto_latch_low: if t > 0.5 {
+                wp2.sostenuto_latch_low
+            } else {
+                wp1.sostenuto_latch_low
+            },
+            sostenuto_latch_mid: if t > 0.5 {
+                wp2.sostenuto_latch_mid
+            } else {
+                wp1.sostenuto_latch_mid
+            },
+            sostenuto_latch_high: if t > 0.5 {
+                wp2.sostenuto_latch_high
+            } else {
+                wp1.sostenuto_latch_high
+            },
             bridge_bleed: bleed,
             unison_detune_cents: detune,
             hammer_hardness: hard,
@@ -628,7 +722,11 @@ impl GrandPianoGestureEngine {
         bus.set_strike_velocity(snap.strike_velocity);
         bus.set_damper_lift(snap.damper_lift_pos);
         bus.set_una_corda_shift(snap.una_corda_shift);
-        bus.set_sostenuto_latch(snap.sostenuto_latch_low, snap.sostenuto_latch_mid, snap.sostenuto_latch_high);
+        bus.set_sostenuto_latch(
+            snap.sostenuto_latch_low,
+            snap.sostenuto_latch_mid,
+            snap.sostenuto_latch_high,
+        );
         bus.set_bridge_bleed(snap.bridge_bleed);
         bus.set_unison_detune_cents(snap.unison_detune_cents);
         bus.set_hammer_hardness(snap.hammer_hardness);
@@ -668,7 +766,10 @@ mod tests {
         );
 
         let snap_start = engine.evaluate_at_beat(0.0);
-        assert_eq!(snap_start.articulation, GrandPianoArticulation::ConcertRecital);
+        assert_eq!(
+            snap_start.articulation,
+            GrandPianoArticulation::ConcertRecital
+        );
         assert!((snap_start.strike_velocity - 0.45).abs() < 1e-3);
 
         let snap_mid = engine.evaluate_at_beat(4.0);
@@ -684,7 +785,8 @@ mod tests {
             },
         );
 
-        let toml_str = toml::to_string(&engine).expect("Failed to serialize GrandPianoGestureEngine");
+        let toml_str =
+            toml::to_string(&engine).expect("Failed to serialize GrandPianoGestureEngine");
         let deserialized: GrandPianoGestureEngine =
             toml::from_str(&toml_str).expect("Failed to deserialize GrandPianoGestureEngine");
         assert_eq!(engine.waypoints.len(), deserialized.waypoints.len());

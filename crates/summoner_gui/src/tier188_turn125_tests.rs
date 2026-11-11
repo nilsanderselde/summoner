@@ -101,7 +101,11 @@ pub mod pure_tests {
             view.bands[0].q_factor = 1.0;
             let (b0, b1, b2, a1, a2) = view.compute_biquad_coeffs(0);
             assert!(
-                b0.is_finite() && b1.is_finite() && b2.is_finite() && a1.is_finite() && a2.is_finite()
+                b0.is_finite()
+                    && b1.is_finite()
+                    && b2.is_finite()
+                    && a1.is_finite()
+                    && a2.is_finite()
             );
             assert!(!m.label().is_empty());
             assert!(!m.short_tag().is_empty());

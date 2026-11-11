@@ -227,7 +227,11 @@ impl TapeSaturationView {
         for row in canvas.iter_mut().take(height.saturating_sub(2)).skip(4) {
             row[center_x] = ':';
         }
-        for ch in canvas[center_y].iter_mut().take(width.saturating_sub(2)).skip(2) {
+        for ch in canvas[center_y]
+            .iter_mut()
+            .take(width.saturating_sub(2))
+            .skip(2)
+        {
             *ch = '.';
         }
 
@@ -325,14 +329,20 @@ impl TapeSaturationView {
         // Render Hysteresis B-H Curve in glowing amber (#FFB300)
         let points = self.compute_hysteresis_points(256);
         for &(h, b) in &points {
-            let px = ((h / 1.5 * 0.45 + 0.5) * (canvas_w as f32 - 16.0) + (canvas_x0 as f32 + 8.0)).round() as i32;
-            let py = ((0.5 - b / 1.2 * 0.42) * (canvas_h as f32 - 16.0) + (canvas_y0 as f32 + 8.0)).round() as i32;
+            let px = ((h / 1.5 * 0.45 + 0.5) * (canvas_w as f32 - 16.0) + (canvas_x0 as f32 + 8.0))
+                .round() as i32;
+            let py = ((0.5 - b / 1.2 * 0.42) * (canvas_h as f32 - 16.0) + (canvas_y0 as f32 + 8.0))
+                .round() as i32;
 
             for dy in -1..=1 {
                 for dx in -1..=1 {
                     let cx = px + dx;
                     let cy = py + dy;
-                    if cx >= canvas_x0 as i32 && cx < (canvas_x0 + canvas_w) as i32 && cy >= canvas_y0 as i32 && cy < (canvas_y0 + canvas_h) as i32 {
+                    if cx >= canvas_x0 as i32
+                        && cx < (canvas_x0 + canvas_w) as i32
+                        && cy >= canvas_y0 as i32
+                        && cy < (canvas_y0 + canvas_h) as i32
+                    {
                         let idx = ((cy as u32 * width + cx as u32) * 4) as usize;
                         if idx + 3 < rgba_pixels.len() {
                             rgba_pixels[idx] = 255;
@@ -374,7 +384,9 @@ impl TapeSaturationView {
             // HF loss rolloff
             let hf_loss = (freq_hz / 18000.0).powi(2) * (1.1 - self.tone * 0.5) * 0.35;
             let response = 0.5 + bump - hf_loss;
-            let cy = ((1.0 - response.clamp(0.05, 0.95)) * (spec_h as f32 - 16.0) + (spec_y0 as f32 + 8.0)).round() as i32;
+            let cy = ((1.0 - response.clamp(0.05, 0.95)) * (spec_h as f32 - 16.0)
+                + (spec_y0 as f32 + 8.0))
+                .round() as i32;
 
             let cx = (spec_x0 + step) as i32;
             for dy in -1..=1 {
@@ -393,7 +405,11 @@ impl TapeSaturationView {
         // Parameter knobs / touch targets (Right lower panel: y in 260..468)
         let button_h = 44u32;
         let speed_btn_w = 100u32;
-        let speeds = [TapeViewSpeed::Ips7_5, TapeViewSpeed::Ips15, TapeViewSpeed::Ips30];
+        let speeds = [
+            TapeViewSpeed::Ips7_5,
+            TapeViewSpeed::Ips15,
+            TapeViewSpeed::Ips30,
+        ];
         for (i, spd) in speeds.iter().enumerate() {
             let bx = spec_x0 + (i as u32) * (speed_btn_w + 16);
             let by = 260u32;
@@ -443,9 +459,14 @@ impl TapeSaturationView {
         );
 
         // Left Hysteresis B-H Canvas
-        let canvas_rect = EguiRect::from_min_size(rect.min + Vec2::new(16.0, 48.0), Vec2::new(360.0, 400.0));
+        let canvas_rect =
+            EguiRect::from_min_size(rect.min + Vec2::new(16.0, 48.0), Vec2::new(360.0, 400.0));
         painter.rect_filled(canvas_rect, 4.0, Color32::from_rgb(16, 24, 40));
-        painter.rect_stroke(canvas_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(40, 56, 88)));
+        painter.rect_stroke(
+            canvas_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(40, 56, 88)),
+        );
 
         // Center axes
         painter.line_segment(
@@ -478,7 +499,10 @@ impl TapeSaturationView {
                 (0.5 - b1 / 1.2 * 0.42) * (canvas_rect.height() - 16.0) + canvas_rect.min.y + 8.0,
             );
 
-            painter.line_segment([p0, p1], Stroke::new(2.0_f32, Color32::from_rgb(255, 179, 0)));
+            painter.line_segment(
+                [p0, p1],
+                Stroke::new(2.0_f32, Color32::from_rgb(255, 179, 0)),
+            );
         }
 
         // Right Panel: Speed selection buttons
@@ -503,7 +527,11 @@ impl TapeSaturationView {
             };
 
             painter.rect_filled(btn_rect, 4.0, fill);
-            painter.rect_stroke(btn_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(60, 80, 120)));
+            painter.rect_stroke(
+                btn_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(60, 80, 120)),
+            );
             painter.text(
                 btn_rect.center(),
                 egui::Align2::CENTER_CENTER,
@@ -526,7 +554,12 @@ impl TapeSaturationView {
 }
 
 /// Minimal PNG encoder writing uncompressed raw RGBA stream into compliant PNG container.
-fn encode_minimal_png(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::new();
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 
@@ -620,8 +653,18 @@ mod tests {
 
     #[test]
     fn test_tape_saturation_view_hit_target_dimensions() {
-        const { assert!(MIN_HIT_TARGET_PT >= 44.0, "Hit targets must be >= 44pt for touch accessibility") };
-        const { assert!(TAPE_PUCK_HIT_RADIUS * 2.0 >= 44.0, "Puck hit bounds must be >= 44pt") };
+        const {
+            assert!(
+                MIN_HIT_TARGET_PT >= 44.0,
+                "Hit targets must be >= 44pt for touch accessibility"
+            )
+        };
+        const {
+            assert!(
+                TAPE_PUCK_HIT_RADIUS * 2.0 >= 44.0,
+                "Puck hit bounds must be >= 44pt"
+            )
+        };
     }
 
     #[test]

@@ -69,16 +69,56 @@ pub struct ScalpElectrodeLocation {
 }
 
 pub const SCALP_ELECTRODES_10_20: [ScalpElectrodeLocation; NUM_10_20_ELECTRODES] = [
-    ScalpElectrodeLocation { name: "Fp1", norm_x: 0.35, norm_y: 0.15 },
-    ScalpElectrodeLocation { name: "Fp2", norm_x: 0.65, norm_y: 0.15 },
-    ScalpElectrodeLocation { name: "F3",  norm_x: 0.28, norm_y: 0.32 },
-    ScalpElectrodeLocation { name: "F4",  norm_x: 0.72, norm_y: 0.32 },
-    ScalpElectrodeLocation { name: "C3",  norm_x: 0.25, norm_y: 0.50 },
-    ScalpElectrodeLocation { name: "C4",  norm_x: 0.75, norm_y: 0.50 },
-    ScalpElectrodeLocation { name: "P3",  norm_x: 0.30, norm_y: 0.68 },
-    ScalpElectrodeLocation { name: "P4",  norm_x: 0.70, norm_y: 0.68 },
-    ScalpElectrodeLocation { name: "O1",  norm_x: 0.38, norm_y: 0.85 },
-    ScalpElectrodeLocation { name: "O2",  norm_x: 0.62, norm_y: 0.85 },
+    ScalpElectrodeLocation {
+        name: "Fp1",
+        norm_x: 0.35,
+        norm_y: 0.15,
+    },
+    ScalpElectrodeLocation {
+        name: "Fp2",
+        norm_x: 0.65,
+        norm_y: 0.15,
+    },
+    ScalpElectrodeLocation {
+        name: "F3",
+        norm_x: 0.28,
+        norm_y: 0.32,
+    },
+    ScalpElectrodeLocation {
+        name: "F4",
+        norm_x: 0.72,
+        norm_y: 0.32,
+    },
+    ScalpElectrodeLocation {
+        name: "C3",
+        norm_x: 0.25,
+        norm_y: 0.50,
+    },
+    ScalpElectrodeLocation {
+        name: "C4",
+        norm_x: 0.75,
+        norm_y: 0.50,
+    },
+    ScalpElectrodeLocation {
+        name: "P3",
+        norm_x: 0.30,
+        norm_y: 0.68,
+    },
+    ScalpElectrodeLocation {
+        name: "P4",
+        norm_x: 0.70,
+        norm_y: 0.68,
+    },
+    ScalpElectrodeLocation {
+        name: "O1",
+        norm_x: 0.38,
+        norm_y: 0.85,
+    },
+    ScalpElectrodeLocation {
+        name: "O2",
+        norm_x: 0.62,
+        norm_y: 0.85,
+    },
 ];
 
 /// 10-20 BCI EEG Brainwave Decoder & Neuro-Feedback Modulation HUD view.
@@ -206,7 +246,9 @@ impl BciEegDecoderView {
     /// Hit test for 2D dynamics puck with minimum 44x44pt bounding target (22.0pt radius).
     pub fn hit_test_bci_puck(&self, pointer_pos: (f32, f32), canvas_bounds: Rect) -> bool {
         let puck_screen_x = canvas_bounds.x + 15.0 + self.puck_pos.0 * (canvas_bounds.width - 30.0);
-        let puck_screen_y = canvas_bounds.y + canvas_bounds.height - 15.0 - self.puck_pos.1 * (canvas_bounds.height - 30.0);
+        let puck_screen_y = canvas_bounds.y + canvas_bounds.height
+            - 15.0
+            - self.puck_pos.1 * (canvas_bounds.height - 30.0);
         let dx = pointer_pos.0 - puck_screen_x;
         let dy = pointer_pos.1 - puck_screen_y;
         (dx * dx + dy * dy).sqrt() <= BCI_EEG_PUCK_HIT_RADIUS
@@ -227,7 +269,13 @@ impl BciEegDecoderView {
         buf.push_str("=== 10-20 BCI EEG BRAINWAVE DECODER & NEURO-FEEDBACK HUD ===\n");
         buf.push_str(&format!(
             "Preset: {} | Channel: {} | Calibrated: {}\n",
-            self.preset.name(), active_ch, if self.is_calibrating { "IN PROGRESS" } else { "LOCKED" }
+            self.preset.name(),
+            active_ch,
+            if self.is_calibrating {
+                "IN PROGRESS"
+            } else {
+                "LOCKED"
+            }
         ));
         buf.push_str(&format!(
             "Bands: δ={:.2} (0.5-3.5Hz) | θ={:.2} (4-7.5Hz) | α={:.2} (8-12.5Hz) | β={:.2} (13-30Hz) | γ={:.2} (30-100Hz)\n",
@@ -235,7 +283,10 @@ impl BciEegDecoderView {
         ));
         buf.push_str(&format!(
             "Neuro-Affective: Focus Index={:.2} | Valence={:+.2} | Arousal={:.2} | CV Out={:.2}V\n",
-            self.focus_index, self.emotional_valence, self.arousal_intensity, self.cv_modulation_out * 10.0
+            self.focus_index,
+            self.emotional_valence,
+            self.arousal_intensity,
+            self.cv_modulation_out * 10.0
         ));
         buf.push_str(&format!(
             "2D Puck: ({:.2}, {:.2}) [PASS: >=44pt hit target]\n",
@@ -274,7 +325,12 @@ impl BciEegDecoderView {
         ui.vertical(|ui| {
             // 1. Preset Header & Calibrate Actions
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Preset:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                ui.label(
+                    RichText::new("Preset:")
+                        .font(FontId::proportional(11.0))
+                        .strong()
+                        .color(Color32::from_rgb(148, 163, 184)),
+                );
                 let presets = [
                     (BciEegPreset::DeepAlphaFlow, "🌿 Alpha Flow"),
                     (BciEegPreset::HighGammaInsight, "⚡ Gamma Insight"),
@@ -286,14 +342,31 @@ impl BciEegDecoderView {
                     let btn = egui::Button::new(
                         RichText::new(label)
                             .font(FontId::proportional(10.0))
-                            .color(if is_active { Color32::WHITE } else { Color32::from_rgb(148, 163, 184) })
-                    ).fill(if is_active { Color32::from_rgb(16, 185, 129) } else { Color32::from_rgb(30, 41, 59) });
+                            .color(if is_active {
+                                Color32::WHITE
+                            } else {
+                                Color32::from_rgb(148, 163, 184)
+                            }),
+                    )
+                    .fill(if is_active {
+                        Color32::from_rgb(16, 185, 129)
+                    } else {
+                        Color32::from_rgb(30, 41, 59)
+                    });
                     if ui.add(btn).clicked() {
                         self.set_preset(p);
                     }
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(RichText::new("⚡ Stimulate Alpha").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(34, 197, 94))).clicked() {
+                    if ui
+                        .button(
+                            RichText::new("⚡ Stimulate Alpha")
+                                .font(FontId::proportional(10.0))
+                                .strong()
+                                .color(Color32::from_rgb(34, 197, 94)),
+                        )
+                        .clicked()
+                    {
                         self.stimulate_alpha();
                     }
                 });
@@ -304,17 +377,36 @@ impl BciEegDecoderView {
             // 2. Interactive 2D Dynamics Puck Canvas (Left) & Scalp Map (Right)
             ui.horizontal(|ui| {
                 // Puck Canvas: Alpha (X) vs Beta (Y)
-                let (puck_resp, puck_painter) = ui.allocate_painter(Vec2::new(ui.available_width() * 0.65, 160.0), egui::Sense::click_and_drag());
+                let (puck_resp, puck_painter) = ui.allocate_painter(
+                    Vec2::new(ui.available_width() * 0.65, 160.0),
+                    egui::Sense::click_and_drag(),
+                );
                 let puck_rect = puck_resp.rect;
                 puck_painter.rect_filled(puck_rect, 4.0, Color32::from_rgb(10, 16, 26));
-                puck_painter.rect_stroke(puck_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(30, 41, 59)));
+                puck_painter.rect_stroke(
+                    puck_rect,
+                    4.0,
+                    Stroke::new(1.0_f32, Color32::from_rgb(30, 41, 59)),
+                );
 
                 // Background flow grid
                 for i in 1..4 {
                     let gx = puck_rect.left() + (puck_rect.width() / 4.0) * i as f32;
                     let gy = puck_rect.top() + (puck_rect.height() / 4.0) * i as f32;
-                    puck_painter.line_segment([egui::pos2(gx, puck_rect.top()), egui::pos2(gx, puck_rect.bottom())], Stroke::new(0.5_f32, Color32::from_rgb(20, 28, 45)));
-                    puck_painter.line_segment([egui::pos2(puck_rect.left(), gy), egui::pos2(puck_rect.right(), gy)], Stroke::new(0.5_f32, Color32::from_rgb(20, 28, 45)));
+                    puck_painter.line_segment(
+                        [
+                            egui::pos2(gx, puck_rect.top()),
+                            egui::pos2(gx, puck_rect.bottom()),
+                        ],
+                        Stroke::new(0.5_f32, Color32::from_rgb(20, 28, 45)),
+                    );
+                    puck_painter.line_segment(
+                        [
+                            egui::pos2(puck_rect.left(), gy),
+                            egui::pos2(puck_rect.right(), gy),
+                        ],
+                        Stroke::new(0.5_f32, Color32::from_rgb(20, 28, 45)),
+                    );
                 }
 
                 // Axis indicators
@@ -336,36 +428,64 @@ impl BciEegDecoderView {
                 // Handle Pointer Drag on Canvas
                 if puck_resp.dragged() || puck_resp.clicked() {
                     if let Some(pos) = puck_resp.interact_pointer_pos() {
-                        let norm_x = ((pos.x - puck_rect.left() - 15.0) / (puck_rect.width() - 30.0)).clamp(0.0, 1.0);
-                        let norm_y = (1.0 - ((pos.y - puck_rect.top() - 15.0) / (puck_rect.height() - 30.0))).clamp(0.0, 1.0);
+                        let norm_x = ((pos.x - puck_rect.left() - 15.0)
+                            / (puck_rect.width() - 30.0))
+                            .clamp(0.0, 1.0);
+                        let norm_y = (1.0
+                            - ((pos.y - puck_rect.top() - 15.0) / (puck_rect.height() - 30.0)))
+                            .clamp(0.0, 1.0);
                         self.update_state_from_puck(norm_x, norm_y);
                     }
                 }
 
                 // Draw Target Dynamics Puck (>= 44x44pt bounding touch target)
                 let puck_x = puck_rect.left() + 15.0 + self.puck_pos.0 * (puck_rect.width() - 30.0);
-                let puck_y = puck_rect.bottom() - 15.0 - self.puck_pos.1 * (puck_rect.height() - 30.0);
-                puck_painter.circle_filled(egui::pos2(puck_x, puck_y), 5.5, Color32::from_rgb(16, 185, 129));
-                puck_painter.circle_stroke(egui::pos2(puck_x, puck_y), 9.0, Stroke::new(1.4_f32, Color32::WHITE));
+                let puck_y =
+                    puck_rect.bottom() - 15.0 - self.puck_pos.1 * (puck_rect.height() - 30.0);
+                puck_painter.circle_filled(
+                    egui::pos2(puck_x, puck_y),
+                    5.5,
+                    Color32::from_rgb(16, 185, 129),
+                );
+                puck_painter.circle_stroke(
+                    egui::pos2(puck_x, puck_y),
+                    9.0,
+                    Stroke::new(1.4_f32, Color32::WHITE),
+                );
 
                 // Scalp Map Canvas (Right)
-                let (scalp_resp, scalp_painter) = ui.allocate_painter(Vec2::new(ui.available_width(), 160.0), egui::Sense::click());
+                let (scalp_resp, scalp_painter) = ui
+                    .allocate_painter(Vec2::new(ui.available_width(), 160.0), egui::Sense::click());
                 let scalp_rect = scalp_resp.rect;
                 scalp_painter.rect_filled(scalp_rect, 4.0, Color32::from_rgb(6, 12, 20));
-                scalp_painter.rect_stroke(scalp_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(30, 41, 59)));
+                scalp_painter.rect_stroke(
+                    scalp_rect,
+                    4.0,
+                    Stroke::new(1.0_f32, Color32::from_rgb(30, 41, 59)),
+                );
 
                 // Head outline ellipse
                 let head_center = scalp_rect.center();
                 let head_radius_x = scalp_rect.width() * 0.38;
                 let head_radius_y = scalp_rect.height() * 0.42;
-                scalp_painter.circle_stroke(head_center, head_radius_x.min(head_radius_y), Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                scalp_painter.circle_stroke(
+                    head_center,
+                    head_radius_x.min(head_radius_y),
+                    Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+                );
 
                 // Nose triangle indicator
                 let nose_top = egui::pos2(head_center.x, scalp_rect.top() + 6.0);
                 let nose_l = egui::pos2(head_center.x - 6.0, scalp_rect.top() + 14.0);
                 let nose_r = egui::pos2(head_center.x + 6.0, scalp_rect.top() + 14.0);
-                scalp_painter.line_segment([nose_l, nose_top], Stroke::new(1.0_f32, Color32::from_rgb(100, 116, 139)));
-                scalp_painter.line_segment([nose_r, nose_top], Stroke::new(1.0_f32, Color32::from_rgb(100, 116, 139)));
+                scalp_painter.line_segment(
+                    [nose_l, nose_top],
+                    Stroke::new(1.0_f32, Color32::from_rgb(100, 116, 139)),
+                );
+                scalp_painter.line_segment(
+                    [nose_r, nose_top],
+                    Stroke::new(1.0_f32, Color32::from_rgb(100, 116, 139)),
+                );
 
                 // Electrodes
                 for (idx, elec) in SCALP_ELECTRODES_10_20.iter().enumerate() {
@@ -378,13 +498,21 @@ impl BciEegDecoderView {
                     } else {
                         Color32::from_rgb(71, 85, 105)
                     };
-                    scalp_painter.circle_filled(egui::pos2(ex, ey), if is_sel { 5.0 } else { 3.5 }, node_color);
+                    scalp_painter.circle_filled(
+                        egui::pos2(ex, ey),
+                        if is_sel { 5.0 } else { 3.5 },
+                        node_color,
+                    );
                     scalp_painter.text(
                         egui::pos2(ex, ey - 7.0),
                         egui::Align2::CENTER_BOTTOM,
                         elec.name,
                         FontId::proportional(7.0),
-                        if is_sel { Color32::WHITE } else { Color32::from_rgb(148, 163, 184) },
+                        if is_sel {
+                            Color32::WHITE
+                        } else {
+                            Color32::from_rgb(148, 163, 184)
+                        },
                     );
 
                     if scalp_resp.clicked() {
@@ -401,22 +529,50 @@ impl BciEegDecoderView {
 
             // 3. 5-Band Spectral Energy Bars
             let bands = [
-                ("δ Delta (0.5-3.5Hz)", self.delta_power, Color32::from_rgb(6, 182, 212)),
-                ("θ Theta (4-7.5Hz)", self.theta_power, Color32::from_rgb(20, 184, 166)),
-                ("α Alpha (8-12.5Hz)", self.alpha_power, Color32::from_rgb(34, 197, 94)),
-                ("β Beta (13-30Hz)", self.beta_power, Color32::from_rgb(245, 158, 11)),
-                ("γ Gamma (30-100Hz)", self.gamma_power, Color32::from_rgb(168, 85, 247)),
+                (
+                    "δ Delta (0.5-3.5Hz)",
+                    self.delta_power,
+                    Color32::from_rgb(6, 182, 212),
+                ),
+                (
+                    "θ Theta (4-7.5Hz)",
+                    self.theta_power,
+                    Color32::from_rgb(20, 184, 166),
+                ),
+                (
+                    "α Alpha (8-12.5Hz)",
+                    self.alpha_power,
+                    Color32::from_rgb(34, 197, 94),
+                ),
+                (
+                    "β Beta (13-30Hz)",
+                    self.beta_power,
+                    Color32::from_rgb(245, 158, 11),
+                ),
+                (
+                    "γ Gamma (30-100Hz)",
+                    self.gamma_power,
+                    Color32::from_rgb(168, 85, 247),
+                ),
             ];
 
             ui.horizontal(|ui| {
                 for (name, val, col) in bands {
                     ui.vertical(|ui| {
-                        ui.label(RichText::new(name).font(FontId::proportional(8.5)).color(col));
+                        ui.label(
+                            RichText::new(name)
+                                .font(FontId::proportional(8.5))
+                                .color(col),
+                        );
                         let bar_progress = val.clamp(0.0, 1.0);
-                        let (b_resp, b_painter) = ui.allocate_painter(Vec2::new(75.0, 10.0), egui::Sense::hover());
+                        let (b_resp, b_painter) =
+                            ui.allocate_painter(Vec2::new(75.0, 10.0), egui::Sense::hover());
                         b_painter.rect_filled(b_resp.rect, 2.0, Color32::from_rgb(15, 23, 42));
                         let fill_w = b_resp.rect.width() * bar_progress;
-                        let filled_rect = egui::Rect::from_min_size(b_resp.rect.min, Vec2::new(fill_w, b_resp.rect.height()));
+                        let filled_rect = egui::Rect::from_min_size(
+                            b_resp.rect.min,
+                            Vec2::new(fill_w, b_resp.rect.height()),
+                        );
                         b_painter.rect_filled(filled_rect, 2.0, col);
                     });
                 }
@@ -430,7 +586,10 @@ impl BciEegDecoderView {
                 ui.label(
                     RichText::new(format!(
                         "Focus Index: {:.2} | Valence: {:+.2} | Arousal: {:.2} | CV Out: {:.2} V",
-                        self.focus_index, self.emotional_valence, self.arousal_intensity, self.cv_modulation_out * 10.0
+                        self.focus_index,
+                        self.emotional_valence,
+                        self.arousal_intensity,
+                        self.cv_modulation_out * 10.0
                     ))
                     .font(FontId::proportional(10.5))
                     .strong()
@@ -439,22 +598,43 @@ impl BciEegDecoderView {
             });
 
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Theta θ:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
-                if ui.add(egui::Slider::new(&mut self.theta_power, 0.0..=1.0).show_value(true)).changed() {
+                ui.label(
+                    RichText::new("Theta θ:")
+                        .font(FontId::proportional(10.0))
+                        .color(Color32::from_rgb(148, 163, 184)),
+                );
+                if ui
+                    .add(egui::Slider::new(&mut self.theta_power, 0.0..=1.0).show_value(true))
+                    .changed()
+                {
                     self.recompute_metrics();
                 }
 
                 ui.separator();
 
-                ui.label(RichText::new("Gamma γ:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
-                if ui.add(egui::Slider::new(&mut self.gamma_power, 0.0..=1.0).show_value(true)).changed() {
+                ui.label(
+                    RichText::new("Gamma γ:")
+                        .font(FontId::proportional(10.0))
+                        .color(Color32::from_rgb(148, 163, 184)),
+                );
+                if ui
+                    .add(egui::Slider::new(&mut self.gamma_power, 0.0..=1.0).show_value(true))
+                    .changed()
+                {
                     self.recompute_metrics();
                 }
 
                 ui.separator();
 
-                ui.label(RichText::new("Delta δ:").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
-                if ui.add(egui::Slider::new(&mut self.delta_power, 0.0..=1.0).show_value(true)).changed() {
+                ui.label(
+                    RichText::new("Delta δ:")
+                        .font(FontId::proportional(10.0))
+                        .color(Color32::from_rgb(148, 163, 184)),
+                );
+                if ui
+                    .add(egui::Slider::new(&mut self.delta_power, 0.0..=1.0).show_value(true))
+                    .changed()
+                {
                     self.recompute_metrics();
                 }
             });

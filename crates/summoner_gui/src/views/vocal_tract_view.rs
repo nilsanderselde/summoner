@@ -20,12 +20,12 @@ pub const MAX_TONGUE_HEIGHT: f32 = 1.0;
 #[derive(Debug, Clone)]
 pub struct VocalTractView {
     pub vowel_preset: VowelPreset,
-    pub tongue_position: f32, // [0.0 = back pharynx ..= 1.0 = dental]
-    pub tongue_height: f32,   // [0.0 = open/low ..= 1.0 = high constriction]
-    pub lip_opening: f32,     // [0.1 = tight rounded ..= 2.5 = wide spread]
-    pub velum_opening: f32,   // [0.0 = oral ..= 1.0 = nasalized]
-    pub glottal_f0_hz: f32,   // [50.0 ..= 600.0 Hz]
-    pub aspiration_level: f32,// [0.0 ..= 1.0]
+    pub tongue_position: f32,  // [0.0 = back pharynx ..= 1.0 = dental]
+    pub tongue_height: f32,    // [0.0 = open/low ..= 1.0 = high constriction]
+    pub lip_opening: f32,      // [0.1 = tight rounded ..= 2.5 = wide spread]
+    pub velum_opening: f32,    // [0.0 = oral ..= 1.0 = nasalized]
+    pub glottal_f0_hz: f32,    // [50.0 ..= 600.0 Hz]
+    pub aspiration_level: f32, // [0.0 ..= 1.0]
     pub cylinder_areas: [f32; NUM_CYLINDERS],
     pub nasal_areas: [f32; NUM_NASAL_CYLINDERS],
     pub puck_pos: (f32, f32), // Normalized (X: tongue_position, Y: tongue_height)
@@ -65,15 +65,51 @@ impl VocalTractView {
         self.vowel_preset = preset;
         self.cylinder_areas = preset.cross_sectional_areas();
         match preset {
-            VowelPreset::I => { self.tongue_position = 0.85; self.tongue_height = 0.90; self.lip_opening = 1.3; }
-            VowelPreset::E => { self.tongue_position = 0.75; self.tongue_height = 0.70; self.lip_opening = 1.2; }
-            VowelPreset::Epsilon => { self.tongue_position = 0.65; self.tongue_height = 0.50; self.lip_opening = 1.3; }
-            VowelPreset::Ash => { self.tongue_position = 0.55; self.tongue_height = 0.30; self.lip_opening = 1.5; }
-            VowelPreset::A => { self.tongue_position = 0.30; self.tongue_height = 0.15; self.lip_opening = 1.6; }
-            VowelPreset::OpenO => { self.tongue_position = 0.20; self.tongue_height = 0.40; self.lip_opening = 0.7; }
-            VowelPreset::O => { self.tongue_position = 0.15; self.tongue_height = 0.65; self.lip_opening = 0.5; }
-            VowelPreset::U => { self.tongue_position = 0.10; self.tongue_height = 0.90; self.lip_opening = 0.3; }
-            VowelPreset::Schwa => { self.tongue_position = 0.50; self.tongue_height = 0.50; self.lip_opening = 1.0; }
+            VowelPreset::I => {
+                self.tongue_position = 0.85;
+                self.tongue_height = 0.90;
+                self.lip_opening = 1.3;
+            }
+            VowelPreset::E => {
+                self.tongue_position = 0.75;
+                self.tongue_height = 0.70;
+                self.lip_opening = 1.2;
+            }
+            VowelPreset::Epsilon => {
+                self.tongue_position = 0.65;
+                self.tongue_height = 0.50;
+                self.lip_opening = 1.3;
+            }
+            VowelPreset::Ash => {
+                self.tongue_position = 0.55;
+                self.tongue_height = 0.30;
+                self.lip_opening = 1.5;
+            }
+            VowelPreset::A => {
+                self.tongue_position = 0.30;
+                self.tongue_height = 0.15;
+                self.lip_opening = 1.6;
+            }
+            VowelPreset::OpenO => {
+                self.tongue_position = 0.20;
+                self.tongue_height = 0.40;
+                self.lip_opening = 0.7;
+            }
+            VowelPreset::O => {
+                self.tongue_position = 0.15;
+                self.tongue_height = 0.65;
+                self.lip_opening = 0.5;
+            }
+            VowelPreset::U => {
+                self.tongue_position = 0.10;
+                self.tongue_height = 0.90;
+                self.lip_opening = 0.3;
+            }
+            VowelPreset::Schwa => {
+                self.tongue_position = 0.50;
+                self.tongue_height = 0.50;
+                self.lip_opening = 1.0;
+            }
         }
         self.puck_pos = (self.tongue_position, self.tongue_height);
     }
@@ -100,7 +136,8 @@ impl VocalTractView {
 
         for i in 38..NUM_CYLINDERS {
             let t = (i - 38) as f32 / 6.0;
-            self.cylinder_areas[i] = (self.cylinder_areas[i] * (1.0 - t + self.lip_opening * t)).clamp(0.1, 8.0);
+            self.cylinder_areas[i] =
+                (self.cylinder_areas[i] * (1.0 - t + self.lip_opening * t)).clamp(0.1, 8.0);
         }
     }
 
@@ -139,7 +176,8 @@ impl VocalTractView {
         let right_w = width - mid_x - 2;
         let center_r = height / 2;
         for c in 0..right_w {
-            let cyl_idx = ((c as f32 / right_w as f32) * (NUM_CYLINDERS - 1) as f32).round() as usize;
+            let cyl_idx =
+                ((c as f32 / right_w as f32) * (NUM_CYLINDERS - 1) as f32).round() as usize;
             let area = self.cylinder_areas[cyl_idx.min(NUM_CYLINDERS - 1)];
             let half_h = ((area / 6.0) * (height as f32 * 0.35)).round().max(1.0) as usize;
             if center_r >= half_h && center_r + half_h < height - 1 {
@@ -155,7 +193,9 @@ impl VocalTractView {
             grid[puck_row][puck_col] = 'O';
         }
 
-        grid.into_iter().map(|row| row.into_iter().collect()).collect()
+        grid.into_iter()
+            .map(|row| row.into_iter().collect())
+            .collect()
     }
 
     #[cfg(feature = "gui")]
@@ -268,11 +308,17 @@ impl VocalTractView {
             let gx = left_rect.min.x + (step as f32 / 4.0) * left_rect.width();
             let gy = left_rect.min.y + (step as f32 / 4.0) * left_rect.height();
             painter.line_segment(
-                [egui::pos2(gx, left_rect.min.y + 24.0), egui::pos2(gx, left_rect.max.y)],
+                [
+                    egui::pos2(gx, left_rect.min.y + 24.0),
+                    egui::pos2(gx, left_rect.max.y),
+                ],
                 Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(0, 229, 255, 40)),
             );
             painter.line_segment(
-                [egui::pos2(left_rect.min.x, gy), egui::pos2(left_rect.max.x, gy)],
+                [
+                    egui::pos2(left_rect.min.x, gy),
+                    egui::pos2(left_rect.max.x, gy),
+                ],
                 Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(0, 229, 255, 40)),
             );
         }
@@ -381,7 +427,11 @@ impl VocalTractView {
             ),
             (
                 "GLOTTAL PITCH (F0)",
-                format!("{:.1} Hz (Aspir: {:.0}%)", self.glottal_f0_hz, self.aspiration_level * 100.0),
+                format!(
+                    "{:.1} Hz (Aspir: {:.0}%)",
+                    self.glottal_f0_hz,
+                    self.aspiration_level * 100.0
+                ),
                 Color32::from_rgb(0, 255, 180),
             ),
         ];
@@ -468,35 +518,134 @@ impl VocalTractView {
         }
 
         // Header Panel (y: 10..46, x: 20..width-20)
-        fill_rounded_rect_vt(&mut pixels, width, height, 20, 10, width - 40, 36, 4, [18, 24, 38, 255]);
-        draw_rect_border_vt(&mut pixels, width, height, 20, 10, width - 40, 36, [45, 60, 85, 255]);
+        fill_rounded_rect_vt(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            4,
+            [18, 24, 38, 255],
+        );
+        draw_rect_border_vt(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            [45, 60, 85, 255],
+        );
 
         // Left Canvas: Tongue Articulation Space (x: 20..width/2 - 10, y: 56..height - 120)
         let left_w = (width - 60) / 2;
         let canvas_h = height - 170;
-        fill_rounded_rect_vt(&mut pixels, width, height, 20, 56, left_w, canvas_h, 6, [14, 20, 32, 255]);
-        draw_rect_border_vt(&mut pixels, width, height, 20, 56, left_w, canvas_h, [45, 60, 85, 255]);
+        fill_rounded_rect_vt(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            left_w,
+            canvas_h,
+            6,
+            [14, 20, 32, 255],
+        );
+        draw_rect_border_vt(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            left_w,
+            canvas_h,
+            [45, 60, 85, 255],
+        );
 
         // Draw Left Grid lines
         for step in 1..4 {
             let gx = 20.0 + (step as f32 / 4.0) * left_w as f32;
             let gy = 56.0 + (step as f32 / 4.0) * canvas_h as f32;
-            draw_line_segment_vt(&mut pixels, width, height, gx, 56.0, gx, 56.0 + canvas_h as f32, [25, 35, 55, 255]);
-            draw_line_segment_vt(&mut pixels, width, height, 20.0, gy, 20.0 + left_w as f32, gy, [25, 35, 55, 255]);
+            draw_line_segment_vt(
+                &mut pixels,
+                width,
+                height,
+                gx,
+                56.0,
+                gx,
+                56.0 + canvas_h as f32,
+                [25, 35, 55, 255],
+            );
+            draw_line_segment_vt(
+                &mut pixels,
+                width,
+                height,
+                20.0,
+                gy,
+                20.0 + left_w as f32,
+                gy,
+                [25, 35, 55, 255],
+            );
         }
 
         // Tongue Puck (Gold/Cyan, >= 22pt radius -> 44x44pt touch bounding target)
         let puck_x = 20.0 + self.puck_pos.0 * left_w as f32;
         let puck_y = 56.0 + (1.0 - self.puck_pos.1) * canvas_h as f32;
-        draw_circle_ring_vt(&mut pixels, width, height, puck_x, puck_y, VOCAL_PUCK_HIT_RADIUS, [0, 229, 255, 160]);
-        draw_circle_filled_vt(&mut pixels, width, height, puck_x, puck_y, 14.0, [0, 229, 255, 255]);
-        draw_circle_filled_vt(&mut pixels, width, height, puck_x, puck_y, 4.0, [255, 255, 255, 255]);
+        draw_circle_ring_vt(
+            &mut pixels,
+            width,
+            height,
+            puck_x,
+            puck_y,
+            VOCAL_PUCK_HIT_RADIUS,
+            [0, 229, 255, 160],
+        );
+        draw_circle_filled_vt(
+            &mut pixels,
+            width,
+            height,
+            puck_x,
+            puck_y,
+            14.0,
+            [0, 229, 255, 255],
+        );
+        draw_circle_filled_vt(
+            &mut pixels,
+            width,
+            height,
+            puck_x,
+            puck_y,
+            4.0,
+            [255, 255, 255, 255],
+        );
 
         // Right Canvas: 44-Cylinder Area Function (x: width/2 + 10..width - 20, y: 56..height - 120)
         let right_x = 20 + left_w + 20;
         let right_w = left_w;
-        fill_rounded_rect_vt(&mut pixels, width, height, right_x, 56, right_w, canvas_h, 6, [14, 20, 32, 255]);
-        draw_rect_border_vt(&mut pixels, width, height, right_x, 56, right_w, canvas_h, [45, 60, 85, 255]);
+        fill_rounded_rect_vt(
+            &mut pixels,
+            width,
+            height,
+            right_x,
+            56,
+            right_w,
+            canvas_h,
+            6,
+            [14, 20, 32, 255],
+        );
+        draw_rect_border_vt(
+            &mut pixels,
+            width,
+            height,
+            right_x,
+            56,
+            right_w,
+            canvas_h,
+            [45, 60, 85, 255],
+        );
 
         let center_y = 56.0 + canvas_h as f32 * 0.5;
         let bar_w = (right_w as f32 - 30.0) / (NUM_CYLINDERS as f32);
@@ -527,8 +676,27 @@ impl VocalTractView {
         // Bottom Metrics Dock (x: 20..width - 20, y: height - 100..height - 20)
         let dock_y = height - 100;
         let dock_w = width - 40;
-        fill_rounded_rect_vt(&mut pixels, width, height, 20, dock_y, dock_w, 80, 4, [16, 35, 28, 255]);
-        draw_rect_border_vt(&mut pixels, width, height, 20, dock_y, dock_w, 80, [0, 255, 180, 255]);
+        fill_rounded_rect_vt(
+            &mut pixels,
+            width,
+            height,
+            20,
+            dock_y,
+            dock_w,
+            80,
+            4,
+            [16, 35, 28, 255],
+        );
+        draw_rect_border_vt(
+            &mut pixels,
+            width,
+            height,
+            20,
+            dock_y,
+            dock_w,
+            80,
+            [0, 255, 180, 255],
+        );
 
         encode_minimal_png_vt(path, &pixels, width, height)
     }
@@ -580,7 +748,16 @@ fn fill_rounded_rect_vt(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_rect_border_vt(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+fn draw_rect_border_vt(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    col: [u8; 4],
+) {
     for x in rx..(rx + rw).min(w) {
         if ry < h {
             let idx = ((ry * w + x) * 4) as usize;
@@ -604,7 +781,16 @@ fn draw_rect_border_vt(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_line_segment_vt(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+fn draw_line_segment_vt(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    col: [u8; 4],
+) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let steps = (dx.abs().max(dy.abs()) * 2.0).max(1.0) as u32;
@@ -658,7 +844,12 @@ fn draw_circle_ring_vt(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32,
     }
 }
 
-fn encode_minimal_png_vt(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_vt(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

@@ -14,9 +14,7 @@
 //! Enforces zero heap allocations in real-time execution loops under `AllocGuard`.
 
 use serde::{Deserialize, Serialize};
-use summoner_core::koto_bus::{
-    KotoArticulation, KotoBus, KotoBusSnapshot,
-};
+use summoner_core::koto_bus::{KotoArticulation, KotoBus, KotoBusSnapshot};
 use summoner_core::param_bus::{ParamBus, ParamId};
 
 /// Interpolation curve between discrete Koto keyframe waypoints.
@@ -87,22 +85,16 @@ pub enum KotoGesturePattern {
         max_oshi_ite_n: f32,
     },
     /// Kokin-joshi Fast Miyako-bushi with crisp staccato tsume attacks.
-    KokinJoshiFastMiyako {
-        phrase_length_beats: f64,
-    },
+    KokinJoshiFastMiyako { phrase_length_beats: f64 },
     /// In-sen Contemporary Dramatic with wide dynamic oshi-ite microtonal tension bends.
     InSenDramaticGendai {
         phrase_length_beats: f64,
         max_pitch_bend_n: f32,
     },
     /// Kumoi-joshi Spring Rain with delicate tremolo and sukui-tsume sweeps.
-    KumoiJoshiSpringRain {
-        phrase_length_beats: f64,
-    },
+    KumoiJoshiSpringRain { phrase_length_beats: f64 },
     /// Ryukyu Festive Island Swell with bright Okinawan pentatonic glissandi.
-    RyukyuIslandSwell {
-        phrase_length_beats: f64,
-    },
+    RyukyuIslandSwell { phrase_length_beats: f64 },
     /// Guzheng Virtuoso Waterfall with rapid 21-string harp-like cascading flow.
     GuzhengVirtuosoWaterfall {
         phrase_length_beats: f64,
@@ -145,7 +137,11 @@ impl KotoGestureEngine {
     }
 
     pub fn sort_waypoints(&mut self) {
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     pub fn clear(&mut self) {
@@ -156,7 +152,10 @@ impl KotoGestureEngine {
         self.clear();
 
         match &pattern {
-            KotoGesturePattern::HirajoshiMeditativeAlap { phrase_length_beats, max_oshi_ite_n } => {
+            KotoGesturePattern::HirajoshiMeditativeAlap {
+                phrase_length_beats,
+                max_oshi_ite_n,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
                 let max_f = *max_oshi_ite_n;
 
@@ -217,7 +216,9 @@ impl KotoGestureEngine {
                 });
             }
 
-            KotoGesturePattern::KokinJoshiFastMiyako { phrase_length_beats } => {
+            KotoGesturePattern::KokinJoshiFastMiyako {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(KotoWaypoint {
@@ -263,7 +264,10 @@ impl KotoGestureEngine {
                 });
             }
 
-            KotoGesturePattern::InSenDramaticGendai { phrase_length_beats, max_pitch_bend_n } => {
+            KotoGesturePattern::InSenDramaticGendai {
+                phrase_length_beats,
+                max_pitch_bend_n,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
                 let max_b = *max_pitch_bend_n;
 
@@ -324,7 +328,9 @@ impl KotoGestureEngine {
                 });
             }
 
-            KotoGesturePattern::KumoiJoshiSpringRain { phrase_length_beats } => {
+            KotoGesturePattern::KumoiJoshiSpringRain {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(KotoWaypoint {
@@ -370,7 +376,9 @@ impl KotoGestureEngine {
                 });
             }
 
-            KotoGesturePattern::RyukyuIslandSwell { phrase_length_beats } => {
+            KotoGesturePattern::RyukyuIslandSwell {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(KotoWaypoint {
@@ -416,7 +424,10 @@ impl KotoGestureEngine {
                 });
             }
 
-            KotoGesturePattern::GuzhengVirtuosoWaterfall { phrase_length_beats, arpeggio_rate_hz: _ } => {
+            KotoGesturePattern::GuzhengVirtuosoWaterfall {
+                phrase_length_beats,
+                arpeggio_rate_hz: _,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(KotoWaypoint {
@@ -580,21 +591,78 @@ impl KotoGestureEngine {
         };
 
         let curve = wp2.curve;
-        let vel = interp(wp0.tsume_velocity, wp1.tsume_velocity, wp2.tsume_velocity, wp3.tsume_velocity, curve).clamp(0.01, 1.0);
-        let oshi = interp(wp0.oshi_ite_force_n, wp1.oshi_ite_force_n, wp2.oshi_ite_force_n, wp3.oshi_ite_force_n, curve).clamp(0.0, 30.0);
-        let hiki = interp(wp0.hiki_iro_release, wp1.hiki_iro_release, wp2.hiki_iro_release, wp3.hiki_iro_release, curve).clamp(0.0, 1.0);
-        let offset = interp(wp0.ji_bridge_offset, wp1.ji_bridge_offset, wp2.ji_bridge_offset, wp3.ji_bridge_offset, curve).clamp(-0.20, 0.20);
-        let bleed = interp(wp0.behind_bridge_bleed, wp1.behind_bridge_bleed, wp2.behind_bridge_bleed, wp3.behind_bridge_bleed, curve).clamp(0.0, 1.0);
-        let wood = interp(wp0.body_wood_resonance, wp1.body_wood_resonance, wp2.body_wood_resonance, wp3.body_wood_resonance, curve).clamp(0.0, 1.0);
-        let mgain = interp(wp0.master_gain, wp1.master_gain, wp2.master_gain, wp3.master_gain, curve).clamp(0.0, 2.0);
+        let vel = interp(
+            wp0.tsume_velocity,
+            wp1.tsume_velocity,
+            wp2.tsume_velocity,
+            wp3.tsume_velocity,
+            curve,
+        )
+        .clamp(0.01, 1.0);
+        let oshi = interp(
+            wp0.oshi_ite_force_n,
+            wp1.oshi_ite_force_n,
+            wp2.oshi_ite_force_n,
+            wp3.oshi_ite_force_n,
+            curve,
+        )
+        .clamp(0.0, 30.0);
+        let hiki = interp(
+            wp0.hiki_iro_release,
+            wp1.hiki_iro_release,
+            wp2.hiki_iro_release,
+            wp3.hiki_iro_release,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let offset = interp(
+            wp0.ji_bridge_offset,
+            wp1.ji_bridge_offset,
+            wp2.ji_bridge_offset,
+            wp3.ji_bridge_offset,
+            curve,
+        )
+        .clamp(-0.20, 0.20);
+        let bleed = interp(
+            wp0.behind_bridge_bleed,
+            wp1.behind_bridge_bleed,
+            wp2.behind_bridge_bleed,
+            wp3.behind_bridge_bleed,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let wood = interp(
+            wp0.body_wood_resonance,
+            wp1.body_wood_resonance,
+            wp2.body_wood_resonance,
+            wp3.body_wood_resonance,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let mgain = interp(
+            wp0.master_gain,
+            wp1.master_gain,
+            wp2.master_gain,
+            wp3.master_gain,
+            curve,
+        )
+        .clamp(0.0, 2.0);
 
         KotoBusSnapshot {
-            articulation: if t > 0.5 { wp2.articulation } else { wp1.articulation },
+            articulation: if t > 0.5 {
+                wp2.articulation
+            } else {
+                wp1.articulation
+            },
             tsume_velocity: vel,
             oshi_ite_force_n: oshi,
             hiki_iro_release: hiki,
             ji_bridge_offset: offset,
-            tuning_schema_idx: if t > 0.5 { wp2.tuning_schema_idx } else { wp1.tuning_schema_idx },
+            tuning_schema_idx: if t > 0.5 {
+                wp2.tuning_schema_idx
+            } else {
+                wp1.tuning_schema_idx
+            },
             behind_bridge_bleed: bleed,
             body_wood_resonance: wood,
             master_gain: mgain,
@@ -641,12 +709,27 @@ mod tests {
     #[test]
     fn test_koto_gesture_patterns_and_catmull_rom_evaluation() {
         for pattern in [
-            KotoGesturePattern::HirajoshiMeditativeAlap { phrase_length_beats: 4.0, max_oshi_ite_n: 15.0 },
-            KotoGesturePattern::KokinJoshiFastMiyako { phrase_length_beats: 4.0 },
-            KotoGesturePattern::InSenDramaticGendai { phrase_length_beats: 6.0, max_pitch_bend_n: 25.0 },
-            KotoGesturePattern::KumoiJoshiSpringRain { phrase_length_beats: 4.0 },
-            KotoGesturePattern::RyukyuIslandSwell { phrase_length_beats: 4.0 },
-            KotoGesturePattern::GuzhengVirtuosoWaterfall { phrase_length_beats: 8.0, arpeggio_rate_hz: 12.0 },
+            KotoGesturePattern::HirajoshiMeditativeAlap {
+                phrase_length_beats: 4.0,
+                max_oshi_ite_n: 15.0,
+            },
+            KotoGesturePattern::KokinJoshiFastMiyako {
+                phrase_length_beats: 4.0,
+            },
+            KotoGesturePattern::InSenDramaticGendai {
+                phrase_length_beats: 6.0,
+                max_pitch_bend_n: 25.0,
+            },
+            KotoGesturePattern::KumoiJoshiSpringRain {
+                phrase_length_beats: 4.0,
+            },
+            KotoGesturePattern::RyukyuIslandSwell {
+                phrase_length_beats: 4.0,
+            },
+            KotoGesturePattern::GuzhengVirtuosoWaterfall {
+                phrase_length_beats: 8.0,
+                arpeggio_rate_hz: 12.0,
+            },
         ] {
             let engine = KotoGestureEngine::with_pattern(pattern);
             assert!(!engine.waypoints.is_empty());
@@ -672,9 +755,17 @@ mod tests {
         });
         let bus = KotoBus::new();
         let mut param_bus = ParamBus::new();
-        summoner_core::koto_bus::register_koto_params(&mut param_bus, summoner_core::koto_bus::KOTO_BASE_PARAM_ID);
+        summoner_core::koto_bus::register_koto_params(
+            &mut param_bus,
+            summoner_core::koto_bus::KOTO_BASE_PARAM_ID,
+        );
 
-        engine.dispatch_to_bus(0.0, &bus, Some(&param_bus), summoner_core::koto_bus::KOTO_BASE_PARAM_ID);
+        engine.dispatch_to_bus(
+            0.0,
+            &bus,
+            Some(&param_bus),
+            summoner_core::koto_bus::KOTO_BASE_PARAM_ID,
+        );
 
         let snap = bus.snapshot();
         assert!((snap.tsume_velocity - 0.85).abs() < 1e-3);

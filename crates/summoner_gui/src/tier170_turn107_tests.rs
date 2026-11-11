@@ -6,13 +6,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::parallel_transient_saturator_view::{
-        ParallelTransientSaturatorView, SaturatorMode, SATURATOR_PUCK_HIT_RADIUS,
-    };
+    use crate::layout_math::Rect;
     use crate::views::midside_focuser_view::{
         MidSideFocuserView, MidSideProfileType, MIDSIDE_FOCUSER_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
+    use crate::views::parallel_transient_saturator_view::{
+        ParallelTransientSaturatorView, SaturatorMode, SATURATOR_PUCK_HIT_RADIUS,
+    };
 
     #[test]
     fn test_turn107_pure_parallel_transient_saturator_initialization_and_kinematics() {
@@ -92,11 +92,46 @@ pub mod pure_tests {
 
         // Profiles and nominal values
         let profiles = [
-            (MidSideProfileType::ClubSubTightener, "CLUB SUB TIGHTENER (120Hz)", 120.0, 4.0, 1.35, 512),
-            (MidSideProfileType::VinylMasterMonofier, "VINYL MASTER ELLIPTICAL MONO", 150.0, 2.0, 0.95, 1024),
-            (MidSideProfileType::AcousticLiveFocus, "ACOUSTIC LIVE MID-FOCUS", 80.0, 1.5, 1.10, 256),
-            (MidSideProfileType::DynamicEdmSlam, "DYNAMIC EDM STEREO SLAM", 140.0, 6.5, 1.60, 512),
-            (MidSideProfileType::BroadcastClaritySafe, "BROADCAST CLARITY SAFE", 100.0, 2.5, 1.00, 512),
+            (
+                MidSideProfileType::ClubSubTightener,
+                "CLUB SUB TIGHTENER (120Hz)",
+                120.0,
+                4.0,
+                1.35,
+                512,
+            ),
+            (
+                MidSideProfileType::VinylMasterMonofier,
+                "VINYL MASTER ELLIPTICAL MONO",
+                150.0,
+                2.0,
+                0.95,
+                1024,
+            ),
+            (
+                MidSideProfileType::AcousticLiveFocus,
+                "ACOUSTIC LIVE MID-FOCUS",
+                80.0,
+                1.5,
+                1.10,
+                256,
+            ),
+            (
+                MidSideProfileType::DynamicEdmSlam,
+                "DYNAMIC EDM STEREO SLAM",
+                140.0,
+                6.5,
+                1.60,
+                512,
+            ),
+            (
+                MidSideProfileType::BroadcastClaritySafe,
+                "BROADCAST CLARITY SAFE",
+                100.0,
+                2.5,
+                1.00,
+                512,
+            ),
         ];
 
         for (p, expected_name, exp_cutoff, exp_punch, exp_width, exp_taps) in profiles {
@@ -155,8 +190,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -186,15 +221,24 @@ pub mod gui_tests {
         view.sync_parallel_transient_saturator_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("blend_ratio").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("blend_ratio")
+                .copied(),
             Some(0.68)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("transient_drive_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("transient_drive_db")
+                .copied(),
             Some(9.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("body_sustain_drive_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("body_sustain_drive_db")
+                .copied(),
             Some(5.2)
         );
         assert_eq!(
@@ -214,23 +258,38 @@ pub mod gui_tests {
         view.sync_midside_focuser_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("mono_cutoff_hz").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("mono_cutoff_hz")
+                .copied(),
             Some(145.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("mid_punch_boost_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("mid_punch_boost_db")
+                .copied(),
             Some(6.2)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("side_width_ratio").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("side_width_ratio")
+                .copied(),
             Some(1.55)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("cutoff_hz").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("cutoff_hz")
+                .copied(),
             Some(145.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("mid_punch").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("mid_punch")
+                .copied(),
             Some(6.2)
         );
         assert_eq!(
@@ -249,12 +308,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let sat_action = palette.actions.iter().find(|a| a.action_id == "open_parallel_transient_saturator_hud");
-        assert!(sat_action.is_some(), "open_parallel_transient_saturator_hud should be registered");
+        let sat_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_parallel_transient_saturator_hud");
+        assert!(
+            sat_action.is_some(),
+            "open_parallel_transient_saturator_hud should be registered"
+        );
         assert_eq!(sat_action.unwrap().category, "Dynamics & Saturation");
 
-        let ms_action = palette.actions.iter().find(|a| a.action_id == "open_midside_focuser_hud");
-        assert!(ms_action.is_some(), "open_midside_focuser_hud should be registered");
+        let ms_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_midside_focuser_hud");
+        assert!(
+            ms_action.is_some(),
+            "open_midside_focuser_hud should be registered"
+        );
         assert_eq!(ms_action.unwrap().category, "Spatial & Surround");
     }
 }

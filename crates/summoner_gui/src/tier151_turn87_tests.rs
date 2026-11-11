@@ -5,11 +5,11 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::neural_speech_to_singing_view::{
-        NeuralSpeechToSingingView, VocalModel, SINGING_PUCK_HIT_RADIUS,
-    };
     use crate::views::neural_choir_formant_view::{
         ChoirEnsembleType, NeuralChoirFormantView, CHOIR_PUCK_HIT_RADIUS,
+    };
+    use crate::views::neural_speech_to_singing_view::{
+        NeuralSpeechToSingingView, VocalModel, SINGING_PUCK_HIT_RADIUS,
     };
 
     #[test]
@@ -25,11 +25,41 @@ pub mod pure_tests {
 
         // Model profiles & nominal parameters
         let models = [
-            (VocalModel::BelCantoOperaTenor, 220.0, 45.0, 5.8, "BEL CANTO OPERA"),
-            (VocalModel::PopModernVocalist, 440.0, 15.0, 6.2, "MODERN POP LEAD"),
-            (VocalModel::ChoralPolyphonicChoir, 330.0, 25.0, 5.0, "POLYPHONIC CHOIR"),
-            (VocalModel::MicrotonalMaqamRetune, 293.66, 30.0, 4.5, "MICROTONAL MAQAM"),
-            (VocalModel::ExperimentalFormantMorph, 164.81, 60.0, 7.0, "NEURAL VOCODER"),
+            (
+                VocalModel::BelCantoOperaTenor,
+                220.0,
+                45.0,
+                5.8,
+                "BEL CANTO OPERA",
+            ),
+            (
+                VocalModel::PopModernVocalist,
+                440.0,
+                15.0,
+                6.2,
+                "MODERN POP LEAD",
+            ),
+            (
+                VocalModel::ChoralPolyphonicChoir,
+                330.0,
+                25.0,
+                5.0,
+                "POLYPHONIC CHOIR",
+            ),
+            (
+                VocalModel::MicrotonalMaqamRetune,
+                293.66,
+                30.0,
+                4.5,
+                "MICROTONAL MAQAM",
+            ),
+            (
+                VocalModel::ExperimentalFormantMorph,
+                164.81,
+                60.0,
+                7.0,
+                "NEURAL VOCODER",
+            ),
         ];
         for (m, pitch, vib, rate, name) in models {
             view.set_vocal_model(m);
@@ -75,11 +105,41 @@ pub mod pure_tests {
 
         // Ensemble profiles & nominal parameters
         let ensembles = [
-            (ChoirEnsembleType::ClassicalSATB, 650.0, 1400.0, 32, "CLASSICAL SATB CHOIR"),
-            (ChoirEnsembleType::BulgarianWomensChoir, 780.0, 1950.0, 16, "BULGARIAN FOLK CHOIR"),
-            (ChoirEnsembleType::GregorianMonasticChant, 450.0, 950.0, 24, "GREGORIAN MONASTIC"),
-            (ChoirEnsembleType::ContemporaryVocalEnsemble, 580.0, 1700.0, 8, "CONTEMPORARY ENSEMBLE"),
-            (ChoirEnsembleType::GospelChoirWallOfSound, 720.0, 1600.0, 48, "GOSPEL WALL OF SOUND"),
+            (
+                ChoirEnsembleType::ClassicalSATB,
+                650.0,
+                1400.0,
+                32,
+                "CLASSICAL SATB CHOIR",
+            ),
+            (
+                ChoirEnsembleType::BulgarianWomensChoir,
+                780.0,
+                1950.0,
+                16,
+                "BULGARIAN FOLK CHOIR",
+            ),
+            (
+                ChoirEnsembleType::GregorianMonasticChant,
+                450.0,
+                950.0,
+                24,
+                "GREGORIAN MONASTIC",
+            ),
+            (
+                ChoirEnsembleType::ContemporaryVocalEnsemble,
+                580.0,
+                1700.0,
+                8,
+                "CONTEMPORARY ENSEMBLE",
+            ),
+            (
+                ChoirEnsembleType::GospelChoirWallOfSound,
+                720.0,
+                1600.0,
+                48,
+                "GOSPEL WALL OF SOUND",
+            ),
         ];
         for (ens, f1, f2, count, name) in ensembles {
             view.set_ensemble(ens);
@@ -171,7 +231,11 @@ pub mod gui_tests {
     fn test_turn87_gui_lock_free_param_bus_dispatch_speech_and_choir() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -192,11 +256,34 @@ pub mod gui_tests {
 
         view.sync_neural_speech_to_singing_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("target_pitch_hz"), Some(&330.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("vibrato_depth_cents"), Some(&55.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("vibrato_rate_hz"), Some(&6.0));
-        assert_eq!(view.inspector_state.node_param_values.get("formant_shift_semitones"), Some(&2.0));
-        assert_eq!(view.inspector_state.node_param_values.get("f0_confidence"), Some(&0.96));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("target_pitch_hz"),
+            Some(&330.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("vibrato_depth_cents"),
+            Some(&55.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("vibrato_rate_hz"),
+            Some(&6.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("formant_shift_semitones"),
+            Some(&2.0)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("f0_confidence"),
+            Some(&0.96)
+        );
 
         let pid_pitch = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_vib = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -213,11 +300,32 @@ pub mod gui_tests {
 
         view.sync_neural_choir_formant_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("formant_f1_hz"), Some(&720.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("formant_f2_hz"), Some(&1850.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("voice_count"), Some(&24.0));
-        assert_eq!(view.inspector_state.node_param_values.get("neural_morph_blend"), Some(&0.92));
-        assert_eq!(view.inspector_state.node_param_values.get("tract_scale"), Some(&1.05));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("formant_f1_hz"),
+            Some(&720.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("formant_f2_hz"),
+            Some(&1850.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("voice_count"),
+            Some(&24.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("neural_morph_blend"),
+            Some(&0.92)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("tract_scale"),
+            Some(&1.05)
+        );
 
         let pid_f1 = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_f2 = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -231,13 +339,18 @@ pub mod gui_tests {
         let ctx = egui::Context::default();
 
         // 1. Speech-to-Singing trigger propagation from rack
-        view.device_rack_state.requested_open_neural_speech_to_singing_hud = true;
+        view.device_rack_state
+            .requested_open_neural_speech_to_singing_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
             });
         });
-        assert!(!view.device_rack_state.requested_open_neural_speech_to_singing_hud);
+        assert!(
+            !view
+                .device_rack_state
+                .requested_open_neural_speech_to_singing_hud
+        );
         assert!(view.is_neural_speech_to_singing_hud_open());
         view.close_neural_speech_to_singing_hud();
 
@@ -267,23 +380,18 @@ pub mod gui_tests {
         }];
 
         inspector_state.selected_node_kind = Some("NeuralChoirFormantView".to_string());
-        inspector_state.chain_devices = vec![crate::views::modern_device_rack::RackChainDeviceVisual {
-            kind: "NeuralChoirFormantView".to_string(),
-            display_name: "Neural Choir Formant".to_string(),
-            is_bypassed: false,
-        }];
+        inspector_state.chain_devices =
+            vec![crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind: "NeuralChoirFormantView".to_string(),
+                display_name: "Neural Choir Formant".to_string(),
+                is_bypassed: false,
+            }];
 
         let bus = ParamBus::new();
 
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_modern_device_rack_with_context(
-                    ui,
-                    &mut rack_state,
-                    None,
-                    Some(&bus),
-                    1,
-                );
+                show_modern_device_rack_with_context(ui, &mut rack_state, None, Some(&bus), 1);
                 show_modern_inspector_with_context(ui, &mut inspector_state, Some(&bus), 1);
             });
         });
@@ -295,11 +403,17 @@ pub mod gui_tests {
     #[test]
     fn test_turn87_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let speech_act = palette.actions.iter().find(|a| a.action_id == "open_neural_speech_to_singing_hud");
+        let speech_act = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_speech_to_singing_hud");
         assert!(speech_act.is_some());
         assert_eq!(speech_act.unwrap().category, "Synthesis");
 
-        let choir_act = palette.actions.iter().find(|a| a.action_id == "open_neural_choir_formant_hud");
+        let choir_act = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_choir_formant_hud");
         assert!(choir_act.is_some());
         assert_eq!(choir_act.unwrap().category, "Synthesis");
     }

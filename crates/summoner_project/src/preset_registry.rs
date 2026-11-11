@@ -54,7 +54,12 @@ impl RegistryPreset {
         parameters: HashMap<String, f32>,
     ) -> Self {
         let slug = name.to_lowercase().replace(' ', "_");
-        let preset_id = format!("{}_{}_{}", target_device.to_lowercase(), slug, author.to_lowercase());
+        let preset_id = format!(
+            "{}_{}_{}",
+            target_device.to_lowercase(),
+            slug,
+            author.to_lowercase()
+        );
 
         let mut preset = Self {
             preset_id,
@@ -313,8 +318,14 @@ mod tests {
         let mut params = HashMap::new();
         params.insert("drive".to_string(), 4.5);
 
-        let p1 = RegistryPreset::new("Warm Tube Tape", "TapeSaturator", "Distortion", "Bob", params.clone())
-            .with_tags(&["vintage", "warmth"]);
+        let p1 = RegistryPreset::new(
+            "Warm Tube Tape",
+            "TapeSaturator",
+            "Distortion",
+            "Bob",
+            params.clone(),
+        )
+        .with_tags(&["vintage", "warmth"]);
 
         let p2 = RegistryPreset::new("Deep Sub", "SubtractiveSynth", "Bass", "Charlie", params)
             .with_tags(&["808", "sub"])
@@ -342,4 +353,3 @@ mod tests {
         let _ = fs::remove_dir_all(&temp_dir);
     }
 }
-

@@ -179,7 +179,9 @@ impl ChromaticTunerView {
     pub fn recompute_note_from_pitch(&mut self, pitch_hz: f32) {
         let clamped_hz = pitch_hz.clamp(20.0, 4000.0);
         self.detected_pitch_hz = clamped_hz;
-        let ref_a4 = self.reference_a4_hz.clamp(MIN_REFERENCE_A4_HZ, MAX_REFERENCE_A4_HZ);
+        let ref_a4 = self
+            .reference_a4_hz
+            .clamp(MIN_REFERENCE_A4_HZ, MAX_REFERENCE_A4_HZ);
         let note_num = 69.0 + 12.0 * (clamped_hz / ref_a4).log2();
         let rounded_midi = note_num.round().clamp(0.0, 127.0) as u8;
         let cents = ((note_num - rounded_midi as f32) * 100.0).clamp(MIN_CENTS_DEV, MAX_CENTS_DEV);
@@ -298,7 +300,11 @@ impl ChromaticTunerView {
         ));
         out.push_str(&format!(
             " Lock Status:      {} | Autocorr Gate: {:.2}\n",
-            if self.is_in_tune_locked() { "LOCKED [IN-TUNE]" } else { "DRIFTING" },
+            if self.is_in_tune_locked() {
+                "LOCKED [IN-TUNE]"
+            } else {
+                "DRIFTING"
+            },
             self.autocorr_threshold
         ));
         out.push_str(&format!(
@@ -307,8 +313,7 @@ impl ChromaticTunerView {
         ));
         out.push_str("----------------------------------------------------------------------\n");
         out.push_str(" Strobe Cent Deviation Meter [-50c .. 0c .. +50c]:\n [");
-        let needle_pos = ((self.cents_deviation - MIN_CENTS_DEV)
-            / (MAX_CENTS_DEV - MIN_CENTS_DEV)
+        let needle_pos = ((self.cents_deviation - MIN_CENTS_DEV) / (MAX_CENTS_DEV - MIN_CENTS_DEV)
             * 30.0)
             .round()
             .clamp(0.0, 30.0) as usize;
@@ -350,7 +355,10 @@ impl ChromaticTunerView {
                 let presets = [
                     (ChromaticTunerPreset::ConcertStandard440Hz, "ISO 440 Hz"),
                     (ChromaticTunerPreset::BaroqueChamber415Hz, "Baroque 415 Hz"),
-                    (ChromaticTunerPreset::OrchestralBright442Hz, "Symphonic 442 Hz"),
+                    (
+                        ChromaticTunerPreset::OrchestralBright442Hz,
+                        "Symphonic 442 Hz",
+                    ),
                     (ChromaticTunerPreset::VerdiNatural432Hz, "Verdi 432 Hz"),
                 ];
                 for (p, label) in presets {
@@ -474,7 +482,11 @@ impl ChromaticTunerView {
                 format!(
                     "A4 Ref: {:.1} Hz | {}",
                     self.reference_a4_hz,
-                    if self.is_in_tune_locked() { "LOCKED" } else { "TUNE" }
+                    if self.is_in_tune_locked() {
+                        "LOCKED"
+                    } else {
+                        "TUNE"
+                    }
                 ),
                 FontId::proportional(10.5),
                 Color32::from_rgb(148, 163, 184),

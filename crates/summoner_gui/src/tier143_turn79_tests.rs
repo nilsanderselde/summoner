@@ -6,8 +6,8 @@
 pub mod pure_tests {
     use crate::layout_math::Rect;
     use crate::views::continuous_doppler_view::{
-        ContinuousDopplerView, HermiteInterpolationOrder, DOPPLER_PUCK_HIT_RADIUS,
-        MAX_POS_RANGE_M, MIN_POS_RANGE_M,
+        ContinuousDopplerView, HermiteInterpolationOrder, DOPPLER_PUCK_HIT_RADIUS, MAX_POS_RANGE_M,
+        MIN_POS_RANGE_M,
     };
     use crate::views::spatial_room_view::{
         SpatialRoomView, WallMaterialPreset, SPATIAL_ROOM_PUCK_HIT_RADIUS,
@@ -17,7 +17,10 @@ pub mod pure_tests {
     #[test]
     fn test_turn79_pure_continuous_doppler_view_initialization_and_kinematics() {
         let mut view = ContinuousDopplerView::new();
-        assert_eq!(view.interpolation_order, HermiteInterpolationOrder::CubicHermite4Pt);
+        assert_eq!(
+            view.interpolation_order,
+            HermiteInterpolationOrder::CubicHermite4Pt
+        );
         assert!((view.pos_x - 0.0).abs() < 1e-3);
         assert!((view.pos_y - 3.5).abs() < 1e-3);
         assert!((view.pos_z - 1.0).abs() < 1e-3);
@@ -35,39 +38,44 @@ pub mod pure_tests {
 
         // Interpolation orders
         view.interpolation_order = HermiteInterpolationOrder::Linear2Pt;
-        assert_eq!(view.interpolation_order, HermiteInterpolationOrder::Linear2Pt);
+        assert_eq!(
+            view.interpolation_order,
+            HermiteInterpolationOrder::Linear2Pt
+        );
         view.interpolation_order = HermiteInterpolationOrder::WindowedSinc;
-        assert_eq!(view.interpolation_order, HermiteInterpolationOrder::WindowedSinc);
+        assert_eq!(
+            view.interpolation_order,
+            HermiteInterpolationOrder::WindowedSinc
+        );
 
         // Doppler kinematics formulas
         // Approaching source: source at +Y (0, 10, 0), moving towards origin (0, -20, 0)
-        let (v_rad_app, ratio_app, cents_app) = ContinuousDopplerView::calculate_doppler_ratio(
-            0.0, 10.0, 0.0, 0.0, -20.0, 0.0, 343.0,
-        );
+        let (v_rad_app, ratio_app, cents_app) =
+            ContinuousDopplerView::calculate_doppler_ratio(0.0, 10.0, 0.0, 0.0, -20.0, 0.0, 343.0);
         assert!(v_rad_app > 0.0);
         assert!(ratio_app > 1.0);
         assert!(cents_app > 0.0);
 
         // Receding source: source at +Y (0, 10, 0), moving away from origin (0, +20, 0)
-        let (v_rad_rec, ratio_rec, cents_rec) = ContinuousDopplerView::calculate_doppler_ratio(
-            0.0, 10.0, 0.0, 0.0, 20.0, 0.0, 343.0,
-        );
+        let (v_rad_rec, ratio_rec, cents_rec) =
+            ContinuousDopplerView::calculate_doppler_ratio(0.0, 10.0, 0.0, 0.0, 20.0, 0.0, 343.0);
         assert!(v_rad_rec < 0.0);
         assert!(ratio_rec < 1.0);
         assert!(cents_rec < 0.0);
 
         // Stationary source
-        let (v_rad_stat, ratio_stat, cents_stat) = ContinuousDopplerView::calculate_doppler_ratio(
-            0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 343.0,
-        );
+        let (v_rad_stat, ratio_stat, cents_stat) =
+            ContinuousDopplerView::calculate_doppler_ratio(0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 343.0);
         assert!(v_rad_stat.abs() < 1e-3);
         assert!((ratio_stat - 1.0).abs() < 1e-3);
         assert!(cents_stat.abs() < 1e-3);
 
         // Coordinate normalizations
-        let norm_x = ContinuousDopplerView::pos_to_normalized(0.0, MIN_POS_RANGE_M, MAX_POS_RANGE_M);
+        let norm_x =
+            ContinuousDopplerView::pos_to_normalized(0.0, MIN_POS_RANGE_M, MAX_POS_RANGE_M);
         assert!((norm_x - 0.5).abs() < 1e-3);
-        let back_x = ContinuousDopplerView::normalized_to_pos(norm_x, MIN_POS_RANGE_M, MAX_POS_RANGE_M);
+        let back_x =
+            ContinuousDopplerView::normalized_to_pos(norm_x, MIN_POS_RANGE_M, MAX_POS_RANGE_M);
         assert!((back_x - 0.0).abs() < 1e-3);
 
         // Hit testing
@@ -150,7 +158,8 @@ pub mod pure_tests {
             eframe::egui::vec2(300.0, 300.0),
         );
         let s_canvas = view.room_to_canvas_pos(view.source_pos.0, view.source_pos.1, dummy_rect);
-        let l_canvas = view.room_to_canvas_pos(view.listener_pos.0, view.listener_pos.1, dummy_rect);
+        let l_canvas =
+            view.room_to_canvas_pos(view.listener_pos.0, view.listener_pos.1, dummy_rect);
 
         assert!(view.hit_test_source_puck((s_canvas.x, s_canvas.y), dummy_rect));
         assert!(view.hit_test_listener_puck((l_canvas.x, l_canvas.y), dummy_rect));
@@ -290,7 +299,8 @@ pub mod gui_tests {
         view.spatial_room_view.room_depth_m = 15.0;
         view.spatial_room_view.room_height_m = 4.2;
         view.spatial_room_view.source_pos = (2.5, 3.5, 1.2);
-        view.spatial_room_view.wall_material = crate::views::spatial_room_view::WallMaterialPreset::WoodPaneling;
+        view.spatial_room_view.wall_material =
+            crate::views::spatial_room_view::WallMaterialPreset::WoodPaneling;
 
         view.sync_spatial_room_hud_state();
 
@@ -308,8 +318,12 @@ pub mod gui_tests {
         let palette = CommandPalette::new();
         let actions = &palette.actions;
 
-        let has_dop = actions.iter().any(|a| a.action_id == "open_continuous_doppler_hud" && a.category == "Spatial");
-        let has_room = actions.iter().any(|a| a.action_id == "open_spatial_room_hud" && a.category == "Spatial");
+        let has_dop = actions
+            .iter()
+            .any(|a| a.action_id == "open_continuous_doppler_hud" && a.category == "Spatial");
+        let has_room = actions
+            .iter()
+            .any(|a| a.action_id == "open_spatial_room_hud" && a.category == "Spatial");
 
         assert!(has_dop);
         assert!(has_room);

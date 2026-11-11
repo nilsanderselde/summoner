@@ -111,16 +111,36 @@ pub fn show_mixer_impl(
                             // Badges row (BUS, RET, VCA, SAFE)
                             ui.horizontal(|ui| {
                                 if track.is_bus_track {
-                                    ui.label(egui::RichText::new("BUS").size(9.0).color(egui::Color32::from_rgb(255, 180, 40)).strong());
+                                    ui.label(
+                                        egui::RichText::new("BUS")
+                                            .size(9.0)
+                                            .color(egui::Color32::from_rgb(255, 180, 40))
+                                            .strong(),
+                                    );
                                 }
                                 if track.is_return_track {
-                                    ui.label(egui::RichText::new("RET").size(9.0).color(egui::Color32::from_rgb(40, 220, 200)).strong());
+                                    ui.label(
+                                        egui::RichText::new("RET")
+                                            .size(9.0)
+                                            .color(egui::Color32::from_rgb(40, 220, 200))
+                                            .strong(),
+                                    );
                                 }
                                 if track.is_vca {
-                                    ui.label(egui::RichText::new("VCA").size(9.0).color(egui::Color32::from_rgb(180, 100, 240)).strong());
+                                    ui.label(
+                                        egui::RichText::new("VCA")
+                                            .size(9.0)
+                                            .color(egui::Color32::from_rgb(180, 100, 240))
+                                            .strong(),
+                                    );
                                 }
                                 if track.solo_safe {
-                                    ui.label(egui::RichText::new("SAFE").size(9.0).color(egui::Color32::from_rgb(100, 255, 120)).strong());
+                                    ui.label(
+                                        egui::RichText::new("SAFE")
+                                            .size(9.0)
+                                            .color(egui::Color32::from_rgb(100, 255, 120))
+                                            .strong(),
+                                    );
                                 }
                             });
 
@@ -154,7 +174,9 @@ pub fn show_mixer_impl(
                                 let mut ss = track.solo_safe;
                                 if ui
                                     .toggle_value(&mut ss, egui::RichText::new("SS").size(10.0))
-                                    .on_hover_text("Solo-Safe: unmuted when other tracks are soloed")
+                                    .on_hover_text(
+                                        "Solo-Safe: unmuted when other tracks are soloed",
+                                    )
                                     .changed()
                                 {
                                     track.solo_safe = ss;
@@ -169,7 +191,11 @@ pub fn show_mixer_impl(
                                 if !track.sends.is_empty() {
                                     let pre = track.sends[0].is_pre_fader;
                                     let label = if pre { "PRE" } else { "PST" };
-                                    if ui.button(egui::RichText::new(label).size(9.0)).on_hover_text("Toggle Pre/Post fader send").clicked() {
+                                    if ui
+                                        .button(egui::RichText::new(label).size(9.0))
+                                        .on_hover_text("Toggle Pre/Post fader send")
+                                        .clicked()
+                                    {
                                         track.sends[0].is_pre_fader = !pre;
                                     }
                                 }
@@ -258,14 +284,29 @@ pub fn show_mixer_impl(
 
                             // Pro View Launchers
                             ui.horizontal(|ui| {
-                                if ui.button(egui::RichText::new("🎛 DAG").size(10.0)).on_hover_text("Open Node Graph DAG for this track").clicked() {
-                                    state.requested_navigation = Some((track.id, "dag".to_string()));
+                                if ui
+                                    .button(egui::RichText::new("🎛 DAG").size(10.0))
+                                    .on_hover_text("Open Node Graph DAG for this track")
+                                    .clicked()
+                                {
+                                    state.requested_navigation =
+                                        Some((track.id, "dag".to_string()));
                                 }
-                                if ui.button(egui::RichText::new("🔬 Rack").size(10.0)).on_hover_text("Inspect DSP Device Rack for this track").clicked() {
-                                    state.requested_navigation = Some((track.id, "rack".to_string()));
+                                if ui
+                                    .button(egui::RichText::new("🔬 Rack").size(10.0))
+                                    .on_hover_text("Inspect DSP Device Rack for this track")
+                                    .clicked()
+                                {
+                                    state.requested_navigation =
+                                        Some((track.id, "rack".to_string()));
                                 }
-                                if ui.button(egui::RichText::new("📈 Auto").size(10.0)).on_hover_text("Open Bezier Automation for this track").clicked() {
-                                    state.requested_navigation = Some((track.id, "auto".to_string()));
+                                if ui
+                                    .button(egui::RichText::new("📈 Auto").size(10.0))
+                                    .on_hover_text("Open Bezier Automation for this track")
+                                    .clicked()
+                                {
+                                    state.requested_navigation =
+                                        Some((track.id, "auto".to_string()));
                                 }
                             });
 
@@ -411,18 +452,44 @@ pub fn show_mixer_impl(
                         // Audio thread metering telemetry
                         ui.horizontal(|ui| {
                             ui.label(egui::RichText::new("LUFS:").size(10.0));
-                            let m_lufs = if state.master_muted { -70.0 } else { -23.0 + 20.0 * state.master_gain.max(0.001).log10() };
-                            ui.label(egui::RichText::new(format!("{:.1}", m_lufs)).strong().size(10.0).color(egui::Color32::from_rgb(255, 200, 80)));
+                            let m_lufs = if state.master_muted {
+                                -70.0
+                            } else {
+                                -23.0 + 20.0 * state.master_gain.max(0.001).log10()
+                            };
+                            ui.label(
+                                egui::RichText::new(format!("{:.1}", m_lufs))
+                                    .strong()
+                                    .size(10.0)
+                                    .color(egui::Color32::from_rgb(255, 200, 80)),
+                            );
                         });
                         ui.horizontal(|ui| {
                             ui.label(egui::RichText::new("TruePk:").size(10.0));
-                            let tp = if state.master_muted { -120.0 } else { -1.0 + 20.0 * state.master_gain.max(0.001).log10() };
-                            let col = if tp > 0.0 { egui::Color32::from_rgb(255, 60, 60) } else { egui::Color32::from_rgb(100, 220, 120) };
-                            ui.label(egui::RichText::new(format!("{:.1} dB", tp)).strong().size(10.0).color(col));
+                            let tp = if state.master_muted {
+                                -120.0
+                            } else {
+                                -1.0 + 20.0 * state.master_gain.max(0.001).log10()
+                            };
+                            let col = if tp > 0.0 {
+                                egui::Color32::from_rgb(255, 60, 60)
+                            } else {
+                                egui::Color32::from_rgb(100, 220, 120)
+                            };
+                            ui.label(
+                                egui::RichText::new(format!("{:.1} dB", tp))
+                                    .strong()
+                                    .size(10.0)
+                                    .color(col),
+                            );
                         });
                         ui.horizontal(|ui| {
                             ui.label(egui::RichText::new("Phase:").size(10.0));
-                            ui.label(egui::RichText::new("+1.00").size(10.0).color(egui::Color32::from_rgb(120, 200, 255)));
+                            ui.label(
+                                egui::RichText::new("+1.00")
+                                    .size(10.0)
+                                    .color(egui::Color32::from_rgb(120, 200, 255)),
+                            );
                         });
 
                         ui.separator();
@@ -636,15 +703,27 @@ mod tests {
 
         let registry = crate::dsp_node_ui::DspNodeRegistry::new();
         let q = state.fx_search_query.trim().to_lowercase();
-        let matches: Vec<_> = registry.list_all().into_iter().filter(|desc| {
-            desc.display_name.to_lowercase().contains(&q) || desc.kind_id.to_lowercase().contains(&q)
-        }).collect();
+        let matches: Vec<_> = registry
+            .list_all()
+            .into_iter()
+            .filter(|desc| {
+                desc.display_name.to_lowercase().contains(&q)
+                    || desc.kind_id.to_lowercase().contains(&q)
+            })
+            .collect();
 
-        assert!(!matches.is_empty(), "Search for chorus should yield DSP nodes");
+        assert!(
+            !matches.is_empty(),
+            "Search for chorus should yield DSP nodes"
+        );
 
         // Insert first match
         let first = &matches[0];
-        let tr = project.tracks.iter_mut().find(|t| t.id == track_id).unwrap();
+        let tr = project
+            .tracks
+            .iter_mut()
+            .find(|t| t.id == track_id)
+            .unwrap();
         let initial_count = tr.nodes.len();
         tr.nodes.push(NodeConfig {
             kind: first.kind_id.clone(),

@@ -84,7 +84,8 @@ impl CompRegion {
     }
 
     pub fn duration_frames(&self) -> usize {
-        self.source_end_frame.saturating_sub(self.source_start_frame)
+        self.source_end_frame
+            .saturating_sub(self.source_start_frame)
     }
 
     pub fn timeline_end_frame(&self) -> usize {
@@ -165,13 +166,8 @@ impl CompTrack {
         let region_id = self.next_region_id;
         self.next_region_id += 1;
 
-        let mut region = CompRegion::new(
-            region_id,
-            take_id,
-            source_start,
-            source_end,
-            timeline_start,
-        );
+        let mut region =
+            CompRegion::new(region_id, take_id, source_start, source_end, timeline_start);
         region.crossfade_in_samples = self.default_crossfade_samples;
         region.crossfade_out_samples = self.default_crossfade_samples;
 
@@ -348,7 +344,10 @@ impl CompTrack {
 
     /// Find an audio take by ID.
     pub fn get_take(&self, take_id: u32) -> Option<&AudioTake> {
-        self.lanes.iter().find(|l| l.take.id == take_id).map(|l| &l.take)
+        self.lanes
+            .iter()
+            .find(|l| l.take.id == take_id)
+            .map(|l| &l.take)
     }
 
     /// Render the composite audio track to stereo buffers with sample-accurate equal-power crossfading.
@@ -382,11 +381,12 @@ impl CompTrack {
                 } else {
                     0.0
                 };
-                let sample_r = if !take.samples_right.is_empty() && src_idx < take.samples_right.len() {
-                    take.samples_right[src_idx]
-                } else {
-                    sample_l
-                };
+                let sample_r =
+                    if !take.samples_right.is_empty() && src_idx < take.samples_right.len() {
+                        take.samples_right[src_idx]
+                    } else {
+                        sample_l
+                    };
 
                 // Equal-power crossfade curves (quarter-sine / cosine)
                 let mut env = 1.0f32;

@@ -239,7 +239,8 @@ impl SpectralDeEsserView {
                     if self.hit_test_sibilance_puck(pos_t, curve_rect) || self.is_dragging_puck {
                         self.is_dragging_puck = true;
                         let nx = ((pos.x - curve_rect.x) / curve_rect.width).clamp(0.0, 1.0);
-                        let ny = (1.0 - ((pos.y - curve_rect.y) / curve_rect.height)).clamp(0.0, 1.0);
+                        let ny =
+                            (1.0 - ((pos.y - curve_rect.y) / curve_rect.height)).clamp(0.0, 1.0);
                         self.sibilance_puck_pos = (nx, ny);
                         self.frequency_hz = Self::normalized_to_freq(nx);
                         self.threshold_db = Self::normalized_to_db(ny);
@@ -533,10 +534,26 @@ impl SpectralDeEsserView {
         );
 
         let params = [
-            ("SIBILANCE FREQ", format!("{:.0} Hz", self.frequency_hz), (0, 229, 255)),
-            ("THRESHOLD", format!("{:.1} dBFS", self.threshold_db), (255, 215, 0)),
-            ("MAX REDUCTION", format!("{:.1} dB", self.reduction_range_db), (255, 107, 43)),
-            ("BANDWIDTH Q", format!("{:.2}", self.bandwidth_q), (0, 255, 180)),
+            (
+                "SIBILANCE FREQ",
+                format!("{:.0} Hz", self.frequency_hz),
+                (0, 229, 255),
+            ),
+            (
+                "THRESHOLD",
+                format!("{:.1} dBFS", self.threshold_db),
+                (255, 215, 0),
+            ),
+            (
+                "MAX REDUCTION",
+                format!("{:.1} dB", self.reduction_range_db),
+                (255, 107, 43),
+            ),
+            (
+                "BANDWIDTH Q",
+                format!("{:.2}", self.bandwidth_q),
+                (0, 255, 180),
+            ),
         ];
         let col_w = (ctrl_rect.width - 40.0) / 4.0;
         for (i, (label, val, col)) in params.iter().enumerate() {
@@ -560,7 +577,10 @@ impl SpectralDeEsserView {
         painter.text(
             egui::pos2(ctrl_rect.x + 20.0, ctrl_rect.y + 70.0),
             egui::Align2::LEFT_TOP,
-            format!("Dynamic Ballistics: Attack {:.1} ms | Release {:.0} ms | Mode: {:?}", self.attack_ms, self.release_ms, self.mode),
+            format!(
+                "Dynamic Ballistics: Attack {:.1} ms | Release {:.0} ms | Mode: {:?}",
+                self.attack_ms, self.release_ms, self.mode
+            ),
             egui::FontId::proportional(11.0),
             Color32::from_rgb(148, 163, 184),
         );

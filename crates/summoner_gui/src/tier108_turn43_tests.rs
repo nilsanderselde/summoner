@@ -70,28 +70,39 @@ pub mod pure_tests {
     #[test]
     fn test_turn43_pure_master_node_automation_lane_key_parsing() {
         // Parsing logic matching open_track_automation_editor & sync_with_param_bus
-        let parse_param_lane = |raw: &str, track_id: u64| -> (Option<usize>, String, String, bool) {
-            if raw == "master_gain" {
-                return (None, "master_gain".to_string(), "master_gain".to_string(), true);
-            }
-            if let Some(rest) = raw.strip_prefix("master_node_") {
-                if let Some((slot_str, p_id)) = rest.split_once('_') {
-                    if let Ok(slot) = slot_str.parse::<usize>() {
-                        let lane_key = format!("master_node_{}_{}", slot, p_id);
-                        return (Some(slot), p_id.to_string(), lane_key, true);
+        let parse_param_lane =
+            |raw: &str, track_id: u64| -> (Option<usize>, String, String, bool) {
+                if raw == "master_gain" {
+                    return (
+                        None,
+                        "master_gain".to_string(),
+                        "master_gain".to_string(),
+                        true,
+                    );
+                }
+                if let Some(rest) = raw.strip_prefix("master_node_") {
+                    if let Some((slot_str, p_id)) = rest.split_once('_') {
+                        if let Ok(slot) = slot_str.parse::<usize>() {
+                            let lane_key = format!("master_node_{}_{}", slot, p_id);
+                            return (Some(slot), p_id.to_string(), lane_key, true);
+                        }
                     }
                 }
-            }
-            if let Some(rest) = raw.strip_prefix("node_") {
-                if let Some((slot_str, p_id)) = rest.split_once('_') {
-                    if let Ok(slot) = slot_str.parse::<usize>() {
-                        let lane_key = format!("track_{}_node_{}_{}", track_id, slot, p_id);
-                        return (Some(slot), p_id.to_string(), lane_key, false);
+                if let Some(rest) = raw.strip_prefix("node_") {
+                    if let Some((slot_str, p_id)) = rest.split_once('_') {
+                        if let Ok(slot) = slot_str.parse::<usize>() {
+                            let lane_key = format!("track_{}_node_{}_{}", track_id, slot, p_id);
+                            return (Some(slot), p_id.to_string(), lane_key, false);
+                        }
                     }
                 }
-            }
-            (None, raw.to_string(), format!("track_{}_{}", track_id, raw), false)
-        };
+                (
+                    None,
+                    raw.to_string(),
+                    format!("track_{}_{}", track_id, raw),
+                    false,
+                )
+            };
 
         // Master Gain
         let (slot, param, lane_key, is_master) = parse_param_lane("master_gain", 0);
@@ -148,9 +159,15 @@ pub mod pure_tests {
         );
 
         // Evaluate at beat 0.0, 2.0, 4.0
-        let val_0 = timeline.evaluate("master_node_0_cutoff", 0.0).unwrap_or(0.0);
-        let val_2 = timeline.evaluate("master_node_0_cutoff", 2.0).unwrap_or(0.0);
-        let val_4 = timeline.evaluate("master_node_0_cutoff", 4.0).unwrap_or(0.0);
+        let val_0 = timeline
+            .evaluate("master_node_0_cutoff", 0.0)
+            .unwrap_or(0.0);
+        let val_2 = timeline
+            .evaluate("master_node_0_cutoff", 2.0)
+            .unwrap_or(0.0);
+        let val_4 = timeline
+            .evaluate("master_node_0_cutoff", 4.0)
+            .unwrap_or(0.0);
 
         assert!((val_0 - 500.0).abs() < 1e-3);
         assert!((val_2 - 1750.0).abs() < 1e-3);
@@ -183,8 +200,16 @@ pub mod gui_tests {
             clip_length_beats: 8.0,
             clips: Vec::new(),
             active_clip_idx: None,
-            device_names: vec!["AetherSynth".to_string(), "FilterPro".to_string(), "AnalogDelay".to_string()],
-            device_kinds: vec!["AetherSynth".to_string(), "FilterPro".to_string(), "AnalogDelay".to_string()],
+            device_names: vec![
+                "AetherSynth".to_string(),
+                "FilterPro".to_string(),
+                "AnalogDelay".to_string(),
+            ],
+            device_kinds: vec![
+                "AetherSynth".to_string(),
+                "FilterPro".to_string(),
+                "AnalogDelay".to_string(),
+            ],
         };
 
         assert_eq!(tr.device_count(), 3);
@@ -219,7 +244,10 @@ pub mod gui_tests {
         assert_eq!(view.master_chain_devices[0].kind, "ParametricEq");
         assert_eq!(view.master_chain_devices[0].display_name, "Master EQ");
         assert_eq!(view.master_chain_devices[1].kind, "TruePeakLimiter");
-        assert_eq!(view.master_chain_devices[1].display_name, "True Peak Limiter");
+        assert_eq!(
+            view.master_chain_devices[1].display_name,
+            "True Peak Limiter"
+        );
         assert_eq!(view.selected_master_chain_idx, 0);
 
         // Selection
@@ -254,8 +282,16 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
 
         // Configure track 0 with 3-node device chain
-        view.tracks[0].device_names = vec!["AetherSynth".to_string(), "ResonantFilter".to_string(), "DigitalDelay".to_string()];
-        view.tracks[0].device_kinds = vec!["AetherSynth".to_string(), "ResonantFilter".to_string(), "DigitalDelay".to_string()];
+        view.tracks[0].device_names = vec![
+            "AetherSynth".to_string(),
+            "ResonantFilter".to_string(),
+            "DigitalDelay".to_string(),
+        ];
+        view.tracks[0].device_kinds = vec![
+            "AetherSynth".to_string(),
+            "ResonantFilter".to_string(),
+            "DigitalDelay".to_string(),
+        ];
         view.select_track(0);
         assert_eq!(view.device_rack_state.chain_devices.len(), 3);
 
@@ -285,14 +321,20 @@ pub mod gui_tests {
         // Open master device automation editor for slot 0 cutoff
         assert!(view.open_master_device_automation_editor(0, "cutoff"));
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some("master_node_0_cutoff"));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some("master_node_0_cutoff")
+        );
         assert!(view.automation_editor.is_some());
         assert_eq!(view.selected_master_chain_idx, 0);
 
         // Open master device automation editor for slot 1 threshold
         assert!(view.open_master_device_automation_editor(1, "threshold"));
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some("master_node_1_threshold"));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some("master_node_1_threshold")
+        );
         assert!(view.automation_editor.is_some());
         assert_eq!(view.selected_master_chain_idx, 1);
     }

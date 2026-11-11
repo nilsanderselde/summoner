@@ -319,7 +319,9 @@ impl ProjectMutationDispatcher {
             }
             ProjectMutation::SetBpm { bpm } => {
                 if bpm <= 0.0 || !bpm.is_finite() {
-                    return Err(MutationError::InvalidValue("BPM must be positive".to_string()));
+                    return Err(MutationError::InvalidValue(
+                        "BPM must be positive".to_string(),
+                    ));
                 }
                 project.transport.bpm = bpm;
             }
@@ -380,9 +382,9 @@ impl ProjectMutationDispatcher {
         mutation: &ProjectMutation,
     ) -> Result<Option<ProjectMutation>, MutationError> {
         match mutation {
-            ProjectMutation::AddTrack { id, .. } => Ok(Some(ProjectMutation::RemoveTrack {
-                track_id: *id,
-            })),
+            ProjectMutation::AddTrack { id, .. } => {
+                Ok(Some(ProjectMutation::RemoveTrack { track_id: *id }))
+            }
             ProjectMutation::RemoveTrack { track_id } => {
                 let track = project
                     .tracks
@@ -457,9 +459,7 @@ impl ProjectMutationDispatcher {
                 }))
             }
             ProjectMutation::MoveAudioClip {
-                track_id,
-                clip_id,
-                ..
+                track_id, clip_id, ..
             } => {
                 let track = project
                     .tracks
@@ -496,9 +496,11 @@ impl ProjectMutationDispatcher {
             ProjectMutation::SetBpm { .. } => Ok(Some(ProjectMutation::SetBpm {
                 bpm: project.transport.bpm,
             })),
-            ProjectMutation::SetTimeSignature { .. } => Ok(Some(ProjectMutation::SetTimeSignature {
-                signature: project.transport.time_signature.clone(),
-            })),
+            ProjectMutation::SetTimeSignature { .. } => {
+                Ok(Some(ProjectMutation::SetTimeSignature {
+                    signature: project.transport.time_signature.clone(),
+                }))
+            }
             ProjectMutation::SetLoopRegion { .. } => Ok(Some(ProjectMutation::SetLoopRegion {
                 start_beat: project.loop_start_beat,
                 end_beat: project.loop_end_beat,
@@ -619,10 +621,7 @@ mod tests {
         dispatcher
             .dispatch(
                 &mut project,
-                ProjectMutation::AddAudioClip {
-                    track_id: 1,
-                    clip,
-                },
+                ProjectMutation::AddAudioClip { track_id: 1, clip },
             )
             .unwrap();
         assert_eq!(project.tracks[0].audio_clips.len(), 1);
@@ -652,4 +651,3 @@ mod tests {
         assert_eq!(project.tracks[0].audio_clips[0].start_beat, 0.0);
     }
 }
-

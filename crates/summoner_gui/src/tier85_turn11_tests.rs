@@ -11,9 +11,9 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::dsp_node_ui::{DspCategory, DspNodeRegistry};
+    use std::collections::HashMap;
     use summoner_core::param_bus::{ParamBus, ParamId};
     use summoner_project::schema::NodeConfig;
-    use std::collections::HashMap;
 
     #[test]
     fn test_turn11_param_bus_macro_and_master_offsets() {
@@ -58,7 +58,11 @@ pub mod pure_tests {
     fn test_turn11_mixer_universal_dsp_inventory() {
         let registry = DspNodeRegistry::new();
         let all_nodes = registry.list_all();
-        assert!(all_nodes.len() >= 1000, "Registry must contain reflected DSP nodes, found {}", all_nodes.len());
+        assert!(
+            all_nodes.len() >= 1000,
+            "Registry must contain reflected DSP nodes, found {}",
+            all_nodes.len()
+        );
 
         let categories = [
             DspCategory::FilterEq,
@@ -76,7 +80,11 @@ pub mod pure_tests {
 
         for cat in categories {
             let cat_nodes: Vec<_> = all_nodes.iter().filter(|n| n.category == cat).collect();
-            assert!(!cat_nodes.is_empty(), "Category {:?} must have registered DSP modules", cat);
+            assert!(
+                !cat_nodes.is_empty(),
+                "Category {:?} must have registered DSP modules",
+                cat
+            );
 
             // Verify a module from this category can be converted into a valid NodeConfig
             let sample_node = cat_nodes[0];
@@ -97,21 +105,26 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 mod tests {
-    use eframe::egui;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::mixer::MixerState;
     use crate::views::modern_top_bar::ModernTopBarState;
+    use eframe::egui;
     use summoner_core::param_bus::{ParamBus, ParamId};
     use summoner_project::create_default_project;
     use summoner_sequencer::automation::AutomationRegistry;
-    use summoner_sequencer::automation_timeline::{AutomationCurve, AutomationLane, AutomationPoint, AutomationTimeline, Interpolation};
+    use summoner_sequencer::automation_timeline::{
+        AutomationCurve, AutomationLane, AutomationPoint, AutomationTimeline, Interpolation,
+    };
 
     #[test]
     fn test_turn11_two_tier_mode_state_transitions() {
         let mut top_bar = ModernTopBarState::default();
         // Defaults to Novice simplicity
         assert!(!top_bar.is_pro_mode, "Default must be Novice mode");
-        assert!(top_bar.is_novice_macro_visible, "Novice macros must be visible by default");
+        assert!(
+            top_bar.is_novice_macro_visible,
+            "Novice macros must be visible by default"
+        );
 
         // Transition to Pro Mode
         top_bar.is_pro_mode = true;
@@ -210,31 +223,39 @@ mod tests {
 
         // Create automation curve for track macro_tone: at beat 2.0 value is 0.92
         let lane_key = format!("track_{}_macro_tone", track_id);
-        timeline.lanes.insert(lane_key.clone(), AutomationLane {
-            param_id: lane_key.clone(),
-            curve: AutomationCurve {
-                points: vec![
-                    AutomationPoint { beat: 0.0, value: 0.20, interp: Interpolation::Linear },
-                    AutomationPoint { beat: 2.0, value: 0.92, interp: Interpolation::Linear },
-                ],
+        timeline.lanes.insert(
+            lane_key.clone(),
+            AutomationLane {
+                param_id: lane_key.clone(),
+                curve: AutomationCurve {
+                    points: vec![
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 0.20,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 2.0,
+                            value: 0.92,
+                            interp: Interpolation::Linear,
+                        },
+                    ],
+                },
             },
-        });
+        );
 
         // Set transport playing at beat 2.0
         view.top_bar_state.is_playing = true;
 
         // Run sync_with_param_bus (playback mode, not recording)
-        view.sync_with_param_bus(
-            &project,
-            &bus,
-            &mut auto_reg,
-            &mut timeline,
-            2.0,
-            false,
-        );
+        view.sync_with_param_bus(&project, &bus, &mut auto_reg, &mut timeline, 2.0, false);
 
         // Verify top bar macro_tone was dynamically evaluated from curve
-        assert!((view.top_bar_state.macro_tone - 0.92).abs() < 1e-4, "macro_tone should be evaluated to 0.92, got {}", view.top_bar_state.macro_tone);
+        assert!(
+            (view.top_bar_state.macro_tone - 0.92).abs() < 1e-4,
+            "macro_tone should be evaluated to 0.92, got {}",
+            view.top_bar_state.macro_tone
+        );
         // Verify ParamBus received the automated value
         assert!((bus.get(tone_pid).unwrap() - 0.92).abs() < 1e-4);
     }
@@ -274,13 +295,19 @@ mod tests {
 
         // Verify automation points were recorded in timeline
         let tone_lane = format!("track_{}_macro_tone", track_id);
-        assert!(timeline.lanes.contains_key(&tone_lane), "Timeline must contain macro_tone lane");
+        assert!(
+            timeline.lanes.contains_key(&tone_lane),
+            "Timeline must contain macro_tone lane"
+        );
         let lane = timeline.lanes.get(&tone_lane).unwrap();
         assert_eq!(lane.curve.points.len(), 1);
         assert_eq!(lane.curve.points[0].beat, 3.5);
         assert_eq!(lane.curve.points[0].value, 0.77);
 
-        assert!(timeline.lanes.contains_key("master_gain"), "Timeline must contain master_gain lane");
+        assert!(
+            timeline.lanes.contains_key("master_gain"),
+            "Timeline must contain master_gain lane"
+        );
         let m_lane = timeline.lanes.get("master_gain").unwrap();
         assert_eq!(m_lane.curve.points.len(), 1);
         assert_eq!(m_lane.curve.points[0].beat, 3.5);

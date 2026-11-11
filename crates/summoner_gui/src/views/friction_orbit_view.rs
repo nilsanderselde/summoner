@@ -54,14 +54,14 @@ impl RosinProfile {
 #[derive(Debug, Clone)]
 pub struct FrictionOrbitView {
     pub rosin: RosinProfile,
-    pub bow_velocity_mps: f32,       // [0.01 ..= 2.00 m/s]
-    pub bow_force_n: f32,             // [0.05 ..= 5.00 N]
-    pub bridge_proximity_beta: f32,   // [0.02 ..= 0.50]
-    pub orbit_puck_pos: (f32, f32),   // Normalized (X: bow_velocity, Y: bow_force)
+    pub bow_velocity_mps: f32,      // [0.01 ..= 2.00 m/s]
+    pub bow_force_n: f32,           // [0.05 ..= 5.00 N]
+    pub bridge_proximity_beta: f32, // [0.02 ..= 0.50]
+    pub orbit_puck_pos: (f32, f32), // Normalized (X: bow_velocity, Y: bow_force)
     pub is_dragging_puck: bool,
-    pub rosin_temperature_pct: f32,  // [0.0 ..= 100.0 %]
-    pub rosin_adhesion_pct: f32,     // [0.0 ..= 100.0 %]
-    pub instantaneous_power_mw: f32, // Friction dissipation power
+    pub rosin_temperature_pct: f32,     // [0.0 ..= 100.0 %]
+    pub rosin_adhesion_pct: f32,        // [0.0 ..= 100.0 %]
+    pub instantaneous_power_mw: f32,    // Friction dissipation power
     pub helmholtz_coherence_score: f32, // [0.0 ..= 1.0]
     pub color_palette: ContrastColorPalette,
 }
@@ -101,7 +101,8 @@ impl FrictionOrbitView {
     }
 
     pub fn normalized_to_velocity(norm: f32) -> f32 {
-        MIN_ORBIT_VELOCITY_MPS + norm.clamp(0.0, 1.0) * (MAX_ORBIT_VELOCITY_MPS - MIN_ORBIT_VELOCITY_MPS)
+        MIN_ORBIT_VELOCITY_MPS
+            + norm.clamp(0.0, 1.0) * (MAX_ORBIT_VELOCITY_MPS - MIN_ORBIT_VELOCITY_MPS)
     }
 
     pub fn force_to_normalized(f: f32) -> f32 {
@@ -193,14 +194,18 @@ impl FrictionOrbitView {
         for s in 0..64 {
             let phase = s as f32 / 64.0 * 2.0 * std::f32::consts::PI;
             let (v_rel, f_fric) = self.evaluate_orbit_point(phase);
-            let col = mid_x + 1 + (((v_rel + 2.0) / 4.0).clamp(0.0, 1.0) * right_w as f32).round() as usize;
+            let col = mid_x
+                + 1
+                + (((v_rel + 2.0) / 4.0).clamp(0.0, 1.0) * right_w as f32).round() as usize;
             let row = (mid_y as f32 - (f_fric / 4.0) * (height as f32 * 0.40)).round() as usize;
             if row > 0 && row < height - 1 && col < width - 1 {
                 grid[row][col] = 'O';
             }
         }
 
-        grid.into_iter().map(|row| row.into_iter().collect()).collect()
+        grid.into_iter()
+            .map(|row| row.into_iter().collect())
+            .collect()
     }
 
     #[cfg(feature = "gui")]
@@ -324,7 +329,10 @@ impl FrictionOrbitView {
             let py = left_mid_y - mu * 60.0;
             let pt = egui::pos2(px, py);
             if let Some(prev) = prev_pt {
-                painter.line_segment([prev, pt], Stroke::new(2.0_f32, Color32::from_rgb(0, 229, 255)));
+                painter.line_segment(
+                    [prev, pt],
+                    Stroke::new(2.0_f32, Color32::from_rgb(0, 229, 255)),
+                );
             }
             prev_pt = Some(pt);
         }
@@ -360,7 +368,10 @@ impl FrictionOrbitView {
             let py = right_mid_y - (f_fric / 3.0) * (right_rect.height() * 0.35);
             let pt = egui::pos2(px, py);
             if let Some(prev) = prev_orb {
-                painter.line_segment([prev, pt], Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)));
+                painter.line_segment(
+                    [prev, pt],
+                    Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)),
+                );
             }
             prev_orb = Some(pt);
         }
@@ -373,8 +384,10 @@ impl FrictionOrbitView {
         if response.dragged() || response.clicked() {
             if let Some(mouse_pos) = response.interact_pointer_pos() {
                 if right_rect.contains(mouse_pos) {
-                    let nx = ((mouse_pos.x - right_rect.min.x) / right_rect.width()).clamp(0.0, 1.0);
-                    let ny = ((right_rect.max.y - mouse_pos.y) / right_rect.height()).clamp(0.0, 1.0);
+                    let nx =
+                        ((mouse_pos.x - right_rect.min.x) / right_rect.width()).clamp(0.0, 1.0);
+                    let ny =
+                        ((right_rect.max.y - mouse_pos.y) / right_rect.height()).clamp(0.0, 1.0);
                     self.orbit_puck_pos = (nx, ny);
                     self.bow_velocity_mps = Self::normalized_to_velocity(nx);
                     self.bow_force_n = Self::normalized_to_force(ny);
@@ -567,7 +580,15 @@ impl FrictionOrbitView {
         let puck_y = canvas_y1 as f32 - self.orbit_puck_pos.1 * (canvas_y1 - canvas_y0) as f32;
 
         // Draw Touch target boundary (>= 44x44pt bounding box, radius 22pt)
-        draw_circle_ring_fo(&mut pixels, w, h, puck_x, puck_y, FRICTION_ORBIT_PUCK_HIT_RADIUS, [255, 107, 43, 180]);
+        draw_circle_ring_fo(
+            &mut pixels,
+            w,
+            h,
+            puck_x,
+            puck_y,
+            FRICTION_ORBIT_PUCK_HIT_RADIUS,
+            [255, 107, 43, 180],
+        );
         draw_circle_filled_fo(&mut pixels, w, h, puck_x, puck_y, 12.0, [255, 107, 43, 255]);
         draw_circle_filled_fo(&mut pixels, w, h, puck_x, puck_y, 4.0, [255, 255, 255, 255]);
 
@@ -653,7 +674,12 @@ fn draw_circle_ring_fo(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32,
     }
 }
 
-fn encode_minimal_png_fo(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_fo(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

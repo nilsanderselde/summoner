@@ -94,12 +94,10 @@ impl BitcrusherMorphView {
 
     /// Deterministic ASCII snapshot with metadata banner.
     pub fn render_ascii_snapshot_str(&self) -> String {
-        let mut lines = vec![
-            format!(
-                "=== TACTILE BITCRUSHER & MORPHOLOGY HUD [MODE: {}] ===",
-                self.mode.mode_name()
-            ),
-        ];
+        let mut lines = vec![format!(
+            "=== TACTILE BITCRUSHER & MORPHOLOGY HUD [MODE: {}] ===",
+            self.mode.mode_name()
+        )];
         lines.extend(self.render_ascii(80, 14));
         lines.push("[PASS] Tactile Bitcrusher Morphology Verification".into());
         lines.join("\n")

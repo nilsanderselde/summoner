@@ -526,4 +526,3 @@ impl NeuralRadianceView {
         )
     }
 }
-

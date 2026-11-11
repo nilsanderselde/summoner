@@ -154,7 +154,8 @@ impl SchottkyWavefolderView {
         let drive_factor = (self.input_drive_gain / 36.0).clamp(0.0, 1.0);
         let stage_factor = (self.folding_stages_count / 6.0).clamp(0.0, 1.0);
         let sharpness = (1.0 - self.diode_saturation_softness).clamp(0.0, 1.0);
-        self.total_harmonic_density = (0.2 + 0.5 * drive_factor + 0.2 * stage_factor + 0.1 * sharpness).clamp(0.0, 1.0);
+        self.total_harmonic_density =
+            (0.2 + 0.5 * drive_factor + 0.2 * stage_factor + 0.1 * sharpness).clamp(0.0, 1.0);
     }
 
     #[inline]
@@ -247,13 +248,22 @@ impl SchottkyWavefolderView {
         out.push_str(&format!("Preset: {}\n", self.preset.name()));
         out.push_str(&format!(
             "Drive: {:.1} dB | Symmetry Bias: {:.2} | Folding Stages: {:.1} | Folds: {}\n",
-            self.input_drive_gain, self.fold_symmetry_bias, self.folding_stages_count, self.effective_fold_count
+            self.input_drive_gain,
+            self.fold_symmetry_bias,
+            self.folding_stages_count,
+            self.effective_fold_count
         ));
         out.push_str(&format!(
             "Miller Cap: {:.0} pF (fc: {:.1} kHz) | Knee Softness: {:.2} | Trim: {:.1} dB\n",
-            self.miller_junction_capacitance, self.miller_cutoff_khz, self.diode_saturation_softness, self.output_trim_makeup
+            self.miller_junction_capacitance,
+            self.miller_cutoff_khz,
+            self.diode_saturation_softness,
+            self.output_trim_makeup
         ));
-        out.push_str(&format!("Touch Target Radius: {:.1} pt [PASS: >=44pt]\n", SCHOTTKY_PUCK_HIT_RADIUS));
+        out.push_str(&format!(
+            "Touch Target Radius: {:.1} pt [PASS: >=44pt]\n",
+            SCHOTTKY_PUCK_HIT_RADIUS
+        ));
         out.push_str("Folded Transfer Curve V_out = f(V_in) across [-2.0V .. +2.0V]:\n");
 
         let cols = 32;
@@ -279,7 +289,13 @@ impl SchottkyWavefolderView {
         for (i, &amp) in harmonics.iter().enumerate() {
             let bars = (amp * 16.0).round() as usize;
             let kind = if (i + 1) % 2 == 0 { "Even" } else { "Odd " };
-            out.push_str(&format!("H{} ({}): {:2} |{}\n", i + 1, kind, (amp * 100.0) as usize, "=".repeat(bars)));
+            out.push_str(&format!(
+                "H{} ({}): {:2} |{}\n",
+                i + 1,
+                kind,
+                (amp * 100.0) as usize,
+                "=".repeat(bars)
+            ));
         }
         out.push_str("======================================================================\n");
         out
@@ -297,10 +313,22 @@ impl SchottkyWavefolderView {
                 );
 
                 let presets = [
-                    (SchottkyWavefolderPreset::SubtleEvenFoldWarmth, "Subtle Even Fold"),
-                    (SchottkyWavefolderPreset::BuchlaWestCoastHarmonics, "Buchla Harmonics"),
-                    (SchottkyWavefolderPreset::ScreamingDiodeCascade, "Screaming Cascade"),
-                    (SchottkyWavefolderPreset::AsymmetricMetallicCrunch, "Metallic Crunch"),
+                    (
+                        SchottkyWavefolderPreset::SubtleEvenFoldWarmth,
+                        "Subtle Even Fold",
+                    ),
+                    (
+                        SchottkyWavefolderPreset::BuchlaWestCoastHarmonics,
+                        "Buchla Harmonics",
+                    ),
+                    (
+                        SchottkyWavefolderPreset::ScreamingDiodeCascade,
+                        "Screaming Cascade",
+                    ),
+                    (
+                        SchottkyWavefolderPreset::AsymmetricMetallicCrunch,
+                        "Metallic Crunch",
+                    ),
                 ];
 
                 for (p, label) in presets {
@@ -327,12 +355,21 @@ impl SchottkyWavefolderView {
             // Upper Visualizer: 2D Wavefolding Puck Canvas + Folded Transfer Curve + Harmonics
             ui.horizontal(|ui| {
                 // 2D Puck Canvas (X: Input Drive, Y: Symmetry Bias)
-                let (canvas_rect, response) = ui.allocate_exact_size(Vec2::new(340.0, 200.0), egui::Sense::drag());
+                let (canvas_rect, response) =
+                    ui.allocate_exact_size(Vec2::new(340.0, 200.0), egui::Sense::drag());
                 let painter = ui.painter_at(canvas_rect);
 
                 // Background
-                painter.rect_filled(canvas_rect, Rounding::same(6.0), Color32::from_rgb(15, 23, 42));
-                painter.rect_stroke(canvas_rect, Rounding::same(6.0), Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                painter.rect_filled(
+                    canvas_rect,
+                    Rounding::same(6.0),
+                    Color32::from_rgb(15, 23, 42),
+                );
+                painter.rect_stroke(
+                    canvas_rect,
+                    Rounding::same(6.0),
+                    Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+                );
 
                 let pad = 15.0;
                 let inner_w = canvas_rect.width() - 2.0 * pad;
@@ -341,7 +378,10 @@ impl SchottkyWavefolderView {
                 // Center zero-bias horizontal line
                 let center_y = canvas_rect.top() + pad + 0.5 * inner_h;
                 painter.line_segment(
-                    [egui::pos2(canvas_rect.left() + pad, center_y), egui::pos2(canvas_rect.right() - pad, center_y)],
+                    [
+                        egui::pos2(canvas_rect.left() + pad, center_y),
+                        egui::pos2(canvas_rect.right() - pad, center_y),
+                    ],
                     Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)),
                 );
 
@@ -349,7 +389,10 @@ impl SchottkyWavefolderView {
                 for i in 1..4 {
                     let gx = canvas_rect.left() + pad + (i as f32 / 4.0) * inner_w;
                     painter.line_segment(
-                        [egui::pos2(gx, canvas_rect.top() + pad), egui::pos2(gx, canvas_rect.bottom() - pad)],
+                        [
+                            egui::pos2(gx, canvas_rect.top() + pad),
+                            egui::pos2(gx, canvas_rect.bottom() - pad),
+                        ],
                         Stroke::new(0.5_f32, Color32::from_rgb(30, 41, 59)),
                     );
                 }
@@ -373,10 +416,18 @@ impl SchottkyWavefolderView {
                 );
 
                 // Glow ring
-                painter.circle_filled(puck_center, SCHOTTKY_PUCK_HIT_RADIUS, Color32::from_rgba_unmultiplied(239, 68, 68, 40));
+                painter.circle_filled(
+                    puck_center,
+                    SCHOTTKY_PUCK_HIT_RADIUS,
+                    Color32::from_rgba_unmultiplied(239, 68, 68, 40),
+                );
                 // Center puck
                 painter.circle_filled(puck_center, 9.0, Color32::from_rgb(239, 68, 68));
-                painter.circle_stroke(puck_center, 9.0, Stroke::new(2.0_f32, Color32::from_rgb(255, 255, 255)));
+                painter.circle_stroke(
+                    puck_center,
+                    9.0,
+                    Stroke::new(2.0_f32, Color32::from_rgb(255, 255, 255)),
+                );
 
                 // Axis labels
                 painter.text(
@@ -396,17 +447,38 @@ impl SchottkyWavefolderView {
 
                 // Right Panel: Transfer Characteristic Curve + Harmonic Spectrum
                 ui.vertical(|ui| {
-                    let (curve_rect, _) = ui.allocate_exact_size(Vec2::new(380.0, 110.0), egui::Sense::hover());
+                    let (curve_rect, _) =
+                        ui.allocate_exact_size(Vec2::new(380.0, 110.0), egui::Sense::hover());
                     let cpainter = ui.painter_at(curve_rect);
-                    cpainter.rect_filled(curve_rect, Rounding::same(6.0), Color32::from_rgb(15, 23, 42));
-                    cpainter.rect_stroke(curve_rect, Rounding::same(6.0), Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                    cpainter.rect_filled(
+                        curve_rect,
+                        Rounding::same(6.0),
+                        Color32::from_rgb(15, 23, 42),
+                    );
+                    cpainter.rect_stroke(
+                        curve_rect,
+                        Rounding::same(6.0),
+                        Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+                    );
 
                     let mid_x = curve_rect.center().x;
                     let mid_y = curve_rect.center().y;
 
                     // Axes
-                    cpainter.line_segment([egui::pos2(curve_rect.left() + 10.0, mid_y), egui::pos2(curve_rect.right() - 10.0, mid_y)], Stroke::new(0.6_f32, Color32::from_rgb(51, 65, 85)));
-                    cpainter.line_segment([egui::pos2(mid_x, curve_rect.top() + 6.0), egui::pos2(mid_x, curve_rect.bottom() - 6.0)], Stroke::new(0.6_f32, Color32::from_rgb(51, 65, 85)));
+                    cpainter.line_segment(
+                        [
+                            egui::pos2(curve_rect.left() + 10.0, mid_y),
+                            egui::pos2(curve_rect.right() - 10.0, mid_y),
+                        ],
+                        Stroke::new(0.6_f32, Color32::from_rgb(51, 65, 85)),
+                    );
+                    cpainter.line_segment(
+                        [
+                            egui::pos2(mid_x, curve_rect.top() + 6.0),
+                            egui::pos2(mid_x, curve_rect.bottom() - 6.0),
+                        ],
+                        Stroke::new(0.6_f32, Color32::from_rgb(51, 65, 85)),
+                    );
 
                     // Transfer Curve Points
                     let steps = 64;
@@ -421,13 +493,19 @@ impl SchottkyWavefolderView {
                     }
 
                     for w in pts.windows(2) {
-                        cpainter.line_segment([w[0], w[1]], Stroke::new(1.8_f32, Color32::from_rgb(239, 68, 68)));
+                        cpainter.line_segment(
+                            [w[0], w[1]],
+                            Stroke::new(1.8_f32, Color32::from_rgb(239, 68, 68)),
+                        );
                     }
 
                     cpainter.text(
                         egui::pos2(curve_rect.left() + 8.0, curve_rect.top() + 6.0),
                         egui::Align2::LEFT_TOP,
-                        format!("V_out = f(V_in) | Active Folds: {}", self.effective_fold_count),
+                        format!(
+                            "V_out = f(V_in) | Active Folds: {}",
+                            self.effective_fold_count
+                        ),
                         FontId::proportional(10.0),
                         Color32::from_rgb(226, 232, 240),
                     );
@@ -435,10 +513,19 @@ impl SchottkyWavefolderView {
                     ui.add_space(6.0);
 
                     // Harmonics Bar Spectrum (H1..H9)
-                    let (spec_rect, _) = ui.allocate_exact_size(Vec2::new(380.0, 84.0), egui::Sense::hover());
+                    let (spec_rect, _) =
+                        ui.allocate_exact_size(Vec2::new(380.0, 84.0), egui::Sense::hover());
                     let spainter = ui.painter_at(spec_rect);
-                    spainter.rect_filled(spec_rect, Rounding::same(6.0), Color32::from_rgb(15, 23, 42));
-                    spainter.rect_stroke(spec_rect, Rounding::same(6.0), Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                    spainter.rect_filled(
+                        spec_rect,
+                        Rounding::same(6.0),
+                        Color32::from_rgb(15, 23, 42),
+                    );
+                    spainter.rect_stroke(
+                        spec_rect,
+                        Rounding::same(6.0),
+                        Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+                    );
 
                     let harmonics = self.evaluate_harmonics();
                     let bar_w = (spec_rect.width() - 30.0) / (NUM_WAVEFOLDER_HARMONICS as f32);
@@ -447,7 +534,10 @@ impl SchottkyWavefolderView {
                         let bx = spec_rect.left() + 15.0 + (i as f32) * bar_w;
                         let bar_h = (amp * (spec_rect.height() - 28.0)).max(2.0);
                         let by = spec_rect.bottom() - 14.0 - bar_h;
-                        let rect = egui::Rect::from_min_size(egui::pos2(bx + 2.0, by), Vec2::new(bar_w - 4.0, bar_h));
+                        let rect = egui::Rect::from_min_size(
+                            egui::pos2(bx + 2.0, by),
+                            Vec2::new(bar_w - 4.0, bar_h),
+                        );
                         let is_even = (i + 1) % 2 == 0;
                         let color = if is_even {
                             Color32::from_rgb(245, 158, 11) // Even harmonics: Amber
@@ -470,45 +560,113 @@ impl SchottkyWavefolderView {
             ui.add_space(10.0);
 
             // Tactile Secondary Parameter Sliders
-            egui::Grid::new("schottky_params_grid").num_columns(2).spacing([16.0, 8.0]).show(ui, |ui| {
-                ui.label(RichText::new("Schottky Pre-Amp Drive:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.input_drive_gain, 0.0..=36.0).show_value(true).suffix(" dB")).changed() {
-                    self.puck_pos.0 = Self::drive_to_normalized(self.input_drive_gain);
-                    self.update_physics();
-                }
-                ui.end_row();
+            egui::Grid::new("schottky_params_grid")
+                .num_columns(2)
+                .spacing([16.0, 8.0])
+                .show(ui, |ui| {
+                    ui.label(
+                        RichText::new("Schottky Pre-Amp Drive:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.input_drive_gain, 0.0..=36.0)
+                                .show_value(true)
+                                .suffix(" dB"),
+                        )
+                        .changed()
+                    {
+                        self.puck_pos.0 = Self::drive_to_normalized(self.input_drive_gain);
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Diode Threshold Asymmetry Bias:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.fold_symmetry_bias, -1.0..=1.0).show_value(true)).changed() {
-                    self.puck_pos.1 = Self::bias_to_normalized(self.fold_symmetry_bias);
-                    self.update_physics();
-                }
-                ui.end_row();
+                    ui.label(
+                        RichText::new("Diode Threshold Asymmetry Bias:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.fold_symmetry_bias, -1.0..=1.0)
+                                .show_value(true),
+                        )
+                        .changed()
+                    {
+                        self.puck_pos.1 = Self::bias_to_normalized(self.fold_symmetry_bias);
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Active Diode Folding Stages:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.folding_stages_count, 1.0..=6.0).step_by(1.0).show_value(true).suffix(" stages")).changed() {
-                    self.update_physics();
-                }
-                ui.end_row();
+                    ui.label(
+                        RichText::new("Active Diode Folding Stages:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.folding_stages_count, 1.0..=6.0)
+                                .step_by(1.0)
+                                .show_value(true)
+                                .suffix(" stages"),
+                        )
+                        .changed()
+                    {
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Miller Junction Capacitance:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.miller_junction_capacitance, 10.0..=1000.0).show_value(true).suffix(" pF")).changed() {
-                    self.update_physics();
-                }
-                ui.end_row();
+                    ui.label(
+                        RichText::new("Miller Junction Capacitance:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.miller_junction_capacitance, 10.0..=1000.0)
+                                .show_value(true)
+                                .suffix(" pF"),
+                        )
+                        .changed()
+                    {
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Schottky Knee Softness:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.diode_saturation_softness, 0.1..=1.0).show_value(true)).changed() {
-                    self.update_physics();
-                }
-                ui.end_row();
+                    ui.label(
+                        RichText::new("Schottky Knee Softness:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.diode_saturation_softness, 0.1..=1.0)
+                                .show_value(true),
+                        )
+                        .changed()
+                    {
+                        self.update_physics();
+                    }
+                    ui.end_row();
 
-                ui.label(RichText::new("Post-Folding Output Makeup Trim:").font(FontId::proportional(11.0)).color(Color32::from_rgb(203, 213, 225)));
-                if ui.add(egui::Slider::new(&mut self.output_trim_makeup, -24.0..=12.0).show_value(true).suffix(" dB")).changed() {
-                    self.update_physics();
-                }
-                ui.end_row();
-            });
+                    ui.label(
+                        RichText::new("Post-Folding Output Makeup Trim:")
+                            .font(FontId::proportional(11.0))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    );
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut self.output_trim_makeup, -24.0..=12.0)
+                                .show_value(true)
+                                .suffix(" dB"),
+                        )
+                        .changed()
+                    {
+                        self.update_physics();
+                    }
+                    ui.end_row();
+                });
 
             ui.add_space(6.0);
 

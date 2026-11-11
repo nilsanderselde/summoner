@@ -17,12 +17,12 @@
 //! - Deterministic ASCII snapshot renderer for headless automated verification
 //! - Accessible layout with touch targets >= 44x44pt (WCAG AAA compliance)
 
-use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 use summoner_project::export::{
-    BitDepth, ExportPreset, ExportPresetManager, ExportSettings, StemExportFormat,
-    StemExportReport, format_stem_filename,
+    format_stem_filename, BitDepth, ExportPreset, ExportPresetManager, ExportSettings,
+    StemExportFormat, StemExportReport,
 };
 use summoner_project::schema::ProjectConfig;
 
@@ -102,13 +102,27 @@ impl LoudnessStandard {
 
     pub fn description(&self) -> &'static str {
         match self {
-            Self::SpotifyYouTube => "Optimized for Spotify, YouTube, Tidal. Ensures zero dynamic limiter penalty.",
-            Self::AppleMusic => "Complies with Apple Digital Masters specification with -1.0 dBTP ceiling.",
-            Self::EbuR128 => "Strict European broadcast standard with gated integrated loudness measurement.",
-            Self::AtscA85 => "United States digital television audio compliance standard with -2.0 dBTP margin.",
-            Self::AesTd1004 => "Optimized for voice podcasts, spoken word, and dialogue distribution.",
-            Self::ClubDj => "Aggressive club system master with maximum punch and crest factor retention.",
-            Self::RawPeak => "Normalizes highest audio peak to 0 dBFS without perceptual weighting.",
+            Self::SpotifyYouTube => {
+                "Optimized for Spotify, YouTube, Tidal. Ensures zero dynamic limiter penalty."
+            }
+            Self::AppleMusic => {
+                "Complies with Apple Digital Masters specification with -1.0 dBTP ceiling."
+            }
+            Self::EbuR128 => {
+                "Strict European broadcast standard with gated integrated loudness measurement."
+            }
+            Self::AtscA85 => {
+                "United States digital television audio compliance standard with -2.0 dBTP margin."
+            }
+            Self::AesTd1004 => {
+                "Optimized for voice podcasts, spoken word, and dialogue distribution."
+            }
+            Self::ClubDj => {
+                "Aggressive club system master with maximum punch and crest factor retention."
+            }
+            Self::RawPeak => {
+                "Normalizes highest audio peak to 0 dBFS without perceptual weighting."
+            }
             Self::Bypass => "Renders pure floating-point DSP output without gain adjustment.",
         }
     }
@@ -151,12 +165,24 @@ impl StemPresetQuickPick {
 
     pub fn description(&self) -> &'static str {
         match self {
-            Self::StudioMasterWav => "24-bit 48kHz uncompressed WAV stems with project prefix and full dynamics.",
-            Self::CdQualityWav => "Standard Red Book 16-bit 44.1kHz WAV stems with TPDF triangular dither.",
-            Self::StreamingReadyNormalized => "24-bit 48kHz stems normalized to -14 LUFS with -1.0 dBTP margin.",
-            Self::BroadcastEbuR128 => "Strict broadcast delivery stems normalized to -23 LUFS integrated.",
-            Self::HiResFlacArchive => "24-bit 96kHz lossless compressed FLAC archive for long-term preservation.",
-            Self::GameAudioCleanLoops => "Seamless loop-ready stems with 0s tail decay and silence trimming.",
+            Self::StudioMasterWav => {
+                "24-bit 48kHz uncompressed WAV stems with project prefix and full dynamics."
+            }
+            Self::CdQualityWav => {
+                "Standard Red Book 16-bit 44.1kHz WAV stems with TPDF triangular dither."
+            }
+            Self::StreamingReadyNormalized => {
+                "24-bit 48kHz stems normalized to -14 LUFS with -1.0 dBTP margin."
+            }
+            Self::BroadcastEbuR128 => {
+                "Strict broadcast delivery stems normalized to -23 LUFS integrated."
+            }
+            Self::HiResFlacArchive => {
+                "24-bit 96kHz lossless compressed FLAC archive for long-term preservation."
+            }
+            Self::GameAudioCleanLoops => {
+                "Seamless loop-ready stems with 0s tail decay and silence trimming."
+            }
         }
     }
 }
@@ -175,11 +201,7 @@ pub struct StemTrackItem {
 }
 
 impl StemTrackItem {
-    pub fn new(
-        track_id: u64,
-        track_name: impl Into<String>,
-        bus_target: Option<String>,
-    ) -> Self {
+    pub fn new(track_id: u64, track_name: impl Into<String>, bus_target: Option<String>) -> Self {
         Self {
             track_id,
             track_name: track_name.into(),
@@ -660,13 +682,19 @@ impl StemsExportView {
     /// Renders a deterministic ASCII snapshot for headless automated test verification.
     pub fn render_snapshot_ascii(&self) -> String {
         let mut lines = Vec::new();
-        lines.push("┌────────────────────────────────────────────────────────────────────────┐".to_string());
+        lines.push(
+            "┌────────────────────────────────────────────────────────────────────────┐"
+                .to_string(),
+        );
         lines.push(format!(
             "│ 📦 MULTI-TRACK STEMS EXPORT & LOUDNESS INSPECTOR [{:<20}] │",
             self.preset.short_name()
         ));
-        lines.push("├────────────────────────────────────────────────────────────────────────┤".to_string());
-        
+        lines.push(
+            "├────────────────────────────────────────────────────────────────────────┤"
+                .to_string(),
+        );
+
         let fmt_str = match self.format {
             StemExportFormat::Wav => "WAV",
             StemExportFormat::Flac => "FLAC",
@@ -681,7 +709,7 @@ impl StemsExportView {
             "│ Format: {:<6} | Bit Depth: {:<12} | Sample Rate: {:>5} Hz      │",
             fmt_str, bit_str, self.sample_rate
         ));
-        
+
         lines.push(format!(
             "│ Standard: {:<20} | Target: {:>+5.1} LUFS | Max TP: {:>+4.1} dBTP │",
             self.loudness_standard.short_name(),
@@ -710,12 +738,19 @@ impl StemsExportView {
             self.tail_decay_seconds
         ));
 
-        lines.push("├────────────────────────────────────────────────────────────────────────┤".to_string());
+        lines.push(
+            "├────────────────────────────────────────────────────────────────────────┤"
+                .to_string(),
+        );
         lines.push(format!("│ Pattern: {:<61} │", self.naming_pattern));
-        let preview = self.format_filename_preview(&self.project_name, 0, 1, "Drums", Some("Drums"));
+        let preview =
+            self.format_filename_preview(&self.project_name, 0, 1, "Drums", Some("Drums"));
         lines.push(format!("│ Preview: {:<61} │", preview));
-        lines.push("└────────────────────────────────────────────────────────────────────────┘".to_string());
-        
+        lines.push(
+            "└────────────────────────────────────────────────────────────────────────┘"
+                .to_string(),
+        );
+
         lines.join("\n")
     }
 
@@ -842,9 +877,21 @@ impl StemsExportView {
                         .color(Color32::from_rgb(226, 232, 240)),
                 );
                 ui.add_space(4.0);
-                ui.radio_value(&mut self.bit_depth, BitDepth::Bit16, "16-bit PCM (CD Standard)");
-                ui.radio_value(&mut self.bit_depth, BitDepth::Bit24, "24-bit PCM (Studio Standard)");
-                ui.radio_value(&mut self.bit_depth, BitDepth::Bit32Float, "32-bit Float (High Dynamic Range)");
+                ui.radio_value(
+                    &mut self.bit_depth,
+                    BitDepth::Bit16,
+                    "16-bit PCM (CD Standard)",
+                );
+                ui.radio_value(
+                    &mut self.bit_depth,
+                    BitDepth::Bit24,
+                    "24-bit PCM (Studio Standard)",
+                );
+                ui.radio_value(
+                    &mut self.bit_depth,
+                    BitDepth::Bit32Float,
+                    "32-bit Float (High Dynamic Range)",
+                );
             });
 
             ui.add_space(24.0);
@@ -892,18 +939,26 @@ impl StemsExportView {
 
                 ui.horizontal(|ui| {
                     ui.label("Reverb / Delay Tail:");
-                    ui.add(egui::Slider::new(&mut self.tail_decay_seconds, 0.0..=10.0).suffix(" s"));
+                    ui.add(
+                        egui::Slider::new(&mut self.tail_decay_seconds, 0.0..=10.0).suffix(" s"),
+                    );
                 });
 
                 ui.checkbox(&mut self.trim_silence, "Trim Trailing Silence");
                 if self.trim_silence {
                     ui.horizontal(|ui| {
                         ui.label("Silence Threshold:");
-                        ui.add(egui::Slider::new(&mut self.silence_threshold_db, -80.0..=-40.0).suffix(" dB"));
+                        ui.add(
+                            egui::Slider::new(&mut self.silence_threshold_db, -80.0..=-40.0)
+                                .suffix(" dB"),
+                        );
                     });
                 }
 
-                ui.checkbox(&mut self.dither_enabled, "TPDF Triangular Dithering (for 16-bit)");
+                ui.checkbox(
+                    &mut self.dither_enabled,
+                    "TPDF Triangular Dithering (for 16-bit)",
+                );
             });
         });
     }
@@ -911,13 +966,22 @@ impl StemsExportView {
     #[cfg(feature = "gui")]
     fn show_tab_tracks_selection(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
-            if ui.add_sized(Vec2::new(100.0, 32.0), egui::Button::new("☑ Select All")).clicked() {
+            if ui
+                .add_sized(Vec2::new(100.0, 32.0), egui::Button::new("☑ Select All"))
+                .clicked()
+            {
                 self.select_all();
             }
-            if ui.add_sized(Vec2::new(100.0, 32.0), egui::Button::new("☐ Deselect All")).clicked() {
+            if ui
+                .add_sized(Vec2::new(100.0, 32.0), egui::Button::new("☐ Deselect All"))
+                .clicked()
+            {
                 self.deselect_all();
             }
-            if ui.add_sized(Vec2::new(100.0, 32.0), egui::Button::new("🔄 Invert")).clicked() {
+            if ui
+                .add_sized(Vec2::new(100.0, 32.0), egui::Button::new("🔄 Invert"))
+                .clicked()
+            {
                 self.invert_selection();
             }
 
@@ -935,37 +999,73 @@ impl StemsExportView {
                     .striped(true)
                     .min_col_width(80.0)
                     .show(ui, |ui| {
-                        ui.label(RichText::new("Export").strong().color(Color32::from_rgb(148, 163, 184)));
-                        ui.label(RichText::new("Track Name").strong().color(Color32::from_rgb(148, 163, 184)));
-                        ui.label(RichText::new("Bus Target").strong().color(Color32::from_rgb(148, 163, 184)));
-                        ui.label(RichText::new("Peak").strong().color(Color32::from_rgb(148, 163, 184)));
-                        ui.label(RichText::new("LUFS").strong().color(Color32::from_rgb(148, 163, 184)));
-                        ui.label(RichText::new("True Peak").strong().color(Color32::from_rgb(148, 163, 184)));
+                        ui.label(
+                            RichText::new("Export")
+                                .strong()
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
+                        ui.label(
+                            RichText::new("Track Name")
+                                .strong()
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
+                        ui.label(
+                            RichText::new("Bus Target")
+                                .strong()
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
+                        ui.label(
+                            RichText::new("Peak")
+                                .strong()
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
+                        ui.label(
+                            RichText::new("LUFS")
+                                .strong()
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
+                        ui.label(
+                            RichText::new("True Peak")
+                                .strong()
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
                         ui.end_row();
 
                         for track in &mut self.tracks {
                             ui.checkbox(&mut track.is_selected, "");
-                            ui.label(RichText::new(&track.track_name).color(Color32::from_rgb(241, 245, 249)));
+                            ui.label(
+                                RichText::new(&track.track_name)
+                                    .color(Color32::from_rgb(241, 245, 249)),
+                            );
                             ui.label(track.bus_target.as_deref().unwrap_or("Master"));
                             ui.label(format!("{:.1} dBFS", track.peak_db));
                             ui.label(format!("{:.1} LUFS", track.integrated_lufs));
-                            
+
                             let tp_color = if track.true_peak_dbtp > -1.0 {
                                 Color32::from_rgb(245, 158, 11) // Warning amber
                             } else {
                                 Color32::from_rgb(16, 185, 129) // Green
                             };
-                            ui.label(RichText::new(format!("{:.1} dBTP", track.true_peak_dbtp)).color(tp_color));
+                            ui.label(
+                                RichText::new(format!("{:.1} dBTP", track.true_peak_dbtp))
+                                    .color(tp_color),
+                            );
                             ui.end_row();
                         }
 
                         if self.include_master {
                             ui.label(RichText::new("★").color(Color32::from_rgb(245, 158, 11)));
-                            ui.label(RichText::new("Master_Mix (Stereo Master Bus)").strong().color(Color32::from_rgb(56, 189, 248)));
+                            ui.label(
+                                RichText::new("Master_Mix (Stereo Master Bus)")
+                                    .strong()
+                                    .color(Color32::from_rgb(56, 189, 248)),
+                            );
                             ui.label("Main Out");
                             ui.label("-0.2 dBFS");
                             ui.label("-14.0 LUFS");
-                            ui.label(RichText::new("-0.2 dBTP").color(Color32::from_rgb(245, 158, 11)));
+                            ui.label(
+                                RichText::new("-0.2 dBTP").color(Color32::from_rgb(245, 158, 11)),
+                            );
                             ui.end_row();
                         }
                     });
@@ -1107,9 +1207,15 @@ impl StemsExportView {
             ui.add_space(4.0);
 
             ui.horizontal(|ui| {
-                ui.add_sized(Vec2::new(380.0, 32.0), egui::TextEdit::singleline(&mut self.output_dir));
+                ui.add_sized(
+                    Vec2::new(380.0, 32.0),
+                    egui::TextEdit::singleline(&mut self.output_dir),
+                );
                 #[cfg(feature = "gui")]
-                if ui.add_sized(Vec2::new(90.0, 32.0), egui::Button::new("📂 Browse...")).clicked() {
+                if ui
+                    .add_sized(Vec2::new(90.0, 32.0), egui::Button::new("📂 Browse..."))
+                    .clicked()
+                {
                     #[cfg(feature = "rfd")]
                     if let Some(path) = rfd::FileDialog::new().pick_folder() {
                         self.output_dir = path.to_string_lossy().to_string();
@@ -1136,14 +1242,21 @@ impl StemsExportView {
                     ("{bit_depth}", "Bit Depth"),
                 ];
                 for (token, hint) in tokens {
-                    if ui.add_sized(Vec2::new(90.0, 28.0), egui::Button::new(token)).on_hover_text(hint).clicked() {
+                    if ui
+                        .add_sized(Vec2::new(90.0, 28.0), egui::Button::new(token))
+                        .on_hover_text(hint)
+                        .clicked()
+                    {
                         self.naming_pattern.push_str(token);
                     }
                 }
             });
 
             ui.add_space(6.0);
-            ui.add_sized(Vec2::new(480.0, 32.0), egui::TextEdit::singleline(&mut self.naming_pattern));
+            ui.add_sized(
+                Vec2::new(480.0, 32.0),
+                egui::TextEdit::singleline(&mut self.naming_pattern),
+            );
 
             ui.add_space(10.0);
             ui.label(
@@ -1154,7 +1267,8 @@ impl StemsExportView {
             );
             ui.add_space(4.0);
 
-            let preview_track = self.format_filename_preview(&self.project_name, 0, 1, "Drums", Some("Drums"));
+            let preview_track =
+                self.format_filename_preview(&self.project_name, 0, 1, "Drums", Some("Drums"));
             let preview_master = self.master_filename_preview(&self.project_name);
 
             egui::Frame::none()
@@ -1163,9 +1277,17 @@ impl StemsExportView {
                 .rounding(Rounding::same(4.0))
                 .inner_margin(egui::Margin::same(8.0))
                 .show(ui, |ui| {
-                    ui.label(RichText::new(format!("Track 1:  {}", preview_track)).monospace().color(Color32::from_rgb(148, 163, 184)));
+                    ui.label(
+                        RichText::new(format!("Track 1:  {}", preview_track))
+                            .monospace()
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
                     if self.include_master {
-                        ui.label(RichText::new(format!("Master:   {}", preview_master)).monospace().color(Color32::from_rgb(56, 189, 248)));
+                        ui.label(
+                            RichText::new(format!("Master:   {}", preview_master))
+                                .monospace()
+                                .color(Color32::from_rgb(56, 189, 248)),
+                        );
                     }
                 });
         });
@@ -1179,9 +1301,12 @@ impl StemsExportView {
 
             ui.vertical(|ui| {
                 ui.label(
-                    RichText::new(format!("Queue: {} Stems • Estimated Total: {:.1} MB", stems_count, est_size))
-                        .font(FontId::proportional(13.0))
-                        .color(Color32::from_rgb(148, 163, 184)),
+                    RichText::new(format!(
+                        "Queue: {} Stems • Estimated Total: {:.1} MB",
+                        stems_count, est_size
+                    ))
+                    .font(FontId::proportional(13.0))
+                    .color(Color32::from_rgb(148, 163, 184)),
                 );
                 if let Some(ref msg) = self.status_message {
                     ui.label(
@@ -1194,16 +1319,24 @@ impl StemsExportView {
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let btn_text = if self.is_exporting {
-                    RichText::new("⏳ Rendering Stems...").font(FontId::proportional(14.0)).strong()
+                    RichText::new("⏳ Rendering Stems...")
+                        .font(FontId::proportional(14.0))
+                        .strong()
                 } else {
-                    RichText::new("🚀 Start Stems Export").font(FontId::proportional(14.0)).strong().color(Color32::from_rgb(255, 255, 255))
+                    RichText::new("🚀 Start Stems Export")
+                        .font(FontId::proportional(14.0))
+                        .strong()
+                        .color(Color32::from_rgb(255, 255, 255))
                 };
 
                 let export_btn = egui::Button::new(btn_text)
                     .fill(Color32::from_rgb(14, 165, 233))
                     .min_size(Vec2::new(170.0, STEM_EXPORT_MIN_HIT_HEIGHT));
 
-                if ui.add_enabled(!self.is_exporting && stems_count > 0, export_btn).clicked() {
+                if ui
+                    .add_enabled(!self.is_exporting && stems_count > 0, export_btn)
+                    .clicked()
+                {
                     let dummy_proj = ProjectConfig::default();
                     let out_path = PathBuf::from(&self.output_dir);
                     let _ = self.execute_export(&dummy_proj, &out_path, None);

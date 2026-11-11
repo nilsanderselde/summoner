@@ -104,7 +104,10 @@ pub mod pure_tests {
         assert!((view.spatial_aliasing_cutoff_hz - 4500.0).abs() < 1e-3);
 
         view.set_array_geometry(WfsGeometry::HexagonalHolographicArray96);
-        assert_eq!(view.array_geometry, WfsGeometry::HexagonalHolographicArray96);
+        assert_eq!(
+            view.array_geometry,
+            WfsGeometry::HexagonalHolographicArray96
+        );
         assert_eq!(view.channel_count, 96);
         assert!((view.spatial_aliasing_cutoff_hz - 2600.0).abs() < 1e-3);
 
@@ -210,7 +213,11 @@ pub mod gui_tests {
     fn test_turn77_gui_live_parambus_slot_dispatch() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 

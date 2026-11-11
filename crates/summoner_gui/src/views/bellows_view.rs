@@ -97,15 +97,21 @@ impl BellowsView {
     }
 
     pub fn update_puck_from_physics(&mut self) {
-        let norm_x = ((self.bellows_pressure_pa - MIN_BELLOWS_PRESSURE_PA) / (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA)).clamp(0.0, 1.0);
-        let norm_y = ((self.valve_velocity - MIN_VALVE_VELOCITY) / (MAX_VALVE_VELOCITY - MIN_VALVE_VELOCITY)).clamp(0.0, 1.0);
+        let norm_x = ((self.bellows_pressure_pa - MIN_BELLOWS_PRESSURE_PA)
+            / (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA))
+            .clamp(0.0, 1.0);
+        let norm_y = ((self.valve_velocity - MIN_VALVE_VELOCITY)
+            / (MAX_VALVE_VELOCITY - MIN_VALVE_VELOCITY))
+            .clamp(0.0, 1.0);
         self.puck_pos = (norm_x, norm_y);
     }
 
     pub fn update_physics_from_puck(&mut self, norm_x: f32, norm_y: f32) {
         self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
-        self.bellows_pressure_pa = MIN_BELLOWS_PRESSURE_PA + self.puck_pos.0 * (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA);
-        self.valve_velocity = MIN_VALVE_VELOCITY + self.puck_pos.1 * (MAX_VALVE_VELOCITY - MIN_VALVE_VELOCITY);
+        self.bellows_pressure_pa = MIN_BELLOWS_PRESSURE_PA
+            + self.puck_pos.0 * (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA);
+        self.valve_velocity =
+            MIN_VALVE_VELOCITY + self.puck_pos.1 * (MAX_VALVE_VELOCITY - MIN_VALVE_VELOCITY);
     }
 
     pub fn set_preset(&mut self, preset: BellowsHudPreset) {
@@ -156,11 +162,13 @@ impl BellowsView {
     }
 
     pub fn pressure_to_normalized(pressure: f32) -> f32 {
-        ((pressure - MIN_BELLOWS_PRESSURE_PA) / (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA)).clamp(0.0, 1.0)
+        ((pressure - MIN_BELLOWS_PRESSURE_PA) / (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_pressure(norm: f32) -> f32 {
-        MIN_BELLOWS_PRESSURE_PA + norm.clamp(0.0, 1.0) * (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA)
+        MIN_BELLOWS_PRESSURE_PA
+            + norm.clamp(0.0, 1.0) * (MAX_BELLOWS_PRESSURE_PA - MIN_BELLOWS_PRESSURE_PA)
     }
 
     pub fn velocity_to_normalized(vel: f32) -> f32 {
@@ -194,13 +202,18 @@ impl BellowsView {
         let border = format!("+{}+", "-".repeat(width.saturating_sub(2)));
         lines.push(border.clone());
 
-        let title = format!("| BELLOWS DYNAMICS HUD [P={:+.0} Pa, Vel={:.2}] |", self.bellows_pressure_pa, self.valve_velocity);
+        let title = format!(
+            "| BELLOWS DYNAMICS HUD [P={:+.0} Pa, Vel={:.2}] |",
+            self.bellows_pressure_pa, self.valve_velocity
+        );
         let padding = width.saturating_sub(title.len() + 2);
         lines.push(format!("|{}{}|", title, " ".repeat(padding)));
 
         let inner_height = height.saturating_sub(4);
-        let puck_x = ((self.puck_pos.0 * (width.saturating_sub(4) as f32)) as usize).min(width.saturating_sub(4));
-        let puck_y = (((1.0 - self.puck_pos.1) * (inner_height.saturating_sub(1) as f32)) as usize).min(inner_height.saturating_sub(1));
+        let puck_x = ((self.puck_pos.0 * (width.saturating_sub(4) as f32)) as usize)
+            .min(width.saturating_sub(4));
+        let puck_y = (((1.0 - self.puck_pos.1) * (inner_height.saturating_sub(1) as f32)) as usize)
+            .min(inner_height.saturating_sub(1));
 
         for y in 0..inner_height {
             let mut row = vec![' '; width.saturating_sub(2)];
@@ -216,8 +229,15 @@ impl BellowsView {
             lines.push(format!("|{}|", s));
         }
 
-        let direction_str = if self.bellows_pressure_pa >= 0.0 { ">>> PUSH >>>" } else { "<<< PULL <<<" };
-        let footer = format!("| Dir: {:<12} Aperture: {:.2} Musette: {:>4.1}c |", direction_str, self.cassotto_aperture, self.musette_detune_cents);
+        let direction_str = if self.bellows_pressure_pa >= 0.0 {
+            ">>> PUSH >>>"
+        } else {
+            "<<< PULL <<<"
+        };
+        let footer = format!(
+            "| Dir: {:<12} Aperture: {:.2} Musette: {:>4.1}c |",
+            direction_str, self.cassotto_aperture, self.musette_detune_cents
+        );
         let foot_pad = width.saturating_sub(footer.len() + 2);
         lines.push(format!("|{}{}|", footer, " ".repeat(foot_pad)));
         lines.push(border);
@@ -226,7 +246,12 @@ impl BellowsView {
     }
 
     /// Render headless PNG snapshot with WCAG AAA contrast for layout and touch target verification.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background dark charcoal #0F172A
@@ -436,7 +461,10 @@ impl BellowsView {
         // Zero-pressure center line (Divider between PULL < 0 and PUSH > 0)
         let mid_x = pad_rect.center().x;
         painter.line_segment(
-            [egui::pos2(mid_x, pad_rect.min.y), egui::pos2(mid_x, pad_rect.max.y)],
+            [
+                egui::pos2(mid_x, pad_rect.min.y),
+                egui::pos2(mid_x, pad_rect.max.y),
+            ],
             Stroke::new(1.5_f32, Color32::from_rgb(59, 130, 246)),
         );
 
@@ -484,7 +512,11 @@ impl BellowsView {
         }
 
         // Draw Interactive Puck
-        painter.circle_filled(puck_center, BELLOWS_PUCK_HIT_RADIUS, Color32::from_rgb(245, 158, 11));
+        painter.circle_filled(
+            puck_center,
+            BELLOWS_PUCK_HIT_RADIUS,
+            Color32::from_rgb(245, 158, 11),
+        );
         painter.circle_stroke(
             puck_center,
             BELLOWS_PUCK_HIT_RADIUS,
@@ -507,7 +539,11 @@ impl BellowsView {
 
         // Visualizer Titles and Gauges
         let is_push = self.bellows_pressure_pa >= 0.0;
-        let dir_str = if is_push { "AIRFLOW: >>> PUSH >>>" } else { "AIRFLOW: <<< PULL <<<" };
+        let dir_str = if is_push {
+            "AIRFLOW: >>> PUSH >>>"
+        } else {
+            "AIRFLOW: <<< PULL <<<"
+        };
         let dir_color = if is_push {
             Color32::from_rgb(245, 158, 11) // Amber
         } else {
@@ -523,7 +559,11 @@ impl BellowsView {
         );
 
         // Pressure Gauge Readout
-        let pres_str = format!("Pressure: {:+.0} Pa  ({:+.2} kPa)", self.bellows_pressure_pa, self.bellows_pressure_pa / 1000.0);
+        let pres_str = format!(
+            "Pressure: {:+.0} Pa  ({:+.2} kPa)",
+            self.bellows_pressure_pa,
+            self.bellows_pressure_pa / 1000.0
+        );
         painter.text(
             egui::pos2(viz_rect.center().x, viz_rect.min.y + 44.0),
             egui::Align2::CENTER_TOP,
@@ -554,7 +594,10 @@ impl BellowsView {
         painter.rect_filled(bar_fill, 2.0, dir_color);
 
         // Cassotto Aperture Shutter Gauge
-        let cass_label = format!("Cassotto Tone Chamber: {:.0}% Open", self.cassotto_aperture * 100.0);
+        let cass_label = format!(
+            "Cassotto Tone Chamber: {:.0}% Open",
+            self.cassotto_aperture * 100.0
+        );
         painter.text(
             egui::pos2(viz_rect.center().x, viz_rect.min.y + 115.0),
             egui::Align2::CENTER_TOP,
@@ -575,7 +618,10 @@ impl BellowsView {
             let sy = slat_rect.min.y + s as f32 * (slat_h / 4.0);
             let open_offset = (1.0 - self.cassotto_aperture) * (slat_h / 5.0);
             painter.line_segment(
-                [egui::pos2(slat_rect.min.x + 4.0, sy + open_offset), egui::pos2(slat_rect.max.x - 4.0, sy + open_offset)],
+                [
+                    egui::pos2(slat_rect.min.x + 4.0, sy + open_offset),
+                    egui::pos2(slat_rect.max.x - 4.0, sy + open_offset),
+                ],
                 Stroke::new(2.0_f32, Color32::from_rgb(148, 163, 184)),
             );
         }
@@ -599,24 +645,60 @@ impl BellowsView {
         ui.allocate_ui_at_rect(controls_rect, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.label(RichText::new("Bellows Chamber Dynamics:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
-                    ui.add(egui::Slider::new(&mut self.bellows_pressure_pa, MIN_BELLOWS_PRESSURE_PA..=MAX_BELLOWS_PRESSURE_PA).text("Pressure (Pa)"));
-                    ui.add(egui::Slider::new(&mut self.valve_velocity, MIN_VALVE_VELOCITY..=MAX_VALVE_VELOCITY).text("Valve Velocity"));
+                    ui.label(
+                        RichText::new("Bellows Chamber Dynamics:")
+                            .font(FontId::proportional(11.0))
+                            .strong()
+                            .color(Color32::from_rgb(226, 232, 240)),
+                    );
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.bellows_pressure_pa,
+                            MIN_BELLOWS_PRESSURE_PA..=MAX_BELLOWS_PRESSURE_PA,
+                        )
+                        .text("Pressure (Pa)"),
+                    );
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.valve_velocity,
+                            MIN_VALVE_VELOCITY..=MAX_VALVE_VELOCITY,
+                        )
+                        .text("Valve Velocity"),
+                    );
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
-                    ui.label(RichText::new("Cassotto & Musette Tuning:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
-                    ui.add(egui::Slider::new(&mut self.cassotto_aperture, 0.0..=1.0).text("Cassotto Aperture"));
-                    ui.add(egui::Slider::new(&mut self.musette_detune_cents, 0.0..=35.0).text("Musette (cents)"));
+                    ui.label(
+                        RichText::new("Cassotto & Musette Tuning:")
+                            .font(FontId::proportional(11.0))
+                            .strong()
+                            .color(Color32::from_rgb(226, 232, 240)),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.cassotto_aperture, 0.0..=1.0)
+                            .text("Cassotto Aperture"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.musette_detune_cents, 0.0..=35.0)
+                            .text("Musette (cents)"),
+                    );
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
-                    ui.label(RichText::new("Reed Aeroacoustics:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
-                    ui.add(egui::Slider::new(&mut self.reed_stiffness, 0.5..=2.0).text("Reed Stiffness"));
+                    ui.label(
+                        RichText::new("Reed Aeroacoustics:")
+                            .font(FontId::proportional(11.0))
+                            .strong()
+                            .color(Color32::from_rgb(226, 232, 240)),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.reed_stiffness, 0.5..=2.0)
+                            .text("Reed Stiffness"),
+                    );
                 });
             });
         });
@@ -624,7 +706,12 @@ impl BellowsView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

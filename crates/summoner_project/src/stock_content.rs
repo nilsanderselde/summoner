@@ -45,7 +45,8 @@ impl StockContentRegistry {
                 source_url: Some("https://freepats.zenvoid.org/".to_string()),
                 commercial_use_cleared: true,
                 royalty_free: true,
-                notes: "100% royalty-free for commercial music releases and live performances.".to_string(),
+                notes: "100% royalty-free for commercial music releases and live performances."
+                    .to_string(),
             },
             StockLicenseEntry {
                 asset_name: "TR-909 Vintage Punch Drum Kit".to_string(),
@@ -108,45 +109,78 @@ impl StockContentRegistry {
                 .with_tags(&["drums", "kit", "808", "electronic", "trap", "hiphop"]),
             ContentItem::new("factory/kits/tr909_vintage.toml", ContentItemKind::Preset)
                 .with_tags(&["drums", "kit", "909", "techno", "house", "punchy"]),
-            ContentItem::new("factory/kits/studio_maple_acoustic.sfz", ContentItemKind::Instrument)
-                .with_tags(&["drums", "acoustic", "studio", "rock", "jazz", "multisample"]),
-            ContentItem::new("factory/kits/cyberpunk_industrial.toml", ContentItemKind::Preset)
-                .with_tags(&["drums", "industrial", "cyberpunk", "distorted", "fx"]),
-
+            ContentItem::new(
+                "factory/kits/studio_maple_acoustic.sfz",
+                ContentItemKind::Instrument,
+            )
+            .with_tags(&["drums", "acoustic", "studio", "rock", "jazz", "multisample"]),
+            ContentItem::new(
+                "factory/kits/cyberpunk_industrial.toml",
+                ContentItemKind::Preset,
+            )
+            .with_tags(&["drums", "industrial", "cyberpunk", "distorted", "fx"]),
             // Multi-Sample Instruments
-            ContentItem::new("factory/instruments/concert_grand_piano.sfz", ContentItemKind::Instrument)
-                .with_tags(&["piano", "acoustic", "keys", "grand", "multisample"]),
-            ContentItem::new("factory/instruments/vintage_rhodes_mk1.sfz", ContentItemKind::Instrument)
-                .with_tags(&["electric_piano", "rhodes", "vintage", "soul", "keys"]),
-            ContentItem::new("factory/instruments/analog_sub_bass.toml", ContentItemKind::Preset)
-                .with_tags(&["bass", "sub", "analog", "synth", "cyberpunk"]),
-            ContentItem::new("factory/instruments/lush_80s_strings.toml", ContentItemKind::Preset)
-                .with_tags(&["pad", "strings", "synthwave", "ambient", "analog"]),
-
+            ContentItem::new(
+                "factory/instruments/concert_grand_piano.sfz",
+                ContentItemKind::Instrument,
+            )
+            .with_tags(&["piano", "acoustic", "keys", "grand", "multisample"]),
+            ContentItem::new(
+                "factory/instruments/vintage_rhodes_mk1.sfz",
+                ContentItemKind::Instrument,
+            )
+            .with_tags(&["electric_piano", "rhodes", "vintage", "soul", "keys"]),
+            ContentItem::new(
+                "factory/instruments/analog_sub_bass.toml",
+                ContentItemKind::Preset,
+            )
+            .with_tags(&["bass", "sub", "analog", "synth", "cyberpunk"]),
+            ContentItem::new(
+                "factory/instruments/lush_80s_strings.toml",
+                ContentItemKind::Preset,
+            )
+            .with_tags(&["pad", "strings", "synthwave", "ambient", "analog"]),
             // Stock Audio Loops
-            ContentItem::new("factory/loops/synthwave_bass_120bpm.wav", ContentItemKind::AudioLoop)
-                .with_bpm(120.0)
-                .with_tags(&["loop", "bass", "synthwave", "analog", "120bpm"])
-                .with_audio_metadata(4.0, 44100, 2),
-            ContentItem::new("factory/loops/funk_drum_groove_110bpm.wav", ContentItemKind::AudioLoop)
-                .with_bpm(110.0)
-                .with_tags(&["loop", "drums", "funk", "acoustic", "groove", "110bpm"])
-                .with_audio_metadata(4.36, 44100, 2),
-            ContentItem::new("factory/loops/lofi_guitar_chords_85bpm.wav", ContentItemKind::AudioLoop)
-                .with_bpm(85.0)
-                .with_tags(&["loop", "guitar", "chords", "lofi", "chill", "85bpm"])
-                .with_audio_metadata(5.64, 44100, 2),
-
+            ContentItem::new(
+                "factory/loops/synthwave_bass_120bpm.wav",
+                ContentItemKind::AudioLoop,
+            )
+            .with_bpm(120.0)
+            .with_tags(&["loop", "bass", "synthwave", "analog", "120bpm"])
+            .with_audio_metadata(4.0, 44100, 2),
+            ContentItem::new(
+                "factory/loops/funk_drum_groove_110bpm.wav",
+                ContentItemKind::AudioLoop,
+            )
+            .with_bpm(110.0)
+            .with_tags(&["loop", "drums", "funk", "acoustic", "groove", "110bpm"])
+            .with_audio_metadata(4.36, 44100, 2),
+            ContentItem::new(
+                "factory/loops/lofi_guitar_chords_85bpm.wav",
+                ContentItemKind::AudioLoop,
+            )
+            .with_bpm(85.0)
+            .with_tags(&["loop", "guitar", "chords", "lofi", "chill", "85bpm"])
+            .with_audio_metadata(5.64, 44100, 2),
             // Demo Projects
-            ContentItem::new("factory/demos/synthwave_sunset.summon", ContentItemKind::ProjectDemo)
-                .with_bpm(120.0)
-                .with_tags(&["demo", "project", "synthwave", "full_mix"]),
-            ContentItem::new("factory/demos/ambient_dawn.summon", ContentItemKind::ProjectDemo)
-                .with_bpm(75.0)
-                .with_tags(&["demo", "project", "ambient", "meditation"]),
-            ContentItem::new("factory/demos/cyberpunk_industrial.summon", ContentItemKind::ProjectDemo)
-                .with_bpm(138.0)
-                .with_tags(&["demo", "project", "cyberpunk", "industrial", "glitch"]),
+            ContentItem::new(
+                "factory/demos/synthwave_sunset.summon",
+                ContentItemKind::ProjectDemo,
+            )
+            .with_bpm(120.0)
+            .with_tags(&["demo", "project", "synthwave", "full_mix"]),
+            ContentItem::new(
+                "factory/demos/ambient_dawn.summon",
+                ContentItemKind::ProjectDemo,
+            )
+            .with_bpm(75.0)
+            .with_tags(&["demo", "project", "ambient", "meditation"]),
+            ContentItem::new(
+                "factory/demos/cyberpunk_industrial.summon",
+                ContentItemKind::ProjectDemo,
+            )
+            .with_bpm(138.0)
+            .with_tags(&["demo", "project", "cyberpunk", "industrial", "glitch"]),
         ];
 
         for item in items {
@@ -166,7 +200,11 @@ impl StockContentRegistry {
             meta: Some(ProjectMetadata {
                 genre: Some("Synthwave".to_string()),
                 bpm: Some(120.0),
-                tags: vec!["synthwave".to_string(), "retro".to_string(), "demo".to_string()],
+                tags: vec![
+                    "synthwave".to_string(),
+                    "retro".to_string(),
+                    "demo".to_string(),
+                ],
                 notes: Some("Factory demo project for Summoner DAW.".to_string()),
                 ..Default::default()
             }),
@@ -218,7 +256,11 @@ impl StockContentRegistry {
             meta: Some(ProjectMetadata {
                 genre: Some("Ambient".to_string()),
                 bpm: Some(75.0),
-                tags: vec!["ambient".to_string(), "meditation".to_string(), "drone".to_string()],
+                tags: vec![
+                    "ambient".to_string(),
+                    "meditation".to_string(),
+                    "drone".to_string(),
+                ],
                 notes: Some("Warm atmospheric textures and physical model drone.".to_string()),
                 ..Default::default()
             }),

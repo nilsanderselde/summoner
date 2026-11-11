@@ -148,7 +148,10 @@ impl HammerStrikeView {
         self.peak_force_n = (f_peak * (1.0 + self.hysteresis_loss * 0.2)).clamp(0.1, 500.0);
 
         // Contact duration estimation: tau ~ 1.5 * (m^p / (K_h * v0^(p - 1)))^(1 / (p + 1))
-        let tau_sec = 1.5 * ((self.mass_kg.powf(self.exponent_p)) / (eff_k * self.strike_velocity.powf(self.exponent_p - 1.0))).powf(1.0 / denom);
+        let tau_sec = 1.5
+            * ((self.mass_kg.powf(self.exponent_p))
+                / (eff_k * self.strike_velocity.powf(self.exponent_p - 1.0)))
+            .powf(1.0 / denom);
         self.contact_duration_ms = (tau_sec * 1000.0).clamp(0.2, 10.0);
     }
 
@@ -203,7 +206,9 @@ impl HammerStrikeView {
     /// Hit-tests the 2D hammer puck within a bounding rectangle.
     pub fn hit_test_hammer_puck(&self, pointer_pos: (f32, f32), canvas_rect: Rect) -> bool {
         let puck_x = canvas_rect.x + 15.0 + self.puck_pos.0 * (canvas_rect.width - 30.0);
-        let puck_y = canvas_rect.y + canvas_rect.height - 15.0 - self.puck_pos.1 * (canvas_rect.height - 30.0);
+        let puck_y = canvas_rect.y + canvas_rect.height
+            - 15.0
+            - self.puck_pos.1 * (canvas_rect.height - 30.0);
         let dx = pointer_pos.0 - puck_x;
         let dy = pointer_pos.1 - puck_y;
         (dx * dx + dy * dy).sqrt() <= HAMMER_PUCK_HIT_RADIUS

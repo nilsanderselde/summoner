@@ -270,7 +270,10 @@ impl I18nEngine {
         fr.insert_simple("mixer.mute", "Muet");
         fr.insert_simple("mixer.arm", "Armer");
         fr.insert_simple("mixer.master", "Bus Principal");
-        fr.insert_simple("dialog.save_changes", "Enregistrer les modifications du projet ?");
+        fr.insert_simple(
+            "dialog.save_changes",
+            "Enregistrer les modifications du projet ?",
+        );
         fr.insert_simple("accessibility.high_contrast", "Contraste Élevé");
         fr.insert_simple("accessibility.screen_reader", "Annonces Lecteur d'Écran");
         fr.insert_plural(
@@ -409,9 +412,18 @@ mod tests {
 
     #[test]
     fn test_locale_resolution_and_defaults() {
-        assert_eq!(SupportedLocale::from_code("de-DE"), Some(SupportedLocale::DeDe));
-        assert_eq!(SupportedLocale::from_code("FR"), Some(SupportedLocale::FrFr));
-        assert_eq!(SupportedLocale::from_code("ja_JP"), Some(SupportedLocale::JaJp));
+        assert_eq!(
+            SupportedLocale::from_code("de-DE"),
+            Some(SupportedLocale::DeDe)
+        );
+        assert_eq!(
+            SupportedLocale::from_code("FR"),
+            Some(SupportedLocale::FrFr)
+        );
+        assert_eq!(
+            SupportedLocale::from_code("ja_JP"),
+            Some(SupportedLocale::JaJp)
+        );
         assert_eq!(SupportedLocale::from_code("unknown"), None);
     }
 
@@ -440,9 +452,15 @@ mod tests {
         assert_eq!(engine.t_plural("project.tracks_count", 8, &[]), "8 tracks");
 
         let de_engine = I18nEngine::new(SupportedLocale::DeDe);
-        assert_eq!(de_engine.t_plural("project.tracks_count", 0, &[]), "Keine Spuren");
+        assert_eq!(
+            de_engine.t_plural("project.tracks_count", 0, &[]),
+            "Keine Spuren"
+        );
         assert_eq!(de_engine.t_plural("project.tracks_count", 1, &[]), "1 Spur");
-        assert_eq!(de_engine.t_plural("project.tracks_count", 12, &[]), "12 Spuren");
+        assert_eq!(
+            de_engine.t_plural("project.tracks_count", 12, &[]),
+            "12 Spuren"
+        );
     }
 
     #[test]

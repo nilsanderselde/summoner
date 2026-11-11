@@ -90,26 +90,18 @@ pub enum HurdyGurdyGesturePattern {
         pulse_intensity: f32,
     },
     /// Medieval Monastic Drone with smooth sustained wheel motion and zero buzz.
-    MedievalMonasticDrone {
-        phrase_length_beats: f64,
-    },
+    MedievalMonasticDrone { phrase_length_beats: f64 },
     /// Baroque Virtuoso Chanterelle with fast melody transitions and subtle buzzing accents.
-    BaroqueVirtuosoChanterelle {
-        phrase_length_beats: f64,
-    },
+    BaroqueVirtuosoChanterelle { phrase_length_beats: f64 },
     /// Auvergne High-Speed Buzz with driving continuous dog rattling.
     AuvergneHighSpeedBuzz {
         phrase_length_beats: f64,
         crank_speed_multiplier: f32,
     },
     /// Gothic Pagan Dark Drone with heavy low drones and syncopated buzz strikes.
-    GothicPaganDrone {
-        phrase_length_beats: f64,
-    },
+    GothicPaganDrone { phrase_length_beats: f64 },
     /// Electro-Acoustic Hybrid Swell with wide wheel acceleration ramps.
-    ElectroAcousticHybrid {
-        phrase_length_beats: f64,
-    },
+    ElectroAcousticHybrid { phrase_length_beats: f64 },
 }
 
 /// Dynamic Hurdy-Gurdy articulation timeline and parameter trajectory engine.
@@ -147,7 +139,11 @@ impl HurdyGurdyGestureEngine {
     }
 
     pub fn sort_waypoints(&mut self) {
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     pub fn clear(&mut self) {
@@ -158,7 +154,10 @@ impl HurdyGurdyGestureEngine {
         self.clear();
 
         match &pattern {
-            HurdyGurdyGesturePattern::BourbonnaisClassicCoupDePoignet { phrase_length_beats, pulse_intensity } => {
+            HurdyGurdyGesturePattern::BourbonnaisClassicCoupDePoignet {
+                phrase_length_beats,
+                pulse_intensity,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
                 let intensity = *pulse_intensity;
 
@@ -238,7 +237,9 @@ impl HurdyGurdyGestureEngine {
                 });
             }
 
-            HurdyGurdyGesturePattern::MedievalMonasticDrone { phrase_length_beats } => {
+            HurdyGurdyGesturePattern::MedievalMonasticDrone {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(HurdyGurdyWaypoint {
@@ -287,7 +288,9 @@ impl HurdyGurdyGestureEngine {
                 });
             }
 
-            HurdyGurdyGesturePattern::BaroqueVirtuosoChanterelle { phrase_length_beats } => {
+            HurdyGurdyGesturePattern::BaroqueVirtuosoChanterelle {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(HurdyGurdyWaypoint {
@@ -336,7 +339,10 @@ impl HurdyGurdyGestureEngine {
                 });
             }
 
-            HurdyGurdyGesturePattern::AuvergneHighSpeedBuzz { phrase_length_beats, crank_speed_multiplier } => {
+            HurdyGurdyGesturePattern::AuvergneHighSpeedBuzz {
+                phrase_length_beats,
+                crank_speed_multiplier,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
                 let mult = *crank_speed_multiplier;
 
@@ -386,7 +392,9 @@ impl HurdyGurdyGestureEngine {
                 });
             }
 
-            HurdyGurdyGesturePattern::GothicPaganDrone { phrase_length_beats } => {
+            HurdyGurdyGesturePattern::GothicPaganDrone {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(HurdyGurdyWaypoint {
@@ -435,7 +443,9 @@ impl HurdyGurdyGestureEngine {
                 });
             }
 
-            HurdyGurdyGesturePattern::ElectroAcousticHybrid { phrase_length_beats } => {
+            HurdyGurdyGesturePattern::ElectroAcousticHybrid {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(HurdyGurdyWaypoint {
@@ -578,45 +588,113 @@ impl HurdyGurdyGestureEngine {
         let span = (wp2.beat - wp1.beat).max(1e-6);
         let t = ((effective_beat - wp1.beat) / span).clamp(0.0, 1.0) as f32;
 
-        let interp = |v0: f32, v1: f32, v2: f32, v3: f32, curve: HurdyGurdyInterpolationCurve| -> f32 {
-            match curve {
-                HurdyGurdyInterpolationCurve::Hold => v1,
-                HurdyGurdyInterpolationCurve::Linear => v1 + t * (v2 - v1),
-                HurdyGurdyInterpolationCurve::Exponential => {
-                    let min_v = v1.min(v2).max(1e-5);
-                    let ratio = (v2.max(1e-5) / min_v).max(1e-5);
-                    v1 * ratio.powf(t)
+        let interp =
+            |v0: f32, v1: f32, v2: f32, v3: f32, curve: HurdyGurdyInterpolationCurve| -> f32 {
+                match curve {
+                    HurdyGurdyInterpolationCurve::Hold => v1,
+                    HurdyGurdyInterpolationCurve::Linear => v1 + t * (v2 - v1),
+                    HurdyGurdyInterpolationCurve::Exponential => {
+                        let min_v = v1.min(v2).max(1e-5);
+                        let ratio = (v2.max(1e-5) / min_v).max(1e-5);
+                        v1 * ratio.powf(t)
+                    }
+                    HurdyGurdyInterpolationCurve::CubicBezier => {
+                        let t2 = t * t;
+                        let t3 = t2 * t;
+                        let b = 3.0 * t2 - 2.0 * t3;
+                        v1 + b * (v2 - v1)
+                    }
+                    HurdyGurdyInterpolationCurve::CubicCatmullRom => {
+                        let t2 = t * t;
+                        let t3 = t2 * t;
+                        0.5 * ((2.0 * v1)
+                            + (-v0 + v2) * t
+                            + (2.0 * v0 - 5.0 * v1 + 4.0 * v2 - v3) * t2
+                            + (-v0 + 3.0 * v1 - 3.0 * v2 + v3) * t3)
+                    }
                 }
-                HurdyGurdyInterpolationCurve::CubicBezier => {
-                    let t2 = t * t;
-                    let t3 = t2 * t;
-                    let b = 3.0 * t2 - 2.0 * t3;
-                    v1 + b * (v2 - v1)
-                }
-                HurdyGurdyInterpolationCurve::CubicCatmullRom => {
-                    let t2 = t * t;
-                    let t3 = t2 * t;
-                    0.5 * ((2.0 * v1)
-                        + (-v0 + v2) * t
-                        + (2.0 * v0 - 5.0 * v1 + 4.0 * v2 - v3) * t2
-                        + (-v0 + 3.0 * v1 - 3.0 * v2 + v3) * t3)
-                }
-            }
-        };
+            };
 
         let curve = wp2.curve;
-        let speed = interp(wp0.crank_speed_rad_s, wp1.crank_speed_rad_s, wp2.crank_speed_rad_s, wp3.crank_speed_rad_s, curve).clamp(0.0, 4.0 * PI);
-        let wrist = interp(wp0.wrist_acceleration_pulse, wp1.wrist_acceleration_pulse, wp2.wrist_acceleration_pulse, wp3.wrist_acceleration_pulse, curve).clamp(0.0, 10.0);
-        let press = interp(wp0.wheel_pressure, wp1.wheel_pressure, wp2.wheel_pressure, wp3.wheel_pressure, curve).clamp(0.01, 1.0);
-        let gap = interp(wp0.chien_clearance_mm, wp1.chien_clearance_mm, wp2.chien_clearance_mm, wp3.chien_clearance_mm, curve).clamp(0.05, 1.20);
-        let damp = interp(wp0.tangent_damping, wp1.tangent_damping, wp2.tangent_damping, wp3.tangent_damping, curve).clamp(0.0, 1.0);
-        let dmix = interp(wp0.drone_melody_mix, wp1.drone_melody_mix, wp2.drone_melody_mix, wp3.drone_melody_mix, curve).clamp(0.0, 1.0);
-        let buzz = interp(wp0.trompette_buzz_level, wp1.trompette_buzz_level, wp2.trompette_buzz_level, wp3.trompette_buzz_level, curve).clamp(0.0, 2.0);
-        let wood = interp(wp0.body_wood_resonance, wp1.body_wood_resonance, wp2.body_wood_resonance, wp3.body_wood_resonance, curve).clamp(0.0, 1.0);
-        let mgain = interp(wp0.master_gain, wp1.master_gain, wp2.master_gain, wp3.master_gain, curve).clamp(0.0, 2.0);
+        let speed = interp(
+            wp0.crank_speed_rad_s,
+            wp1.crank_speed_rad_s,
+            wp2.crank_speed_rad_s,
+            wp3.crank_speed_rad_s,
+            curve,
+        )
+        .clamp(0.0, 4.0 * PI);
+        let wrist = interp(
+            wp0.wrist_acceleration_pulse,
+            wp1.wrist_acceleration_pulse,
+            wp2.wrist_acceleration_pulse,
+            wp3.wrist_acceleration_pulse,
+            curve,
+        )
+        .clamp(0.0, 10.0);
+        let press = interp(
+            wp0.wheel_pressure,
+            wp1.wheel_pressure,
+            wp2.wheel_pressure,
+            wp3.wheel_pressure,
+            curve,
+        )
+        .clamp(0.01, 1.0);
+        let gap = interp(
+            wp0.chien_clearance_mm,
+            wp1.chien_clearance_mm,
+            wp2.chien_clearance_mm,
+            wp3.chien_clearance_mm,
+            curve,
+        )
+        .clamp(0.05, 1.20);
+        let damp = interp(
+            wp0.tangent_damping,
+            wp1.tangent_damping,
+            wp2.tangent_damping,
+            wp3.tangent_damping,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let dmix = interp(
+            wp0.drone_melody_mix,
+            wp1.drone_melody_mix,
+            wp2.drone_melody_mix,
+            wp3.drone_melody_mix,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let buzz = interp(
+            wp0.trompette_buzz_level,
+            wp1.trompette_buzz_level,
+            wp2.trompette_buzz_level,
+            wp3.trompette_buzz_level,
+            curve,
+        )
+        .clamp(0.0, 2.0);
+        let wood = interp(
+            wp0.body_wood_resonance,
+            wp1.body_wood_resonance,
+            wp2.body_wood_resonance,
+            wp3.body_wood_resonance,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let mgain = interp(
+            wp0.master_gain,
+            wp1.master_gain,
+            wp2.master_gain,
+            wp3.master_gain,
+            curve,
+        )
+        .clamp(0.0, 2.0);
 
         HurdyGurdyBusSnapshot {
-            articulation: if t > 0.5 { wp2.articulation } else { wp1.articulation },
+            articulation: if t > 0.5 {
+                wp2.articulation
+            } else {
+                wp1.articulation
+            },
             crank_speed_rad_s: speed,
             wrist_acceleration_pulse: wrist,
             wheel_pressure: press,
@@ -671,12 +749,26 @@ mod tests {
     #[test]
     fn test_hurdy_gurdy_gesture_patterns_and_catmull_rom_evaluation() {
         for pattern in [
-            HurdyGurdyGesturePattern::BourbonnaisClassicCoupDePoignet { phrase_length_beats: 4.0, pulse_intensity: 1.5 },
-            HurdyGurdyGesturePattern::MedievalMonasticDrone { phrase_length_beats: 4.0 },
-            HurdyGurdyGesturePattern::BaroqueVirtuosoChanterelle { phrase_length_beats: 4.0 },
-            HurdyGurdyGesturePattern::AuvergneHighSpeedBuzz { phrase_length_beats: 6.0, crank_speed_multiplier: 1.2 },
-            HurdyGurdyGesturePattern::GothicPaganDrone { phrase_length_beats: 4.0 },
-            HurdyGurdyGesturePattern::ElectroAcousticHybrid { phrase_length_beats: 4.0 },
+            HurdyGurdyGesturePattern::BourbonnaisClassicCoupDePoignet {
+                phrase_length_beats: 4.0,
+                pulse_intensity: 1.5,
+            },
+            HurdyGurdyGesturePattern::MedievalMonasticDrone {
+                phrase_length_beats: 4.0,
+            },
+            HurdyGurdyGesturePattern::BaroqueVirtuosoChanterelle {
+                phrase_length_beats: 4.0,
+            },
+            HurdyGurdyGesturePattern::AuvergneHighSpeedBuzz {
+                phrase_length_beats: 6.0,
+                crank_speed_multiplier: 1.2,
+            },
+            HurdyGurdyGesturePattern::GothicPaganDrone {
+                phrase_length_beats: 4.0,
+            },
+            HurdyGurdyGesturePattern::ElectroAcousticHybrid {
+                phrase_length_beats: 4.0,
+            },
         ] {
             let engine = HurdyGurdyGestureEngine::with_pattern(pattern);
             assert!(!engine.waypoints.is_empty());
@@ -696,15 +788,25 @@ mod tests {
 
     #[test]
     fn test_hurdy_gurdy_gesture_dispatch_to_bus() {
-        let engine = HurdyGurdyGestureEngine::with_pattern(HurdyGurdyGesturePattern::BourbonnaisClassicCoupDePoignet {
-            phrase_length_beats: 4.0,
-            pulse_intensity: 2.0,
-        });
+        let engine = HurdyGurdyGestureEngine::with_pattern(
+            HurdyGurdyGesturePattern::BourbonnaisClassicCoupDePoignet {
+                phrase_length_beats: 4.0,
+                pulse_intensity: 2.0,
+            },
+        );
         let bus = HurdyGurdyBus::new();
         let mut param_bus = ParamBus::new();
-        summoner_core::hurdy_gurdy_bus::register_hurdy_gurdy_params(&mut param_bus, summoner_core::hurdy_gurdy_bus::HURDY_GURDY_BASE_PARAM_ID);
+        summoner_core::hurdy_gurdy_bus::register_hurdy_gurdy_params(
+            &mut param_bus,
+            summoner_core::hurdy_gurdy_bus::HURDY_GURDY_BASE_PARAM_ID,
+        );
 
-        engine.dispatch_to_bus(0.0, &bus, Some(&param_bus), summoner_core::hurdy_gurdy_bus::HURDY_GURDY_BASE_PARAM_ID);
+        engine.dispatch_to_bus(
+            0.0,
+            &bus,
+            Some(&param_bus),
+            summoner_core::hurdy_gurdy_bus::HURDY_GURDY_BASE_PARAM_ID,
+        );
 
         let snap = bus.snapshot();
         assert!((snap.crank_speed_rad_s - 2.0 * PI).abs() < 1e-3);

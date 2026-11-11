@@ -47,7 +47,9 @@ pub mod pure_tests {
 #[cfg(all(test, feature = "gui"))]
 mod gui_tests {
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
+    use crate::views::modern_inspector::{
+        show_modern_inspector_with_context, ModernInspectorState,
+    };
     use eframe::egui;
     use summoner_core::param_bus::{ParamBus, ParamId};
 
@@ -281,7 +283,10 @@ mod gui_tests {
         assert_eq!(view.device_rack_state.chain_devices.len(), 3);
         assert_eq!(view.inspector_state.chain_devices.len(), 3);
         assert_eq!(view.inspector_state.chain_devices[0].kind, "OscillatorNode");
-        assert_eq!(view.inspector_state.chain_devices[1].kind, "LadderFilterNode");
+        assert_eq!(
+            view.inspector_state.chain_devices[1].kind,
+            "LadderFilterNode"
+        );
         assert_eq!(view.inspector_state.chain_devices[2].kind, "ChorusNode");
 
         // Selecting node 1 in inspector reflects in view and project

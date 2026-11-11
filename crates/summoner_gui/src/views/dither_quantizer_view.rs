@@ -229,7 +229,10 @@ impl DitherQuantizerView {
     }
 
     fn next_rand(&mut self) -> f32 {
-        self.prng_state = self.prng_state.wrapping_mul(1664525).wrapping_add(1013904223);
+        self.prng_state = self
+            .prng_state
+            .wrapping_mul(1664525)
+            .wrapping_add(1013904223);
         ((self.prng_state >> 9) as f32) / ((1 << 23) as f32) - 0.5
     }
 
@@ -260,18 +263,39 @@ impl DitherQuantizerView {
         out.push_str(&format!(" Preset:           {}\n", self.preset.name()));
         out.push_str(&format!(" Bit Depth:        {} bits\n", self.bit_depth));
         out.push_str(&format!(" Dither Mode:      {}\n", self.dither_mode.name()));
-        out.push_str(&format!(" Noise Shaping:    {:.2} x\n", self.shaping_intensity));
-        out.push_str(&format!(" Theoretical SNR:  {:.2} dB\n", self.theoretical_snr_db()));
-        out.push_str(&format!(" Effective Floor:  {:.1} dBFS\n", self.effective_noise_floor_dbfs()));
-        out.push_str(&format!(" Quant Steps:      {} levels\n", self.quantization_steps()));
-        out.push_str(&format!(" Puck Coord:       ({:.3}, {:.3}) [PASS: >=44pt Hit Target]\n", self.puck_pos.0, self.puck_pos.1));
+        out.push_str(&format!(
+            " Noise Shaping:    {:.2} x\n",
+            self.shaping_intensity
+        ));
+        out.push_str(&format!(
+            " Theoretical SNR:  {:.2} dB\n",
+            self.theoretical_snr_db()
+        ));
+        out.push_str(&format!(
+            " Effective Floor:  {:.1} dBFS\n",
+            self.effective_noise_floor_dbfs()
+        ));
+        out.push_str(&format!(
+            " Quant Steps:      {} levels\n",
+            self.quantization_steps()
+        ));
+        out.push_str(&format!(
+            " Puck Coord:       ({:.3}, {:.3}) [PASS: >=44pt Hit Target]\n",
+            self.puck_pos.0, self.puck_pos.1
+        ));
         out.push_str("----------------------------------------------------------------------\n");
         out.push_str(" Probability Density Function Curve P(e):\n ");
 
         for step in 0..32 {
             let error = (step as f32 / 31.0) * 2.0 - 1.0;
             let prob = match self.dither_mode {
-                DitherMode::None => if error.abs() < 0.05 { 1.0 } else { 0.0 },
+                DitherMode::None => {
+                    if error.abs() < 0.05 {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                }
                 DitherMode::Tpdf => (1.0 - error.abs()).max(0.0),
                 DitherMode::NoiseShaped => {
                     let tpdf = (1.0 - error.abs()).max(0.0);
@@ -325,10 +349,18 @@ impl DitherQuantizerView {
                     let is_active = self.preset == p;
                     let btn = egui::Button::new(
                         RichText::new(label)
-                            .color(if is_active { Color32::WHITE } else { Color32::from_rgb(203, 213, 225) })
+                            .color(if is_active {
+                                Color32::WHITE
+                            } else {
+                                Color32::from_rgb(203, 213, 225)
+                            })
                             .size(11.0),
                     )
-                    .fill(if is_active { Color32::from_rgb(2, 132, 199) } else { Color32::from_rgb(30, 41, 59) })
+                    .fill(if is_active {
+                        Color32::from_rgb(2, 132, 199)
+                    } else {
+                        Color32::from_rgb(30, 41, 59)
+                    })
                     .min_size(Vec2::new(75.0, 24.0));
 
                     if ui.add(btn).clicked() {
@@ -351,10 +383,18 @@ impl DitherQuantizerView {
                     let is_active = self.dither_mode == m;
                     let btn = egui::Button::new(
                         RichText::new(label)
-                            .color(if is_active { Color32::BLACK } else { Color32::from_rgb(224, 242, 254) })
+                            .color(if is_active {
+                                Color32::BLACK
+                            } else {
+                                Color32::from_rgb(224, 242, 254)
+                            })
                             .size(11.0),
                     )
-                    .fill(if is_active { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(15, 23, 42) })
+                    .fill(if is_active {
+                        Color32::from_rgb(56, 189, 248)
+                    } else {
+                        Color32::from_rgb(15, 23, 42)
+                    })
                     .min_size(Vec2::new(80.0, 22.0));
 
                     if ui.add(btn).clicked() {
@@ -367,13 +407,18 @@ impl DitherQuantizerView {
 
             // Interactive 2D Dynamics Puck Canvas
             let canvas_size = Vec2::new(ui.available_width().max(280.0), 140.0);
-            let (response, painter) = ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
+            let (response, painter) =
+                ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
             let rect = response.rect;
             let canvas = Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height());
 
             // Background
             painter.rect_filled(rect, Rounding::same(4.0), Color32::from_rgb(15, 23, 42));
-            painter.rect_stroke(rect, Rounding::same(4.0), Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+            painter.rect_stroke(
+                rect,
+                Rounding::same(4.0),
+                Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+            );
 
             // Grid lines
             for i in 1..4 {
@@ -396,7 +441,13 @@ impl DitherQuantizerView {
                 let frac = idx as f32 / (num_pts - 1) as f32;
                 let err = frac * 2.0 - 1.0;
                 let p_val = match self.dither_mode {
-                    DitherMode::None => if err.abs() < 0.08 { 0.9 } else { 0.05 },
+                    DitherMode::None => {
+                        if err.abs() < 0.08 {
+                            0.9
+                        } else {
+                            0.05
+                        }
+                    }
                     DitherMode::Tpdf => (1.0 - err.abs()).max(0.0),
                     DitherMode::NoiseShaped => {
                         let t = (1.0 - err.abs()).max(0.0);
@@ -418,8 +469,12 @@ impl DitherQuantizerView {
             if response.dragged() || response.clicked() {
                 if let Some(pos) = response.interact_pointer_pos() {
                     let padding = 15.0;
-                    let norm_x = ((pos.x - (rect.min.x + padding)) / (rect.width() - 2.0 * padding)).clamp(0.0, 1.0);
-                    let norm_y = (1.0 - ((pos.y - (rect.min.y + padding)) / (rect.height() - 2.0 * padding))).clamp(0.0, 1.0);
+                    let norm_x = ((pos.x - (rect.min.x + padding))
+                        / (rect.width() - 2.0 * padding))
+                        .clamp(0.0, 1.0);
+                    let norm_y = (1.0
+                        - ((pos.y - (rect.min.y + padding)) / (rect.height() - 2.0 * padding)))
+                        .clamp(0.0, 1.0);
                     self.update_from_puck(norm_x, norm_y);
                 }
             }
@@ -429,17 +484,33 @@ impl DitherQuantizerView {
             let puck_pos = egui::pos2(puck_x, puck_y);
 
             // Outer hit glow
-            painter.circle_filled(puck_pos, DITHER_PUCK_HIT_RADIUS, Color32::from_rgba_unmultiplied(14, 165, 233, 45));
-            painter.circle_stroke(puck_pos, DITHER_PUCK_HIT_RADIUS, Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)));
+            painter.circle_filled(
+                puck_pos,
+                DITHER_PUCK_HIT_RADIUS,
+                Color32::from_rgba_unmultiplied(14, 165, 233, 45),
+            );
+            painter.circle_stroke(
+                puck_pos,
+                DITHER_PUCK_HIT_RADIUS,
+                Stroke::new(1.0_f32, Color32::from_rgb(56, 189, 248)),
+            );
             // Inner Core
             painter.circle_filled(puck_pos, 6.0, Color32::from_rgb(224, 242, 254));
-            painter.circle_stroke(puck_pos, 8.0, Stroke::new(1.5_f32, Color32::from_rgb(2, 132, 199)));
+            painter.circle_stroke(
+                puck_pos,
+                8.0,
+                Stroke::new(1.5_f32, Color32::from_rgb(2, 132, 199)),
+            );
 
             // Text Labels inside Canvas
             painter.text(
                 egui::pos2(rect.min.x + 8.0, rect.min.y + 6.0),
                 egui::Align2::LEFT_TOP,
-                format!("Bit Depth: {} bits | SNR: {:.1} dB", self.bit_depth, self.theoretical_snr_db()),
+                format!(
+                    "Bit Depth: {} bits | SNR: {:.1} dB",
+                    self.bit_depth,
+                    self.theoretical_snr_db()
+                ),
                 FontId::proportional(11.0),
                 Color32::from_rgb(186, 230, 253),
             );
@@ -447,7 +518,11 @@ impl DitherQuantizerView {
             painter.text(
                 egui::pos2(rect.max.x - 8.0, rect.min.y + 6.0),
                 egui::Align2::RIGHT_TOP,
-                format!("Floor: {:.1} dBFS | Shaping: {:.2}x", self.effective_noise_floor_dbfs(), self.shaping_intensity),
+                format!(
+                    "Floor: {:.1} dBFS | Shaping: {:.2}x",
+                    self.effective_noise_floor_dbfs(),
+                    self.shaping_intensity
+                ),
                 FontId::proportional(10.0),
                 Color32::from_rgb(148, 163, 184),
             );
@@ -458,7 +533,10 @@ impl DitherQuantizerView {
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Bit Depth:").size(11.0));
                 let mut d = self.bit_depth;
-                if ui.add(egui::Slider::new(&mut d, MIN_BIT_DEPTH..=MAX_BIT_DEPTH).suffix(" bits")).changed() {
+                if ui
+                    .add(egui::Slider::new(&mut d, MIN_BIT_DEPTH..=MAX_BIT_DEPTH).suffix(" bits"))
+                    .changed()
+                {
                     self.bit_depth = d;
                     self.sync_puck_from_params();
                 }
@@ -467,7 +545,13 @@ impl DitherQuantizerView {
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Noise Shaping Intensity:").size(11.0));
                 let mut s = self.shaping_intensity;
-                if ui.add(egui::Slider::new(&mut s, MIN_SHAPING_INTENSITY..=MAX_SHAPING_INTENSITY)).changed() {
+                if ui
+                    .add(egui::Slider::new(
+                        &mut s,
+                        MIN_SHAPING_INTENSITY..=MAX_SHAPING_INTENSITY,
+                    ))
+                    .changed()
+                {
                     self.shaping_intensity = s;
                     self.sync_puck_from_params();
                 }

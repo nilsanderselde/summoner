@@ -440,8 +440,7 @@ impl ParametricEqView {
                     }
                 }
                 BiquadFilterMode::Bandpass => {
-                    let bell =
-                        1.0 / (1.0 + (ratio - 1.0 / ratio).powi(2) * band.q_factor.powi(2));
+                    let bell = 1.0 / (1.0 + (ratio - 1.0 / ratio).powi(2) * band.q_factor.powi(2));
                     total_db += (bell - 1.0) * 18.0;
                 }
             }

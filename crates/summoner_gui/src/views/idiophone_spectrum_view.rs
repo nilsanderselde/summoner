@@ -48,8 +48,12 @@ impl IdiophoneViewProfile {
     pub fn modal_ratios(&self) -> [f32; NUM_VIEW_MODES] {
         match self {
             Self::MarimbaWood => [1.000, 4.000, 10.000, 14.250, 18.600, 24.500, 31.200, 38.800],
-            Self::XylophoneRosewood => [1.000, 3.000, 9.000, 13.500, 18.000, 23.400, 29.800, 37.100],
-            Self::VibraphoneAluminum => [1.000, 3.980, 9.950, 15.200, 21.400, 28.100, 35.600, 43.900],
+            Self::XylophoneRosewood => {
+                [1.000, 3.000, 9.000, 13.500, 18.000, 23.400, 29.800, 37.100]
+            }
+            Self::VibraphoneAluminum => {
+                [1.000, 3.980, 9.950, 15.200, 21.400, 28.100, 35.600, 43.900]
+            }
             Self::SteelpanTrinidad => [1.000, 2.000, 3.000, 4.120, 5.350, 6.780, 8.420, 10.250],
             Self::KalimbaMbira => [1.000, 6.267, 17.550, 34.390, 56.840, 84.880, 118.50, 157.70],
             Self::GlockenspielBell => [1.000, 2.756, 5.404, 8.933, 13.345, 18.640, 24.815, 31.870],
@@ -80,7 +84,7 @@ pub struct IdiophoneSpectrumView {
     pub tremolo_rate_hz: f32,    // [0.0 ..= 10.0]
     pub tremolo_depth: f32,      // [0.0 ..= 1.0]
     pub fundamental_hz: f32,
-    pub puck_pos: (f32, f32),    // Normalized (X: mallet_hardness, Y: strike_velocity)
+    pub puck_pos: (f32, f32), // Normalized (X: mallet_hardness, Y: strike_velocity)
     pub is_dragging_puck: bool,
     pub color_palette: ContrastColorPalette,
 }
@@ -165,7 +169,8 @@ impl IdiophoneSpectrumView {
             // Mode amplitude boosted by strike velocity and higher modes excited by mallet hardness
             let mode_freq_factor = (ratios[i]).powf(0.65 * self.mallet_hardness);
             let base_amp = 1.0 / (1.0 + 0.45 * (i as f32) * (1.0 - 0.75 * self.mallet_hardness));
-            let amp = (base_amp * mode_freq_factor.min(3.0) * self.strike_velocity).clamp(0.02, 1.0);
+            let amp =
+                (base_amp * mode_freq_factor.min(3.0) * self.strike_velocity).clamp(0.02, 1.0);
             amplitudes[i] = amp;
         }
 
@@ -258,16 +263,9 @@ impl IdiophoneSpectrumView {
             let bh = bar_area_h * amp;
             let by = bar_area_y + (bar_area_h - bh);
 
-            let bar_rect = egui::Rect::from_min_size(
-                egui::pos2(bx, by),
-                egui::vec2(bar_w, bh),
-            );
+            let bar_rect = egui::Rect::from_min_size(egui::pos2(bx, by), egui::vec2(bar_w, bh));
 
-            painter.rect_filled(
-                bar_rect,
-                2.0,
-                Color32::from_rgb(255, 170, 0),
-            );
+            painter.rect_filled(bar_rect, 2.0, Color32::from_rgb(255, 170, 0));
 
             // Modal ratio label below bar
             let ratio_label = format!("{:.1}x", ratios[i]);
@@ -286,18 +284,13 @@ impl IdiophoneSpectrumView {
         let pad_w = rect.width() * 0.40;
         let pad_h = rect.height() - 90.0;
 
-        let pad_rect = egui::Rect::from_min_size(
-            egui::pos2(pad_x, pad_y),
-            egui::vec2(pad_w, pad_h),
-        );
+        let pad_rect =
+            egui::Rect::from_min_size(egui::pos2(pad_x, pad_y), egui::vec2(pad_w, pad_h));
 
         painter.rect_stroke(
             pad_rect,
             4.0_f32,
-            Stroke::new(
-                1.5_f32,
-                Color32::from_rgb(60, 75, 100),
-            ),
+            Stroke::new(1.5_f32, Color32::from_rgb(60, 75, 100)),
         );
 
         let puck_px = pad_x + self.puck_pos.0 * pad_w;
@@ -401,7 +394,16 @@ impl IdiophoneSpectrumView {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_rect_filled_id(buf: &mut [u8], w: u32, h: u32, rx: f32, ry: f32, rw: f32, rh: f32, col: [u8; 4]) {
+fn draw_rect_filled_id(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: f32,
+    ry: f32,
+    rw: f32,
+    rh: f32,
+    col: [u8; 4],
+) {
     let min_x = rx.max(0.0) as u32;
     let max_x = (rx + rw).min(w as f32 - 1.0) as u32;
     let min_y = ry.max(0.0) as u32;
@@ -433,7 +435,12 @@ fn draw_circle_filled_id(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f3
     }
 }
 
-fn encode_minimal_png_id(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_id(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

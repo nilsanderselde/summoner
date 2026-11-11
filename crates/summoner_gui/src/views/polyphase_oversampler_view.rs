@@ -86,7 +86,9 @@ impl PolyphaseOversamplerPreset {
         match self {
             Self::Realtime4xHalfBand => "Real-Time 4x Half-Band FIR (192 kHz / 84 dB Stopband)",
             Self::Mastering8xUltraClean => "Mastering 8x Ultra-Clean (384 kHz / 108 dB Stopband)",
-            Self::AggressiveWavefold8xGuard => "Aggressive Wavefolder 8x Guard (9.5x Drive / 114 dB)",
+            Self::AggressiveWavefold8xGuard => {
+                "Aggressive Wavefolder 8x Guard (9.5x Drive / 114 dB)"
+            }
             Self::LowLatency2xTracking => "Low-Latency 2x Tracking (96 kHz / 64 dB Stopband)",
         }
     }
@@ -199,8 +201,7 @@ impl PolyphaseOversamplerView {
     }
 
     pub fn normalized_to_drive(norm: f32) -> f32 {
-        MIN_OVERSAMPLE_DRIVE
-            + norm.clamp(0.0, 1.0) * (MAX_OVERSAMPLE_DRIVE - MIN_OVERSAMPLE_DRIVE)
+        MIN_OVERSAMPLE_DRIVE + norm.clamp(0.0, 1.0) * (MAX_OVERSAMPLE_DRIVE - MIN_OVERSAMPLE_DRIVE)
     }
 
     pub fn stopband_to_normalized(stop_db: f32) -> f32 {
@@ -357,7 +358,10 @@ impl PolyphaseOversamplerView {
             ui.horizontal_wrapped(|ui| {
                 ui.label(RichText::new("FIR Presets:").strong());
                 let presets = [
-                    (PolyphaseOversamplerPreset::Realtime4xHalfBand, "4x Half-Band"),
+                    (
+                        PolyphaseOversamplerPreset::Realtime4xHalfBand,
+                        "4x Half-Band",
+                    ),
                     (
                         PolyphaseOversamplerPreset::Mastering8xUltraClean,
                         "8x Mastering",
@@ -366,7 +370,10 @@ impl PolyphaseOversamplerView {
                         PolyphaseOversamplerPreset::AggressiveWavefold8xGuard,
                         "8x Wavefold Guard",
                     ),
-                    (PolyphaseOversamplerPreset::LowLatency2xTracking, "2x Tracking"),
+                    (
+                        PolyphaseOversamplerPreset::LowLatency2xTracking,
+                        "2x Tracking",
+                    ),
                 ];
                 for (p, label) in presets {
                     let is_active = self.preset == p;

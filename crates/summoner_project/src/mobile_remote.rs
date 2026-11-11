@@ -51,21 +51,53 @@ pub enum RemoteClientCommand {
     TransportPlay,
     TransportStop,
     TransportRecord,
-    TransportScrubBeat { target_beat: f64 },
-    SetVolume { track_index: usize, volume: f32 },
-    SetPan { track_index: usize, pan: f32 },
-    SetMute { track_index: usize, muted: bool },
-    SetSolo { track_index: usize, soloed: bool },
-    SetArm { track_index: usize, armed: bool },
-    LaunchClip { track_index: usize, scene_index: usize },
-    SetXyPad { pad_index: usize, x: f32, y: f32, touching: bool },
-    Ping { sequence: u64, client_time_ms: u64 },
+    TransportScrubBeat {
+        target_beat: f64,
+    },
+    SetVolume {
+        track_index: usize,
+        volume: f32,
+    },
+    SetPan {
+        track_index: usize,
+        pan: f32,
+    },
+    SetMute {
+        track_index: usize,
+        muted: bool,
+    },
+    SetSolo {
+        track_index: usize,
+        soloed: bool,
+    },
+    SetArm {
+        track_index: usize,
+        armed: bool,
+    },
+    LaunchClip {
+        track_index: usize,
+        scene_index: usize,
+    },
+    SetXyPad {
+        pad_index: usize,
+        x: f32,
+        y: f32,
+        touching: bool,
+    },
+    Ping {
+        sequence: u64,
+        client_time_ms: u64,
+    },
 }
 
 /// Outbound synchronization event sent to mobile client.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RemoteServerEvent {
-    TransportState { is_playing: bool, current_beat: f64, bpm: f32 },
+    TransportState {
+        is_playing: bool,
+        current_beat: f64,
+        bpm: f32,
+    },
     TrackState {
         track_index: usize,
         name: String,
@@ -75,9 +107,19 @@ pub enum RemoteServerEvent {
         soloed: bool,
         meter_peak_db: f32,
     },
-    ClipGridState { rows: usize, cols: usize, active_scenes: Vec<usize> },
-    Pong { sequence: u64, client_time_ms: u64, server_time_ms: u64 },
-    HapticTrigger { haptic: AndroidHapticFeedback },
+    ClipGridState {
+        rows: usize,
+        cols: usize,
+        active_scenes: Vec<usize>,
+    },
+    Pong {
+        sequence: u64,
+        client_time_ms: u64,
+        server_time_ms: u64,
+    },
+    HapticTrigger {
+        haptic: AndroidHapticFeedback,
+    },
 }
 
 /// 2D XY Modulation Vector Touch Puck with physical spring-back inertia.
@@ -163,9 +205,16 @@ impl MobileRemoteBridge {
     }
 
     /// Process incoming command from client.
-    pub fn handle_client_command(&mut self, cmd: RemoteClientCommand, current_server_time_ms: u64) -> Option<RemoteServerEvent> {
+    pub fn handle_client_command(
+        &mut self,
+        cmd: RemoteClientCommand,
+        current_server_time_ms: u64,
+    ) -> Option<RemoteServerEvent> {
         match cmd {
-            RemoteClientCommand::Ping { sequence, client_time_ms } => {
+            RemoteClientCommand::Ping {
+                sequence,
+                client_time_ms,
+            } => {
                 self.last_client_seq = sequence;
                 // Compute round trip time if timing matches
                 if current_server_time_ms >= client_time_ms {
@@ -244,13 +293,16 @@ mod tests {
 
     #[test]
     fn test_android_ping_pong_rtt_and_haptics() {
-        let mut bridge = MobileRemoteBridge::new(MobilePlatformKind::AndroidLowLatencyCompanion, "Pixel8");
+        let mut bridge =
+            MobileRemoteBridge::new(MobilePlatformKind::AndroidLowLatencyCompanion, "Pixel8");
         let ping_cmd = RemoteClientCommand::Ping {
             sequence: 42,
             client_time_ms: 1000,
         };
 
-        let response = bridge.handle_client_command(ping_cmd, 1025).expect("missing pong");
+        let response = bridge
+            .handle_client_command(ping_cmd, 1025)
+            .expect("missing pong");
         assert_eq!(
             response,
             RemoteServerEvent::Pong {
@@ -282,4 +334,3 @@ mod tests {
         assert!(osc_bytes.starts_with(b"/track/1/volume\0"));
     }
 }
-

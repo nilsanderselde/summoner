@@ -71,9 +71,15 @@ impl SemVer {
         if parts.len() != 3 {
             return Err(format!("Expected major.minor.patch, got '{}'", s));
         }
-        let major = parts[0].parse().map_err(|e| format!("Invalid major: {}", e))?;
-        let minor = parts[1].parse().map_err(|e| format!("Invalid minor: {}", e))?;
-        let patch = parts[2].parse().map_err(|e| format!("Invalid patch: {}", e))?;
+        let major = parts[0]
+            .parse()
+            .map_err(|e| format!("Invalid major: {}", e))?;
+        let minor = parts[1]
+            .parse()
+            .map_err(|e| format!("Invalid minor: {}", e))?;
+        let patch = parts[2]
+            .parse()
+            .map_err(|e| format!("Invalid patch: {}", e))?;
         Ok(Self::new(major, minor, patch))
     }
 
@@ -110,7 +116,14 @@ pub struct DeviceMacroParam {
 }
 
 impl DeviceMacroParam {
-    pub fn new(id: &str, name: &str, min_val: f32, max_val: f32, default_val: f32, unit: &str) -> Self {
+    pub fn new(
+        id: &str,
+        name: &str,
+        min_val: f32,
+        max_val: f32,
+        default_val: f32,
+        unit: &str,
+    ) -> Self {
         Self {
             id: id.to_string(),
             name: name.to_string(),
@@ -165,9 +178,16 @@ impl fmt::Display for DevicePackageError {
             Self::Serialization(e) => write!(f, "Serialization error: {}", e),
             Self::Archive(e) => write!(f, "Archive error: {}", e),
             Self::ChecksumMismatch { expected, actual } => {
-                write!(f, "Checksum mismatch: expected {}, got {}", expected, actual)
+                write!(
+                    f,
+                    "Checksum mismatch: expected {}, got {}",
+                    expected, actual
+                )
             }
-            Self::IncompatibleApiVersion { required, supported } => {
+            Self::IncompatibleApiVersion {
+                required,
+                supported,
+            } => {
                 write!(
                     f,
                     "Incompatible API version: device requires {}, host supports {}",
@@ -278,7 +298,8 @@ impl DevicePackage {
         let mut buffer = Vec::new();
         {
             let mut zip = ZipWriter::new(Cursor::new(&mut buffer));
-            let options = FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+            let options =
+                FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
             // 1. Write manifest
             zip.start_file("manifest.json", options)
@@ -332,8 +353,8 @@ impl DevicePackage {
         sandbox: Option<&DeviceSandbox>,
     ) -> Result<Self, DevicePackageError> {
         let cursor = Cursor::new(bytes);
-        let mut zip = ZipArchive::new(cursor)
-            .map_err(|e| DevicePackageError::Archive(e.to_string()))?;
+        let mut zip =
+            ZipArchive::new(cursor).map_err(|e| DevicePackageError::Archive(e.to_string()))?;
 
         // 1. Read manifest
         let manifest: DeviceManifest = {
@@ -564,13 +585,17 @@ mod tests {
         let bytes = pkg.export_to_bytes().expect("Export should succeed");
         assert!(!bytes.is_empty());
 
-        let imported = DevicePackage::import_from_bytes(&bytes, None).expect("Import should succeed");
+        let imported =
+            DevicePackage::import_from_bytes(&bytes, None).expect("Import should succeed");
         assert_eq!(imported.manifest.id, "org.summoner.stereo_dim");
         assert_eq!(imported.manifest.name, "Stereo Dimmer");
         assert_eq!(imported.dsp_code, dsp_code);
         assert_eq!(imported.parameters.len(), 1);
         assert_eq!(imported.sample_assets.len(), 1);
-        assert_eq!(imported.sample_assets["impulse.raw"], vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(
+            imported.sample_assets["impulse.raw"],
+            vec![1, 2, 3, 4, 5, 6, 7, 8]
+        );
         assert_eq!(imported.presets.len(), 1);
     }
 
@@ -588,11 +613,15 @@ mod tests {
         let _bytes = pkg.export_to_bytes().unwrap();
 
         // Deliberately corrupt package by re-packaging with modified manifest checksum
-        pkg.manifest.checksum = "0000000000000000000000000000000000000000000000000000000000000000".to_string();
+        pkg.manifest.checksum =
+            "0000000000000000000000000000000000000000000000000000000000000000".to_string();
         let bad_bytes = pkg.export_to_bytes().unwrap();
 
         let res = DevicePackage::import_from_bytes(&bad_bytes, None);
-        assert!(matches!(res, Err(DevicePackageError::ChecksumMismatch { .. })));
+        assert!(matches!(
+            res,
+            Err(DevicePackageError::ChecksumMismatch { .. })
+        ));
     }
 
     #[test]
@@ -625,6 +654,9 @@ mod tests {
         pkg.add_sample_asset("large.bin", vec![0u8; 100]); // 100 bytes > 10 bytes
         let bytes_large = pkg.export_to_bytes().unwrap();
         let quota_res = DevicePackage::import_from_bytes(&bytes_large, Some(&tiny_sandbox));
-        assert!(matches!(quota_res, Err(DevicePackageError::SandboxViolation(_))));
+        assert!(matches!(
+            quota_res,
+            Err(DevicePackageError::SandboxViolation(_))
+        ));
     }
 }

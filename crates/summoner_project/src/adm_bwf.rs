@@ -58,7 +58,11 @@ pub struct AdmCartesianPosition {
 
 impl Default for AdmCartesianPosition {
     fn default() -> Self {
-        Self { x: 0.0, y: 1.0, z: 0.0 }
+        Self {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        }
     }
 }
 
@@ -108,7 +112,10 @@ pub fn generate_adm_xml(
         escape_xml(programme_name)
     ));
     for (i, _) in objects.iter().enumerate() {
-        xml.push_str(&format!("    <audioObjectIDRef>AO_{:04}</audioObjectIDRef>\n", 1001 + i));
+        xml.push_str(&format!(
+            "    <audioObjectIDRef>AO_{:04}</audioObjectIDRef>\n",
+            1001 + i
+        ));
     }
     xml.push_str("  </audioContent>\n");
 
@@ -124,8 +131,14 @@ pub fn generate_adm_xml(
             ao_id,
             escape_xml(&obj.name)
         ));
-        xml.push_str(&format!("    <audioPackFormatIDRef>{}</audioPackFormatIDRef>\n", ap_id));
-        xml.push_str(&format!("    <audioTrackUIDRef>ATU_{:08}</audioTrackUIDRef>\n", 1001 + i));
+        xml.push_str(&format!(
+            "    <audioPackFormatIDRef>{}</audioPackFormatIDRef>\n",
+            ap_id
+        ));
+        xml.push_str(&format!(
+            "    <audioTrackUIDRef>ATU_{:08}</audioTrackUIDRef>\n",
+            1001 + i
+        ));
         xml.push_str("  </audioObject>\n");
 
         xml.push_str(&format!(
@@ -133,7 +146,10 @@ pub fn generate_adm_xml(
             ap_id,
             escape_xml(&obj.name)
         ));
-        xml.push_str(&format!("    <audioChannelFormatIDRef>{}</audioChannelFormatIDRef>\n", ac_id));
+        xml.push_str(&format!(
+            "    <audioChannelFormatIDRef>{}</audioChannelFormatIDRef>\n",
+            ac_id
+        ));
         xml.push_str("  </audioPackFormat>\n");
 
         xml.push_str(&format!(
@@ -156,7 +172,8 @@ pub fn generate_adm_xml(
 
         xml.push_str(&format!(
             "  <audioTrackFormat audioTrackFormatID=\"{}\" audioTrackFormatName=\"Track {}\">\n",
-            at_id, obj.track_index + 1
+            at_id,
+            obj.track_index + 1
         ));
         xml.push_str(&format!(
             "    <audioStreamFormatIDRef>AS_{:08}</audioStreamFormatIDRef>\n",
@@ -282,10 +299,10 @@ pub fn export_adm_bwf_wav(
     cursor.write_all(&22u16.to_le_bytes())?; // cbSize
     cursor.write_all(&bit_depth.to_le_bytes())?; // validBitsPerSample
     cursor.write_all(&0u32.to_le_bytes())?; // channelMask
-    // SubFormat GUID: KSDATAFORMAT_SUBTYPE_PCM (00000001-0000-0010-8000-00aa00389b71)
+                                            // SubFormat GUID: KSDATAFORMAT_SUBTYPE_PCM (00000001-0000-0010-8000-00aa00389b71)
     let pcm_guid = [
-        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38,
-        0x9b, 0x71,
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b,
+        0x71,
     ];
     cursor.write_all(&pcm_guid)?;
 
@@ -379,7 +396,11 @@ mod tests {
                 id: "AO_1001".to_string(),
                 name: "Dialog Lead".to_string(),
                 track_index: 0,
-                position: AdmCartesianPosition { x: 0.0, y: 1.0, z: 0.0 },
+                position: AdmCartesianPosition {
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                },
                 gain: 1.0,
                 spread: 0.0,
                 is_bed_channel: true,
@@ -388,7 +409,11 @@ mod tests {
                 id: "AO_1002".to_string(),
                 name: "Helicopter SFX".to_string(),
                 track_index: 1,
-                position: AdmCartesianPosition { x: -0.8, y: 0.5, z: 0.9 },
+                position: AdmCartesianPosition {
+                    x: -0.8,
+                    y: 0.5,
+                    z: 0.9,
+                },
                 gain: 0.8,
                 spread: 0.2,
                 is_bed_channel: false,

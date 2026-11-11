@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::neural_radiance_view::{
         NeuralRadianceView, RadianceFieldModel, RADIANCE_PUCK_HIT_RADIUS,
     };
     use crate::views::neural_vocal_stylizer_view::{
         NeuralVocalStylizerView, VocalStyleModel, STYLIZE_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn86_pure_neural_radiance_view_initialization_and_kinematics() {
@@ -25,11 +25,46 @@ pub mod pure_tests {
 
         // Model profiles & nominal parameters
         let models = [
-            (RadianceFieldModel::InstantNeRFAcoustics, 30.0, 3.5, 256, 0.25, "INSTANT ACOUSTIC NeRF (HASH GRID)"),
-            (RadianceFieldModel::ContinuousFieldHRIR, -45.0, 1.2, 128, 0.65, "CONTINUOUS FIELD HRIR (IMPLICIT SH)"),
-            (RadianceFieldModel::BinauralRoomRadianceNeRF, 60.0, 5.0, 512, 0.35, "6-DoF BINAURAL BRIR RADIANCE"),
-            (RadianceFieldModel::WaveguideNeuralMesh, 0.0, 2.8, 128, 0.15, "WAVEGUIDE NEURAL FDTD MESH"),
-            (RadianceFieldModel::DiffusionRoomImpulseField, -90.0, 8.0, 512, 0.45, "DIFFUSION SPATIAL IMPULSE FIELD"),
+            (
+                RadianceFieldModel::InstantNeRFAcoustics,
+                30.0,
+                3.5,
+                256,
+                0.25,
+                "INSTANT ACOUSTIC NeRF (HASH GRID)",
+            ),
+            (
+                RadianceFieldModel::ContinuousFieldHRIR,
+                -45.0,
+                1.2,
+                128,
+                0.65,
+                "CONTINUOUS FIELD HRIR (IMPLICIT SH)",
+            ),
+            (
+                RadianceFieldModel::BinauralRoomRadianceNeRF,
+                60.0,
+                5.0,
+                512,
+                0.35,
+                "6-DoF BINAURAL BRIR RADIANCE",
+            ),
+            (
+                RadianceFieldModel::WaveguideNeuralMesh,
+                0.0,
+                2.8,
+                128,
+                0.15,
+                "WAVEGUIDE NEURAL FDTD MESH",
+            ),
+            (
+                RadianceFieldModel::DiffusionRoomImpulseField,
+                -90.0,
+                8.0,
+                512,
+                0.45,
+                "DIFFUSION SPATIAL IMPULSE FIELD",
+            ),
         ];
         for (m, heading, dist, dim, alpha, name) in models {
             view.set_model(m);
@@ -80,11 +115,46 @@ pub mod pure_tests {
 
         // Model profiles & nominal parameters
         let models = [
-            (VocalStyleModel::BelCantoOpera, 0.85, 0.45, 5.8, 95.0, "BEL CANTO OPERA"),
-            (VocalStyleModel::ContemporaryPopBelt, 0.70, 0.25, 6.5, 35.0, "CONTEMPORARY BELT"),
-            (VocalStyleModel::BulgarianChoirOpenThroat, 0.90, 0.80, 3.2, 10.0, "BULGARIAN CHOIR"),
-            (VocalStyleModel::TuvanThroatKargyraa, 0.95, 0.65, 4.0, 20.0, "TUVAN THROAT"),
-            (VocalStyleModel::GospelMelismaExpressive, 0.80, 0.90, 6.2, 80.0, "GOSPEL MELISMA"),
+            (
+                VocalStyleModel::BelCantoOpera,
+                0.85,
+                0.45,
+                5.8,
+                95.0,
+                "BEL CANTO OPERA",
+            ),
+            (
+                VocalStyleModel::ContemporaryPopBelt,
+                0.70,
+                0.25,
+                6.5,
+                35.0,
+                "CONTEMPORARY BELT",
+            ),
+            (
+                VocalStyleModel::BulgarianChoirOpenThroat,
+                0.90,
+                0.80,
+                3.2,
+                10.0,
+                "BULGARIAN CHOIR",
+            ),
+            (
+                VocalStyleModel::TuvanThroatKargyraa,
+                0.95,
+                0.65,
+                4.0,
+                20.0,
+                "TUVAN THROAT",
+            ),
+            (
+                VocalStyleModel::GospelMelismaExpressive,
+                0.80,
+                0.90,
+                6.2,
+                80.0,
+                "GOSPEL MELISMA",
+            ),
         ];
         for (m, blend, ornament, v_rate, v_depth, name) in models {
             view.set_vocal_model(m);
@@ -200,7 +270,11 @@ pub mod gui_tests {
     fn test_turn86_gui_lock_free_param_bus_dispatch_radiance_and_vocal_stylizer() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -222,10 +296,24 @@ pub mod gui_tests {
 
         view.sync_neural_radiance_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("heading_deg"), Some(&45.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("distance_m"), Some(&4.2));
-        assert_eq!(view.device_rack_state.node_param_values.get("latent_dim"), Some(&256.0));
-        assert_eq!(view.inspector_state.node_param_values.get("absorption_alpha"), Some(&0.35));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("heading_deg"),
+            Some(&45.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("distance_m"),
+            Some(&4.2)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("latent_dim"),
+            Some(&256.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("absorption_alpha"),
+            Some(&0.35)
+        );
 
         let pid_head = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_dist = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -242,10 +330,30 @@ pub mod gui_tests {
 
         view.sync_neural_vocal_stylizer_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("style_blend_pct"), Some(&0.88));
-        assert_eq!(view.device_rack_state.node_param_values.get("ornament_depth_pct"), Some(&0.62));
-        assert_eq!(view.device_rack_state.node_param_values.get("vibrato_rate_hz"), Some(&6.4));
-        assert_eq!(view.inspector_state.node_param_values.get("vibrato_depth_cents"), Some(&85.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("style_blend_pct"),
+            Some(&0.88)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("ornament_depth_pct"),
+            Some(&0.62)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("vibrato_rate_hz"),
+            Some(&6.4)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("vibrato_depth_cents"),
+            Some(&85.0)
+        );
 
         let pid_blend = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_ornm = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -270,13 +378,18 @@ pub mod gui_tests {
         view.close_neural_radiance_hud();
 
         // 2. Neural Vocal Stylizer trigger propagation from inspector
-        view.inspector_state.requested_open_neural_vocal_stylizer_hud = true;
+        view.inspector_state
+            .requested_open_neural_vocal_stylizer_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
             });
         });
-        assert!(!view.inspector_state.requested_open_neural_vocal_stylizer_hud);
+        assert!(
+            !view
+                .inspector_state
+                .requested_open_neural_vocal_stylizer_hud
+        );
         assert!(view.is_neural_vocal_stylizer_hud_open());
         view.close_neural_vocal_stylizer_hud();
     }
@@ -295,23 +408,18 @@ pub mod gui_tests {
         }];
 
         inspector_state.selected_node_kind = Some("NeuralVocalStylizerView".to_string());
-        inspector_state.chain_devices = vec![crate::views::modern_device_rack::RackChainDeviceVisual {
-            kind: "NeuralVocalStylizerView".to_string(),
-            display_name: "Neural Vocal Stylizer".to_string(),
-            is_bypassed: false,
-        }];
+        inspector_state.chain_devices =
+            vec![crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind: "NeuralVocalStylizerView".to_string(),
+                display_name: "Neural Vocal Stylizer".to_string(),
+                is_bypassed: false,
+            }];
 
         let bus = ParamBus::new();
 
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                show_modern_device_rack_with_context(
-                    ui,
-                    &mut rack_state,
-                    None,
-                    Some(&bus),
-                    1,
-                );
+                show_modern_device_rack_with_context(ui, &mut rack_state, None, Some(&bus), 1);
                 show_modern_inspector_with_context(ui, &mut inspector_state, Some(&bus), 1);
             });
         });
@@ -323,11 +431,17 @@ pub mod gui_tests {
     #[test]
     fn test_turn86_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let rad_act = palette.actions.iter().find(|a| a.action_id == "open_neural_radiance_hud");
+        let rad_act = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_radiance_hud");
         assert!(rad_act.is_some());
         assert_eq!(rad_act.unwrap().category, "Spatial");
 
-        let voc_act = palette.actions.iter().find(|a| a.action_id == "open_neural_vocal_stylizer_hud");
+        let voc_act = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_vocal_stylizer_hud");
         assert!(voc_act.is_some());
         assert_eq!(voc_act.unwrap().category, "Synthesis");
     }

@@ -156,7 +156,9 @@ impl WindchestReservoirView {
 
     pub fn update_physics(&mut self) {
         // Compute pressure sag based on pipe air consumption and compliance
-        let sag_drop = self.nominal_pressure_mmh2o * (self.sag_coefficient * 15.0) * self.pipe_consumption_rate;
+        let sag_drop = self.nominal_pressure_mmh2o
+            * (self.sag_coefficient * 15.0)
+            * self.pipe_consumption_rate;
         let effective_sag_drop = sag_drop.min(self.nominal_pressure_mmh2o * 0.50);
         let base_p = (self.nominal_pressure_mmh2o - effective_sag_drop).max(5.0);
 
@@ -168,12 +170,16 @@ impl WindchestReservoirView {
 
         self.dynamic_pressure_mmh2o = base_p * trem_factor;
         self.dynamic_pressure_pascals = self.dynamic_pressure_mmh2o * MMH2O_TO_PASCALS;
-        self.flue_jet_velocity_mps = (2.0 * self.dynamic_pressure_pascals / AIR_DENSITY_RHO).max(0.0).sqrt();
-        self.reservoir_bellows_sag_pct = ((effective_sag_drop / self.nominal_pressure_mmh2o) * 100.0).clamp(0.0, 100.0);
+        self.flue_jet_velocity_mps = (2.0 * self.dynamic_pressure_pascals / AIR_DENSITY_RHO)
+            .max(0.0)
+            .sqrt();
+        self.reservoir_bellows_sag_pct =
+            ((effective_sag_drop / self.nominal_pressure_mmh2o) * 100.0).clamp(0.0, 100.0);
     }
 
     pub fn pressure_to_normalized(pressure: f32) -> f32 {
-        ((pressure - MIN_NOMINAL_PRESSURE) / (MAX_NOMINAL_PRESSURE - MIN_NOMINAL_PRESSURE)).clamp(0.0, 1.0)
+        ((pressure - MIN_NOMINAL_PRESSURE) / (MAX_NOMINAL_PRESSURE - MIN_NOMINAL_PRESSURE))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_pressure(norm: f32) -> f32 {
@@ -193,12 +199,17 @@ impl WindchestReservoirView {
         let mut curve = [0.0_f32; NUM_PRESSURE_PLOT_POINTS];
         let p_base = self.nominal_pressure_mmh2o;
         let sag_ratio = (self.sag_coefficient * 15.0) * self.pipe_consumption_rate;
-        let trem_amp = if self.tremulant_enabled { self.tremulant_depth * 0.15 } else { 0.0 };
+        let trem_amp = if self.tremulant_enabled {
+            self.tremulant_depth * 0.15
+        } else {
+            0.0
+        };
 
         for (i, item) in curve.iter_mut().enumerate() {
             let t = (i as f32) / (NUM_PRESSURE_PLOT_POINTS as f32 - 1.0);
             // Simulate pipe attack air consumption sag that stabilizes via blower replenishment
-            let sag_envelope = 1.0 - (1.0 - (-t * 6.0).exp()) * sag_ratio * (-(1.0 - t) * 1.5).exp();
+            let sag_envelope =
+                1.0 - (1.0 - (-t * 6.0).exp()) * sag_ratio * (-(1.0 - t) * 1.5).exp();
             let trem_wave = if self.tremulant_enabled {
                 (t * std::f32::consts::TAU * self.tremulant_rate_hz * 0.4).sin() * trem_amp
             } else {
@@ -212,9 +223,13 @@ impl WindchestReservoirView {
 
     pub fn render_ascii_snapshot(&self) -> String {
         let mut out = String::new();
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str("   SUMMONER DAW — ORGAN WINDCHEST AERODYNAMICS & BELLOWS RESERVOIR HUD\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str(&format!(" Preset: {}\n", self.preset.name()));
         out.push_str(" Touch Target: [PASS: >=44pt]\n");
         out.push_str(&format!(
@@ -229,7 +244,9 @@ impl WindchestReservoirView {
         ));
         out.push_str(&format!(
             " Bellows Sag: {:.1}% | Blower Recovery: {:.2}s | Pipe Consumption: {:.0}%\n",
-            self.reservoir_bellows_sag_pct, self.recovery_time_sec, self.pipe_consumption_rate * 100.0
+            self.reservoir_bellows_sag_pct,
+            self.recovery_time_sec,
+            self.pipe_consumption_rate * 100.0
         ));
         out.push_str(&format!(
             " Tremulant: {} (Rate: {:.1} Hz, Depth: {:.0}%)\n",
@@ -237,7 +254,9 @@ impl WindchestReservoirView {
             self.tremulant_rate_hz,
             self.tremulant_depth * 100.0
         ));
-        out.push_str("--------------------------------------------------------------------------------\n");
+        out.push_str(
+            "--------------------------------------------------------------------------------\n",
+        );
         out.push_str(" Dynamic Pressure Waveform P(t) [mmH2O]:\n");
 
         let curve = self.evaluate_pressure_curve();
@@ -258,7 +277,9 @@ impl WindchestReservoirView {
         }
         out.push_str("     +--------------------------------\n");
         out.push_str("      0ms                            500ms\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out
     }
 

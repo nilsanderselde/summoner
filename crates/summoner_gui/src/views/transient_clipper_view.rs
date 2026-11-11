@@ -290,10 +290,7 @@ impl TransientClipperView {
         ));
         output.push_str(&format!(
             " Drive: +{:<4.1} dB | Knee: {:<4.1} dB | OS: {}x | Ceil: {:<4.1} dBFS\n",
-            self.clip_drive_db,
-            self.knee_softness_db,
-            self.oversampling_factor,
-            self.ceiling_dbfs
+            self.clip_drive_db, self.knee_softness_db, self.oversampling_factor, self.ceiling_dbfs
         ));
         output.push_str("------------------------------------------------------------\n");
         for line in lines {

@@ -1094,28 +1094,13 @@ impl BrowserCategory {
             BrowserCategory::Samples => &[
                 (
                     "Drums",
-                    &[
-                        "Drums/Synths.wav",
-                        "Kick_Punchy.wav",
-                        "Snare_Tight.wav",
-                    ],
+                    &["Drums/Synths.wav", "Kick_Punchy.wav", "Snare_Tight.wav"],
                 ),
                 (
                     "Synths",
-                    &[
-                        "Audit.midi",
-                        "Lead_Aether.toml",
-                        "Pad_Shimmer.toml",
-                    ],
+                    &["Audit.midi", "Lead_Aether.toml", "Pad_Shimmer.toml"],
                 ),
-                (
-                    "Bass",
-                    &[
-                        "Sample..midi",
-                        "Sub_808.wav",
-                        "Acid_303.toml",
-                    ],
-                ),
+                ("Bass", &["Sample..midi", "Sub_808.wav", "Acid_303.toml"]),
             ],
             BrowserCategory::Soundbanks => &[
                 (
@@ -1268,10 +1253,14 @@ pub fn show_modern_asset_browser(
                             Color32::TRANSPARENT
                         };
                         let _btn = ui.add(
-                            egui::Button::new(RichText::new(*icon).font(FontId::proportional(14.0)).color(text_col))
-                                .fill(fill)
-                                .rounding(Rounding::same(4.0))
-                                .min_size(Vec2::new(28.0, 28.0))
+                            egui::Button::new(
+                                RichText::new(*icon)
+                                    .font(FontId::proportional(14.0))
+                                    .color(text_col),
+                            )
+                            .fill(fill)
+                            .rounding(Rounding::same(4.0))
+                            .min_size(Vec2::new(28.0, 28.0)),
                         );
                         ui.add_space(4.0);
                     }
@@ -1292,7 +1281,12 @@ pub fn show_modern_asset_browser(
 
                     // Header
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("Asset Browser").font(FontId::proportional(12.0)).strong().color(Color32::from_rgb(241, 245, 249)));
+                        ui.label(
+                            RichText::new("Asset Browser")
+                                .font(FontId::proportional(12.0))
+                                .strong()
+                                .color(Color32::from_rgb(241, 245, 249)),
+                        );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.small_button("◀").clicked() {
                                 state.is_collapsed = true;
@@ -1304,7 +1298,11 @@ pub fn show_modern_asset_browser(
 
                     // Search Box
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("🔍").font(FontId::proportional(10.0)).color(Color32::from_rgb(148, 163, 184)));
+                        ui.label(
+                            RichText::new("🔍")
+                                .font(FontId::proportional(10.0))
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
                         ui.add(
                             egui::TextEdit::singleline(&mut state.search_query)
                                 .hint_text("Search...")
@@ -1350,8 +1348,15 @@ pub fn show_modern_asset_browser(
 
                         item_frame.show(ui, |ui| {
                             ui.horizontal(|ui| {
-                                ui.label(RichText::new(cat.icon()).font(FontId::proportional(12.0)));
-                                let resp = ui.selectable_label(is_sel, RichText::new(cat.name()).font(FontId::proportional(11.0)).color(text_color));
+                                ui.label(
+                                    RichText::new(cat.icon()).font(FontId::proportional(12.0)),
+                                );
+                                let resp = ui.selectable_label(
+                                    is_sel,
+                                    RichText::new(cat.name())
+                                        .font(FontId::proportional(11.0))
+                                        .color(text_color),
+                                );
                                 if resp.clicked() {
                                     state.selected_category = cat;
                                 }
@@ -1370,18 +1375,24 @@ pub fn show_modern_asset_browser(
                         let query = state.search_query.trim().to_lowercase();
 
                         for (folder_name, files) in folders {
-                            let folder_matches = !query.is_empty() && folder_name.to_lowercase().contains(&query);
+                            let folder_matches =
+                                !query.is_empty() && folder_name.to_lowercase().contains(&query);
                             let matching_files: Vec<&'static str> = files
                                 .iter()
                                 .copied()
-                                .filter(|file| query.is_empty() || folder_matches || file.to_lowercase().contains(&query))
+                                .filter(|file| {
+                                    query.is_empty()
+                                        || folder_matches
+                                        || file.to_lowercase().contains(&query)
+                                })
                                 .collect();
 
                             if !query.is_empty() && matching_files.is_empty() {
                                 continue;
                             }
 
-                            let is_exp = !query.is_empty() || state.expanded_folders.contains(&folder_name.to_string());
+                            let is_exp = !query.is_empty()
+                                || state.expanded_folders.contains(&folder_name.to_string());
                             let arrow = if is_exp { "▼" } else { "▶" };
 
                             ui.horizontal(|ui| {
@@ -1392,7 +1403,12 @@ pub fn show_modern_asset_browser(
                                         state.expanded_folders.push(folder_name.to_string());
                                     }
                                 }
-                                ui.label(RichText::new(format!("📁 {}", folder_name)).font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(245, 158, 11)));
+                                ui.label(
+                                    RichText::new(format!("📁 {}", folder_name))
+                                        .font(FontId::proportional(11.0))
+                                        .strong()
+                                        .color(Color32::from_rgb(245, 158, 11)),
+                                );
                             });
 
                             if is_exp {
@@ -1400,8 +1416,17 @@ pub fn show_modern_asset_browser(
                                     ui.horizontal(|ui| {
                                         ui.add_space(14.0);
                                         let is_sel = state.selected_item.as_deref() == Some(file);
-                                        let file_col = if is_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(200, 215, 235) };
-                                        let btn = ui.selectable_label(is_sel, RichText::new(format!("📄 {}", file)).font(FontId::proportional(10.0)).color(file_col));
+                                        let file_col = if is_sel {
+                                            Color32::from_rgb(56, 189, 248)
+                                        } else {
+                                            Color32::from_rgb(200, 215, 235)
+                                        };
+                                        let btn = ui.selectable_label(
+                                            is_sel,
+                                            RichText::new(format!("📄 {}", file))
+                                                .font(FontId::proportional(10.0))
+                                                .color(file_col),
+                                        );
                                         if btn.clicked() {
                                             state.selected_item = Some(file.to_string());
                                             _on_drag(file);

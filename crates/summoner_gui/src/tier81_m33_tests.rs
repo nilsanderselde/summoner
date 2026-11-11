@@ -6,6 +6,8 @@
 
 #[cfg(all(test, feature = "gui"))]
 mod tests {
+    use crate::app::SummonerApp;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use std::sync::Arc;
     use summoner_core::allocator::AllocGuard;
     use summoner_core::param_bus::{ParamBus, ParamId};
@@ -14,8 +16,6 @@ mod tests {
     use summoner_sequencer::automation_timeline::{
         AutomationCurve, AutomationLane, AutomationPoint, AutomationTimeline, Interpolation,
     };
-    use crate::app::SummonerApp;
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
 
     #[test]
     fn test_m33_param_bus_live_sync() {
@@ -33,7 +33,10 @@ mod tests {
         let mut registry = AutomationRegistry::new();
         let mut timeline = AutomationTimeline::new();
 
-        let mut view = AwardWinningGuiView { selected_track_idx: 0, ..Default::default() };
+        let mut view = AwardWinningGuiView {
+            selected_track_idx: 0,
+            ..Default::default()
+        };
 
         // User tweaks dials in the GUI
         view.device_rack_state.cutoff = 0.88;
@@ -114,13 +117,20 @@ mod tests {
             curve,
         });
 
-        let mut view = AwardWinningGuiView { selected_track_idx: 0, ..Default::default() };
+        let mut view = AwardWinningGuiView {
+            selected_track_idx: 0,
+            ..Default::default()
+        };
         view.top_bar_state.is_playing = true;
 
         // Evaluate at beat 2.0 (midpoint => 0.5)
         view.sync_with_param_bus(&project, &bus, &mut registry, &mut timeline, 2.0, false);
         let cutoff_val = view.device_rack_state.cutoff;
-        assert!((cutoff_val - 0.5).abs() < 1e-4, "Expected ~0.5, got {}", cutoff_val);
+        assert!(
+            (cutoff_val - 0.5).abs() < 1e-4,
+            "Expected ~0.5, got {}",
+            cutoff_val
+        );
 
         // 2. Automation recording test: User tweaks decay to 0.95 at beat 3.0
         view.device_rack_state.decay = 0.95;
@@ -153,12 +163,25 @@ mod tests {
                 assert!((samples[511] - 0.75).abs() < 1e-5);
             }
         }));
-        assert!(guard_result.is_ok(), "Oscilloscope streaming violated AllocGuard zero-alloc constraint!");
+        assert!(
+            guard_result.is_ok(),
+            "Oscilloscope streaming violated AllocGuard zero-alloc constraint!"
+        );
 
         // Verify AwardWinningGuiView receives live oscilloscope data
         let osc = app.oscilloscope_buffers.get(&1).unwrap();
         app.award_winning_view.current_oscilloscope_samples = Some(osc.read_all().to_vec());
-        assert!(app.award_winning_view.current_oscilloscope_samples.is_some());
-        assert_eq!(app.award_winning_view.current_oscilloscope_samples.as_ref().unwrap().len(), 512);
+        assert!(app
+            .award_winning_view
+            .current_oscilloscope_samples
+            .is_some());
+        assert_eq!(
+            app.award_winning_view
+                .current_oscilloscope_samples
+                .as_ref()
+                .unwrap()
+                .len(),
+            512
+        );
     }
 }

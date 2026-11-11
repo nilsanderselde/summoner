@@ -86,10 +86,7 @@ impl SfzRegionSlot {
 
     /// Matches MIDI note and velocity against keyzone & velocity layer bounds (`SampleRegion::matches`).
     pub fn matches(&self, note: u8, velocity: u8) -> bool {
-        note >= self.lokey
-            && note <= self.hikey
-            && velocity >= self.lovel
-            && velocity <= self.hivel
+        note >= self.lokey && note <= self.hikey && velocity >= self.lovel && velocity <= self.hivel
     }
 }
 
@@ -110,7 +107,9 @@ pub enum SfzSamplerPreset {
 impl SfzSamplerPreset {
     pub fn name(&self) -> &'static str {
         match self {
-            Self::ConcertGrandVelocityLayers => "Concert Grand Piano (Velocity Layers + LoopRelease)",
+            Self::ConcertGrandVelocityLayers => {
+                "Concert Grand Piano (Velocity Layers + LoopRelease)"
+            }
             Self::OrchestralStringsSustainLoop => "Orchestral Strings Ensemble (Continuous Loop)",
             Self::AmbientPadPingPong => "Crystalline Ambient Pad (Bidirectional Ping-Pong)",
             Self::VintageMpcChopsNoLoop => "Vintage MPC Keyzone Chops (One-Shot NoLoop)",
@@ -138,24 +137,12 @@ impl SfzSamplerPreset {
                 0.65,
                 SfzLoopTopology::LoopContinuous,
             ),
-            Self::AmbientPadPingPong => (
-                0.15,
-                0.75,
-                64,
-                -4.0,
-                80.0,
-                0.50,
-                SfzLoopTopology::PingPong,
-            ),
-            Self::VintageMpcChopsNoLoop => (
-                0.00,
-                1.00,
-                48,
-                0.0,
-                2.0,
-                1.00,
-                SfzLoopTopology::NoLoop,
-            ),
+            Self::AmbientPadPingPong => {
+                (0.15, 0.75, 64, -4.0, 80.0, 0.50, SfzLoopTopology::PingPong)
+            }
+            Self::VintageMpcChopsNoLoop => {
+                (0.00, 1.00, 48, 0.0, 2.0, 1.00, SfzLoopTopology::NoLoop)
+            }
         }
     }
 }
@@ -286,8 +273,7 @@ impl SfzSamplerView {
     }
 
     pub fn normalized_to_loop_length(norm: f32) -> f32 {
-        MIN_LOOP_LENGTH_NORM
-            + norm.clamp(0.0, 1.0) * (MAX_LOOP_LENGTH_NORM - MIN_LOOP_LENGTH_NORM)
+        MIN_LOOP_LENGTH_NORM + norm.clamp(0.0, 1.0) * (MAX_LOOP_LENGTH_NORM - MIN_LOOP_LENGTH_NORM)
     }
 
     /// Computes effective normalized loop end point `(loop_start + loop_length).min(1.0)`.
@@ -297,8 +283,7 @@ impl SfzSamplerView {
 
     /// Computes linear pitch playback rate matching `MultiSamplerNode::trigger_note` + fine tune cents.
     pub fn compute_playback_rate(&self, note: u8) -> f32 {
-        let semitones =
-            (note as f32 - self.root_keycenter as f32) + (self.fine_tune_cents / 100.0);
+        let semitones = (note as f32 - self.root_keycenter as f32) + (self.fine_tune_cents / 100.0);
         2.0_f32.powf(semitones / 12.0)
     }
 
@@ -395,11 +380,7 @@ impl SfzSamplerView {
         ));
         out.push_str(&format!(
             " Pitch & Audition: Root {} | Fine {:+.1} c | Note {} -> {:.3}x ({})\n",
-            self.root_keycenter,
-            self.fine_tune_cents,
-            self.audition_note,
-            rate,
-            matched_label
+            self.root_keycenter, self.fine_tune_cents, self.audition_note, rate, matched_label
         ));
         out.push_str(&format!(
             " Puck Coord:       ({:.3}, {:.3}) [PASS: >=44pt Hit Target]\n",
@@ -484,8 +465,7 @@ impl SfzSamplerView {
             );
 
             // Highlight active loop window region
-            let l_start_x =
-                rect.min.x + 15.0 + self.loop_start_norm * (rect.width() - 30.0);
+            let l_start_x = rect.min.x + 15.0 + self.loop_start_norm * (rect.width() - 30.0);
             let l_end_x =
                 rect.min.x + 15.0 + self.effective_loop_end_norm() * (rect.width() - 30.0);
             let loop_rect = egui::Rect::from_min_max(

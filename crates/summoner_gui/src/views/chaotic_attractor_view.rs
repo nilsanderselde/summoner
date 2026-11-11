@@ -73,10 +73,18 @@ impl ChaoticAttractorPreset {
     /// Returns nominal (system_type, rho, sigma, beta, dt).
     pub fn nominal_parameters(&self) -> (AttractorSystemType, f32, f32, f32, f32) {
         match self {
-            Self::ClassicLorenzButterfly => (AttractorSystemType::LorenzSystem, 28.0, 10.0, 2.667, 0.010),
-            Self::RosslerStrangeAttractor => (AttractorSystemType::RosslerSystem, 15.0, 6.0, 2.000, 0.015),
-            Self::HyperchaoticConvection => (AttractorSystemType::LorenzSystem, 45.0, 18.0, 3.200, 0.008),
-            Self::SubcriticalLimitCycle => (AttractorSystemType::LorenzSystem, 22.0, 8.0, 2.000, 0.012),
+            Self::ClassicLorenzButterfly => {
+                (AttractorSystemType::LorenzSystem, 28.0, 10.0, 2.667, 0.010)
+            }
+            Self::RosslerStrangeAttractor => {
+                (AttractorSystemType::RosslerSystem, 15.0, 6.0, 2.000, 0.015)
+            }
+            Self::HyperchaoticConvection => {
+                (AttractorSystemType::LorenzSystem, 45.0, 18.0, 3.200, 0.008)
+            }
+            Self::SubcriticalLimitCycle => {
+                (AttractorSystemType::LorenzSystem, 22.0, 8.0, 2.000, 0.012)
+            }
         }
     }
 }
@@ -190,7 +198,11 @@ impl ChaoticAttractorView {
                 self.current_y += dy * dt;
                 self.current_z += dz * dt;
                 self.orbit_velocity = (dx * dx + dy * dy + dz * dz).sqrt() * 0.05;
-                (self.current_x * 0.05, self.current_y * 0.05, self.current_z * 0.05)
+                (
+                    self.current_x * 0.05,
+                    self.current_y * 0.05,
+                    self.current_z * 0.05,
+                )
             }
             AttractorSystemType::RosslerSystem => {
                 let a = 0.2_f32;
@@ -204,7 +216,11 @@ impl ChaoticAttractorView {
                 self.current_y += dy * dt;
                 self.current_z += dz * dt;
                 self.orbit_velocity = (dx * dx + dy * dy + dz * dz).sqrt() * 0.1;
-                (self.current_x * 0.1, self.current_y * 0.1, self.current_z * 0.1)
+                (
+                    self.current_x * 0.1,
+                    self.current_y * 0.1,
+                    self.current_z * 0.1,
+                )
             }
         }
     }
@@ -257,9 +273,13 @@ impl ChaoticAttractorView {
 
     pub fn render_ascii_snapshot(&self) -> String {
         let mut out = String::new();
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str("   SUMMONER DAW — CHAOTIC FRACTAL ATTRACTOR MODULATION HUD\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str(&format!(" Preset: {}\n", self.preset.name()));
         out.push_str(" Touch Target: [PASS: >=44pt]\n");
         out.push_str(&format!(
@@ -278,9 +298,15 @@ impl ChaoticAttractorView {
         out.push_str(&format!(
             " Largest Lyapunov Exponent λ₁: {:.3} ({})\n",
             self.lyapunov_exponent,
-            if self.lyapunov_exponent > 0.05 { "CHAOTIC DIVERGENCE" } else { "STABLE LIMIT CYCLE" }
+            if self.lyapunov_exponent > 0.05 {
+                "CHAOTIC DIVERGENCE"
+            } else {
+                "STABLE LIMIT CYCLE"
+            }
         ));
-        out.push_str("--------------------------------------------------------------------------------\n");
+        out.push_str(
+            "--------------------------------------------------------------------------------\n",
+        );
         out.push_str(" 2D Phase Portrait Projection (X vs Z):\n");
 
         let traj = self.evaluate_trajectory();
@@ -289,7 +315,9 @@ impl ChaoticAttractorView {
             out.push_str(&format!("{:4.1} |", z_val));
             for col in 0..32 {
                 let x_val = ((col as f32 / 31.0) - 0.5) * 3.0;
-                let hit = traj.iter().any(|pt| (pt.0 - x_val).abs() < 0.12 && (pt.2 - z_val).abs() < 0.20);
+                let hit = traj
+                    .iter()
+                    .any(|pt| (pt.0 - x_val).abs() < 0.12 && (pt.2 - z_val).abs() < 0.20);
                 if hit {
                     out.push('ж');
                 } else if row == 0 {
@@ -304,7 +332,9 @@ impl ChaoticAttractorView {
         }
         out.push_str("       --------------------------------\n");
         out.push_str("      -1.5            0.0            +1.5 (X Coord)\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out
     }
 

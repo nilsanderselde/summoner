@@ -5,14 +5,11 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::air_reed_view::{
-        AirReedPreset, AirReedView, AIR_REED_PUCK_HIT_RADIUS,
-    };
-    use crate::views::stem_separator_view::{
-        StemChannelConfig, StemSeparatorPreset, StemSeparatorView,
-        STEM_SEPARATOR_PUCK_HIT_RADIUS,
-    };
     use crate::layout_math::Rect;
+    use crate::views::air_reed_view::{AirReedPreset, AirReedView, AIR_REED_PUCK_HIT_RADIUS};
+    use crate::views::stem_separator_view::{
+        StemChannelConfig, StemSeparatorPreset, StemSeparatorView, STEM_SEPARATOR_PUCK_HIT_RADIUS,
+    };
 
     #[test]
     fn test_turn121_pure_air_reed_initialization_and_physics() {
@@ -22,13 +19,50 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (AirReedPreset::HonkyokuRoMeditation, "Honkyoku Ro Meditation (800 Pa)", 800.0, 0.0, 10.0, 1.45, 0.15, 0.00),
-            (AirReedPreset::DeepMeriShadowBend, "Deep Meri Shadow Bend (-200c)", 520.0, -200.0, 14.0, 1.15, 0.28, 0.10),
-            (AirReedPreset::KariOverblownKan, "Kari Overblown Kan (2200 Pa)", 2200.0, 120.0, 6.5, 2.10, 0.12, 0.25),
-            (AirReedPreset::MuraiIkiExplosiveBurst, "Murai-Iki Explosive Burst (3600 Pa)", 3600.0, -45.0, 8.0, 2.65, 0.45, 0.95),
+            (
+                AirReedPreset::HonkyokuRoMeditation,
+                "Honkyoku Ro Meditation (800 Pa)",
+                800.0,
+                0.0,
+                10.0,
+                1.45,
+                0.15,
+                0.00,
+            ),
+            (
+                AirReedPreset::DeepMeriShadowBend,
+                "Deep Meri Shadow Bend (-200c)",
+                520.0,
+                -200.0,
+                14.0,
+                1.15,
+                0.28,
+                0.10,
+            ),
+            (
+                AirReedPreset::KariOverblownKan,
+                "Kari Overblown Kan (2200 Pa)",
+                2200.0,
+                120.0,
+                6.5,
+                2.10,
+                0.12,
+                0.25,
+            ),
+            (
+                AirReedPreset::MuraiIkiExplosiveBurst,
+                "Murai-Iki Explosive Burst (3600 Pa)",
+                3600.0,
+                -45.0,
+                8.0,
+                2.65,
+                0.45,
+                0.95,
+            ),
         ];
 
-        for (p, exp_name, exp_press, exp_cents, exp_dist, exp_sharp, exp_turb, exp_murai) in presets {
+        for (p, exp_name, exp_press, exp_cents, exp_dist, exp_sharp, exp_turb, exp_murai) in presets
+        {
             view.set_preset(p);
             assert_eq!(p.name(), exp_name);
             let (press, cents, dist, sharp, turb, murai) = p.nominal_parameters();
@@ -105,10 +139,34 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (StemSeparatorPreset::BalancedFull4Stem, "Balanced Full 4-Stem (0 dB Flat)", [0.0, 0.0, 0.0, 0.0], 0.50, 0.75),
-            (StemSeparatorPreset::AcapellaMelodyFocus, "Acapella & Melody Focus (+3 dB Lead)", [-18.0, -18.0, 3.0, -12.0], 0.68, 0.92),
-            (StemSeparatorPreset::DrumAndBassFoundation, "Drum & Bass Foundation (Rhythm Solo)", [2.0, 2.5, -24.0, -20.0], 0.32, 0.85),
-            (StemSeparatorPreset::InstrumentalBackingKaraoke, "Instrumental Backing (-36 dB Lead)", [0.5, 0.5, -36.0, 1.0], 0.45, 0.88),
+            (
+                StemSeparatorPreset::BalancedFull4Stem,
+                "Balanced Full 4-Stem (0 dB Flat)",
+                [0.0, 0.0, 0.0, 0.0],
+                0.50,
+                0.75,
+            ),
+            (
+                StemSeparatorPreset::AcapellaMelodyFocus,
+                "Acapella & Melody Focus (+3 dB Lead)",
+                [-18.0, -18.0, 3.0, -12.0],
+                0.68,
+                0.92,
+            ),
+            (
+                StemSeparatorPreset::DrumAndBassFoundation,
+                "Drum & Bass Foundation (Rhythm Solo)",
+                [2.0, 2.5, -24.0, -20.0],
+                0.32,
+                0.85,
+            ),
+            (
+                StemSeparatorPreset::InstrumentalBackingKaraoke,
+                "Instrumental Backing (-36 dB Lead)",
+                [0.5, 0.5, -36.0, 1.0],
+                0.45,
+                0.88,
+            ),
         ];
 
         for (p, exp_name, exp_gains, exp_tilt, exp_sharp) in presets {
@@ -161,10 +219,10 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::air_reed_view::AirReedView;
-    use crate::views::stem_separator_view::StemSeparatorView;
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::air_reed_view::AirReedView;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use crate::views::stem_separator_view::StemSeparatorView;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::ParamBus;
@@ -194,8 +252,14 @@ pub mod gui_tests {
         aw_view.open_air_reed_hud();
         assert!(aw_view.is_air_reed_hud_open());
         aw_view.sync_air_reed_hud_state();
-        assert!(aw_view.device_rack_state.node_param_values.contains_key("blowing_pressure_pa"));
-        assert!(aw_view.inspector_state.node_param_values.contains_key("meri_kari_cents"));
+        assert!(aw_view
+            .device_rack_state
+            .node_param_values
+            .contains_key("blowing_pressure_pa"));
+        assert!(aw_view
+            .inspector_state
+            .node_param_values
+            .contains_key("meri_kari_cents"));
         aw_view.close_air_reed_hud();
         assert!(!aw_view.is_air_reed_hud_open());
 
@@ -204,8 +268,14 @@ pub mod gui_tests {
         aw_view.open_stem_separator_hud();
         assert!(aw_view.is_stem_separator_hud_open());
         aw_view.sync_stem_separator_hud_state();
-        assert!(aw_view.device_rack_state.node_param_values.contains_key("spectral_tilt"));
-        assert!(aw_view.inspector_state.node_param_values.contains_key("mask_sharpness"));
+        assert!(aw_view
+            .device_rack_state
+            .node_param_values
+            .contains_key("spectral_tilt"));
+        assert!(aw_view
+            .inspector_state
+            .node_param_values
+            .contains_key("mask_sharpness"));
         aw_view.close_stem_separator_hud();
         assert!(!aw_view.is_stem_separator_hud_open());
     }
@@ -216,9 +286,17 @@ pub mod gui_tests {
         let actions = &palette.actions;
 
         let has_air_reed = actions.iter().any(|a| a.action_id == "open_air_reed_hud");
-        let has_stem_sep = actions.iter().any(|a| a.action_id == "open_stem_separator_hud");
+        let has_stem_sep = actions
+            .iter()
+            .any(|a| a.action_id == "open_stem_separator_hud");
 
-        assert!(has_air_reed, "open_air_reed_hud must be registered in command palette");
-        assert!(has_stem_sep, "open_stem_separator_hud must be registered in command palette");
+        assert!(
+            has_air_reed,
+            "open_air_reed_hud must be registered in command palette"
+        );
+        assert!(
+            has_stem_sep,
+            "open_stem_separator_hud must be registered in command palette"
+        );
     }
 }

@@ -5,19 +5,17 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
+    use crate::views::fm_matrix_view::{FmAlgorithm, FmMatrixView, FM_PUCK_HIT_RADIUS};
+    use crate::views::resonance_suppressor_view::{
+        ResonanceSuppressorView, SuppressorMode, RESONANCE_NODE_HIT_RADIUS,
+    };
     use crate::views::spectral_deesser_view::{
         DeEsserMode, SpectralDeEsserView, DEESSER_PUCK_HIT_RADIUS,
     };
     use crate::views::spectral_matching_eq_view::{
         MatchingProfile, SpectralMatchingEqView, MATCH_EQ_NUM_BANDS, MATCH_EQ_PUCK_HIT_RADIUS,
     };
-    use crate::views::resonance_suppressor_view::{
-        ResonanceSuppressorView, SuppressorMode, RESONANCE_NODE_HIT_RADIUS,
-    };
-    use crate::views::fm_matrix_view::{
-        FmAlgorithm, FmMatrixView, FM_PUCK_HIT_RADIUS,
-    };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn102_pure_spectral_deesser_initialization_and_kinematics() {
@@ -114,10 +112,22 @@ pub mod pure_tests {
 
         // Profile switching & names
         let profiles = [
-            (MatchingProfile::ReferenceTrackMatch, "Reference Track Match"),
-            (MatchingProfile::PinkNoiseMasterTarget, "Pink Noise Master Target"),
-            (MatchingProfile::LoudnessBalancedTarget, "Loudness Balanced Target"),
-            (MatchingProfile::WarmAnalogMasterTilt, "Warm Analog Master Tilt"),
+            (
+                MatchingProfile::ReferenceTrackMatch,
+                "Reference Track Match",
+            ),
+            (
+                MatchingProfile::PinkNoiseMasterTarget,
+                "Pink Noise Master Target",
+            ),
+            (
+                MatchingProfile::LoudnessBalancedTarget,
+                "Loudness Balanced Target",
+            ),
+            (
+                MatchingProfile::WarmAnalogMasterTilt,
+                "Warm Analog Master Tilt",
+            ),
         ];
 
         for (profile, expected_name) in profiles {
@@ -263,12 +273,12 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
-    use eframe::egui;
-    use std::sync::Arc;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::modern_inspector::show_modern_inspector_with_context;
+    use eframe::egui;
+    use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn102_gui_modal_window_lifecycles() {
@@ -336,7 +346,11 @@ pub mod gui_tests {
     fn test_turn102_gui_lock_free_param_bus_dispatch_all_four_huds() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -357,10 +371,24 @@ pub mod gui_tests {
         }
         view.sync_resonance_suppressor_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("global_sensitivity"), Some(&80.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("depth_db"), Some(&18.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("bandwidth_q"), Some(&12.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("attack_ms"), Some(&4.5));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("global_sensitivity"),
+            Some(&80.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("depth_db"),
+            Some(&18.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("bandwidth_q"),
+            Some(&12.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("attack_ms"),
+            Some(&4.5)
+        );
 
         let pid_sens = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_depth = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -379,8 +407,16 @@ pub mod gui_tests {
         view.fm_matrix_view.operators[0].ratio = 2.0;
         view.sync_fm_matrix_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("algorithm_idx"), Some(&1.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("op1_ratio"), Some(&2.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("algorithm_idx"),
+            Some(&1.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("op1_ratio"),
+            Some(&2.0)
+        );
 
         let pid_algo = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_fb = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -399,10 +435,24 @@ pub mod gui_tests {
         view.spectral_deesser_view.bandwidth_q = 3.0;
         view.sync_spectral_deesser_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("frequency_hz"), Some(&7500.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("threshold_db"), Some(&-19.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("reduction_range_db"), Some(&15.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("bandwidth_q"), Some(&3.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("frequency_hz"),
+            Some(&7500.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("threshold_db"),
+            Some(&-19.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("reduction_range_db"),
+            Some(&15.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("bandwidth_q"),
+            Some(&3.0)
+        );
 
         let pid_freq = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_thresh = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -421,10 +471,28 @@ pub mod gui_tests {
         view.spectral_matching_eq_view.linear_phase = true;
         view.sync_spectral_matching_eq_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("match_amount_percent"), Some(&85.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("smoothing_semitones"), Some(&6.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("gain_limit_db"), Some(&9.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("linear_phase"), Some(&1.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("match_amount_percent"),
+            Some(&85.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("smoothing_semitones"),
+            Some(&6.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("gain_limit_db"),
+            Some(&9.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("linear_phase"),
+            Some(&1.0)
+        );
 
         let pid_amt = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_smooth = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -507,14 +575,19 @@ pub mod gui_tests {
 
         // 5. Device Rack Trigger: Resonance Suppressor
         view.device_rack_state.selected_node_kind = Some("ResonanceSuppressor".to_string());
-        view.device_rack_state.requested_open_resonance_suppressor_hud = true;
+        view.device_rack_state
+            .requested_open_resonance_suppressor_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
             });
         });
         assert!(view.is_resonance_suppressor_hud_open());
-        assert!(!view.device_rack_state.requested_open_resonance_suppressor_hud);
+        assert!(
+            !view
+                .device_rack_state
+                .requested_open_resonance_suppressor_hud
+        );
         view.close_resonance_suppressor_hud();
 
         // 6. Device Rack Trigger: FM Matrix
@@ -543,14 +616,19 @@ pub mod gui_tests {
 
         // 8. Device Rack Trigger: Spectral Matching EQ
         view.device_rack_state.selected_node_kind = Some("SpectralMatchingEq".to_string());
-        view.device_rack_state.requested_open_spectral_matching_eq_hud = true;
+        view.device_rack_state
+            .requested_open_spectral_matching_eq_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
             });
         });
         assert!(view.is_spectral_matching_eq_hud_open());
-        assert!(!view.device_rack_state.requested_open_spectral_matching_eq_hud);
+        assert!(
+            !view
+                .device_rack_state
+                .requested_open_spectral_matching_eq_hud
+        );
         view.close_spectral_matching_eq_hud();
     }
 

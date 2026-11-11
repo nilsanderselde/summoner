@@ -117,12 +117,19 @@ impl GrandPianoView {
     }
 
     pub fn velocity_to_normalized(vel: f32) -> f32 {
-        let v = vel.clamp(MIN_GRAND_PIANO_STRIKE_VELOCITY, MAX_GRAND_PIANO_STRIKE_VELOCITY);
-        ((v - MIN_GRAND_PIANO_STRIKE_VELOCITY) / (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY)).clamp(0.0, 1.0)
+        let v = vel.clamp(
+            MIN_GRAND_PIANO_STRIKE_VELOCITY,
+            MAX_GRAND_PIANO_STRIKE_VELOCITY,
+        );
+        ((v - MIN_GRAND_PIANO_STRIKE_VELOCITY)
+            / (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_velocity(norm: f32) -> f32 {
-        MIN_GRAND_PIANO_STRIKE_VELOCITY + norm.clamp(0.0, 1.0) * (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY)
+        MIN_GRAND_PIANO_STRIKE_VELOCITY
+            + norm.clamp(0.0, 1.0)
+                * (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY)
     }
 
     pub fn hit_test_piano_puck(&self, point: (f32, f32), canvas: Rect) -> bool {
@@ -138,15 +145,21 @@ impl GrandPianoView {
     }
 
     pub fn update_puck_from_physics(&mut self) {
-        let norm_x = ((self.hammer_hardness - MIN_HAMMER_HARDNESS) / (MAX_HAMMER_HARDNESS - MIN_HAMMER_HARDNESS)).clamp(0.0, 1.0);
-        let norm_y = ((self.strike_velocity - MIN_GRAND_PIANO_STRIKE_VELOCITY) / (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY)).clamp(0.0, 1.0);
+        let norm_x = ((self.hammer_hardness - MIN_HAMMER_HARDNESS)
+            / (MAX_HAMMER_HARDNESS - MIN_HAMMER_HARDNESS))
+            .clamp(0.0, 1.0);
+        let norm_y = ((self.strike_velocity - MIN_GRAND_PIANO_STRIKE_VELOCITY)
+            / (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY))
+            .clamp(0.0, 1.0);
         self.puck_pos = (norm_x, norm_y);
     }
 
     pub fn update_physics_from_puck(&mut self, norm_x: f32, norm_y: f32) {
         self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
-        self.hammer_hardness = MIN_HAMMER_HARDNESS + self.puck_pos.0 * (MAX_HAMMER_HARDNESS - MIN_HAMMER_HARDNESS);
-        self.strike_velocity = MIN_GRAND_PIANO_STRIKE_VELOCITY + self.puck_pos.1 * (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY);
+        self.hammer_hardness =
+            MIN_HAMMER_HARDNESS + self.puck_pos.0 * (MAX_HAMMER_HARDNESS - MIN_HAMMER_HARDNESS);
+        self.strike_velocity = MIN_GRAND_PIANO_STRIKE_VELOCITY
+            + self.puck_pos.1 * (MAX_GRAND_PIANO_STRIKE_VELOCITY - MIN_GRAND_PIANO_STRIKE_VELOCITY);
         self.update_piano_acoustics();
     }
 
@@ -253,12 +266,16 @@ impl GrandPianoView {
 
         let dynamics_info = format!(
             "| Velocity: {:.2} | Hardness: {:.2} | Prompt T60: {:.1}s | Aftersound: {:.1}s |",
-            self.strike_velocity, self.hammer_hardness, self.prompt_t60_sec, self.aftersound_t60_sec
+            self.strike_velocity,
+            self.hammer_hardness,
+            self.prompt_t60_sec,
+            self.aftersound_t60_sec
         );
         let dyn_padded = format!("{:<width$}|", dynamics_info, width = width - 1);
         lines.push(dyn_padded);
 
-        let pedal_info = format!(
+        let pedal_info =
+            format!(
             "| Sustain/Half-Pedal: {:.0}% | Una Corda: {:.0}% | Sostenuto: {} | Detune: {:.2}c |",
             self.damper_lift_pos * 100.0,
             self.una_corda_shift * 100.0,
@@ -284,7 +301,9 @@ impl GrandPianoView {
                 let env_prompt = (-col_t * 6.0).exp();
                 // Aftersound envelope: slow decay with beating
                 let beat_freq = self.unison_detune_cents * 4.0;
-                let env_after = 0.35 * (-col_t * 1.2).exp() * (1.0 + 0.4 * (col_t * beat_freq * std::f32::consts::PI).cos());
+                let env_after = 0.35
+                    * (-col_t * 1.2).exp()
+                    * (1.0 + 0.4 * (col_t * beat_freq * std::f32::consts::PI).cos());
                 let total_env = (env_prompt * 0.7 + env_after * 0.3).clamp(0.0, 1.0);
 
                 if (total_env - row_ratio).abs() < 0.06 {
@@ -304,7 +323,12 @@ impl GrandPianoView {
     }
 
     /// Render headless PNG snapshot to verify layout alignment, hit targets, and WCAG AAA contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background color: Deep midnight slate `#0A0E18`
@@ -383,7 +407,9 @@ impl GrandPianoView {
 
             let env_prompt = (-col_t * 5.5).exp();
             let beat_freq = self.unison_detune_cents * 4.0;
-            let env_after = 0.40 * (-col_t * 1.0).exp() * (1.0 + 0.35 * (col_t * beat_freq * std::f32::consts::PI).cos());
+            let env_after = 0.40
+                * (-col_t * 1.0).exp()
+                * (1.0 + 0.35 * (col_t * beat_freq * std::f32::consts::PI).cos());
             let total_env = (env_prompt * 0.65 + env_after * 0.35).clamp(0.0, 1.0);
 
             let py = 420 - (total_env * 320.0) as usize;
@@ -452,19 +478,49 @@ impl GrandPianoView {
 
             ui.horizontal(|ui| {
                 ui.label("Preset:");
-                if ui.selectable_label(self.preset == GrandPianoHudPreset::SteinwayDRecital, "Steinway D").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == GrandPianoHudPreset::SteinwayDRecital,
+                        "Steinway D",
+                    )
+                    .clicked()
+                {
                     self.set_preset(GrandPianoHudPreset::SteinwayDRecital);
                 }
-                if ui.selectable_label(self.preset == GrandPianoHudPreset::BösendorferWarmth, "Bösendorfer 290").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == GrandPianoHudPreset::BösendorferWarmth,
+                        "Bösendorfer 290",
+                    )
+                    .clicked()
+                {
                     self.set_preset(GrandPianoHudPreset::BösendorferWarmth);
                 }
-                if ui.selectable_label(self.preset == GrandPianoHudPreset::YamahaCFXPop, "Yamaha CFX").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == GrandPianoHudPreset::YamahaCFXPop,
+                        "Yamaha CFX",
+                    )
+                    .clicked()
+                {
                     self.set_preset(GrandPianoHudPreset::YamahaCFXPop);
                 }
-                if ui.selectable_label(self.preset == GrandPianoHudPreset::ImpressionistUnaCorda, "Una Corda Shimmer").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == GrandPianoHudPreset::ImpressionistUnaCorda,
+                        "Una Corda Shimmer",
+                    )
+                    .clicked()
+                {
                     self.set_preset(GrandPianoHudPreset::ImpressionistUnaCorda);
                 }
-                if ui.selectable_label(self.preset == GrandPianoHudPreset::IntimateFelted, "Intimate Felt").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == GrandPianoHudPreset::IntimateFelted,
+                        "Intimate Felt",
+                    )
+                    .clicked()
+                {
                     self.set_preset(GrandPianoHudPreset::IntimateFelted);
                 }
             });
@@ -474,16 +530,34 @@ impl GrandPianoView {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.label("Hammer Dynamics (Hardness vs Velocity):");
-                    ui.add(egui::Slider::new(&mut self.hammer_hardness, MIN_HAMMER_HARDNESS..=MAX_HAMMER_HARDNESS).text("Felt Hardness"));
-                    ui.add(egui::Slider::new(&mut self.strike_velocity, MIN_GRAND_PIANO_STRIKE_VELOCITY..=MAX_GRAND_PIANO_STRIKE_VELOCITY).text("Strike Velocity"));
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.hammer_hardness,
+                            MIN_HAMMER_HARDNESS..=MAX_HAMMER_HARDNESS,
+                        )
+                        .text("Felt Hardness"),
+                    );
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.strike_velocity,
+                            MIN_GRAND_PIANO_STRIKE_VELOCITY..=MAX_GRAND_PIANO_STRIKE_VELOCITY,
+                        )
+                        .text("Strike Velocity"),
+                    );
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
                     ui.label("Continuous Pedals:");
-                    ui.add(egui::Slider::new(&mut self.damper_lift_pos, 0.0..=1.0).text("Sustain (Half-Pedal)"));
-                    ui.add(egui::Slider::new(&mut self.una_corda_shift, 0.0..=1.0).text("Una Corda (Soft Pedal)"));
+                    ui.add(
+                        egui::Slider::new(&mut self.damper_lift_pos, 0.0..=1.0)
+                            .text("Sustain (Half-Pedal)"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.una_corda_shift, 0.0..=1.0)
+                            .text("Una Corda (Soft Pedal)"),
+                    );
                     ui.checkbox(&mut self.sostenuto_engaged, "Sostenuto Latch");
                 });
             });
@@ -491,7 +565,12 @@ impl GrandPianoView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

@@ -55,7 +55,7 @@ pub mod pure_tests {
         // Atomic lock-free mutations
         bus.set(master_trim_pid, -2.5);
         bus.set(track2_phase_pid, 1.0); // Phase inverted
-        bus.set(track2_trim_pid, 3.5);  // +3.5 dB input trim
+        bus.set(track2_trim_pid, 3.5); // +3.5 dB input trim
 
         assert_eq!(bus.get(master_trim_pid), Some(-2.5));
         assert_eq!(bus.get(track2_phase_pid), Some(1.0));
@@ -121,8 +121,8 @@ pub mod pure_tests {
 #[cfg(feature = "gui")]
 pub mod gui_tests {
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use summoner_core::param_bus::ParamBus;
     use std::sync::Arc;
+    use summoner_core::param_bus::ParamBus;
 
     #[test]
     fn test_turn44_gui_master_selection_lockstep() {
@@ -138,8 +138,14 @@ pub mod gui_tests {
         assert!(view.inspecting_master);
         assert_eq!(view.device_rack_state.device_name, "Master Bus");
         assert_eq!(view.inspector_state.target_name, "Master Bus");
-        assert_eq!(view.device_rack_state.chain_devices.len(), view.master_chain_devices.len());
-        assert_eq!(view.inspector_state.chain_devices.len(), view.master_chain_devices.len());
+        assert_eq!(
+            view.device_rack_state.chain_devices.len(),
+            view.master_chain_devices.len()
+        );
+        assert_eq!(
+            view.inspector_state.chain_devices.len(),
+            view.master_chain_devices.len()
+        );
 
         // Select Master Node Slot 1 (e.g. Limiter)
         let sel_slot1 = view.select_master_node(1);
@@ -202,17 +208,26 @@ pub mod gui_tests {
         let inv1 = view.toggle_track_phase_invert(track_id);
         assert!(inv1);
         assert!(view.is_track_phase_inverted(track_id));
-        assert_eq!(param_bus.get(summoner_core::param_bus::ParamId(1000 + 204)), Some(1.0));
+        assert_eq!(
+            param_bus.get(summoner_core::param_bus::ParamId(1000 + 204)),
+            Some(1.0)
+        );
 
         let inv2 = view.toggle_track_phase_invert(track_id);
         assert!(!inv2);
         assert!(!view.is_track_phase_inverted(track_id));
-        assert_eq!(param_bus.get(summoner_core::param_bus::ParamId(1000 + 204)), Some(0.0));
+        assert_eq!(
+            param_bus.get(summoner_core::param_bus::ParamId(1000 + 204)),
+            Some(0.0)
+        );
 
         // Input trim setting
         view.set_track_input_trim(track_id, 4.5);
         assert_eq!(view.get_track_input_trim(track_id), 4.5);
-        assert_eq!(param_bus.get(summoner_core::param_bus::ParamId(1000 + 205)), Some(4.5));
+        assert_eq!(
+            param_bus.get(summoner_core::param_bus::ParamId(1000 + 205)),
+            Some(4.5)
+        );
 
         // Clamping to [-18.0, 18.0]
         view.set_track_input_trim(track_id, 25.0);
@@ -223,7 +238,10 @@ pub mod gui_tests {
         // Master trim setting
         view.set_master_trim(-3.0);
         assert_eq!(view.master_trim_db, -3.0);
-        assert_eq!(param_bus.get(summoner_core::param_bus::ParamId(9997)), Some(-3.0));
+        assert_eq!(
+            param_bus.get(summoner_core::param_bus::ParamId(9997)),
+            Some(-3.0)
+        );
 
         // Clamping to [-12.0, 12.0]
         view.set_master_trim(15.0);
@@ -238,7 +256,10 @@ pub mod gui_tests {
         let res_trim = view.open_master_trim_automation_editor();
         assert!(res_trim);
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param, Some("master_trim".to_string()));
+        assert_eq!(
+            view.requested_modular_automation_param,
+            Some("master_trim".to_string())
+        );
         let ed = view.automation_editor.as_ref().unwrap();
         assert_eq!(ed.parameter_name, "Master Bus — Gain Trim");
         assert_eq!(ed.unit_name, "dB");

@@ -6,12 +6,12 @@
 pub mod pure_tests {
     use crate::layout_math::Rect;
     use crate::views::soundboard_bridge_view::{
-        SoundboardBridgeView, SoundboardHudPreset, SOUNDBOARD_PUCK_HIT_RADIUS,
-        MIN_BRIDGE_BLEED, MAX_BRIDGE_BLEED, MIN_DECAY_SCALE, MAX_DECAY_SCALE,
+        SoundboardBridgeView, SoundboardHudPreset, MAX_BRIDGE_BLEED, MAX_DECAY_SCALE,
+        MIN_BRIDGE_BLEED, MIN_DECAY_SCALE, SOUNDBOARD_PUCK_HIT_RADIUS,
     };
     use crate::views::sympathetic_coupling_view::{
-        SympatheticCouplingView, SympatheticPreset, SYMPATHETIC_PUCK_HIT_RADIUS,
-        NUM_COUPLED_STRINGS,
+        SympatheticCouplingView, SympatheticPreset, NUM_COUPLED_STRINGS,
+        SYMPATHETIC_PUCK_HIT_RADIUS,
     };
     use summoner_core::param_bus::ParamId;
 
@@ -66,13 +66,22 @@ pub mod pure_tests {
         assert!((view.puck_pos.0 - 0.50).abs() < 1e-3);
         assert!((view.puck_pos.1 - 0.50).abs() < 1e-3);
         assert!(view.bridge_bleed >= MIN_BRIDGE_BLEED && view.bridge_bleed <= MAX_BRIDGE_BLEED);
-        assert!(view.soundboard_decay_scale >= MIN_DECAY_SCALE && view.soundboard_decay_scale <= MAX_DECAY_SCALE);
+        assert!(
+            view.soundboard_decay_scale >= MIN_DECAY_SCALE
+                && view.soundboard_decay_scale <= MAX_DECAY_SCALE
+        );
 
         // Hit testing
         let puck_x = 50.0 + view.puck_pos.0 * 200.0;
         let puck_y = 100.0 + (1.0 - view.puck_pos.1) * 150.0;
         assert!(view.hit_test_soundboard_puck((puck_x, puck_y), 50.0, 100.0, 200.0, 150.0));
-        assert!(view.hit_test_soundboard_puck((puck_x + 10.0, puck_y + 10.0), 50.0, 100.0, 200.0, 150.0));
+        assert!(view.hit_test_soundboard_puck(
+            (puck_x + 10.0, puck_y + 10.0),
+            50.0,
+            100.0,
+            200.0,
+            150.0
+        ));
         assert!(!view.hit_test_soundboard_puck((puck_x + 35.0, puck_y), 50.0, 100.0, 200.0, 150.0));
 
         // ASCII snapshot
@@ -122,7 +131,12 @@ pub mod pure_tests {
         assert!(off_diag > far_off);
 
         // Hit testing
-        let canvas = Rect { x: 60.0, y: 120.0, width: 240.0, height: 180.0 };
+        let canvas = Rect {
+            x: 60.0,
+            y: 120.0,
+            width: 240.0,
+            height: 180.0,
+        };
         let puck_x = canvas.x + view.puck_pos.0 * canvas.width;
         let puck_y = canvas.y + (1.0 - view.puck_pos.1) * canvas.height;
         assert!(view.hit_test_coupling_puck((puck_x, puck_y), canvas));
@@ -141,9 +155,9 @@ pub mod pure_tests {
         let slot_idx = 2u32;
         let base_id = track_id * 1000 + slot_idx * 20;
 
-        let pid_bleed  = ParamId(base_id);
-        let pid_decay  = ParamId(base_id + 1);
-        let pid_imp    = ParamId(base_id + 2);
+        let pid_bleed = ParamId(base_id);
+        let pid_decay = ParamId(base_id + 1);
+        let pid_imp = ParamId(base_id + 2);
         let pid_inharm = ParamId(base_id + 3);
 
         assert_eq!(pid_bleed.0, 3040);
@@ -163,8 +177,8 @@ pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn66_gui_award_winning_soundboard_and_sympathetic_hud_lifecycles() {
@@ -205,7 +219,11 @@ pub mod gui_tests {
     fn test_turn66_gui_live_parambus_atomic_sync_soundboard_and_sympathetic() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -227,9 +245,20 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(460.0));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(0.00022));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("bridge_bleed"), Some(&0.42));
-        assert_eq!(view.device_rack_state.node_param_values.get("soundboard_decay_scale"), Some(&1.15));
-        assert_eq!(view.inspector_state.node_param_values.get("bridge_bleed"), Some(&0.42));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("bridge_bleed"),
+            Some(&0.42)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("soundboard_decay_scale"),
+            Some(&1.15)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("bridge_bleed"),
+            Some(&0.42)
+        );
 
         // 2. Sync Sympathetic HUD
         view.sympathetic_view.coupling_strength = 0.28;
@@ -243,9 +272,22 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(3.2));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(0.65));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("coupling_strength"), Some(&0.28));
-        assert_eq!(view.device_rack_state.node_param_values.get("bridge_loss"), Some(&0.996));
-        assert_eq!(view.inspector_state.node_param_values.get("coupling_strength"), Some(&0.28));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("coupling_strength"),
+            Some(&0.28)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("bridge_loss"),
+            Some(&0.996)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("coupling_strength"),
+            Some(&0.28)
+        );
     }
 
     #[test]
@@ -300,10 +342,22 @@ pub mod gui_tests {
     #[test]
     fn test_turn66_gui_command_palette_actions_registered() {
         let palette = CommandPalette::new();
-        let has_soundboard = palette.actions.iter().any(|a| a.action_id == "open_soundboard_hud");
-        let has_sympathetic = palette.actions.iter().any(|a| a.action_id == "open_sympathetic_hud");
+        let has_soundboard = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_soundboard_hud");
+        let has_sympathetic = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_sympathetic_hud");
 
-        assert!(has_soundboard, "Expected open_soundboard_hud in command palette");
-        assert!(has_sympathetic, "Expected open_sympathetic_hud in command palette");
+        assert!(
+            has_soundboard,
+            "Expected open_soundboard_hud in command palette"
+        );
+        assert!(
+            has_sympathetic,
+            "Expected open_sympathetic_hud in command palette"
+        );
     }
 }

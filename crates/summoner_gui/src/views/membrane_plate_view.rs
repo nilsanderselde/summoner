@@ -619,4 +619,3 @@ impl MembranePlateView {
         self.render_ascii(40, 20).join("\n")
     }
 }
-

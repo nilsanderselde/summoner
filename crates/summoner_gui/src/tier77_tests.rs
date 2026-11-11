@@ -8,7 +8,8 @@ mod tests {
         PluckedInstrumentViewProfile, PluckedStringView, PLUCK_PUCK_HIT_RADIUS,
     };
     use crate::views::sympathetic_coupling_view::{
-        SympatheticCouplingView, SympatheticPreset, SYMPATHETIC_PUCK_HIT_RADIUS, NUM_COUPLED_STRINGS,
+        SympatheticCouplingView, SympatheticPreset, NUM_COUPLED_STRINGS,
+        SYMPATHETIC_PUCK_HIT_RADIUS,
     };
 
     #[test]
@@ -133,7 +134,8 @@ mod tests {
         assert!(ascii[0].starts_with('+'));
 
         // 7. Snapshot PNG Rendering
-        let res = view.render_snapshot_png("scratch/renders/sympathetic_coupling_view.png", 800, 520);
+        let res =
+            view.render_snapshot_png("scratch/renders/sympathetic_coupling_view.png", 800, 520);
         assert!(res.is_ok());
     }
 }

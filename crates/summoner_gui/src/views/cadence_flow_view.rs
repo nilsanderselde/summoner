@@ -54,7 +54,8 @@ impl CadenceFlowView {
         let target_root = 0; // C
         let target_quality = ChordQuality::Major; // I
 
-        let resolved_path = resolver.resolve_cadence_path(start_root, start_quality, target_root, target_quality);
+        let resolved_path =
+            resolver.resolve_cadence_path(start_root, start_quality, target_root, target_quality);
 
         Self {
             start_root,
@@ -135,7 +136,11 @@ impl CadenceFlowView {
     }
 
     /// Hit-tests touch coordinate against chord step node pucks on the canvas.
-    pub fn hit_test_step_puck(&self, point: (f32, f32), canvas_rect: (f32, f32, f32, f32)) -> Option<usize> {
+    pub fn hit_test_step_puck(
+        &self,
+        point: (f32, f32),
+        canvas_rect: (f32, f32, f32, f32),
+    ) -> Option<usize> {
         let (cx, cy, cw, ch) = canvas_rect;
         let num_steps = self.resolved_path.len();
         if num_steps == 0 {
@@ -222,7 +227,11 @@ impl CadenceFlowView {
         }
 
         // Footer info
-        let curr_label = self.resolved_path.get(self.current_step_idx).map(|s| s.roman_numeral.as_str()).unwrap_or("?");
+        let curr_label = self
+            .resolved_path
+            .get(self.current_step_idx)
+            .map(|s| s.roman_numeral.as_str())
+            .unwrap_or("?");
         let footer = format!("Active Step: {} | TouchHit: >=44pt [PASS]", curr_label);
         for (i, ch) in footer.chars().enumerate() {
             if i + 2 < width - 2 && height > 3 {
@@ -302,7 +311,8 @@ impl CadenceFlowView {
                         ];
                         for v in 0..4 {
                             let vy_prev = canvas_rect.min.y + 60.0 + (76 - prev_v[v]) as f32 * 2.8;
-                            let vy_curr = canvas_rect.min.y + 60.0 + (76 - step.voicing[v]) as f32 * 2.8;
+                            let vy_curr =
+                                canvas_rect.min.y + 60.0 + (76 - step.voicing[v]) as f32 * 2.8;
                             painter.line_segment(
                                 [
                                     egui::pos2(prev_pos.unwrap().x, vy_prev),
@@ -371,13 +381,31 @@ impl CadenceFlowView {
         let active_step = self.resolved_path.get(self.current_step_idx);
         let tension_val = active_step.map(|s| s.tension).unwrap_or(0.0);
         let vl_cost_val = active_step.map(|s| s.voice_leading_cost).unwrap_or(0.0);
-        let cadence_label = active_step.map(|s| s.cadence_type.label()).unwrap_or("None");
+        let cadence_label = active_step
+            .map(|s| s.cadence_type.label())
+            .unwrap_or("None");
 
         let metrics = [
-            ("PROGRESSION STEP", format!("{}/{}", self.current_step_idx + 1, num_steps), Color32::from_rgb(255, 215, 0)),
-            ("HARMONIC TENSION", format!("{:.1}%", tension_val * 100.0), Color32::from_rgb(255, 107, 43)),
-            ("VOICE-LEADING COST", format!("{:.1}", vl_cost_val), Color32::from_rgb(0, 229, 255)),
-            ("PREDICTED CADENCE", cadence_label.to_string(), Color32::from_rgb(0, 255, 180)),
+            (
+                "PROGRESSION STEP",
+                format!("{}/{}", self.current_step_idx + 1, num_steps),
+                Color32::from_rgb(255, 215, 0),
+            ),
+            (
+                "HARMONIC TENSION",
+                format!("{:.1}%", tension_val * 100.0),
+                Color32::from_rgb(255, 107, 43),
+            ),
+            (
+                "VOICE-LEADING COST",
+                format!("{:.1}", vl_cost_val),
+                Color32::from_rgb(0, 229, 255),
+            ),
+            (
+                "PREDICTED CADENCE",
+                cadence_label.to_string(),
+                Color32::from_rgb(0, 255, 180),
+            ),
         ];
 
         let col_w = (dock_rect.width() - 40.0) / 4.0;
@@ -452,19 +480,66 @@ impl CadenceFlowView {
         }
 
         // Header Panel (y: 10..46, x: 20..width-20)
-        fill_rounded_rect_cf(&mut pixels, width, height, 20, 10, width - 40, 36, 4, [18, 24, 38, 255]);
-        draw_rect_border_cf(&mut pixels, width, height, 20, 10, width - 40, 36, [45, 60, 85, 255]);
+        fill_rounded_rect_cf(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            4,
+            [18, 24, 38, 255],
+        );
+        draw_rect_border_cf(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            [45, 60, 85, 255],
+        );
 
         // Main Progression Ribbon Canvas (x: 20..width - 20, y: 56..height - 120)
         let canvas_w = width - 40;
         let canvas_h = height - 176;
-        fill_rounded_rect_cf(&mut pixels, width, height, 20, 56, canvas_w, canvas_h, 6, [14, 20, 32, 255]);
-        draw_rect_border_cf(&mut pixels, width, height, 20, 56, canvas_w, canvas_h, [45, 60, 85, 255]);
+        fill_rounded_rect_cf(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            canvas_w,
+            canvas_h,
+            6,
+            [14, 20, 32, 255],
+        );
+        draw_rect_border_cf(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            canvas_w,
+            canvas_h,
+            [45, 60, 85, 255],
+        );
 
         // Draw Grid lines
         for step in 1..4 {
             let gy = 56.0 + (step as f32 / 4.0) * canvas_h as f32;
-            draw_line_segment_cf(&mut pixels, width, height, 20.0, gy, 20.0 + canvas_w as f32, gy, [22, 30, 48, 255]);
+            draw_line_segment_cf(
+                &mut pixels,
+                width,
+                height,
+                20.0,
+                gy,
+                20.0 + canvas_w as f32,
+                gy,
+                [22, 30, 48, 255],
+            );
         }
 
         // Draw Progression Nodes, connecting lines, and SATB ribbons
@@ -493,11 +568,29 @@ impl CadenceFlowView {
                     for v in 0..4 {
                         let vy_prev = 56.0 + 60.0 + (76 - prev_v[v]) as f32 * 2.8;
                         let vy_curr = 56.0 + 60.0 + (76 - step.voicing[v]) as f32 * 2.8;
-                        draw_line_segment_cf(&mut pixels, width, height, prev_p.0, vy_prev, px, vy_curr, colors[v]);
+                        draw_line_segment_cf(
+                            &mut pixels,
+                            width,
+                            height,
+                            prev_p.0,
+                            vy_prev,
+                            px,
+                            vy_curr,
+                            colors[v],
+                        );
                     }
 
                     // Main connection line
-                    draw_line_segment_cf(&mut pixels, width, height, prev_p.0, prev_p.1, px, py, [0, 229, 255, 255]);
+                    draw_line_segment_cf(
+                        &mut pixels,
+                        width,
+                        height,
+                        prev_p.0,
+                        prev_p.1,
+                        px,
+                        py,
+                        [0, 229, 255, 255],
+                    );
                 }
 
                 // Draw Chord Step Node Puck (>= 22pt radius -> 44x44pt bounding hit target)
@@ -507,9 +600,33 @@ impl CadenceFlowView {
                     [0, 229, 255, 255]
                 };
 
-                draw_circle_ring_cf(&mut pixels, width, height, px, py, CADENCE_PUCK_HIT_RADIUS, [255, 215, 0, 140]);
-                draw_circle_filled_cf(&mut pixels, width, height, px, py, CADENCE_PUCK_VISUAL_RADIUS, puck_color);
-                draw_circle_filled_cf(&mut pixels, width, height, px, py, 4.0, [255, 255, 255, 255]);
+                draw_circle_ring_cf(
+                    &mut pixels,
+                    width,
+                    height,
+                    px,
+                    py,
+                    CADENCE_PUCK_HIT_RADIUS,
+                    [255, 215, 0, 140],
+                );
+                draw_circle_filled_cf(
+                    &mut pixels,
+                    width,
+                    height,
+                    px,
+                    py,
+                    CADENCE_PUCK_VISUAL_RADIUS,
+                    puck_color,
+                );
+                draw_circle_filled_cf(
+                    &mut pixels,
+                    width,
+                    height,
+                    px,
+                    py,
+                    4.0,
+                    [255, 255, 255, 255],
+                );
 
                 prev_pt = Some((px, py));
                 prev_voicing = Some(step.voicing);
@@ -519,8 +636,27 @@ impl CadenceFlowView {
         // Bottom Metrics Dock (x: 20..width - 20, y: height - 100..height - 20)
         let dock_y = height - 100;
         let dock_w = width - 40;
-        fill_rounded_rect_cf(&mut pixels, width, height, 20, dock_y, dock_w, 80, 4, [16, 35, 28, 255]);
-        draw_rect_border_cf(&mut pixels, width, height, 20, dock_y, dock_w, 80, [0, 255, 180, 255]);
+        fill_rounded_rect_cf(
+            &mut pixels,
+            width,
+            height,
+            20,
+            dock_y,
+            dock_w,
+            80,
+            4,
+            [16, 35, 28, 255],
+        );
+        draw_rect_border_cf(
+            &mut pixels,
+            width,
+            height,
+            20,
+            dock_y,
+            dock_w,
+            80,
+            [0, 255, 180, 255],
+        );
 
         encode_minimal_png_cf(path, &pixels, width, height)
     }
@@ -572,7 +708,16 @@ fn fill_rounded_rect_cf(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_rect_border_cf(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+fn draw_rect_border_cf(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    col: [u8; 4],
+) {
     for x in rx..(rx + rw).min(w) {
         if ry < h {
             let idx = ((ry * w + x) * 4) as usize;
@@ -596,7 +741,16 @@ fn draw_rect_border_cf(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_line_segment_cf(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+fn draw_line_segment_cf(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    col: [u8; 4],
+) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let steps = (dx.abs().max(dy.abs()) * 2.0).max(1.0) as u32;
@@ -650,7 +804,12 @@ fn draw_circle_ring_cf(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32,
     }
 }
 
-fn encode_minimal_png_cf(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_cf(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

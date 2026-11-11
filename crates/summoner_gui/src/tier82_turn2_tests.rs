@@ -31,19 +31,25 @@ mod pure_tests {
             "NoiseGen",
         ];
         for node in target_nodes {
-            assert!(registry.get(node).is_some(), "Node {} must exist in DspNodeRegistry", node);
+            assert!(
+                registry.get(node).is_some(),
+                "Node {} must exist in DspNodeRegistry",
+                node
+            );
         }
     }
 }
 
 #[cfg(all(test, feature = "gui"))]
 mod tests {
-    use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::modern_device_rack::{show_modern_device_rack, ModernDeviceRackState};
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
+    use crate::views::modern_inspector::{
+        show_modern_inspector_with_context, ModernInspectorState,
+    };
     use crate::views::modern_top_bar::ModernTopBarState;
+    use eframe::egui;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn2_device_rack_pro_params_drawer_mode() {
@@ -103,7 +109,9 @@ mod tests {
         });
 
         // User edits cutoff in the Inspector to 0.92
-        view.inspector_state.node_param_values.insert("cutoff".to_string(), 0.92);
+        view.inspector_state
+            .node_param_values
+            .insert("cutoff".to_string(), 0.92);
 
         // Run next frame: sync should propagate 0.92 to device_rack_state without overwriting
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
@@ -112,11 +120,19 @@ mod tests {
             });
         });
 
-        assert_eq!(view.device_rack_state.node_param_values.get("cutoff"), Some(&0.92));
-        assert_eq!(view.inspector_state.node_param_values.get("cutoff"), Some(&0.92));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("cutoff"),
+            Some(&0.92)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("cutoff"),
+            Some(&0.92)
+        );
 
         // Now user edits resonance in the Device Rack to 0.84
-        view.device_rack_state.node_param_values.insert("resonance".to_string(), 0.84);
+        view.device_rack_state
+            .node_param_values
+            .insert("resonance".to_string(), 0.84);
 
         // Run next frame: sync should propagate 0.84 to inspector_state without overwriting
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
@@ -125,8 +141,14 @@ mod tests {
             });
         });
 
-        assert_eq!(view.device_rack_state.node_param_values.get("resonance"), Some(&0.84));
-        assert_eq!(view.inspector_state.node_param_values.get("resonance"), Some(&0.84));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("resonance"),
+            Some(&0.84)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("resonance"),
+            Some(&0.84)
+        );
     }
 
     #[test]
@@ -150,12 +172,19 @@ mod tests {
             });
         });
 
-        assert_eq!(view.device_rack_state.selected_node_kind.as_deref(), Some("TubeSaturationNode"));
-        assert_eq!(view.device_rack_state.device_name, "Analog Vacuum Tube Saturation Stage");
+        assert_eq!(
+            view.device_rack_state.selected_node_kind.as_deref(),
+            Some("TubeSaturationNode")
+        );
+        assert_eq!(
+            view.device_rack_state.device_name,
+            "Analog Vacuum Tube Saturation Stage"
+        );
 
         // 2. User changes module in Device Rack dropdown
         view.device_rack_state.selected_node_kind = Some("PluckSynth".to_string());
-        view.device_rack_state.device_name = "Karplus-Strong Plucked String Synthesis Core".to_string();
+        view.device_rack_state.device_name =
+            "Karplus-Strong Plucked String Synthesis Core".to_string();
 
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
@@ -163,8 +192,14 @@ mod tests {
             });
         });
 
-        assert_eq!(view.inspector_state.selected_node_kind.as_deref(), Some("PluckSynth"));
-        assert_eq!(view.inspector_state.target_name, "Karplus-Strong Plucked String Synthesis Core");
+        assert_eq!(
+            view.inspector_state.selected_node_kind.as_deref(),
+            Some("PluckSynth")
+        );
+        assert_eq!(
+            view.inspector_state.target_name,
+            "Karplus-Strong Plucked String Synthesis Core"
+        );
     }
 
     #[test]

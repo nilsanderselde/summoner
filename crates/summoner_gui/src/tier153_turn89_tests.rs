@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::neural_phoneme_view::{
-        NeuralPhonemeView, PhonemeModel, PHONEME_PUCK_HIT_RADIUS,
-    };
+    use crate::layout_math::Rect;
     use crate::views::neural_dereverb_view::{
         DereverbModel, NeuralDereverbView, DEREVERB_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
+    use crate::views::neural_phoneme_view::{
+        NeuralPhonemeView, PhonemeModel, PHONEME_PUCK_HIT_RADIUS,
+    };
 
     #[test]
     fn test_turn89_pure_neural_phoneme_initialization_and_kinematics() {
@@ -86,11 +86,41 @@ pub mod pure_tests {
 
         // Architecture profiles & nominal parameters
         let models = [
-            (DereverbModel::NeuralSpectralMaskUNet, 18.0, 6.0, 1.5, "NEURAL SPECTRAL U-NET"),
-            (DereverbModel::WeightedPredictionErrorWPE, 12.0, 3.0, 1.2, "STATISTICAL WPE (M-CH)"),
-            (DereverbModel::DiffusionDeconvolution, 24.0, 12.0, 2.2, "DIFFUSION DECONVOLUTION"),
-            (DereverbModel::CathedralAcousticHall, 30.0, -6.0, 4.8, "CATHEDRAL LONG-TAIL"),
-            (DereverbModel::ConferenceRoomAutomix, 15.0, 8.0, 0.6, "CONFERENCE ROOM AUTOMIX"),
+            (
+                DereverbModel::NeuralSpectralMaskUNet,
+                18.0,
+                6.0,
+                1.5,
+                "NEURAL SPECTRAL U-NET",
+            ),
+            (
+                DereverbModel::WeightedPredictionErrorWPE,
+                12.0,
+                3.0,
+                1.2,
+                "STATISTICAL WPE (M-CH)",
+            ),
+            (
+                DereverbModel::DiffusionDeconvolution,
+                24.0,
+                12.0,
+                2.2,
+                "DIFFUSION DECONVOLUTION",
+            ),
+            (
+                DereverbModel::CathedralAcousticHall,
+                30.0,
+                -6.0,
+                4.8,
+                "CATHEDRAL LONG-TAIL",
+            ),
+            (
+                DereverbModel::ConferenceRoomAutomix,
+                15.0,
+                8.0,
+                0.6,
+                "CONFERENCE ROOM AUTOMIX",
+            ),
         ];
         for (m, dep, drr, rt, name) in models {
             view.set_model(m);
@@ -177,7 +207,11 @@ pub mod gui_tests {
     fn test_turn89_gui_lock_free_param_bus_dispatch_phoneme_and_dereverb() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -199,12 +233,42 @@ pub mod gui_tests {
 
         view.sync_neural_phoneme_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("formant_f1_hz"), Some(&550.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("formant_f2_hz"), Some(&1950.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("formant_f3_hz"), Some(&2750.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("vocal_tract_cm"), Some(&16.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("latent_style_weight"), Some(&0.85));
-        assert_eq!(view.device_rack_state.node_param_values.get("glottal_open_quotient"), Some(&0.58));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("formant_f1_hz"),
+            Some(&550.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("formant_f2_hz"),
+            Some(&1950.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("formant_f3_hz"),
+            Some(&2750.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("vocal_tract_cm"),
+            Some(&16.5)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("latent_style_weight"),
+            Some(&0.85)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("glottal_open_quotient"),
+            Some(&0.58)
+        );
 
         let pid_f1 = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_f2 = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -221,12 +285,40 @@ pub mod gui_tests {
 
         view.sync_neural_dereverb_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("suppression_depth_db"), Some(&21.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("direct_to_reverberant_ratio_db"), Some(&7.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("early_reflection_cancel"), Some(&0.82));
-        assert_eq!(view.inspector_state.node_param_values.get("late_tail_suppression"), Some(&0.88));
-        assert_eq!(view.inspector_state.node_param_values.get("room_rt60_s"), Some(&2.1));
-        assert_eq!(view.inspector_state.node_param_values.get("neural_blend_pct"), Some(&90.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("suppression_depth_db"),
+            Some(&21.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("direct_to_reverberant_ratio_db"),
+            Some(&7.5)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("early_reflection_cancel"),
+            Some(&0.82)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("late_tail_suppression"),
+            Some(&0.88)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("room_rt60_s"),
+            Some(&2.1)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("neural_blend_pct"),
+            Some(&90.0)
+        );
 
         let pid_depth = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_drr = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -265,13 +357,25 @@ pub mod gui_tests {
     #[test]
     fn test_turn89_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let phon_action = palette.actions.iter().find(|a| a.action_id == "open_neural_phoneme_hud");
-        assert!(phon_action.is_some(), "open_neural_phoneme_hud must be registered in command palette");
+        let phon_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_phoneme_hud");
+        assert!(
+            phon_action.is_some(),
+            "open_neural_phoneme_hud must be registered in command palette"
+        );
         let phon = phon_action.unwrap();
         assert_eq!(phon.category, "Synthesis");
 
-        let dereverb_action = palette.actions.iter().find(|a| a.action_id == "open_neural_dereverb_hud");
-        assert!(dereverb_action.is_some(), "open_neural_dereverb_hud must be registered in command palette");
+        let dereverb_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_dereverb_hud");
+        assert!(
+            dereverb_action.is_some(),
+            "open_neural_dereverb_hud must be registered in command palette"
+        );
         let dr = dereverb_action.unwrap();
         assert_eq!(dr.category, "Restoration");
     }

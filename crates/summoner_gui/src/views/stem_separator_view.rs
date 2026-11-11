@@ -179,12 +179,16 @@ impl StemSeparatorView {
         let bass_raw = (1.0 - (f_shifted / 0.35).clamp(0.0, 1.0)).powf(sharpness_exp);
         // Drums dominate low kick punch (~0.15) and high transients (~0.85)
         let drum_kick = (-((f_shifted - 0.15) / 0.12).powi(2)).exp();
-        let drum_hat = ((f_shifted - 0.55) / 0.45).clamp(0.0, 1.0).powf(sharpness_exp);
+        let drum_hat = ((f_shifted - 0.55) / 0.45)
+            .clamp(0.0, 1.0)
+            .powf(sharpness_exp);
         let drums_raw = (drum_kick * 0.65 + drum_hat * 0.85).clamp(0.0, 1.0);
         // Melody dominates mid-range vocal/instrument fundamentals [0.25 .. 0.75]
-        let melody_raw = (-((f_shifted - 0.50) / (0.28 - self.mask_sharpness * 0.10).max(0.08)).powi(2)).exp();
+        let melody_raw =
+            (-((f_shifted - 0.50) / (0.28 - self.mask_sharpness * 0.10).max(0.08)).powi(2)).exp();
         // Other captures ambient harmonic pad & residual spectrum
-        let other_raw = (0.35 + 0.35 * (f_shifted * std::f32::consts::PI).sin()) * (1.0 - self.mask_sharpness * 0.3);
+        let other_raw = (0.35 + 0.35 * (f_shifted * std::f32::consts::PI).sin())
+            * (1.0 - self.mask_sharpness * 0.3);
 
         [
             (drums_raw * self.stems[0].linear_gain()).clamp(0.0, 2.0),
@@ -219,16 +223,24 @@ impl StemSeparatorView {
         out.push_str(" SUMMONER DAW -- NEURAL ONNX 4-STEM SEPARATOR & ROUTER HUD SNAPSHOT\n");
         out.push_str("======================================================================\n");
         out.push_str(&format!(" Preset:           {}\n", self.preset.name()));
-        out.push_str(&format!(" Spectral Tilt:    {:.2} | Mask Sharpness: {:.2}\n", self.spectral_tilt, self.mask_sharpness));
+        out.push_str(&format!(
+            " Spectral Tilt:    {:.2} | Mask Sharpness: {:.2}\n",
+            self.spectral_tilt, self.mask_sharpness
+        ));
         for stem in &self.stems {
             out.push_str(&format!(
                 " Stem [{:<6}]:   {:+.1} dB | Pan: {:+.2} | Track -> #{} | Mute: {}\n",
                 stem.stem_name, stem.gain_db, stem.pan, stem.target_track_index, stem.is_muted
             ));
         }
-        out.push_str(&format!(" Puck Coord:       ({:.3}, {:.3}) [PASS: >=44pt Hit Target]\n", self.puck_pos.0, self.puck_pos.1));
+        out.push_str(&format!(
+            " Puck Coord:       ({:.3}, {:.3}) [PASS: >=44pt Hit Target]\n",
+            self.puck_pos.0, self.puck_pos.1
+        ));
         out.push_str("----------------------------------------------------------------------\n");
-        out.push_str(" Dominant Stem Across Frequency Spectrum (B=Bass, D=Drums, M=Melody, O=Other):\n ");
+        out.push_str(
+            " Dominant Stem Across Frequency Spectrum (B=Bass, D=Drums, M=Melody, O=Other):\n ",
+        );
 
         for step in 0..32 {
             let f = step as f32 / 31.0;
@@ -279,16 +291,27 @@ impl StemSeparatorView {
                     (StemSeparatorPreset::BalancedFull4Stem, "Balanced 4-Stem"),
                     (StemSeparatorPreset::AcapellaMelodyFocus, "Acapella Lead"),
                     (StemSeparatorPreset::DrumAndBassFoundation, "Drum & Bass"),
-                    (StemSeparatorPreset::InstrumentalBackingKaraoke, "Instrumental"),
+                    (
+                        StemSeparatorPreset::InstrumentalBackingKaraoke,
+                        "Instrumental",
+                    ),
                 ];
                 for (p, label) in presets {
                     let is_active = self.preset == p;
                     let btn = egui::Button::new(
                         RichText::new(label)
-                            .color(if is_active { Color32::BLACK } else { Color32::from_rgb(203, 213, 225) })
+                            .color(if is_active {
+                                Color32::BLACK
+                            } else {
+                                Color32::from_rgb(203, 213, 225)
+                            })
                             .size(11.0),
                     )
-                    .fill(if is_active { Color32::from_rgb(192, 132, 252) } else { Color32::from_rgb(30, 41, 59) })
+                    .fill(if is_active {
+                        Color32::from_rgb(192, 132, 252)
+                    } else {
+                        Color32::from_rgb(30, 41, 59)
+                    })
                     .min_size(Vec2::new(80.0, 24.0));
 
                     if ui.add(btn).clicked() {
@@ -301,20 +324,25 @@ impl StemSeparatorView {
 
             // Interactive 2D Spectral Mask Canvas
             let canvas_size = Vec2::new(ui.available_width().max(280.0), 140.0);
-            let (response, painter) = ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
+            let (response, painter) =
+                ui.allocate_painter(canvas_size, egui::Sense::click_and_drag());
             let rect = response.rect;
             let canvas = Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height());
 
             // Background
             painter.rect_filled(rect, Rounding::same(4.0), Color32::from_rgb(18, 12, 28));
-            painter.rect_stroke(rect, Rounding::same(4.0), Stroke::new(1.0_f32, Color32::from_rgb(76, 29, 149)));
+            painter.rect_stroke(
+                rect,
+                Rounding::same(4.0),
+                Stroke::new(1.0_f32, Color32::from_rgb(76, 29, 149)),
+            );
 
             // Draw 4 Stem Spectral Mask Contours
             let stem_colors = [
-                Color32::from_rgb(249, 115, 22), // Drums (Orange)
-                Color32::from_rgb(56, 189, 248), // Bass (Cyan)
+                Color32::from_rgb(249, 115, 22),  // Drums (Orange)
+                Color32::from_rgb(56, 189, 248),  // Bass (Cyan)
                 Color32::from_rgb(192, 132, 252), // Melody (Purple)
-                Color32::from_rgb(52, 211, 153), // Other (Emerald)
+                Color32::from_rgb(52, 211, 153),  // Other (Emerald)
             ];
 
             let num_pts = 40;
@@ -337,8 +365,12 @@ impl StemSeparatorView {
             if response.dragged() || response.clicked() {
                 if let Some(pos) = response.interact_pointer_pos() {
                     let padding = 15.0;
-                    let norm_x = ((pos.x - (rect.min.x + padding)) / (rect.width() - 2.0 * padding)).clamp(0.0, 1.0);
-                    let norm_y = (1.0 - ((pos.y - (rect.min.y + padding)) / (rect.height() - 2.0 * padding))).clamp(0.0, 1.0);
+                    let norm_x = ((pos.x - (rect.min.x + padding))
+                        / (rect.width() - 2.0 * padding))
+                        .clamp(0.0, 1.0);
+                    let norm_y = (1.0
+                        - ((pos.y - (rect.min.y + padding)) / (rect.height() - 2.0 * padding)))
+                        .clamp(0.0, 1.0);
                     self.update_from_puck(norm_x, norm_y);
                 }
             }
@@ -347,10 +379,22 @@ impl StemSeparatorView {
             let (puck_x, puck_y) = self.puck_to_canvas_pos(&canvas);
             let puck_pos = egui::pos2(puck_x, puck_y);
 
-            painter.circle_filled(puck_pos, STEM_SEPARATOR_PUCK_HIT_RADIUS, Color32::from_rgba_unmultiplied(168, 85, 247, 45));
-            painter.circle_stroke(puck_pos, STEM_SEPARATOR_PUCK_HIT_RADIUS, Stroke::new(1.0_f32, Color32::from_rgb(192, 132, 252)));
+            painter.circle_filled(
+                puck_pos,
+                STEM_SEPARATOR_PUCK_HIT_RADIUS,
+                Color32::from_rgba_unmultiplied(168, 85, 247, 45),
+            );
+            painter.circle_stroke(
+                puck_pos,
+                STEM_SEPARATOR_PUCK_HIT_RADIUS,
+                Stroke::new(1.0_f32, Color32::from_rgb(192, 132, 252)),
+            );
             painter.circle_filled(puck_pos, 6.0, Color32::from_rgb(243, 232, 255));
-            painter.circle_stroke(puck_pos, 8.0, Stroke::new(1.5_f32, Color32::from_rgb(168, 85, 247)));
+            painter.circle_stroke(
+                puck_pos,
+                8.0,
+                Stroke::new(1.5_f32, Color32::from_rgb(168, 85, 247)),
+            );
 
             painter.text(
                 egui::pos2(rect.min.x + 8.0, rect.min.y + 6.0),
@@ -372,18 +416,37 @@ impl StemSeparatorView {
                     let mute_btn = egui::Button::new(
                         RichText::new(if stem.is_muted { "MUTE" } else { "ON" })
                             .size(10.0)
-                            .color(if stem.is_muted { Color32::WHITE } else { Color32::BLACK }),
+                            .color(if stem.is_muted {
+                                Color32::WHITE
+                            } else {
+                                Color32::BLACK
+                            }),
                     )
-                    .fill(if stem.is_muted { Color32::from_rgb(239, 68, 68) } else { Color32::from_rgb(52, 211, 153) })
+                    .fill(if stem.is_muted {
+                        Color32::from_rgb(239, 68, 68)
+                    } else {
+                        Color32::from_rgb(52, 211, 153)
+                    })
                     .min_size(Vec2::new(42.0, 20.0));
 
                     if ui.add(mute_btn).clicked() {
                         stem.is_muted = !stem.is_muted;
                     }
 
-                    ui.label(RichText::new(format!("{:<7}", stem.stem_name.to_uppercase())).strong().size(11.0));
-                    ui.add(egui::Slider::new(&mut stem.gain_db, MIN_STEM_GAIN_DB..=MAX_STEM_GAIN_DB).suffix(" dB"));
-                    ui.label(RichText::new(format!("-> Trk #{}", stem.target_track_index + 1)).size(10.5).color(Color32::from_rgb(148, 163, 184)));
+                    ui.label(
+                        RichText::new(format!("{:<7}", stem.stem_name.to_uppercase()))
+                            .strong()
+                            .size(11.0),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut stem.gain_db, MIN_STEM_GAIN_DB..=MAX_STEM_GAIN_DB)
+                            .suffix(" dB"),
+                    );
+                    ui.label(
+                        RichText::new(format!("-> Trk #{}", stem.target_track_index + 1))
+                            .size(10.5)
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
                 });
             }
         });

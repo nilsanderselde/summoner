@@ -16,7 +16,10 @@ pub mod pure_tests {
     #[test]
     fn test_turn72_pure_wavefront_reflection_view_initialization_and_architectures() {
         let mut view = WavefrontReflectionView::new();
-        assert_eq!(view.architecture, RoomArchitectureType::ConcertHallHorseshoe);
+        assert_eq!(
+            view.architecture,
+            RoomArchitectureType::ConcertHallHorseshoe
+        );
         assert!((view.surface_scattering_coeff - 0.45).abs() < 1e-3);
         assert!((view.boundary_absorption_alpha - 0.20).abs() < 1e-3);
         assert_eq!(view.ray_count, 2500);
@@ -25,7 +28,10 @@ pub mod pure_tests {
 
         // Architecture profiles
         view.set_architecture(RoomArchitectureType::ShoeboxStudioControl);
-        assert_eq!(view.architecture, RoomArchitectureType::ShoeboxStudioControl);
+        assert_eq!(
+            view.architecture,
+            RoomArchitectureType::ShoeboxStudioControl
+        );
         assert!((view.surface_scattering_coeff - 0.25).abs() < 1e-3);
         assert!((view.boundary_absorption_alpha - 0.60).abs() < 1e-3);
         assert_eq!(view.ray_count, 1800);
@@ -68,7 +74,10 @@ pub mod pure_tests {
     #[test]
     fn test_turn72_pure_diffractive_propagation_view_initialization_and_models() {
         let mut view = DiffractivePropagationView::new();
-        assert_eq!(view.model, DiffractionModelType::SphericalHelmholtzKirchhoff);
+        assert_eq!(
+            view.model,
+            DiffractionModelType::SphericalHelmholtzKirchhoff
+        );
         assert!((view.diffraction_angle_deg - 75.0).abs() < 1e-3);
         assert!((view.source_distance_m - 4.5).abs() < 1e-3);
         assert_eq!(DIFFRACTION_PUCK_HIT_RADIUS, 22.0);
@@ -151,8 +160,8 @@ pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn72_gui_award_winning_view_headless_rendering_without_panic() {
@@ -196,7 +205,11 @@ pub mod gui_tests {
     fn test_turn72_gui_live_parambus_slot_dispatch() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -219,9 +232,24 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(0.85));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(3200.0));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("surface_scattering_coeff"), Some(&0.65));
-        assert_eq!(view.device_rack_state.node_param_values.get("boundary_absorption_alpha"), Some(&0.35));
-        assert_eq!(view.inspector_state.node_param_values.get("surface_scattering_coeff"), Some(&0.65));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("surface_scattering_coeff"),
+            Some(&0.65)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("boundary_absorption_alpha"),
+            Some(&0.35)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("surface_scattering_coeff"),
+            Some(&0.65)
+        );
 
         // 2. Sync Diffractive Propagation HUD
         view.diffractive_propagation_view.diffraction_angle_deg = 110.0;
@@ -235,16 +263,32 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(0.40));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(75.0));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("diffraction_angle_deg"), Some(&110.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("source_distance_m"), Some(&8.5));
-        assert_eq!(view.inspector_state.node_param_values.get("diffraction_angle_deg"), Some(&110.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("diffraction_angle_deg"),
+            Some(&110.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("source_distance_m"),
+            Some(&8.5)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("diffraction_angle_deg"),
+            Some(&110.0)
+        );
     }
 
     #[test]
     fn test_turn72_gui_rack_and_inspector_trigger_propagation() {
         let mut view = AwardWinningGuiView::new();
 
-        view.device_rack_state.requested_open_wavefront_reflection_hud = true;
+        view.device_rack_state
+            .requested_open_wavefront_reflection_hud = true;
         let ctx = egui::Context::default();
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
@@ -252,31 +296,46 @@ pub mod gui_tests {
             });
         });
         assert!(view.is_wavefront_reflection_hud_open());
-        assert!(!view.device_rack_state.requested_open_wavefront_reflection_hud);
+        assert!(
+            !view
+                .device_rack_state
+                .requested_open_wavefront_reflection_hud
+        );
 
         view.close_wavefront_reflection_hud();
         assert!(!view.is_wavefront_reflection_hud_open());
 
-        view.inspector_state.requested_open_diffractive_propagation_hud = true;
+        view.inspector_state
+            .requested_open_diffractive_propagation_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
             });
         });
         assert!(view.is_diffractive_propagation_hud_open());
-        assert!(!view.inspector_state.requested_open_diffractive_propagation_hud);
+        assert!(
+            !view
+                .inspector_state
+                .requested_open_diffractive_propagation_hud
+        );
     }
 
     #[test]
     fn test_turn72_gui_command_palette_action_registration() {
         let palette = CommandPalette::new();
-        let wf_action = palette.actions.iter().find(|a| a.action_id == "open_wavefront_reflection_hud");
+        let wf_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_wavefront_reflection_hud");
         assert!(wf_action.is_some());
         let wf = wf_action.unwrap();
         assert_eq!(wf.category, "Physical Modeling");
         assert!(wf.label.contains("Wavefront Reflection"));
 
-        let diff_action = palette.actions.iter().find(|a| a.action_id == "open_diffractive_propagation_hud");
+        let diff_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_diffractive_propagation_hud");
         assert!(diff_action.is_some());
         let diff = diff_action.unwrap();
         assert_eq!(diff.category, "Physical Modeling");

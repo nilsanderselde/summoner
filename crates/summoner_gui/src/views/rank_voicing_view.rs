@@ -107,7 +107,8 @@ impl RankVoicingView {
 
     pub fn update_puck_from_physics(&mut self) {
         let norm_x = ((self.cutup_ratio - MIN_CUTUP) / (MAX_CUTUP - MIN_CUTUP)).clamp(0.0, 1.0);
-        let norm_y = ((self.toe_hole_aperture - MIN_TOE_HOLE) / (MAX_TOE_HOLE - MIN_TOE_HOLE)).clamp(0.0, 1.0);
+        let norm_y = ((self.toe_hole_aperture - MIN_TOE_HOLE) / (MAX_TOE_HOLE - MIN_TOE_HOLE))
+            .clamp(0.0, 1.0);
         self.puck_pos = (norm_x, norm_y);
     }
 
@@ -132,16 +133,18 @@ impl RankVoicingView {
         self.render_ascii(80, 16).join("\n")
     }
 
-
     /// Calculate jet velocity, chiff transient, and overtone distribution based on voicing parameters.
     pub fn update_voicing_acoustics(&mut self) {
         let effective_p_pascals = self.wind_pressure_mmh2o * 9.80665 * self.toe_hole_aperture;
         let air_density = 1.204; // kg/m^3 at 20°C
-        self.air_velocity_mps = (2.0 * effective_p_pascals / air_density).sqrt().clamp(10.0, 70.0);
+        self.air_velocity_mps = (2.0 * effective_p_pascals / air_density)
+            .sqrt()
+            .clamp(10.0, 70.0);
 
         // Chiff duration: increases with larger cutup, decreases with higher pressure/velocity
-        self.chiff_duration_ms = (40.0 * (self.cutup_ratio / 0.25) * (36.0 / self.air_velocity_mps.max(10.0)))
-            .clamp(5.0, 80.0);
+        self.chiff_duration_ms =
+            (40.0 * (self.cutup_ratio / 0.25) * (36.0 / self.air_velocity_mps.max(10.0)))
+                .clamp(5.0, 80.0);
 
         // Harmonic overtones depending on rank type and cutup/toe regulation
         match self.rank_type {
@@ -149,8 +152,13 @@ impl RankVoicingView {
                 for i in 0..8 {
                     let harm_idx = (i + 1) as f32;
                     let roll = 1.0 / harm_idx.powf(1.1);
-                    let cutup_boost = if i == 0 { 1.0 } else { 1.0 - (self.cutup_ratio - 0.25) * 1.5 };
-                    self.harmonic_weights[i] = (roll * cutup_boost * self.toe_hole_aperture).clamp(0.01, 1.0);
+                    let cutup_boost = if i == 0 {
+                        1.0
+                    } else {
+                        1.0 - (self.cutup_ratio - 0.25) * 1.5
+                    };
+                    self.harmonic_weights[i] =
+                        (roll * cutup_boost * self.toe_hole_aperture).clamp(0.01, 1.0);
                 }
             }
             VoicingRankType::Bourdon16 => {
@@ -158,7 +166,9 @@ impl RankVoicingView {
                 for i in 0..8 {
                     let harm_idx = i + 1;
                     if harm_idx % 2 == 1 {
-                        self.harmonic_weights[i] = (1.0 / (harm_idx as f32).powf(1.3) * self.toe_hole_aperture).clamp(0.01, 1.0);
+                        self.harmonic_weights[i] = (1.0 / (harm_idx as f32).powf(1.3)
+                            * self.toe_hole_aperture)
+                            .clamp(0.01, 1.0);
                     } else {
                         self.harmonic_weights[i] = (0.05 / (harm_idx as f32)).clamp(0.01, 0.2);
                     }
@@ -167,14 +177,16 @@ impl RankVoicingView {
             VoicingRankType::Octave4 => {
                 for i in 0..8 {
                     let harm_idx = (i + 1) as f32;
-                    self.harmonic_weights[i] = (0.9 / harm_idx.powf(0.95) * self.toe_hole_aperture).clamp(0.01, 1.0);
+                    self.harmonic_weights[i] =
+                        (0.9 / harm_idx.powf(0.95) * self.toe_hole_aperture).clamp(0.01, 1.0);
                 }
             }
             VoicingRankType::Flute4 => {
                 for i in 0..8 {
                     let harm_idx = i + 1;
                     if harm_idx % 2 == 1 {
-                        self.harmonic_weights[i] = (0.95 / (harm_idx as f32).powf(1.6)).clamp(0.01, 1.0);
+                        self.harmonic_weights[i] =
+                            (0.95 / (harm_idx as f32).powf(1.6)).clamp(0.01, 1.0);
                     } else {
                         self.harmonic_weights[i] = (0.04 / harm_idx as f32).clamp(0.01, 0.15);
                     }
@@ -183,7 +195,8 @@ impl RankVoicingView {
             VoicingRankType::SuperOctave2 => {
                 for i in 0..8 {
                     let harm_idx = (i + 1) as f32;
-                    self.harmonic_weights[i] = (0.8 / harm_idx.powf(0.8) * self.toe_hole_aperture).clamp(0.01, 1.0);
+                    self.harmonic_weights[i] =
+                        (0.8 / harm_idx.powf(0.8) * self.toe_hole_aperture).clamp(0.01, 1.0);
                 }
             }
             VoicingRankType::MixtureIV => {
@@ -201,7 +214,8 @@ impl RankVoicingView {
             VoicingRankType::Trompette8 => {
                 for i in 0..8 {
                     let harm_idx = (i + 1) as f32;
-                    self.harmonic_weights[i] = (1.0 / harm_idx.powf(0.65) * self.toe_hole_aperture).clamp(0.01, 1.0);
+                    self.harmonic_weights[i] =
+                        (1.0 / harm_idx.powf(0.65) * self.toe_hole_aperture).clamp(0.01, 1.0);
                 }
             }
             VoicingRankType::VoxHumana8 => {
@@ -226,7 +240,8 @@ impl RankVoicingView {
         for (i, slot) in stream.iter_mut().enumerate() {
             let t = i as f32 / 15.0;
             let x = t;
-            let y = (t * std::f32::consts::TAU * 1.5).sin() * 0.15 * (1.0 + self.cutup_ratio) * v_scale;
+            let y =
+                (t * std::f32::consts::TAU * 1.5).sin() * 0.15 * (1.0 + self.cutup_ratio) * v_scale;
             *slot = (x, y);
         }
         stream
@@ -444,7 +459,11 @@ impl RankVoicingView {
             }
         }
 
-        painter.circle_filled(puck_pos, RANK_VOICING_PUCK_HIT_RADIUS, Color32::from_rgb(255, 180, 50));
+        painter.circle_filled(
+            puck_pos,
+            RANK_VOICING_PUCK_HIT_RADIUS,
+            Color32::from_rgb(255, 180, 50),
+        );
         painter.circle_stroke(
             puck_pos,
             RANK_VOICING_PUCK_HIT_RADIUS,
@@ -512,9 +531,18 @@ impl RankVoicingView {
 
         let tele_items = [
             ("MOUTH CUTUP", format!("{:.2}", self.cutup_ratio)),
-            ("TOE REGULATION", format!("{:.0}%", self.toe_hole_aperture * 100.0)),
-            ("FLUE AIR VELOCITY", format!("{:.1} m/s", self.air_velocity_mps)),
-            ("CHIFF DURATION", format!("{:.1} ms", self.chiff_duration_ms)),
+            (
+                "TOE REGULATION",
+                format!("{:.0}%", self.toe_hole_aperture * 100.0),
+            ),
+            (
+                "FLUE AIR VELOCITY",
+                format!("{:.1} m/s", self.air_velocity_mps),
+            ),
+            (
+                "CHIFF DURATION",
+                format!("{:.1} ms", self.chiff_duration_ms),
+            ),
         ];
 
         for (i, (label, val)) in tele_items.iter().enumerate() {
@@ -537,7 +565,12 @@ impl RankVoicingView {
     }
 
     /// Render headless PNG snapshot.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep Slate Navy (#0C101A)
@@ -665,7 +698,12 @@ impl RankVoicingView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

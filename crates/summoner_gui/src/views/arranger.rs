@@ -275,21 +275,13 @@ pub fn show_arranger(
 
         ui.separator();
         ui.label("Ruler:");
-        ui.selectable_value(
-            &mut state.ruler_format,
-            RulerTimeFormat::BarsBeats,
-            "Bars",
-        );
+        ui.selectable_value(&mut state.ruler_format, RulerTimeFormat::BarsBeats, "Bars");
         ui.selectable_value(
             &mut state.ruler_format,
             RulerTimeFormat::MinutesSeconds,
             "Time",
         );
-        ui.selectable_value(
-            &mut state.ruler_format,
-            RulerTimeFormat::SMPTE,
-            "SMPTE",
-        );
+        ui.selectable_value(&mut state.ruler_format, RulerTimeFormat::SMPTE, "SMPTE");
 
         ui.separator();
         ui.label("Height:");
@@ -620,7 +612,11 @@ pub fn show_arranger(
             let track = &mut project.tracks[t_idx];
             let is_selected = selected_track_id.is_some_and(|id| id == track.id);
             let is_dimmed = any_soloed && !track.soloed;
-            let row_height = if track.collapsed { 22.0 } else { state.default_track_height };
+            let row_height = if track.collapsed {
+                22.0
+            } else {
+                state.default_track_height
+            };
 
             ui.horizontal(|ui| {
                 // Track Control Header (Steps 419, 420, 422, 424, 446, 448)
@@ -719,7 +715,9 @@ pub fn show_arranger(
                                         track.group_bus = Some("Synth Bus".to_string());
                                         ui.close_menu();
                                     }
-                                    if track.group_bus.is_some() && ui.button("🚫 Clear Group").clicked() {
+                                    if track.group_bus.is_some()
+                                        && ui.button("🚫 Clear Group").clicked()
+                                    {
                                         track.group_bus = None;
                                         ui.close_menu();
                                     }
@@ -887,7 +885,11 @@ pub fn show_arranger(
                     let playhead_rel = *playhead_beat - seq.start_beat;
                     // S key shortcut to split selected clip at playhead
                     let s_pressed = ui.input(|i| i.key_pressed(egui::Key::S) && !i.modifiers.ctrl);
-                    if is_clip_selected && s_pressed && playhead_rel > 0.0 && playhead_rel < clip_beats {
+                    if is_clip_selected
+                        && s_pressed
+                        && playhead_rel > 0.0
+                        && playhead_rel < clip_beats
+                    {
                         if let Some(new_seq) = split_clip_at(seq, playhead_rel) {
                             split_clip_target = Some((track_id, new_seq));
                         }
@@ -907,7 +909,8 @@ pub fn show_arranger(
                     let mut del_clip = false;
 
                     clip_resp.context_menu(|ui| {
-                        if playhead_rel > 0.0 && playhead_rel < clip_beats
+                        if playhead_rel > 0.0
+                            && playhead_rel < clip_beats
                             && ui.button("✂ Split at Playhead (S)").clicked()
                         {
                             if let Some(new_seq) = split_clip_at(seq, playhead_rel) {
@@ -1092,31 +1095,64 @@ pub fn show_arranger(
                     // Interactive fade drag handles (Step 582)
                     if !track_is_collapsed {
                         let fade_in_handle_rect = egui::Rect::from_center_size(
-                            egui::pos2(clip_rect.left() + (seq.fade_in as f32 * ppb).min(clip_rect.width() * 0.5), clip_rect.top() + 4.0),
+                            egui::pos2(
+                                clip_rect.left()
+                                    + (seq.fade_in as f32 * ppb).min(clip_rect.width() * 0.5),
+                                clip_rect.top() + 4.0,
+                            ),
                             egui::vec2(10.0, 10.0),
                         );
-                        let fade_in_resp = ui.interact(fade_in_handle_rect, clip_id.with("fade_in_h"), egui::Sense::drag());
+                        let fade_in_resp = ui.interact(
+                            fade_in_handle_rect,
+                            clip_id.with("fade_in_h"),
+                            egui::Sense::drag(),
+                        );
                         if fade_in_resp.dragged() {
                             let delta_beats = (fade_in_resp.drag_delta().x / ppb) as f64;
                             seq.fade_in = (seq.fade_in + delta_beats).clamp(0.0, clip_beats * 0.5);
                         }
                         if fade_in_resp.hovered() || seq.fade_in > 0.0 {
-                            painter.circle_filled(fade_in_handle_rect.center(), 3.5, egui::Color32::WHITE);
-                            painter.circle_stroke(fade_in_handle_rect.center(), 4.5, egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(56, 189, 248)));
+                            painter.circle_filled(
+                                fade_in_handle_rect.center(),
+                                3.5,
+                                egui::Color32::WHITE,
+                            );
+                            painter.circle_stroke(
+                                fade_in_handle_rect.center(),
+                                4.5,
+                                egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(56, 189, 248)),
+                            );
                         }
 
                         let fade_out_handle_rect = egui::Rect::from_center_size(
-                            egui::pos2(clip_rect.right() - (seq.fade_out as f32 * ppb).min(clip_rect.width() * 0.5), clip_rect.top() + 4.0),
+                            egui::pos2(
+                                clip_rect.right()
+                                    - (seq.fade_out as f32 * ppb).min(clip_rect.width() * 0.5),
+                                clip_rect.top() + 4.0,
+                            ),
                             egui::vec2(10.0, 10.0),
                         );
-                        let fade_out_resp = ui.interact(fade_out_handle_rect, clip_id.with("fade_out_h"), egui::Sense::drag());
+                        let fade_out_resp = ui.interact(
+                            fade_out_handle_rect,
+                            clip_id.with("fade_out_h"),
+                            egui::Sense::drag(),
+                        );
                         if fade_out_resp.dragged() {
                             let delta_beats = (-fade_out_resp.drag_delta().x / ppb) as f64;
-                            seq.fade_out = (seq.fade_out + delta_beats).clamp(0.0, clip_beats * 0.5);
+                            seq.fade_out =
+                                (seq.fade_out + delta_beats).clamp(0.0, clip_beats * 0.5);
                         }
                         if fade_out_resp.hovered() || seq.fade_out > 0.0 {
-                            painter.circle_filled(fade_out_handle_rect.center(), 3.5, egui::Color32::WHITE);
-                            painter.circle_stroke(fade_out_handle_rect.center(), 4.5, egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(56, 189, 248)));
+                            painter.circle_filled(
+                                fade_out_handle_rect.center(),
+                                3.5,
+                                egui::Color32::WHITE,
+                            );
+                            painter.circle_stroke(
+                                fade_out_handle_rect.center(),
+                                4.5,
+                                egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(56, 189, 248)),
+                            );
                         }
                     }
 
@@ -1243,7 +1279,11 @@ pub fn show_arranger(
                         if ui.button("✂ Split at Playhead").clicked() {
                             let playhead_rel = *playhead_beat;
                             if audio_clip.contains_beat(playhead_rel) {
-                                if let Ok((_, p2)) = audio_clip.split_at_beat(playhead_rel, 44100, project.transport.bpm) {
+                                if let Ok((_, p2)) = audio_clip.split_at_beat(
+                                    playhead_rel,
+                                    44100,
+                                    project.transport.bpm,
+                                ) {
                                     audio_clips_to_dup.push(p2);
                                 }
                             }
@@ -1300,7 +1340,10 @@ pub fn show_arranger(
                     if points.len() >= 2 {
                         painter.add(egui::Shape::line(
                             points,
-                            egui::Stroke::new(1.0_f32, egui::Color32::from_rgba_unmultiplied(204, 251, 241, 140)),
+                            egui::Stroke::new(
+                                1.0_f32,
+                                egui::Color32::from_rgba_unmultiplied(204, 251, 241, 140),
+                            ),
                         ));
                     }
 
@@ -1318,7 +1361,9 @@ pub fn show_arranger(
                 }
 
                 track.audio_clips.extend(audio_clips_to_dup);
-                track.audio_clips.retain(|c| !audio_clips_to_del.contains(&c.id));
+                track
+                    .audio_clips
+                    .retain(|c| !audio_clips_to_del.contains(&c.id));
 
                 // Context menu on empty track lane area (Step 589)
                 lane_resp.context_menu(|ui| {
@@ -1920,7 +1965,9 @@ mod tests {
         assert_eq!(state.default_track_height, 56.0);
         assert!(state.selected_audio_clips.is_empty());
 
-        state.selected_audio_clips.insert("clip_audio_1".to_string());
+        state
+            .selected_audio_clips
+            .insert("clip_audio_1".to_string());
         assert!(state.selected_audio_clips.contains("clip_audio_1"));
     }
 }

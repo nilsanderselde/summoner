@@ -322,7 +322,11 @@ impl ElectricPianoView {
 
         lines.push(format!(
             "│ Tonebar: {:.2} | Clunk: {:.2} | Drive: {:+.1}dB | EQ: B:{:+.1} T:{:+.1}dB │",
-            self.tonebar_coupling, self.damper_clunk_volume, self.tube_drive_db, self.bass_db, self.treble_db
+            self.tonebar_coupling,
+            self.damper_clunk_volume,
+            self.tube_drive_db,
+            self.bass_db,
+            self.treble_db
         ));
 
         lines.push(format!(
@@ -330,13 +334,25 @@ impl ElectricPianoView {
             if self.tremolo_enabled { "ON " } else { "OFF" },
             self.tremolo_rate_hz,
             self.tremolo_depth * 100.0,
-            if self.tremolo_stereo { "Stereo Ping-Pong" } else { "Mono Optical" }
+            if self.tremolo_stereo {
+                "Stereo Ping-Pong"
+            } else {
+                "Mono Optical"
+            }
         ));
 
         let wave = self.evaluate_pickup_wave();
         let mut wave_str = String::from("│ Wave: ");
         for val in wave.iter().take(24) {
-            let ch = if *val > 0.6 { '▲' } else if *val > 0.1 { '─' } else if *val < -0.6 { '▼' } else { ' ' };
+            let ch = if *val > 0.6 {
+                '▲'
+            } else if *val > 0.1 {
+                '─'
+            } else if *val < -0.6 {
+                '▼'
+            } else {
+                ' '
+            };
             wave_str.push(ch);
         }
         wave_str.push_str(" │");
@@ -350,7 +366,12 @@ impl ElectricPianoView {
     }
 
     /// Renders a headless PNG snapshot to the specified path.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep slate #0A0E18
@@ -410,7 +431,9 @@ impl ElectricPianoView {
         for (i, &val) in wave.iter().enumerate() {
             let x_coord = w_x0 + (i * w_w) / 32;
             let y_offset = (val * (c_h as f32 * 0.35)) as isize;
-            let y_coord = (w_cy as isize - y_offset).clamp(margin as isize, (height - margin) as isize) as usize;
+            let y_coord = (w_cy as isize - y_offset)
+                .clamp(margin as isize, (height - margin) as isize)
+                as usize;
 
             for dy in 0..3 {
                 for dx in 0..3 {
@@ -506,11 +529,16 @@ impl ElectricPianoView {
 
             // 3. Interactive Display Canvas (Left: Tine Air-Gap vs Offset Pad; Right: Inductive Pickup Bark Waveform)
             let canvas_w = ui.available_width().max(420.0);
-            let (canvas_resp, painter) = ui.allocate_painter(Vec2::new(canvas_w, 190.0), egui::Sense::click_and_drag());
+            let (canvas_resp, painter) =
+                ui.allocate_painter(Vec2::new(canvas_w, 190.0), egui::Sense::click_and_drag());
             let c_rect = canvas_resp.rect;
 
             painter.rect_filled(c_rect, 6.0, Color32::from_rgb(10, 14, 24));
-            painter.rect_stroke(c_rect, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)));
+            painter.rect_stroke(
+                c_rect,
+                6.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)),
+            );
 
             let pad_w = (c_rect.width() - 32.0) * 0.48;
             let pad_rect = egui::Rect::from_min_size(
@@ -518,7 +546,11 @@ impl ElectricPianoView {
                 Vec2::new(pad_w, c_rect.height() - 24.0),
             );
             painter.rect_filled(pad_rect, 4.0, Color32::from_rgb(16, 22, 34));
-            painter.rect_stroke(pad_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(38, 50, 72)));
+            painter.rect_stroke(
+                pad_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(38, 50, 72)),
+            );
 
             // Left Pad Grid Lines
             for gy in 1..4 {
@@ -541,7 +573,8 @@ impl ElectricPianoView {
                 if let Some(pos) = canvas_resp.interact_pointer_pos() {
                     if pad_rect.contains(pos) {
                         let norm_x = ((pos.x - pad_rect.min.x) / pad_rect.width()).clamp(0.0, 1.0);
-                        let norm_y = (1.0 - ((pos.y - pad_rect.min.y) / pad_rect.height())).clamp(0.0, 1.0);
+                        let norm_y =
+                            (1.0 - ((pos.y - pad_rect.min.y) / pad_rect.height())).clamp(0.0, 1.0);
                         self.update_physics_from_puck(norm_x, norm_y);
                     }
                 }
@@ -572,7 +605,10 @@ impl ElectricPianoView {
             painter.text(
                 egui::pos2(pad_rect.min.x + 8.0, pad_rect.max.y - 14.0),
                 egui::Align2::LEFT_BOTTOM,
-                format!("Gap: {:.2} mm | Offset: {:+.2} mm", self.air_gap_mm, self.alignment_offset_mm),
+                format!(
+                    "Gap: {:.2} mm | Offset: {:+.2} mm",
+                    self.air_gap_mm, self.alignment_offset_mm
+                ),
                 egui::FontId::proportional(8.5),
                 Color32::from_rgb(203, 213, 225),
             );
@@ -584,11 +620,18 @@ impl ElectricPianoView {
                 Vec2::new(wave_w, c_rect.height() - 24.0),
             );
             painter.rect_filled(wave_rect, 4.0, Color32::from_rgb(14, 18, 28));
-            painter.rect_stroke(wave_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(38, 50, 72)));
+            painter.rect_stroke(
+                wave_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(38, 50, 72)),
+            );
 
             let mid_y = wave_rect.center().y;
             painter.line_segment(
-                [egui::pos2(wave_rect.min.x, mid_y), egui::pos2(wave_rect.max.x, mid_y)],
+                [
+                    egui::pos2(wave_rect.min.x, mid_y),
+                    egui::pos2(wave_rect.max.x, mid_y),
+                ],
                 Stroke::new(0.5_f32, Color32::from_rgb(45, 60, 85)),
             );
 
@@ -601,7 +644,10 @@ impl ElectricPianoView {
                 let py = mid_y - val * (wave_rect.height() * 0.40);
                 let pt = egui::pos2(px, py);
                 if let Some(prev) = prev_pt {
-                    painter.line_segment([prev, pt], Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)));
+                    painter.line_segment(
+                        [prev, pt],
+                        Stroke::new(1.8_f32, Color32::from_rgb(0, 229, 255)),
+                    );
                 }
                 prev_pt = Some(pt);
             }
@@ -616,7 +662,11 @@ impl ElectricPianoView {
             painter.text(
                 egui::pos2(wave_rect.min.x + 8.0, wave_rect.max.y - 14.0),
                 egui::Align2::LEFT_BOTTOM,
-                format!("Bark Drive: {:.0}% | Tonebar Coupling: {:.0}%", self.bark_drive * 100.0, self.tonebar_coupling * 100.0),
+                format!(
+                    "Bark Drive: {:.0}% | Tonebar Coupling: {:.0}%",
+                    self.bark_drive * 100.0,
+                    self.tonebar_coupling * 100.0
+                ),
                 egui::FontId::proportional(8.5),
                 Color32::from_rgb(148, 163, 184),
             );
@@ -627,34 +677,63 @@ impl ElectricPianoView {
             ui.horizontal(|ui| {
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(egui::RichText::new("TINE & HAMMER DYNAMICS").size(10.0).color(Color32::from_rgb(251, 191, 36)).strong());
+                        ui.label(
+                            egui::RichText::new("TINE & HAMMER DYNAMICS")
+                                .size(10.0)
+                                .color(Color32::from_rgb(251, 191, 36))
+                                .strong(),
+                        );
                         ui.horizontal(|ui| {
                             ui.label("Hammer Hardness:");
-                            ui.add(egui::Slider::new(&mut self.hammer_hardness, 0.0..=1.0).text(""));
+                            ui.add(
+                                egui::Slider::new(&mut self.hammer_hardness, 0.0..=1.0).text(""),
+                            );
                             ui.label("Bark Overdrive:");
                             ui.add(egui::Slider::new(&mut self.bark_drive, 0.0..=1.0).text(""));
                         });
                         ui.horizontal(|ui| {
                             ui.label("Tonebar Coupling:");
-                            ui.add(egui::Slider::new(&mut self.tonebar_coupling, 0.0..=1.0).text(""));
+                            ui.add(
+                                egui::Slider::new(&mut self.tonebar_coupling, 0.0..=1.0).text(""),
+                            );
                             ui.label("Damper Clunk:");
-                            ui.add(egui::Slider::new(&mut self.damper_clunk_volume, 0.0..=1.0).text(""));
+                            ui.add(
+                                egui::Slider::new(&mut self.damper_clunk_volume, 0.0..=1.0)
+                                    .text(""),
+                            );
                         });
                     });
                 });
 
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(egui::RichText::new("PREAMP & 2-BAND TONE EQ").size(10.0).color(Color32::from_rgb(56, 189, 248)).strong());
+                        ui.label(
+                            egui::RichText::new("PREAMP & 2-BAND TONE EQ")
+                                .size(10.0)
+                                .color(Color32::from_rgb(56, 189, 248))
+                                .strong(),
+                        );
                         ui.horizontal(|ui| {
                             ui.label("Tube Drive:");
-                            ui.add(egui::Slider::new(&mut self.tube_drive_db, 0.0..=24.0).suffix(" dB").text(""));
+                            ui.add(
+                                egui::Slider::new(&mut self.tube_drive_db, 0.0..=24.0)
+                                    .suffix(" dB")
+                                    .text(""),
+                            );
                             ui.label("Bass EQ:");
-                            ui.add(egui::Slider::new(&mut self.bass_db, -12.0..=12.0).suffix(" dB").text(""));
+                            ui.add(
+                                egui::Slider::new(&mut self.bass_db, -12.0..=12.0)
+                                    .suffix(" dB")
+                                    .text(""),
+                            );
                         });
                         ui.horizontal(|ui| {
                             ui.label("Treble EQ:");
-                            ui.add(egui::Slider::new(&mut self.treble_db, -12.0..=12.0).suffix(" dB").text(""));
+                            ui.add(
+                                egui::Slider::new(&mut self.treble_db, -12.0..=12.0)
+                                    .suffix(" dB")
+                                    .text(""),
+                            );
                             ui.label("Master Out:");
                             ui.add(egui::Slider::new(&mut self.master_level, 0.0..=2.0).text(""));
                         });
@@ -667,14 +746,27 @@ impl ElectricPianoView {
             // 5. Optical Stereo Tremolo Panel
             ui.group(|ui| {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("OPTICAL TREMOLO:").size(10.0).color(Color32::from_rgb(52, 211, 153)).strong());
+                    ui.label(
+                        egui::RichText::new("OPTICAL TREMOLO:")
+                            .size(10.0)
+                            .color(Color32::from_rgb(52, 211, 153))
+                            .strong(),
+                    );
                     let trem_btn = egui::Button::new(
                         egui::RichText::new(if self.tremolo_enabled { "ON" } else { "BYPASS" })
-                            .color(if self.tremolo_enabled { Color32::from_rgb(16, 24, 34) } else { Color32::from_rgb(200, 210, 225) })
+                            .color(if self.tremolo_enabled {
+                                Color32::from_rgb(16, 24, 34)
+                            } else {
+                                Color32::from_rgb(200, 210, 225)
+                            })
                             .strong(),
                     )
                     .min_size(Vec2::new(70.0, 28.0))
-                    .fill(if self.tremolo_enabled { Color32::from_rgb(52, 211, 153) } else { Color32::from_rgb(32, 45, 66) });
+                    .fill(if self.tremolo_enabled {
+                        Color32::from_rgb(52, 211, 153)
+                    } else {
+                        Color32::from_rgb(32, 45, 66)
+                    });
                     if ui.add(trem_btn).clicked() {
                         self.tremolo_enabled = !self.tremolo_enabled;
                     }
@@ -687,9 +779,13 @@ impl ElectricPianoView {
 
                     ui.separator();
                     let mode_btn = egui::Button::new(
-                        egui::RichText::new(if self.tremolo_stereo { "Stereo Ping-Pong" } else { "Mono Optical" })
-                            .color(Color32::from_rgb(226, 232, 240))
-                            .strong(),
+                        egui::RichText::new(if self.tremolo_stereo {
+                            "Stereo Ping-Pong"
+                        } else {
+                            "Mono Optical"
+                        })
+                        .color(Color32::from_rgb(226, 232, 240))
+                        .strong(),
                     )
                     .min_size(Vec2::new(120.0, 28.0))
                     .fill(Color32::from_rgb(24, 36, 52));
@@ -702,7 +798,12 @@ impl ElectricPianoView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

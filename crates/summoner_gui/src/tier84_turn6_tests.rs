@@ -30,8 +30,16 @@ pub mod pure_tests {
 
         for p in presets {
             assert!(!p.id.is_empty(), "Preset ID must not be empty");
-            assert!(!p.name.is_empty(), "Preset Name must not be empty for {}", p.id);
-            assert!(!p.description.is_empty(), "Description must not be empty for {}", p.id);
+            assert!(
+                !p.name.is_empty(),
+                "Preset Name must not be empty for {}",
+                p.id
+            );
+            assert!(
+                !p.description.is_empty(),
+                "Description must not be empty for {}",
+                p.id
+            );
             assert!(!p.tags.is_empty(), "Tags must not be empty for {}", p.id);
             assert!(
                 p.macro_tone >= 0.0 && p.macro_tone <= 1.0,
@@ -81,7 +89,10 @@ pub mod pure_tests {
 
         let expected_gm = [
             ("gm_grand_piano", "General MIDI Acoustic Grand Piano"),
-            ("gm_electric_piano", "General MIDI Electric Piano 1 (Rhodes)"),
+            (
+                "gm_electric_piano",
+                "General MIDI Electric Piano 1 (Rhodes)",
+            ),
             ("gm_drawbar_organ", "General MIDI Drawbar Organ"),
             ("gm_church_organ", "General MIDI Church Pipe Organ"),
             ("gm_nylon_guitar", "General MIDI Nylon String Guitar"),
@@ -130,10 +141,22 @@ pub mod pure_tests {
         let micro_presets = presets_by_category(FactoryPresetCategory::MicrotonalHarmony);
         assert!(micro_presets.len() >= 5);
 
-        assert_eq!(find_preset("19_edo_neutral_pad").unwrap().tuning_edo, Some(19));
-        assert_eq!(find_preset("31_edo_justness_lead").unwrap().tuning_edo, Some(31));
-        assert_eq!(find_preset("53_edo_makam_drone").unwrap().tuning_edo, Some(53));
-        assert_eq!(find_preset("22_edo_porcupine_bass").unwrap().tuning_edo, Some(22));
+        assert_eq!(
+            find_preset("19_edo_neutral_pad").unwrap().tuning_edo,
+            Some(19)
+        );
+        assert_eq!(
+            find_preset("31_edo_justness_lead").unwrap().tuning_edo,
+            Some(31)
+        );
+        assert_eq!(
+            find_preset("53_edo_makam_drone").unwrap().tuning_edo,
+            Some(53)
+        );
+        assert_eq!(
+            find_preset("22_edo_porcupine_bass").unwrap().tuning_edo,
+            Some(22)
+        );
         assert!(find_preset("bp_gamma_chime").is_some());
 
         let phys_presets = presets_by_category(FactoryPresetCategory::PhysicalModeling);
@@ -151,10 +174,18 @@ pub mod pure_tests {
     #[test]
     fn test_factory_demo_templates_inventory() {
         let templates = all_demo_templates();
-        assert_eq!(templates.len(), 5, "Must have 5 full factory demo templates");
+        assert_eq!(
+            templates.len(),
+            5,
+            "Must have 5 full factory demo templates"
+        );
 
         let expected_templates = [
-            ("physical_showcase", "Physical Modeling Acoustic Showcase", 110.0),
+            (
+                "physical_showcase",
+                "Physical Modeling Acoustic Showcase",
+                110.0,
+            ),
             ("19_edo_odyssey", "19-EDO Microtonal Odyssey", 128.0),
             ("bohlen_pierce", "Bohlen-Pierce Tritave Ambient", 88.0),
             ("chiptune_anthem", "Chiptune Tracker 8-Bit Anthem", 144.0),
@@ -162,8 +193,8 @@ pub mod pure_tests {
         ];
 
         for (id, title, bpm) in expected_templates {
-            let tmpl = find_demo_template(id)
-                .unwrap_or_else(|| panic!("Demo template {} not found", id));
+            let tmpl =
+                find_demo_template(id).unwrap_or_else(|| panic!("Demo template {} not found", id));
             assert_eq!(tmpl.title, title);
             assert_eq!(tmpl.bpm, bpm);
             assert!(
@@ -181,12 +212,12 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use eframe::egui;
-    use summoner_core::allocator::AllocGuard;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use crate::factory_presets::find_preset;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::modern_asset_browser::BrowserCategory;
+    use eframe::egui;
+    use summoner_core::allocator::AllocGuard;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_asset_browser_soundbank_category() {
@@ -195,7 +226,10 @@ pub mod gui_tests {
         assert_eq!(cat.icon(), "📦");
 
         let folders = cat.default_folders();
-        assert!(folders.len() >= 7, "Soundbanks category must have >= 7 sub-folders");
+        assert!(
+            folders.len() >= 7,
+            "Soundbanks category must have >= 7 sub-folders"
+        );
         let folder_names: Vec<&str> = folders.iter().map(|(n, _)| *n).collect();
         assert!(folder_names.contains(&"Physical Modeling"));
         assert!(folder_names.contains(&"General MIDI Soundbank"));
@@ -209,11 +243,23 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::default();
 
         let ok = view.apply_factory_preset("steinway_grand_piano", None);
-        assert!(ok, "apply_factory_preset should succeed for steinway_grand_piano");
+        assert!(
+            ok,
+            "apply_factory_preset should succeed for steinway_grand_piano"
+        );
 
-        assert_eq!(view.top_bar_state.selected_preset, "Steinway Concert Grand Piano");
-        assert_eq!(view.device_rack_state.selected_node_kind.as_deref(), Some("GrandPianoModel"));
-        assert_eq!(view.device_rack_state.device_name, "Steinway Concert Grand Piano");
+        assert_eq!(
+            view.top_bar_state.selected_preset,
+            "Steinway Concert Grand Piano"
+        );
+        assert_eq!(
+            view.device_rack_state.selected_node_kind.as_deref(),
+            Some("GrandPianoModel")
+        );
+        assert_eq!(
+            view.device_rack_state.device_name,
+            "Steinway Concert Grand Piano"
+        );
 
         // Verify macro knobs synced
         assert_eq!(view.top_bar_state.macro_tone, 0.72);
@@ -222,14 +268,36 @@ pub mod gui_tests {
         assert_eq!(view.top_bar_state.macro_character, 0.50);
 
         // Verify device rack parameters populated
-        assert!(view.device_rack_state.node_param_values.contains_key("felt_hardness"));
-        assert_eq!(view.device_rack_state.node_param_values.get("felt_hardness"), Some(&0.65));
-        assert_eq!(view.device_rack_state.node_param_values.get("soundboard_resonance"), Some(&0.82));
+        assert!(view
+            .device_rack_state
+            .node_param_values
+            .contains_key("felt_hardness"));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("felt_hardness"),
+            Some(&0.65)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("soundboard_resonance"),
+            Some(&0.82)
+        );
 
         // Verify inspector synced
-        assert_eq!(view.inspector_state.selected_node_kind.as_deref(), Some("GrandPianoModel"));
-        assert_eq!(view.inspector_state.target_name, "Steinway Concert Grand Piano");
-        assert_eq!(view.inspector_state.node_param_values.get("felt_hardness"), Some(&0.65));
+        assert_eq!(
+            view.inspector_state.selected_node_kind.as_deref(),
+            Some("GrandPianoModel")
+        );
+        assert_eq!(
+            view.inspector_state.target_name,
+            "Steinway Concert Grand Piano"
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("felt_hardness"),
+            Some(&0.65)
+        );
     }
 
     #[test]
@@ -290,7 +358,10 @@ pub mod gui_tests {
         assert_eq!(view.piano_roll_notes[1].pitch_idx, 6);
 
         // Verify lead track instrument was loaded into rack
-        assert_eq!(view.device_rack_state.selected_node_kind.as_deref(), Some("EdoTuning"));
+        assert_eq!(
+            view.device_rack_state.selected_node_kind.as_deref(),
+            Some("EdoTuning")
+        );
     }
 
     #[test]
@@ -324,17 +395,22 @@ pub mod gui_tests {
         let _ctx = egui::Context::default();
 
         // Simulate asset selection from asset browser
-        view.asset_browser_state.selected_category = crate::views::modern_asset_browser::BrowserCategory::Soundbanks;
+        view.asset_browser_state.selected_category =
+            crate::views::modern_asset_browser::BrowserCategory::Soundbanks;
 
         // 1. Loading preset from browser
         let preset_asset = "Hindustani Ravi Shankar Sitar";
         let ok = view.apply_factory_preset(preset_asset, None);
         assert!(ok);
-        assert_eq!(view.device_rack_state.selected_node_kind.as_deref(), Some("JawariBridge"));
+        assert_eq!(
+            view.device_rack_state.selected_node_kind.as_deref(),
+            Some("JawariBridge")
+        );
 
         // 2. Loading demo template from browser
         let tmpl_asset = "Chiptune Tracker 8-Bit Anthem";
-        let tmpl = crate::factory_presets::find_demo_template(tmpl_asset).expect("Chiptune anthem must exist");
+        let tmpl = crate::factory_presets::find_demo_template(tmpl_asset)
+            .expect("Chiptune anthem must exist");
         let ok_t = view.load_factory_demo_template(tmpl.id);
         assert!(ok_t);
         assert_eq!(view.top_bar_state.bpm, 144.0);

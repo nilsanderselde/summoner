@@ -93,13 +93,21 @@ impl HornMuteType {
             Self::Open => 0.0,
             Self::Straight => {
                 // Highpass low cut below 450 Hz, resonant nasal peak at 2.6 kHz
-                let low_cut = if freq_hz < 450.0 { -14.0 * (1.0 - freq_hz / 450.0) } else { 0.0 };
+                let low_cut = if freq_hz < 450.0 {
+                    -14.0 * (1.0 - freq_hz / 450.0)
+                } else {
+                    0.0
+                };
                 let nasal_peak = 5.5 * (-0.5 * ((freq_hz - 2600.0) / 700.0).powi(2)).exp();
                 low_cut + nasal_peak
             }
             Self::Harmon => {
                 // Severe low cut below 600 Hz, deep mid notch at 900 Hz, metallic buzz at 1.8 kHz and 3.5 kHz
-                let low_cut = if freq_hz < 600.0 { -18.0 * (1.0 - freq_hz / 600.0) } else { 0.0 };
+                let low_cut = if freq_hz < 600.0 {
+                    -18.0 * (1.0 - freq_hz / 600.0)
+                } else {
+                    0.0
+                };
                 let notch = -12.0 * (-0.5 * ((freq_hz - 900.0) / 250.0).powi(2)).exp();
                 let buzz1 = 6.5 * (-0.5 * ((freq_hz - 1800.0) / 450.0).powi(2)).exp();
                 let buzz2 = 4.0 * (-0.5 * ((freq_hz - 3500.0) / 900.0).powi(2)).exp();
@@ -202,7 +210,8 @@ impl HornReflectionView {
         let impedance = (1.0 - (self.flare_coefficient - 0.65).abs() * 0.45).clamp(0.2, 0.98);
         self.throat_impedance_score = impedance;
         // Radiation efficiency scales with bell radius and flare
-        let rad = ((self.bell_radius_m / 0.20) * 0.5 + (self.flare_coefficient / 1.5) * 0.5).clamp(0.1, 0.96);
+        let rad = ((self.bell_radius_m / 0.20) * 0.5 + (self.flare_coefficient / 1.5) * 0.5)
+            .clamp(0.1, 0.96);
         self.radiation_efficiency = rad;
     }
 

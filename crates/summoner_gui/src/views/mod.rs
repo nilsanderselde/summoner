@@ -11,9 +11,9 @@ pub mod auditory_roughness_view;
 pub mod auro3d_spatializer_view;
 pub mod auto_wah_view;
 pub mod award_winning_gui_view;
-pub mod bellows_view;
 pub mod bbd_chorus_view;
 pub mod bci_eeg_decoder_view;
+pub mod bellows_view;
 pub mod bezier_automation_editor;
 pub mod binaural_brir_view;
 pub mod binaural_panner_view;
@@ -21,10 +21,10 @@ pub mod bitcrusher_morph_view;
 pub mod biwa_sawari_view;
 pub mod bowed_string_view;
 pub mod cadence_flow_view;
+pub mod cassotto_chamber_view;
 pub mod chaotic_attractor_view;
 pub mod chord_suggestion_panel;
 pub mod chromatic_tuner_view;
-pub mod cassotto_chamber_view;
 pub mod clavinet_view;
 pub mod co_producer;
 pub mod comb_resonator_view;
@@ -34,15 +34,11 @@ pub mod continuous_doppler_view;
 pub mod convolution_impulse_view;
 pub mod convolution_morph_view;
 pub mod crystal_resonator_view;
-pub mod modern_asset_browser;
-pub mod modern_device_rack;
-pub mod modern_inspector;
-pub mod modern_top_bar;
 pub mod detachable_window_manager;
 pub mod device_catalog;
 pub mod dialog_gating_view;
-pub mod dither_quantizer_view;
 pub mod diffractive_propagation_view;
+pub mod dither_quantizer_view;
 pub mod dpi_scale_panel;
 pub mod drum_machine_view;
 pub mod dsp_rack_dock;
@@ -102,6 +98,10 @@ pub mod midi_panel;
 pub mod midside_focuser_view;
 pub mod mixer;
 pub mod modal_synthesis_view;
+pub mod modern_asset_browser;
+pub mod modern_device_rack;
+pub mod modern_inspector;
+pub mod modern_top_bar;
 pub mod modulation_matrix;
 pub mod mpe_editor;
 pub mod mpegh_3d_spatializer_view;
@@ -157,9 +157,9 @@ pub mod ring_mod_view;
 pub mod rotary_doppler_view;
 pub mod rotary_speaker_view;
 pub mod sample_editor_view;
-pub mod score_editor_view;
 pub mod scala_browser;
 pub mod schottky_wavefolder_view;
+pub mod score_editor_view;
 pub mod sfz_sampler_view;
 pub mod shakuhachi_view;
 pub mod sidechain_matrix_view;
@@ -231,8 +231,13 @@ pub mod woodwind_jet_view;
 pub mod zero_gravity_fluid_view;
 
 pub use accessibility_announcer::AccessibilityAnnouncerView;
-pub use aether_synth_view::{AetherSynthPreset, AetherSynthView, CompositeSynthVoiceMode, AETHER_SYNTH_PUCK_HIT_RADIUS};
-pub use ai_autonomous_mastering_view::{AiAutonomousMasteringView, AiMasteringPreset, MasteringTargetCurve, AI_MASTERING_PUCK_HIT_RADIUS};
+pub use aether_synth_view::{
+    AetherSynthPreset, AetherSynthView, CompositeSynthVoiceMode, AETHER_SYNTH_PUCK_HIT_RADIUS,
+};
+pub use ai_autonomous_mastering_view::{
+    AiAutonomousMasteringView, AiMasteringPreset, MasteringTargetCurve,
+    AI_MASTERING_PUCK_HIT_RADIUS,
+};
 pub use air_reed_view::{AirReedPreset, AirReedView, AIR_REED_PUCK_HIT_RADIUS};
 pub use ambisonic_radar_view::AmbisonicRadarView;
 pub use atmos_916_spatializer_view::Atmos916SpatializerView;
@@ -243,12 +248,11 @@ pub use auro3d_spatializer_view::Auro3dSpatializerView;
 pub use auto_wah_view::*;
 pub use award_winning_gui_view::*;
 pub use bbd_chorus_view::BbdChorusView;
-pub use bci_eeg_decoder_view::{BciEegDecoderView, BciEegPreset, ScalpElectrodeLocation, BCI_EEG_PUCK_HIT_RADIUS, NUM_10_20_ELECTRODES, SCALP_ELECTRODES_10_20};
+pub use bci_eeg_decoder_view::{
+    BciEegDecoderView, BciEegPreset, ScalpElectrodeLocation, BCI_EEG_PUCK_HIT_RADIUS,
+    NUM_10_20_ELECTRODES, SCALP_ELECTRODES_10_20,
+};
 pub use bellows_view::*;
-pub use modern_asset_browser::*;
-pub use modern_device_rack::*;
-pub use modern_inspector::*;
-pub use modern_top_bar::*;
 pub use bezier_automation_editor::BezierAutomationEditorView;
 pub use binaural_brir_view::BinauralBrirView;
 pub use binaural_panner_view::BinauralPannerView;
@@ -256,9 +260,13 @@ pub use bitcrusher_morph_view::BitcrusherMorphView;
 pub use biwa_sawari_view::{BiwaSawariPreset, BiwaSawariView, BIWA_PUCK_HIT_RADIUS};
 pub use bowed_string_view::BowedStringView;
 pub use cadence_flow_view::CadenceFlowView;
-pub use chaotic_attractor_view::{AttractorSystemType, ChaoticAttractorPreset, ChaoticAttractorView, ATTRACTOR_PUCK_HIT_RADIUS};
-pub use chromatic_tuner_view::{ChromaticTunerPreset, ChromaticTunerView, CHROMATIC_TUNER_PUCK_HIT_RADIUS};
 pub use cassotto_chamber_view::{CassottoChamberProfile, CassottoChamberView};
+pub use chaotic_attractor_view::{
+    AttractorSystemType, ChaoticAttractorPreset, ChaoticAttractorView, ATTRACTOR_PUCK_HIT_RADIUS,
+};
+pub use chromatic_tuner_view::{
+    ChromaticTunerPreset, ChromaticTunerView, CHROMATIC_TUNER_PUCK_HIT_RADIUS,
+};
 pub use clavinet_view::*;
 pub use comb_resonator_view::CombResonatorView;
 pub use concordance_lattice_view::ConcordanceLatticeView;
@@ -269,16 +277,21 @@ pub use convolution_morph_view::ConvolutionMorphView;
 pub use detachable_window_manager::DetachableWindowManagerView;
 pub use device_catalog::*;
 pub use dialog_gating_view::{DialogGatingView, DialogLoudnessStandard};
-pub use dither_quantizer_view::{DitherMode, DitherPreset, DitherQuantizerView, DITHER_PUCK_HIT_RADIUS};
 pub use diffractive_propagation_view::DiffractivePropagationView;
+pub use dither_quantizer_view::{
+    DitherMode, DitherPreset, DitherQuantizerView, DITHER_PUCK_HIT_RADIUS,
+};
 pub use dpi_scale_panel::DpiScalePanelView;
-pub use drum_machine_view::{DrumMachinePadView, DrumMachinePreset, DrumPadSlotConfig, DRUM_MACHINE_PUCK_HIT_RADIUS};
+pub use drum_machine_view::{
+    DrumMachinePadView, DrumMachinePreset, DrumPadSlotConfig, DRUM_MACHINE_PUCK_HIT_RADIUS,
+};
 pub use dsp_rack_dock::DspRackDockView;
 pub use dulcimer_cimbalom_view::DulcimerCimbalomView;
 pub use dynamic_crest_shaper_view::{CrestTopology, DynamicCrestShaperView};
 pub use dynamic_stereo_width_view::{DynamicStereoWidthView, StereoWidthProfile};
 pub use ebu_loudness_radar_view::EbuLoudnessRadarView;
 pub use electric_piano_view::*;
+pub use embouchure_angle_view::*;
 pub use envelope_follower_view::EnvelopeFollowerView;
 pub use equal_loudness_contour_view::EqualLoudnessContourView;
 pub use fm_matrix_view::FmMatrixView;
@@ -294,7 +307,10 @@ pub use granular_cloud_view::GranularCloudView;
 pub use granular_freeze_view::GranularFreezeView;
 pub use granular_pitch_shifter_view::GranularPitchShifterView;
 pub use hammer_strike_view::{ExcitationPreset, HammerStrikeView};
-pub use hardware_control_surface_view::{HardwareControlPreset, HardwareControlSurfaceView, HardwareControllerProtocol, HARDWARE_SURFACE_PUCK_HIT_RADIUS};
+pub use hardware_control_surface_view::{
+    HardwareControlPreset, HardwareControlSurfaceView, HardwareControllerProtocol,
+    HARDWARE_SURFACE_PUCK_HIT_RADIUS,
+};
 pub use harmonic_exciter_view::HarmonicExciterView;
 pub use harmonic_tension_map::HarmonicTensionMapView;
 pub use hoa4_spatializer_view::Hoa4SpatializerView;
@@ -302,7 +318,9 @@ pub use hoa5_binaural_view::Hoa5BinauralView;
 pub use hoa_spatializer_view::HoaSpatializerView;
 pub use horn_reflection_view::{HornFlarePreset, HornMuteType, HornReflectionView};
 pub use hurdy_gurdy_view::*;
-pub use idiophone_spectrum_view::{IdiophoneSpectrumView, IdiophoneViewProfile, IDIOPHONE_PUCK_HIT_RADIUS, NUM_VIEW_MODES};
+pub use idiophone_spectrum_view::{
+    IdiophoneSpectrumView, IdiophoneViewProfile, IDIOPHONE_PUCK_HIT_RADIUS, NUM_VIEW_MODES,
+};
 pub use isomorphic_lattice_view::IsomorphicLatticeView;
 pub use isomorphic_tuning_keyboard::IsomorphicTuningKeyboardView;
 pub use jawari_bridge_view::*;
@@ -313,13 +331,18 @@ pub use koto_view::*;
 pub use ladder_filter_view::LadderFilterView;
 pub use linear_phase_crossover_view::{CrossoverSlope, LinearPhaseCrossoverView};
 pub use live_macro_rack::LiveMacroRackView;
-pub use live_session_recorder_view::{LiveRecordDiskFormat, LiveRecorderPreset, LiveSessionRecorderView, LIVE_RECORDER_PUCK_HIT_RADIUS};
+pub use live_session_recorder_view::{
+    LiveRecordDiskFormat, LiveRecorderPreset, LiveSessionRecorderView,
+    LIVE_RECORDER_PUCK_HIT_RADIUS,
+};
 pub use loop_slicer_view::LoopSlicerView;
 pub use macro_rotary_dial::MacroRotaryDialView;
 pub use master_limiter_radar_view::MasterLimiterRadarView;
 pub use mastering_meter::*;
 pub use mbira_kalimba_view::MbiraKalimbaView;
-pub use membrane_cavity_view::{MembraneCavityView, MembraneInstrumentViewProfile, MEMBRANE_PUCK_HIT_RADIUS};
+pub use membrane_cavity_view::{
+    MembraneCavityView, MembraneInstrumentViewProfile, MEMBRANE_PUCK_HIT_RADIUS,
+};
 pub use membrane_plate_view::MembranePlateView;
 pub use membrane_resonator_view::MembraneResonatorView;
 pub use meter_bridge_view::MeterBridgeView;
@@ -328,13 +351,20 @@ pub use modal_synthesis_view::{
     ModalExcitationMode, ModalMaterialKind, ModalSynthesisPreset, ModalSynthesisView,
     MAX_MODAL_RESONATOR_MODES, MODAL_SYNTHESIS_PUCK_HIT_RADIUS,
 };
+pub use modern_asset_browser::*;
+pub use modern_device_rack::*;
+pub use modern_inspector::*;
+pub use modern_top_bar::*;
 pub use modulation_matrix::*;
 pub use mpe_editor::{MpeCurveNode, MpeDimension, MpeEditorView, MpeNoteBlock};
 pub use mpegh_3d_spatializer_view::Mpegh3DSpatializerView;
 pub use mpegh_spatializer_view::MpeghSpatializerView;
 pub use mpegh_trajectory_view::MpeghTrajectoryView;
 pub use multiband_clipper_view::{ClipperCurveMode, MultibandClipperView};
-pub use multiband_compressor_view::{MultibandCompBandSlot, MultibandCompressorPreset, MultibandCompressorView, MULTIBAND_COMP_PUCK_HIT_RADIUS};
+pub use multiband_compressor_view::{
+    MultibandCompBandSlot, MultibandCompressorPreset, MultibandCompressorView,
+    MULTIBAND_COMP_PUCK_HIT_RADIUS,
+};
 pub use multiband_decompressor_view::{DecompressorPreset, MultibandDecompressorView};
 pub use multiband_expander_view::{ExpanderMode, MultibandExpanderView};
 pub use multiband_imager_view::MultibandImagerView;
@@ -357,29 +387,52 @@ pub use nhk222_spatializer_view::Nhk222SpatializerView;
 pub use optical_compressor_view::{CompressorTopology, OpticalCompressorView};
 pub use oversampled_limiter_view::OversampledLimiterView;
 pub use parallel_transient_saturator_view::{ParallelTransientSaturatorView, SaturatorMode};
-pub use parametric_eq_view::{BiquadFilterMode, ParametricBandConfig, ParametricEqPreset, ParametricEqView, PARAMETRIC_EQ_PUCK_HIT_RADIUS};
+pub use parametric_eq_view::{
+    BiquadFilterMode, ParametricBandConfig, ParametricEqPreset, ParametricEqView,
+    PARAMETRIC_EQ_PUCK_HIT_RADIUS,
+};
 pub use phase_align_view::PhaseAlignView;
 pub use pipe_organ_view::PipeOrganView;
 pub use pitch_corrector_view::PitchCorrectorView;
-pub use plate_dispersion_view::{PlateDispersionView, PlateReverbViewProfile, PLATE_PUCK_HIT_RADIUS};
+pub use plate_dispersion_view::{
+    PlateDispersionView, PlateReverbViewProfile, PLATE_PUCK_HIT_RADIUS,
+};
 pub use plucked_string_view::*;
-pub use plugin_host_view::{HostedPluginFormat, PluginHostPreset, PluginHostView, PLUGIN_HOST_PUCK_HIT_RADIUS};
+pub use plugin_host_view::{
+    HostedPluginFormat, PluginHostPreset, PluginHostView, PLUGIN_HOST_PUCK_HIT_RADIUS,
+};
 pub use polar_phase_correlator_view::PolarPhaseCorrelatorView;
-pub use polyphase_oversampler_view::{OversampleFactorMode, PolyphaseOversamplerPreset, PolyphaseOversamplerView, FIR_TAPS_COUNT, HALF_BAND_FIR_COEFFS, OVERSAMPLER_PUCK_HIT_RADIUS};
+pub use polyphase_oversampler_view::{
+    OversampleFactorMode, PolyphaseOversamplerPreset, PolyphaseOversamplerView, FIR_TAPS_COUNT,
+    HALF_BAND_FIR_COEFFS, OVERSAMPLER_PUCK_HIT_RADIUS,
+};
+pub use quantum_bloch_sphere_view::{
+    QuantumBlochSphereView, QuantumStatePreset, QUANTUM_PUCK_HIT_RADIUS,
+};
 pub use rank_voicing_view::*;
-pub use quantum_bloch_sphere_view::{QuantumBlochSphereView, QuantumStatePreset, QUANTUM_PUCK_HIT_RADIUS};
 pub use raytraced_reverb_view::RaytracedReverbView;
 pub use resonance_suppressor_view::ResonanceSuppressorView;
 pub use reverb_space_view::ReverbSpaceView;
 pub use ribbon_controller_view::RibbonControllerView;
-pub use ring_mod_view::{RingModPreset, RingModulatorView, RingWaveformShape, RING_MOD_PUCK_HIT_RADIUS};
+pub use ring_mod_view::{
+    RingModPreset, RingModulatorView, RingWaveformShape, RING_MOD_PUCK_HIT_RADIUS,
+};
 pub use rotary_doppler_view::RotaryDopplerView;
 pub use rotary_speaker_view::RotarySpeakerView;
 pub use sample_editor_view::SampleEditorView;
+pub use schottky_wavefolder_view::{
+    SchottkyWavefolderPreset, SchottkyWavefolderView, SCHOTTKY_PUCK_HIT_RADIUS,
+};
 pub use score_editor_view::*;
-pub use sfz_sampler_view::{SfzLoopTopology, SfzRegionSlot, SfzSamplerPreset, SfzSamplerView, SFZ_SAMPLER_PUCK_HIT_RADIUS};
+pub use sfz_sampler_view::{
+    SfzLoopTopology, SfzRegionSlot, SfzSamplerPreset, SfzSamplerView, SFZ_SAMPLER_PUCK_HIT_RADIUS,
+};
+pub use shakuhachi_view::*;
 pub use sidechain_matrix_view::SidechainMatrixView;
-pub use simd_poly_wavetable_view::{SimdPolyWavetablePreset, SimdPolyWavetableView, WavetableFrameShape, MAX_SIMD_POLY_VOICES, SIMD_POLY_WAVETABLE_PUCK_HIT_RADIUS, WAVETABLE_FRAME_SIZE};
+pub use simd_poly_wavetable_view::{
+    SimdPolyWavetablePreset, SimdPolyWavetableView, WavetableFrameShape, MAX_SIMD_POLY_VOICES,
+    SIMD_POLY_WAVETABLE_PUCK_HIT_RADIUS, WAVETABLE_FRAME_SIZE,
+};
 pub use sitar_view::*;
 pub use sonar_hydrophone_view::SonarHydrophoneView;
 pub use soundboard_bridge_view::*;
@@ -388,27 +441,33 @@ pub use spatial_room_view::*;
 pub use spatial_trajectory_view::{SpatialGrainParticle, SpatialTrajectoryView};
 pub use spectral_aligner_view::SpectralAlignerView;
 pub use spectral_brush_editor::SpectralBrushEditorView;
-pub use spectral_debleed_view::{SpectralDebleedView, DebleedMode};
+pub use spectral_debleed_view::{DebleedMode, SpectralDebleedView};
 pub use spectral_deesser_view::SpectralDeEsserView;
 pub use spectral_flatness_view::SpectralFlatnessView;
 pub use spectral_grain_cloud_view::SpectralGrainCloudView;
 pub use spectral_masking_view::SpectralMaskingView;
 pub use spectral_matching_eq_view::SpectralMatchingEqView;
 pub use spectral_morph_view::SpectralMorphView;
-pub use spectral_reshaper_view::{SpectralReshaperView, ReshaperPreset};
+pub use spectral_reshaper_view::{ReshaperPreset, SpectralReshaperView};
 pub use spectral_resynthesis_view::SpectralResynthesisView;
 pub use spectral_tilt_view::SpectralTiltView;
 pub use spectral_unmasker_view::{SpectralUnmaskerView, UnmaskerRouting};
 pub use spectrogram_3d_view::Spectrogram3DView;
-pub use spectrogram_art_view::{SpectroColorMode, SpectroFrequencyMapping, SpectrogramArtPreset, SpectrogramArtView, SPECTROGRAM_ART_PUCK_HIT_RADIUS};
-pub use embouchure_angle_view::*;
-pub use schottky_wavefolder_view::{SchottkyWavefolderPreset, SchottkyWavefolderView, SCHOTTKY_PUCK_HIT_RADIUS};
-pub use shakuhachi_view::*;
-pub use spring_lattice_view::{SpringLatticeView, SpringLatticeViewProfile, SPRING_PUCK_HIT_RADIUS};
+pub use spectrogram_art_view::{
+    SpectroColorMode, SpectroFrequencyMapping, SpectrogramArtPreset, SpectrogramArtView,
+    SPECTROGRAM_ART_PUCK_HIT_RADIUS,
+};
+pub use spring_lattice_view::{
+    SpringLatticeView, SpringLatticeViewProfile, SPRING_PUCK_HIT_RADIUS,
+};
 pub use spring_reverb_view::SpringReverbView;
 pub use steelpan_drum_view::SteelpanDrumView;
-pub use stem_separator_view::{StemChannelConfig, StemSeparatorPreset, StemSeparatorView, STEM_SEPARATOR_PUCK_HIT_RADIUS};
-pub use stems_export_view::{LoudnessStandard, StemPresetQuickPick, StemTrackItem, StemsExportView};
+pub use stem_separator_view::{
+    StemChannelConfig, StemSeparatorPreset, StemSeparatorView, STEM_SEPARATOR_PUCK_HIT_RADIUS,
+};
+pub use stems_export_view::{
+    LoudnessStandard, StemPresetQuickPick, StemTrackItem, StemsExportView,
+};
 pub use step_sequencer_matrix::StepSequencerMatrixView;
 pub use stereo_vectorscope_view::StereoVectorscopeView;
 pub use stereo_widener_view::StereoWidenerView;
@@ -424,18 +483,18 @@ pub use through_zero_flanger_view::ThroughZeroFlangerView;
 pub use tine_resonator_view::*;
 pub use tonehole_matrix_view::*;
 pub use tonewheel_organ_view::*;
-pub use transient_clipper_view::{TransientClipperView, ClipperProfileType};
+pub use transient_clipper_view::{ClipperProfileType, TransientClipperView};
 pub use transient_declicker_view::{TransientDeclickerView, VinylRestorationMode};
 pub use transient_designer_view::TransientDesignerView;
-pub use transient_gate_view::{TransientGateView, GateMode};
-pub use transient_reconstructor_view::{TransientReconstructorView, ReconstructProfileType};
+pub use transient_gate_view::{GateMode, TransientGateView};
+pub use transient_reconstructor_view::{ReconstructProfileType, TransientReconstructorView};
 pub use transient_shaper_view::TransientShaperView;
 pub use transient_unwrapper_view::{TransientUnwrapperView, UnwrapperMode};
 pub use transient_warp_editor::TransientWarpEditorView;
 pub use trompette_bridge_view::*;
 pub use true_peak_limiter_view::{
-    TruePeakLimiterPreset, TruePeakLimiterView, ITU_BS1770_COEFFS, TRUE_PEAK_LIMITER_PUCK_HIT_RADIUS,
-    TRUE_PEAK_MAX_LOOKAHEAD, TRUE_PEAK_POLYPHASE_TAPS,
+    TruePeakLimiterPreset, TruePeakLimiterView, ITU_BS1770_COEFFS,
+    TRUE_PEAK_LIMITER_PUCK_HIT_RADIUS, TRUE_PEAK_MAX_LOOKAHEAD, TRUE_PEAK_POLYPHASE_TAPS,
 };
 pub use tube_bias_view::TubeBiasView;
 pub use turkish_ney_view::TurkishNeyView;
@@ -448,6 +507,8 @@ pub use wavefront_reflection_view::WavefrontReflectionView;
 pub use waveguide_brass_view::WaveguideBrassView;
 pub use waveguide_mesh_view::WaveguideMeshView;
 pub use wfs_array_spatializer_view::WfsArraySpatializerView;
-pub use windchest_reservoir_view::{WindchestPreset, WindchestReservoirView, WINDCHEST_PUCK_HIT_RADIUS};
+pub use windchest_reservoir_view::{
+    WindchestPreset, WindchestReservoirView, WINDCHEST_PUCK_HIT_RADIUS,
+};
 pub use woodwind_jet_view::WoodwindJetView;
 pub use zero_gravity_fluid_view::{FluidAcousticRegime, ZeroGravityFluidView};

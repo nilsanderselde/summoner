@@ -55,7 +55,7 @@ impl SympatheticPreset {
 #[derive(Debug, Clone)]
 pub struct SympatheticCouplingView {
     pub preset: SympatheticPreset,
-    pub coupling_strength: f32, // [0.0 ..= 0.50]
+    pub coupling_strength: f32,  // [0.0 ..= 0.50]
     pub bridge_impedance_z: f32, // [0.5 ..= 10.0 kg/s]
     pub bridge_loss: f32,        // [0.90 ..= 0.999]
     pub puck_pos: (f32, f32),    // Normalized (X: coupling_strength, Y: bridge_loss)
@@ -104,9 +104,11 @@ impl SympatheticCouplingView {
         self.string_energy_levels[0] = primary;
         for i in 1..NUM_COUPLED_STRINGS {
             let dist = i as f32;
-            self.string_energy_levels[i] = (primary * self.coupling_strength * 2.0 / (1.0 + dist * 0.6)).clamp(0.02, 1.0);
+            self.string_energy_levels[i] =
+                (primary * self.coupling_strength * 2.0 / (1.0 + dist * 0.6)).clamp(0.02, 1.0);
         }
-        self.total_radiated_energy = self.string_energy_levels.iter().sum::<f32>() / NUM_COUPLED_STRINGS as f32;
+        self.total_radiated_energy =
+            self.string_energy_levels.iter().sum::<f32>() / NUM_COUPLED_STRINGS as f32;
     }
 
     /// Evaluates energy transfer matrix cell coefficient $C_{ij} \in [0.0, 1.0]$.
@@ -156,7 +158,9 @@ impl SympatheticCouplingView {
         for i in 0..NUM_COUPLED_STRINGS {
             let r = 2 + i * bar_h;
             if r < height - 1 {
-                let energy_len = ((self.string_energy_levels[i] * (left_w - 6) as f32).round() as usize).min(left_w - 6);
+                let energy_len = ((self.string_energy_levels[i] * (left_w - 6) as f32).round()
+                    as usize)
+                    .min(left_w - 6);
                 for c in 0..energy_len {
                     grid[r][3 + c] = '=';
                 }
@@ -174,12 +178,20 @@ impl SympatheticCouplingView {
                 let c = mid_x + 2 + j * cell_w;
                 if r < height - 1 && c < width - 1 {
                     let cell_val = self.evaluate_coupling_matrix_cell(i, j);
-                    grid[r][c] = if i == j { '*' } else if cell_val > 0.08 { '+' } else { '.' };
+                    grid[r][c] = if i == j {
+                        '*'
+                    } else if cell_val > 0.08 {
+                        '+'
+                    } else {
+                        '.'
+                    };
                 }
             }
         }
 
-        grid.into_iter().map(|row| row.into_iter().collect()).collect()
+        grid.into_iter()
+            .map(|row| row.into_iter().collect())
+            .collect()
     }
 
     /// Render ASCII snapshot representation of the view as a single multiline string.
@@ -348,7 +360,10 @@ impl SympatheticCouplingView {
             for j in 0..NUM_COUPLED_STRINGS {
                 let cx = right_rect.min.x + 20.0 + j as f32 * cell_w;
                 let cy = right_rect.min.y + 35.0 + i as f32 * cell_h;
-                let cell_rect = egui::Rect::from_min_size(egui::pos2(cx, cy), egui::vec2(cell_w - 4.0, cell_h - 4.0));
+                let cell_rect = egui::Rect::from_min_size(
+                    egui::pos2(cx, cy),
+                    egui::vec2(cell_w - 4.0, cell_h - 4.0),
+                );
 
                 let coeff = self.evaluate_coupling_matrix_cell(i, j);
                 let alpha_u8 = (coeff * 255.0).clamp(30.0, 255.0) as u8;
@@ -369,8 +384,12 @@ impl SympatheticCouplingView {
         if response.dragged() || response.clicked() {
             if let Some(mouse_pos) = response.interact_pointer_pos() {
                 if right_rect.contains(mouse_pos) {
-                    let nx = ((mouse_pos.x - (right_rect.min.x + 20.0)) / (right_rect.width() - 40.0)).clamp(0.0, 1.0);
-                    let ny = (((right_rect.max.y - 25.0) - mouse_pos.y) / (right_rect.height() - 60.0)).clamp(0.0, 1.0);
+                    let nx = ((mouse_pos.x - (right_rect.min.x + 20.0))
+                        / (right_rect.width() - 40.0))
+                        .clamp(0.0, 1.0);
+                    let ny = (((right_rect.max.y - 25.0) - mouse_pos.y)
+                        / (right_rect.height() - 60.0))
+                        .clamp(0.0, 1.0);
                     self.puck_pos = (nx, ny);
                     self.coupling_strength = nx * 0.50;
                     self.bridge_loss = 0.90 + ny * 0.099;
@@ -554,9 +573,18 @@ impl SympatheticCouplingView {
 
         // Interactive Puck
         let puck_x = (right_x0 + 20) as f32 + self.puck_pos.0 * (right_x1 - right_x0 - 40) as f32;
-        let puck_y = (canvas_y1 - 25) as f32 - self.puck_pos.1 * (canvas_y1 - canvas_y0 - 60) as f32;
+        let puck_y =
+            (canvas_y1 - 25) as f32 - self.puck_pos.1 * (canvas_y1 - canvas_y0 - 60) as f32;
 
-        draw_circle_ring_sc(&mut pixels, w, h, puck_x, puck_y, SYMPATHETIC_PUCK_HIT_RADIUS, [0, 255, 180, 180]);
+        draw_circle_ring_sc(
+            &mut pixels,
+            w,
+            h,
+            puck_x,
+            puck_y,
+            SYMPATHETIC_PUCK_HIT_RADIUS,
+            [0, 255, 180, 180],
+        );
         draw_circle_filled_sc(&mut pixels, w, h, puck_x, puck_y, 12.0, [0, 255, 180, 255]);
         draw_circle_filled_sc(&mut pixels, w, h, puck_x, puck_y, 4.0, [255, 255, 255, 255]);
 
@@ -626,7 +654,12 @@ fn draw_circle_ring_sc(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32,
     }
 }
 
-fn encode_minimal_png_sc(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_sc(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 
@@ -729,7 +762,8 @@ mod tests {
     #[test]
     fn test_sympathetic_coupling_view_snapshot_render() {
         let view = SympatheticCouplingView::new();
-        let res = view.render_snapshot_png("scratch/renders/sympathetic_coupling_view.png", 800, 520);
+        let res =
+            view.render_snapshot_png("scratch/renders/sympathetic_coupling_view.png", 800, 520);
         assert!(res.is_ok());
     }
 }

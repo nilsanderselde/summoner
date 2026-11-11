@@ -40,7 +40,9 @@ pub mod pure_tests {
 #[cfg(all(test, feature = "gui"))]
 mod gui_tests {
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_device_rack::{show_modern_device_rack_with_context, ModernDeviceRackState};
+    use crate::views::modern_device_rack::{
+        show_modern_device_rack_with_context, ModernDeviceRackState,
+    };
     use eframe::egui;
     use summoner_core::param_bus::{ParamBus, ParamId};
 
@@ -204,15 +206,24 @@ mod gui_tests {
 
         // Device rack should have reconciled 3 chain devices
         assert_eq!(view.device_rack_state.chain_devices.len(), 3);
-        assert_eq!(view.device_rack_state.chain_devices[0].kind, "OscillatorNode");
-        assert_eq!(view.device_rack_state.chain_devices[1].kind, "LadderFilterNode");
+        assert_eq!(
+            view.device_rack_state.chain_devices[0].kind,
+            "OscillatorNode"
+        );
+        assert_eq!(
+            view.device_rack_state.chain_devices[1].kind,
+            "LadderFilterNode"
+        );
         assert_eq!(view.device_rack_state.chain_devices[2].kind, "DelayNode");
 
         // Selecting node 1 updates active parameters
         view.select_track_node(1);
         view.sync_with_project(&mut project, &mut playhead, &mut transport, &mut sel_track);
 
-        assert_eq!(view.device_rack_state.selected_node_kind.as_deref(), Some("LadderFilterNode"));
+        assert_eq!(
+            view.device_rack_state.selected_node_kind.as_deref(),
+            Some("LadderFilterNode")
+        );
         assert_eq!(view.device_rack_state.cutoff, 0.65);
         assert_eq!(view.device_rack_state.resonance, 0.45);
     }

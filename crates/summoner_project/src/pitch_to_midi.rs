@@ -25,11 +25,11 @@ pub enum ArticulationType {
 /// Transcribed individual MIDI note with articulation and microtonal detuning.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TranscribedNote {
-    pub pitch: u8,            // 0 - 127
-    pub cents_detune: f32,    // -50.0 to +50.0 cents
+    pub pitch: u8,         // 0 - 127
+    pub cents_detune: f32, // -50.0 to +50.0 cents
     pub start_time_sec: f64,
     pub duration_sec: f64,
-    pub velocity: u8,         // 1 - 127
+    pub velocity: u8, // 1 - 127
     pub articulation: ArticulationType,
 }
 
@@ -240,7 +240,8 @@ impl VoiceToMidiTranscriber {
             if notes[i].duration_sec < 0.12 {
                 notes[i].articulation = ArticulationType::Staccato;
             } else if i + 1 < notes.len() {
-                let gap = notes[i + 1].start_time_sec - (notes[i].start_time_sec + notes[i].duration_sec);
+                let gap =
+                    notes[i + 1].start_time_sec - (notes[i].start_time_sec + notes[i].duration_sec);
                 if gap < 0.02 {
                     notes[i].articulation = ArticulationType::Legato;
                 }
@@ -250,7 +251,12 @@ impl VoiceToMidiTranscriber {
         notes
     }
 
-    fn finalize_note(start_time: f64, duration: f64, pitches: &[f32], rms_list: &[f32]) -> TranscribedNote {
+    fn finalize_note(
+        start_time: f64,
+        duration: f64,
+        pitches: &[f32],
+        rms_list: &[f32],
+    ) -> TranscribedNote {
         let avg_pitch = pitches.iter().sum::<f32>() / pitches.len() as f32;
         let rounded_pitch = avg_pitch.round().clamp(0.0, 127.0) as u8;
         let cents = (avg_pitch - rounded_pitch as f32) * 100.0;
@@ -276,7 +282,10 @@ mod tests {
     #[test]
     fn test_hz_and_midi_conversion() {
         assert_eq!(VoiceToMidiTranscriber::hz_to_midi_note(440.0).round(), 69.0); // A4
-        assert_eq!(VoiceToMidiTranscriber::hz_to_midi_note(261.63).round(), 60.0); // C4
+        assert_eq!(
+            VoiceToMidiTranscriber::hz_to_midi_note(261.63).round(),
+            60.0
+        ); // C4
         assert!((VoiceToMidiTranscriber::midi_note_to_hz(69.0) - 440.0).abs() < 0.01);
     }
 
@@ -290,7 +299,9 @@ mod tests {
             .map(|i| (2.0 * std::f32::consts::PI * target_freq * i as f32 / sr).sin() * 0.8)
             .collect();
 
-        let (est_freq, rms) = transcriber.estimate_pitch_yin(&frame).expect("pitch not detected");
+        let (est_freq, rms) = transcriber
+            .estimate_pitch_yin(&frame)
+            .expect("pitch not detected");
         assert!((est_freq - target_freq).abs() < 2.0);
         assert!(rms > 0.5);
     }
@@ -319,4 +330,3 @@ mod tests {
         assert!(notes[0].duration_sec > 0.1);
     }
 }
-

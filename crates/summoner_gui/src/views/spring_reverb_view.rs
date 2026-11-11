@@ -449,7 +449,10 @@ impl SpringReverbView {
         // Profile Selector Tabs (y: 46..90) - Each tab >= 44pt touch target
         let profiles = [
             (SpringReverbProfile::AccutronicsType4, "ACCUTRONICS TYPE 4"),
-            (SpringReverbProfile::StudioMasterType9, "STUDIO MASTER TYPE 9"),
+            (
+                SpringReverbProfile::StudioMasterType9,
+                "STUDIO MASTER TYPE 9",
+            ),
             (SpringReverbProfile::DubSpaceDrip, "DUB SPACE DRIP"),
             (SpringReverbProfile::SurfSpringKick, "SURF SPRING KICK"),
             (SpringReverbProfile::LoFiTrashChamber, "LO-FI TRASH TANK"),
@@ -629,7 +632,8 @@ impl SpringReverbView {
             egui::vec2(col_w - 20.0, 20.0),
         );
         painter.rect_filled(bar1_rect, 3.0, Color32::from_rgb(10, 14, 22));
-        let fill1_w = (bar1_rect.width() * (self.tension_pct / 100.0)).clamp(0.0, bar1_rect.width());
+        let fill1_w =
+            (bar1_rect.width() * (self.tension_pct / 100.0)).clamp(0.0, bar1_rect.width());
         painter.rect_filled(
             egui::Rect::from_min_size(bar1_rect.min, egui::vec2(fill1_w, 20.0)),
             3.0,
@@ -650,8 +654,8 @@ impl SpringReverbView {
             egui::vec2(col_w - 20.0, 20.0),
         );
         painter.rect_filled(bar2_rect, 3.0, Color32::from_rgb(10, 14, 22));
-        let fill2_w = (bar2_rect.width() * (self.dispersion_chirp_pct / 100.0))
-            .clamp(0.0, bar2_rect.width());
+        let fill2_w =
+            (bar2_rect.width() * (self.dispersion_chirp_pct / 100.0)).clamp(0.0, bar2_rect.width());
         painter.rect_filled(
             egui::Rect::from_min_size(bar2_rect.min, egui::vec2(fill2_w, 20.0)),
             3.0,
@@ -712,8 +716,8 @@ impl SpringReverbView {
                     self.dispersion_chirp_pct =
                         (((pos.x - bar2_rect.min.x) / bar2_rect.width()) * 100.0).clamp(0.0, 100.0);
                 } else if bar3_rect.contains(pos) {
-                    self.decay_seconds =
-                        0.5 + (((pos.x - bar3_rect.min.x) / bar3_rect.width()) * 7.5).clamp(0.0, 7.5);
+                    self.decay_seconds = 0.5
+                        + (((pos.x - bar3_rect.min.x) / bar3_rect.width()) * 7.5).clamp(0.0, 7.5);
                 } else if bar4_rect.contains(pos) {
                     self.drive_saturation_db =
                         (((pos.x - bar4_rect.min.x) / bar4_rect.width()) * 18.0).clamp(0.0, 18.0);

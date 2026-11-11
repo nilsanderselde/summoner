@@ -1,5 +1,4 @@
 #![cfg(feature = "gui")]
-
 // Summoner - Deterministic, Headless-First DAW
 // Copyright (C) 2026 nilsanderselde - AGPLv3 License
 
@@ -10,9 +9,8 @@
 pub mod pure_tests {
     use crate::views::hoa5_radar_view::{
         Hoa5RadarPreset, Hoa5RadarView, TrajectoryMode, HOA5_RADAR_PUCK_HIT_RADIUS,
-        HOA5_TOTAL_CHANNELS, MAX_RADAR_AZIMUTH_DEG, MAX_RADAR_DISTANCE_M,
-        MAX_RADAR_ELEVATION_DEG, MIN_RADAR_AZIMUTH_DEG, MIN_RADAR_DISTANCE_M,
-        MIN_RADAR_ELEVATION_DEG,
+        HOA5_TOTAL_CHANNELS, MAX_RADAR_AZIMUTH_DEG, MAX_RADAR_DISTANCE_M, MAX_RADAR_ELEVATION_DEG,
+        MIN_RADAR_AZIMUTH_DEG, MIN_RADAR_DISTANCE_M, MIN_RADAR_ELEVATION_DEG,
     };
 
     #[test]
@@ -39,7 +37,13 @@ pub mod pure_tests {
             (Hoa5RadarPreset::Hoa5_36ChannelSphere, 45.0, 20.0, 3.0, 0.70),
             (Hoa5RadarPreset::MaxReAcousticFocus, 0.0, 15.0, 2.0, 0.95),
             (Hoa5RadarPreset::BinauralHoa5Hrir, -60.0, 0.0, 1.5, 0.85),
-            (Hoa5RadarPreset::Surround22_2Broadcast, 90.0, 30.0, 4.5, 0.80),
+            (
+                Hoa5RadarPreset::Surround22_2Broadcast,
+                90.0,
+                30.0,
+                4.5,
+                0.80,
+            ),
             (Hoa5RadarPreset::Dome9_1_6Master, -135.0, 45.0, 3.5, 0.75),
             (Hoa5RadarPreset::DopplerOrbitalFlyby, 0.0, 10.0, 2.5, 0.65),
         ];
@@ -47,10 +51,26 @@ pub mod pure_tests {
         for (p, exp_az, exp_el, exp_dist, exp_foc) in presets {
             view.set_preset(p);
             assert_eq!(view.preset, p);
-            assert!((view.azimuth_deg - exp_az).abs() < 1e-3, "Preset {:?} Azimuth mismatch", p);
-            assert!((view.elevation_deg - exp_el).abs() < 1e-3, "Preset {:?} Elevation mismatch", p);
-            assert!((view.distance_m - exp_dist).abs() < 1e-3, "Preset {:?} Distance mismatch", p);
-            assert!((view.energy_focus - exp_foc).abs() < 1e-3, "Preset {:?} Focus mismatch", p);
+            assert!(
+                (view.azimuth_deg - exp_az).abs() < 1e-3,
+                "Preset {:?} Azimuth mismatch",
+                p
+            );
+            assert!(
+                (view.elevation_deg - exp_el).abs() < 1e-3,
+                "Preset {:?} Elevation mismatch",
+                p
+            );
+            assert!(
+                (view.distance_m - exp_dist).abs() < 1e-3,
+                "Preset {:?} Distance mismatch",
+                p
+            );
+            assert!(
+                (view.energy_focus - exp_foc).abs() < 1e-3,
+                "Preset {:?} Focus mismatch",
+                p
+            );
             assert_eq!(view.ambisonic_order, 5);
         }
     }
@@ -98,7 +118,10 @@ pub mod pure_tests {
         view.set_azimuth_elevation_distance(45.0, 30.0, 2.0);
 
         // Check Monopole (Order 0: W)
-        assert!(view.spherical_harmonic_levels[0] > 0.0, "W component must be non-zero");
+        assert!(
+            view.spherical_harmonic_levels[0] > 0.0,
+            "W component must be non-zero"
+        );
 
         // Check Dipoles (Order 1: Y, Z, X)
         assert!(view.spherical_harmonic_levels[1] > 0.0);
@@ -112,9 +135,18 @@ pub mod pure_tests {
 
         // Check Order energies
         let total_energy: f32 = view.order_energies.iter().sum();
-        assert!(total_energy > 0.0, "Total soundfield energy must be positive");
-        assert!(view.order_energies[0] > 0.0, "Order 0 energy must be positive");
-        assert!(view.order_energies[1] > 0.0, "Order 1 energy must be positive");
+        assert!(
+            total_energy > 0.0,
+            "Total soundfield energy must be positive"
+        );
+        assert!(
+            view.order_energies[0] > 0.0,
+            "Order 0 energy must be positive"
+        );
+        assert!(
+            view.order_energies[1] > 0.0,
+            "Order 1 energy must be positive"
+        );
     }
 
     #[test]
@@ -135,7 +167,10 @@ pub mod pure_tests {
             }
         }
 
-        assert!(observed_doppler, "Doppler ratio should change during flyby trajectory sweep");
+        assert!(
+            observed_doppler,
+            "Doppler ratio should change during flyby trajectory sweep"
+        );
         assert!(view.doppler_frequency_ratio >= 0.5 && view.doppler_frequency_ratio <= 2.0);
     }
 
@@ -143,7 +178,10 @@ pub mod pure_tests {
     fn test_turn51_touch_target_and_puck_hit_radius() {
         // Touch target compliance: hit bounding target must be >= 44x44pt
         let hit_box_diameter = HOA5_RADAR_PUCK_HIT_RADIUS * 2.0;
-        assert!(hit_box_diameter >= 44.0, "Hit target diameter must be >= 44.0pt for WCAG AAA touch target compliance");
+        assert!(
+            hit_box_diameter >= 44.0,
+            "Hit target diameter must be >= 44.0pt for WCAG AAA touch target compliance"
+        );
     }
 
     #[test]
@@ -166,8 +204,8 @@ pub mod pure_tests {
 pub mod gui_tests {
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::hoa5_radar_view::Hoa5RadarView;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn51_hoa5_radar_view_headless_egui_render() {
@@ -270,9 +308,15 @@ pub mod gui_tests {
     #[test]
     fn test_turn51_command_palette_hoa5_action() {
         let palette = crate::command_palette::CommandPalette::new();
-        let action = palette.actions.iter().find(|a| a.action_id == "open_hoa5_radar_hud");
+        let action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_hoa5_radar_hud");
 
-        assert!(action.is_some(), "open_hoa5_radar_hud must be registered in command palette");
+        assert!(
+            action.is_some(),
+            "open_hoa5_radar_hud must be registered in command palette"
+        );
         let act = action.unwrap();
         assert_eq!(act.category, "Spatial & Ambisonics");
         assert!(act.label.contains("5th-Order Ambisonics"));

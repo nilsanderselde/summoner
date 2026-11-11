@@ -5,14 +5,14 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::layout_math::Rect;
-    use crate::views::woodwind_jet_view::{
-        WoodwindJetView, WoodwindInstrument, WOODWIND_PUCK_HIT_RADIUS,
-        MIN_JET_PRESSURE_KPA, MAX_JET_PRESSURE_KPA, MIN_JET_OFFSET_MM, MAX_JET_OFFSET_MM,
-        MIN_TUBE_LENGTH_M, MAX_TUBE_LENGTH_M,
-    };
     use crate::views::tonehole_matrix_view::{
-        ToneholeMatrixView, ToneholeDisplayMode, TONEHOLE_PUCK_HIT_RADIUS,
-        MIN_CUTOFF_HZ, MAX_CUTOFF_HZ, MIN_BORE_LENGTH_M, MAX_BORE_LENGTH_M,
+        ToneholeDisplayMode, ToneholeMatrixView, MAX_BORE_LENGTH_M, MAX_CUTOFF_HZ,
+        MIN_BORE_LENGTH_M, MIN_CUTOFF_HZ, TONEHOLE_PUCK_HIT_RADIUS,
+    };
+    use crate::views::woodwind_jet_view::{
+        WoodwindInstrument, WoodwindJetView, MAX_JET_OFFSET_MM, MAX_JET_PRESSURE_KPA,
+        MAX_TUBE_LENGTH_M, MIN_JET_OFFSET_MM, MIN_JET_PRESSURE_KPA, MIN_TUBE_LENGTH_M,
+        WOODWIND_PUCK_HIT_RADIUS,
     };
     use summoner_core::param_bus::ParamId;
 
@@ -25,9 +25,15 @@ pub mod pure_tests {
         assert_eq!(view.tonehole_state, [true; 6]);
         assert!((view.jet_velocity_ms - 45.6).abs() < 1.0);
         assert!((view.effective_bore_length_m - 0.60).abs() < 1e-3);
-        assert!(view.jet_pressure_kpa >= MIN_JET_PRESSURE_KPA && view.jet_pressure_kpa <= MAX_JET_PRESSURE_KPA);
+        assert!(
+            view.jet_pressure_kpa >= MIN_JET_PRESSURE_KPA
+                && view.jet_pressure_kpa <= MAX_JET_PRESSURE_KPA
+        );
         assert!(view.jet_offset_mm >= MIN_JET_OFFSET_MM && view.jet_offset_mm <= MAX_JET_OFFSET_MM);
-        assert!(view.effective_bore_length_m >= MIN_TUBE_LENGTH_M && view.effective_bore_length_m <= MAX_TUBE_LENGTH_M);
+        assert!(
+            view.effective_bore_length_m >= MIN_TUBE_LENGTH_M
+                && view.effective_bore_length_m <= MAX_TUBE_LENGTH_M
+        );
         assert_eq!(WOODWIND_PUCK_HIT_RADIUS, 22.0);
 
         // Test instruments
@@ -79,7 +85,12 @@ pub mod pure_tests {
         assert!(view.acoustic_coupling_score > 0.0 && view.acoustic_coupling_score <= 1.0);
 
         // Hit testing
-        let canvas = Rect { x: 40.0, y: 80.0, width: 200.0, height: 160.0 };
+        let canvas = Rect {
+            x: 40.0,
+            y: 80.0,
+            width: 200.0,
+            height: 160.0,
+        };
         let puck_x = canvas.x + view.jet_puck_pos.0 * canvas.width;
         let puck_y = canvas.y + (1.0 - view.jet_puck_pos.1) * canvas.height;
         assert!(view.hit_test_jet_puck((puck_x, puck_y), canvas));
@@ -107,10 +118,16 @@ pub mod pure_tests {
 
         // Display modes
         view.set_display_mode(ToneholeDisplayMode::RadiationImpedanceSpectrum);
-        assert_eq!(view.display_mode, ToneholeDisplayMode::RadiationImpedanceSpectrum);
+        assert_eq!(
+            view.display_mode,
+            ToneholeDisplayMode::RadiationImpedanceSpectrum
+        );
 
         view.set_display_mode(ToneholeDisplayMode::ScatteringMatrix3Port);
-        assert_eq!(view.display_mode, ToneholeDisplayMode::ScatteringMatrix3Port);
+        assert_eq!(
+            view.display_mode,
+            ToneholeDisplayMode::ScatteringMatrix3Port
+        );
 
         // Fingering mask (open holes)
         view.set_fingering_mask(0b001111); // 4 closed, 2 open
@@ -140,7 +157,12 @@ pub mod pure_tests {
         assert!((back_c - view.lattice_cutoff_hz).abs() < 1e-1);
 
         // Hit testing
-        let canvas = Rect { x: 50.0, y: 100.0, width: 220.0, height: 150.0 };
+        let canvas = Rect {
+            x: 50.0,
+            y: 100.0,
+            width: 220.0,
+            height: 150.0,
+        };
         let puck_x = canvas.x + view.radiation_puck_pos.0 * canvas.width;
         let puck_y = canvas.y + (1.0 - view.radiation_puck_pos.1) * canvas.height;
         assert!(view.hit_test_radiation_puck((puck_x, puck_y), canvas));
@@ -160,9 +182,9 @@ pub mod pure_tests {
         let base_id = track_id * 1000 + slot_idx * 20;
 
         let pid_press = ParamId(base_id);
-        let pid_off   = ParamId(base_id + 1);
-        let pid_vel   = ParamId(base_id + 2);
-        let pid_coup  = ParamId(base_id + 3);
+        let pid_off = ParamId(base_id + 1);
+        let pid_vel = ParamId(base_id + 2);
+        let pid_coup = ParamId(base_id + 3);
 
         assert_eq!(pid_press.0, 4060);
         assert_eq!(pid_off.0, 4061);
@@ -181,8 +203,8 @@ pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn67_gui_award_winning_woodwind_jet_and_tonehole_matrix_hud_lifecycles() {
@@ -223,7 +245,11 @@ pub mod gui_tests {
     fn test_turn67_gui_live_parambus_atomic_sync_woodwind_jet_and_tonehole_matrix() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -245,9 +271,24 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(59.2));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(0.88));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("jet_pressure_kpa"), Some(&2.10));
-        assert_eq!(view.device_rack_state.node_param_values.get("jet_offset_mm"), Some(&8.5));
-        assert_eq!(view.inspector_state.node_param_values.get("jet_pressure_kpa"), Some(&2.10));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("jet_pressure_kpa"),
+            Some(&2.10)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("jet_offset_mm"),
+            Some(&8.5)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("jet_pressure_kpa"),
+            Some(&2.10)
+        );
 
         // 2. Sync Tonehole Matrix HUD
         view.tonehole_matrix_view.bore_length_m = 0.72;
@@ -261,19 +302,44 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(238.3));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(18.2));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("bore_length_m"), Some(&0.72));
-        assert_eq!(view.device_rack_state.node_param_values.get("lattice_cutoff_hz"), Some(&2850.0));
-        assert_eq!(view.inspector_state.node_param_values.get("bore_length_m"), Some(&0.72));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("bore_length_m"),
+            Some(&0.72)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("lattice_cutoff_hz"),
+            Some(&2850.0)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("bore_length_m"),
+            Some(&0.72)
+        );
     }
 
     #[test]
     fn test_turn67_gui_command_palette_registration() {
         let palette = CommandPalette::new();
-        let has_jet = palette.actions.iter().any(|a| a.action_id == "open_woodwind_jet_hud");
-        let has_th = palette.actions.iter().any(|a| a.action_id == "open_tonehole_matrix_hud");
+        let has_jet = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_woodwind_jet_hud");
+        let has_th = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_tonehole_matrix_hud");
 
-        assert!(has_jet, "CommandPalette must register open_woodwind_jet_hud");
-        assert!(has_th, "CommandPalette must register open_tonehole_matrix_hud");
+        assert!(
+            has_jet,
+            "CommandPalette must register open_woodwind_jet_hud"
+        );
+        assert!(
+            has_th,
+            "CommandPalette must register open_tonehole_matrix_hud"
+        );
     }
 
     #[test]

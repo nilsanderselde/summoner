@@ -338,11 +338,7 @@ impl WebRtcAudioMesh {
     }
 
     /// Renders and mixes all active remote peer streams into stereo output buffers.
-    pub fn mix_peers_into_master(
-        &mut self,
-        output_left: &mut [f32],
-        output_right: &mut [f32],
-    ) {
+    pub fn mix_peers_into_master(&mut self, output_left: &mut [f32], output_right: &mut [f32]) {
         let frames = output_left.len();
 
         let any_soloed = self.peers.values().any(|p| p.soloed);

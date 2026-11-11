@@ -136,7 +136,9 @@ impl AutoWahView {
                 }
                 GuiWahFilterMode::PeakingWah => {
                     // Peaking bell transfer function
-                    let bp = (w_ratio / q) / (((1.0 - w_ratio * w_ratio).powi(2) + (w_ratio / q).powi(2)).sqrt()).max(1e-5);
+                    let bp = (w_ratio / q)
+                        / (((1.0 - w_ratio * w_ratio).powi(2) + (w_ratio / q).powi(2)).sqrt())
+                            .max(1e-5);
                     1.0 + bp * 2.0
                 }
             };
@@ -176,13 +178,24 @@ impl AutoWahView {
 
         lines.push(format!(
             "│ Ballistics: Att: {:.1}ms Rel: {:.0}ms | Mix: {:.0}% | Env: {:.2} │",
-            self.attack_ms, self.release_ms, self.mix * 100.0, self.envelope_level
+            self.attack_ms,
+            self.release_ms,
+            self.mix * 100.0,
+            self.envelope_level
         ));
 
         let curve = self.evaluate_filter_magnitude_response();
         let mut curve_str = String::from("│ Response: ");
         for val in curve.iter().take(24) {
-            let ch = if *val > 0.75 { '█' } else if *val > 0.5 { '▀' } else if *val > 0.25 { '─' } else { ' ' };
+            let ch = if *val > 0.75 {
+                '█'
+            } else if *val > 0.5 {
+                '▀'
+            } else if *val > 0.25 {
+                '─'
+            } else {
+                ' '
+            };
             curve_str.push(ch);
         }
         curve_str.push_str(" │");
@@ -196,7 +209,12 @@ impl AutoWahView {
     }
 
     /// Renders a headless PNG snapshot to the specified path.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep slate #0A0E18
@@ -403,12 +421,18 @@ impl AutoWahView {
                     for step in 1..4 {
                         let gy = rect_l.top() + rect_l.height() * (step as f32 * 0.25);
                         painter_l.line_segment(
-                            [egui::pos2(rect_l.left(), gy), egui::pos2(rect_l.right(), gy)],
+                            [
+                                egui::pos2(rect_l.left(), gy),
+                                egui::pos2(rect_l.right(), gy),
+                            ],
                             Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(60, 80, 110, 80)),
                         );
                         let gx = rect_l.left() + rect_l.width() * (step as f32 * 0.25);
                         painter_l.line_segment(
-                            [egui::pos2(gx, rect_l.top()), egui::pos2(gx, rect_l.bottom())],
+                            [
+                                egui::pos2(gx, rect_l.top()),
+                                egui::pos2(gx, rect_l.bottom()),
+                            ],
                             Stroke::new(0.5_f32, Color32::from_rgba_unmultiplied(60, 80, 110, 80)),
                         );
                     }
@@ -417,7 +441,8 @@ impl AutoWahView {
                     if res_l.dragged() || res_l.clicked() {
                         if let Some(pos) = res_l.interact_pointer_pos() {
                             let nx = ((pos.x - rect_l.left()) / rect_l.width()).clamp(0.0, 1.0);
-                            let ny = (1.0 - ((pos.y - rect_l.top()) / rect_l.height())).clamp(0.0, 1.0);
+                            let ny =
+                                (1.0 - ((pos.y - rect_l.top()) / rect_l.height())).clamp(0.0, 1.0);
                             self.update_physics_from_puck(nx, ny);
                         }
                     }
@@ -447,7 +472,10 @@ impl AutoWahView {
                     painter_l.text(
                         egui::pos2(rect_l.left() + 8.0, rect_l.bottom() - 18.0),
                         egui::Align2::LEFT_BOTTOM,
-                        format!("Sens: {:.2} | Res Q: {:.1}", self.sensitivity, self.resonance_q),
+                        format!(
+                            "Sens: {:.2} | Res Q: {:.1}",
+                            self.sensitivity, self.resonance_q
+                        ),
                         FontId::proportional(11.0),
                         Color32::from_rgb(200, 240, 225),
                     );
@@ -478,7 +506,10 @@ impl AutoWahView {
                         let norm_f = (freq / 40.0_f32).log10() / (16000.0 / 40.0_f32).log10();
                         let sx = rect_r.left() + norm_f * rect_r.width();
                         painter_r.line_segment(
-                            [egui::pos2(sx, rect_r.top()), egui::pos2(sx, rect_r.bottom())],
+                            [
+                                egui::pos2(sx, rect_r.top()),
+                                egui::pos2(sx, rect_r.bottom()),
+                            ],
                             Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(60, 80, 115, 60)),
                         );
                     }
@@ -517,7 +548,10 @@ impl AutoWahView {
                     painter_r.text(
                         egui::pos2(rect_r.left() + 12.0, rect_r.top() + 10.0),
                         egui::Align2::LEFT_TOP,
-                        format!("Base: {:.0} Hz | Range: {:.1} Oct", self.base_freq_hz, self.sweep_range_octaves),
+                        format!(
+                            "Base: {:.0} Hz | Range: {:.1} Oct",
+                            self.base_freq_hz, self.sweep_range_octaves
+                        ),
                         FontId::proportional(11.0),
                         Color32::from_rgb(148, 163, 184),
                     );
@@ -536,19 +570,27 @@ impl AutoWahView {
 
                     ui.vertical(|ui| {
                         ui.label(RichText::new("Sweep Range").strong());
-                        ui.add(egui::Slider::new(&mut self.sweep_range_octaves, 0.5..=6.0).text("oct"));
+                        ui.add(
+                            egui::Slider::new(&mut self.sweep_range_octaves, 0.5..=6.0).text("oct"),
+                        );
                     });
 
                     ui.vertical(|ui| {
                         ui.label(RichText::new("Sensitivity").strong());
-                        if ui.add(egui::Slider::new(&mut self.sensitivity, 0.0..=1.0)).changed() {
+                        if ui
+                            .add(egui::Slider::new(&mut self.sensitivity, 0.0..=1.0))
+                            .changed()
+                        {
                             self.update_puck_from_physics();
                         }
                     });
 
                     ui.vertical(|ui| {
                         ui.label(RichText::new("Resonance (Q)").strong());
-                        if ui.add(egui::Slider::new(&mut self.resonance_q, 0.5..=25.0).text("Q")).changed() {
+                        if ui
+                            .add(egui::Slider::new(&mut self.resonance_q, 0.5..=25.0).text("Q"))
+                            .changed()
+                        {
                             self.update_puck_from_physics();
                         }
                     });
@@ -573,7 +615,12 @@ impl AutoWahView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

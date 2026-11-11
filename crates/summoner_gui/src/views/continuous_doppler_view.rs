@@ -34,10 +34,10 @@ pub struct ContinuousDopplerView {
     pub target_x: f32,
     pub target_y: f32,
     pub target_z: f32,
-    pub vel_x: f32, // Lateral velocity [-50.0 ..= +50.0 m/s]
-    pub vel_y: f32, // Depth velocity [-50.0 ..= +50.0 m/s]
-    pub vel_z: f32, // Elevation velocity [-50.0 ..= +50.0 m/s]
-    pub speed_of_sound_mps: f32, // Speed of sound [300.0 ..= 400.0 m/s] (standard: 343.0 m/s)
+    pub vel_x: f32,                // Lateral velocity [-50.0 ..= +50.0 m/s]
+    pub vel_y: f32,                // Depth velocity [-50.0 ..= +50.0 m/s]
+    pub vel_z: f32,                // Elevation velocity [-50.0 ..= +50.0 m/s]
+    pub speed_of_sound_mps: f32,   // Speed of sound [300.0 ..= 400.0 m/s] (standard: 343.0 m/s)
     pub air_absorption_coeff: f32, // High-frequency air absorption [0.0 ..= 1.0] (default: 0.35)
     pub interpolation_order: HermiteInterpolationOrder,
     pub radial_velocity_mps: f32,
@@ -118,7 +118,8 @@ impl ContinuousDopplerView {
 
         let el_rad = (self.pos_z / dist).clamp(-1.0, 1.0).asin();
         self.air_cutoff_hz = (20000.0
-            / (1.0 + 0.08 * dist * (1.0 - 0.2 * el_rad.sin()) * (self.air_absorption_coeff / 0.35)))
+            / (1.0
+                + 0.08 * dist * (1.0 - 0.2 * el_rad.sin()) * (self.air_absorption_coeff / 0.35)))
             .clamp(800.0, 20000.0);
 
         let gain = (1.0 / dist).clamp(0.05, 2.0);
@@ -278,7 +279,10 @@ impl ContinuousDopplerView {
         painter.text(
             egui::pos2(header_rect.max.x - 16.0, header_rect.min.y + 14.0),
             egui::Align2::RIGHT_TOP,
-            format!("Interpolation: {} | c = {:.1} m/s", order_label, self.speed_of_sound_mps),
+            format!(
+                "Interpolation: {} | c = {:.1} m/s",
+                order_label, self.speed_of_sound_mps
+            ),
             egui::FontId::proportional(11.0),
             Color32::from_rgb(56, 189, 248),
         );
@@ -302,7 +306,13 @@ impl ContinuousDopplerView {
         let max_r = canvas_w * 0.44;
 
         // Concentric distance rings
-        for (i, dist_label) in [("5m", 0.2), ("10m", 0.4), ("15m", 0.6), ("20m", 0.8), ("25m", 1.0)] {
+        for (i, dist_label) in [
+            ("5m", 0.2),
+            ("10m", 0.4),
+            ("15m", 0.6),
+            ("20m", 0.8),
+            ("25m", 1.0),
+        ] {
             let r = max_r * dist_label;
             painter.circle_stroke(
                 egui::pos2(ccx, ccy),

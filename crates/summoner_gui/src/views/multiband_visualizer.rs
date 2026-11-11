@@ -196,7 +196,11 @@ impl MultibandVisualizerView {
             self.state.crossover_fc1, self.state.crossover_fc2, self.state.crossover_fc3
         ));
         for (i, b) in self.state.bands.iter().enumerate() {
-            let sel = if i == self.state.selected_band_idx { "*" } else { " " };
+            let sel = if i == self.state.selected_band_idx {
+                "*"
+            } else {
+                " "
+            };
             out.push_str(&format!(
                 "[{}] Band {}: {:<18} | Thresh: {:>5.1} dB | Ratio: {:>3.1}:1 | GR: {:>5.1} dB (Hold: {:>5.1})\n",
                 sel, i + 1, b.name, b.threshold_db, b.ratio, b.current_gr_db, b.peak_hold_gr_db
@@ -207,12 +211,7 @@ impl MultibandVisualizerView {
     }
 
     /// Render a high-resolution headless snapshot PNG file for visual verification.
-    pub fn render_snapshot_png(
-        &self,
-        path: &str,
-        width: u32,
-        height: u32,
-    ) -> Result<(), String> {
+    pub fn render_snapshot_png(&self, path: &str, width: u32, height: u32) -> Result<(), String> {
         if let Some(parent) = std::path::Path::new(path).parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -223,7 +222,7 @@ impl MultibandVisualizerView {
         for y in 0..height {
             for x in 0..width {
                 let idx = ((y * width + x) * 4) as usize;
-                pixels[idx] = 10;     // Dark Navy R
+                pixels[idx] = 10; // Dark Navy R
                 pixels[idx + 1] = 14; // Dark Navy G
                 pixels[idx + 2] = 24; // Dark Navy B
                 pixels[idx + 3] = 255;
@@ -247,10 +246,10 @@ impl MultibandVisualizerView {
         let spec_x = 20u32;
 
         let band_colors = [
-            [255, 61, 0],   // Band 0 (Low): Red-Orange
-            [255, 171, 0],  // Band 1 (Low-Mid): Amber
-            [0, 229, 255],  // Band 2 (High-Mid): Electric Cyan
-            [0, 230, 118],  // Band 3 (High): Mint Green
+            [255, 61, 0],  // Band 0 (Low): Red-Orange
+            [255, 171, 0], // Band 1 (Low-Mid): Amber
+            [0, 229, 255], // Band 2 (High-Mid): Electric Cyan
+            [0, 230, 118], // Band 3 (High): Mint Green
         ];
 
         let fc_positions = [
@@ -465,7 +464,8 @@ impl MultibandVisualizerView {
 
         for (b_idx, band) in self.state.bands.iter().enumerate() {
             let is_sel = b_idx == self.state.selected_band_idx;
-            let tab_rect = EguiRect::from_min_size(Pos2::new(tab_x, tab_y), Vec2::new(tab_w, tab_h));
+            let tab_rect =
+                EguiRect::from_min_size(Pos2::new(tab_x, tab_y), Vec2::new(tab_w, tab_h));
 
             let bg_col = if is_sel {
                 Color32::from_rgb(28, 40, 64)
@@ -485,7 +485,11 @@ impl MultibandVisualizerView {
                 egui::Align2::CENTER_CENTER,
                 &band.name,
                 egui::FontId::proportional(11.0),
-                if is_sel { Color32::WHITE } else { Color32::from_rgb(180, 190, 210) },
+                if is_sel {
+                    Color32::WHITE
+                } else {
+                    Color32::from_rgb(180, 190, 210)
+                },
             );
 
             tab_x += tab_w + 12.0;
@@ -504,7 +508,11 @@ impl MultibandVisualizerView {
             Vec2::new(380.0, 320.0),
         );
         painter.rect_filled(curve_rect, 6.0, Color32::from_rgb(14, 18, 28));
-        painter.rect_stroke(curve_rect, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(40, 55, 80)));
+        painter.rect_stroke(
+            curve_rect,
+            6.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(40, 55, 80)),
+        );
 
         // 1:1 Diagonal Reference Line
         painter.line_segment(
@@ -554,11 +562,18 @@ impl MultibandVisualizerView {
 
         for (b_idx, band) in self.state.bands.iter().enumerate() {
             let mx = meter_start_x + b_idx as f32 * (meter_w + meter_gap);
-            let m_rect = EguiRect::from_min_size(Pos2::new(mx, rect.min.y + 160.0), Vec2::new(meter_w, meter_h));
+            let m_rect = EguiRect::from_min_size(
+                Pos2::new(mx, rect.min.y + 160.0),
+                Vec2::new(meter_w, meter_h),
+            );
 
             // Trough
             painter.rect_filled(m_rect, 4.0, Color32::from_rgb(18, 24, 38));
-            painter.rect_stroke(m_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)));
+            painter.rect_stroke(
+                m_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)),
+            );
 
             // GR Fill
             let gr_norm = (band.current_gr_db.abs() / 24.0).clamp(0.0, 1.0);
@@ -581,7 +596,12 @@ impl MultibandVisualizerView {
 }
 
 // Uncompressed direct PNG encoder for headless snapshot generation
-fn save_png_direct_multiband(path: &str, width: u32, height: u32, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_direct_multiband(
+    path: &str,
+    width: u32,
+    height: u32,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out: Vec<u8> = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 
@@ -673,7 +693,12 @@ mod tests {
 
     #[test]
     fn test_multiband_visualizer_hit_target_dimensions() {
-        const { assert!(MIN_HIT_TARGET_PT >= 44.0, "Hit targets must be >= 44pt for touch accessibility") };
+        const {
+            assert!(
+                MIN_HIT_TARGET_PT >= 44.0,
+                "Hit targets must be >= 44pt for touch accessibility"
+            )
+        };
     }
 
     #[test]

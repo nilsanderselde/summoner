@@ -6,13 +6,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::hammer_strike_view::{
-        ExcitationPreset, HammerStrikeView, HAMMER_PUCK_HIT_RADIUS, NUM_SYMPATHETIC_STRINGS,
-    };
+    use crate::layout_math::Rect;
     use crate::views::console_emulation_view::{
         ConsoleDeskPreset, ConsoleEmulationView, CONSOLE_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
+    use crate::views::hammer_strike_view::{
+        ExcitationPreset, HammerStrikeView, HAMMER_PUCK_HIT_RADIUS, NUM_SYMPATHETIC_STRINGS,
+    };
 
     #[test]
     fn test_turn115_pure_hammer_strike_initialization_and_physics() {
@@ -22,10 +22,46 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (ExcitationPreset::PianoFeltHammer, "Concert Grand Piano Felt Hammer", 0.003, 1.2e8, 2.4, 0.35, 0.12, 2.8),
-            (ExcitationPreset::HarpsichordQuill, "Harpsichord Quill / Delrin Pick Snap", 0.0005, 5.0e7, 1.8, 0.15, 0.15, 3.5),
-            (ExcitationPreset::NylonFingertip, "Classical Nylon Guitar Fleshy Pluck", 0.0015, 2.0e7, 1.5, 0.50, 0.20, 2.0),
-            (ExcitationPreset::FretboardSlap, "Fretboard Slap Bass Metallic Impact", 0.008, 3.0e8, 3.2, 0.10, 0.08, 5.0),
+            (
+                ExcitationPreset::PianoFeltHammer,
+                "Concert Grand Piano Felt Hammer",
+                0.003,
+                1.2e8,
+                2.4,
+                0.35,
+                0.12,
+                2.8,
+            ),
+            (
+                ExcitationPreset::HarpsichordQuill,
+                "Harpsichord Quill / Delrin Pick Snap",
+                0.0005,
+                5.0e7,
+                1.8,
+                0.15,
+                0.15,
+                3.5,
+            ),
+            (
+                ExcitationPreset::NylonFingertip,
+                "Classical Nylon Guitar Fleshy Pluck",
+                0.0015,
+                2.0e7,
+                1.5,
+                0.50,
+                0.20,
+                2.0,
+            ),
+            (
+                ExcitationPreset::FretboardSlap,
+                "Fretboard Slap Bass Metallic Impact",
+                0.008,
+                3.0e8,
+                3.2,
+                0.10,
+                0.08,
+                5.0,
+            ),
         ];
 
         for (p, exp_name, exp_m, exp_k, exp_p, exp_mu, exp_beta, exp_vel) in presets {
@@ -99,9 +135,33 @@ pub mod pure_tests {
 
         // Preset profiles and expected values
         let presets = [
-            (ConsoleDeskPreset::NeveVintage8048, "Neve 8048 / 1073 (Vintage Class-A Desk)", 52.0, 1.8, 3.5, 0.65, 0.55),
-            (ConsoleDeskPreset::SslGSeries4000, "SSL 4000 E/G (British VCA Punch & Sheen)", 90.0, 1.2, 2.0, 0.40, 0.35),
-            (ConsoleDeskPreset::ApiDiscrete1608, "API 1608 / 2520 (Discrete Midrange Punch)", 2500.0, 2.5, 4.5, 0.75, 0.70),
+            (
+                ConsoleDeskPreset::NeveVintage8048,
+                "Neve 8048 / 1073 (Vintage Class-A Desk)",
+                52.0,
+                1.8,
+                3.5,
+                0.65,
+                0.55,
+            ),
+            (
+                ConsoleDeskPreset::SslGSeries4000,
+                "SSL 4000 E/G (British VCA Punch & Sheen)",
+                90.0,
+                1.2,
+                2.0,
+                0.40,
+                0.35,
+            ),
+            (
+                ConsoleDeskPreset::ApiDiscrete1608,
+                "API 1608 / 2520 (Discrete Midrange Punch)",
+                2500.0,
+                2.5,
+                4.5,
+                0.75,
+                0.70,
+            ),
         ];
 
         for (p, exp_name, exp_fc, exp_bump, exp_drv, exp_sat, exp_thd) in presets {
@@ -141,8 +201,8 @@ pub mod pure_tests {
         // Harmonic distortion evaluation
         let harmonics = view.evaluate_harmonic_profile();
         assert_eq!(harmonics[0], 0.0); // Fundamental is 0 dB
-        assert!(harmonics[1] < 0.0);   // 2nd harmonic is below fundamental
-        assert!(harmonics[2] < 0.0);   // 3rd harmonic is below fundamental
+        assert!(harmonics[1] < 0.0); // 2nd harmonic is below fundamental
+        assert!(harmonics[2] < 0.0); // 3rd harmonic is below fundamental
 
         // Touch puck hit testing (>= 22pt radius -> 44x44pt bounding box)
         let canvas = Rect::new(20.0, 20.0, 400.0, 220.0);
@@ -163,8 +223,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -192,19 +252,31 @@ pub mod gui_tests {
         view.sync_hammer_strike_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("strike_position").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("strike_position")
+                .copied(),
             Some(0.18)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("strike_velocity").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("strike_velocity")
+                .copied(),
             Some(3.6)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("strike_position").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("strike_position")
+                .copied(),
             Some(0.18)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("strike_velocity").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("strike_velocity")
+                .copied(),
             Some(3.6)
         );
 
@@ -215,19 +287,31 @@ pub mod gui_tests {
         view.sync_console_emulation_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("drive_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("drive_db")
+                .copied(),
             Some(5.2)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("transformer_saturation").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("transformer_saturation")
+                .copied(),
             Some(0.70)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("drive_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("drive_db")
+                .copied(),
             Some(5.2)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("transformer_saturation").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("transformer_saturation")
+                .copied(),
             Some(0.70)
         );
 
@@ -242,12 +326,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let hammer_action = palette.actions.iter().find(|a| a.action_id == "open_hammer_strike_hud");
-        assert!(hammer_action.is_some(), "open_hammer_strike_hud should be registered");
+        let hammer_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_hammer_strike_hud");
+        assert!(
+            hammer_action.is_some(),
+            "open_hammer_strike_hud should be registered"
+        );
         assert_eq!(hammer_action.unwrap().category, "Physical Modeling");
 
-        let console_action = palette.actions.iter().find(|a| a.action_id == "open_console_emulation_hud");
-        assert!(console_action.is_some(), "open_console_emulation_hud should be registered");
+        let console_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_console_emulation_hud");
+        assert!(
+            console_action.is_some(),
+            "open_console_emulation_hud should be registered"
+        );
         assert_eq!(console_action.unwrap().category, "Dynamics & Saturation");
     }
 }

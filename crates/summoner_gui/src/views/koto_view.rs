@@ -101,7 +101,8 @@ impl KotoView {
 
     pub fn oshi_ite_to_normalized(force: f32) -> f32 {
         let val = force.clamp(MIN_OSHI_ITE_FORCE_N, MAX_OSHI_ITE_FORCE_N);
-        ((val - MIN_OSHI_ITE_FORCE_N) / (MAX_OSHI_ITE_FORCE_N - MIN_OSHI_ITE_FORCE_N)).clamp(0.0, 1.0)
+        ((val - MIN_OSHI_ITE_FORCE_N) / (MAX_OSHI_ITE_FORCE_N - MIN_OSHI_ITE_FORCE_N))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_oshi_ite(norm: f32) -> f32 {
@@ -110,11 +111,13 @@ impl KotoView {
 
     pub fn tsume_to_normalized(vel: f32) -> f32 {
         let val = vel.clamp(MIN_KOTO_TSUME_VELOCITY, MAX_KOTO_TSUME_VELOCITY);
-        ((val - MIN_KOTO_TSUME_VELOCITY) / (MAX_KOTO_TSUME_VELOCITY - MIN_KOTO_TSUME_VELOCITY)).clamp(0.0, 1.0)
+        ((val - MIN_KOTO_TSUME_VELOCITY) / (MAX_KOTO_TSUME_VELOCITY - MIN_KOTO_TSUME_VELOCITY))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_tsume(norm: f32) -> f32 {
-        MIN_KOTO_TSUME_VELOCITY + norm.clamp(0.0, 1.0) * (MAX_KOTO_TSUME_VELOCITY - MIN_KOTO_TSUME_VELOCITY)
+        MIN_KOTO_TSUME_VELOCITY
+            + norm.clamp(0.0, 1.0) * (MAX_KOTO_TSUME_VELOCITY - MIN_KOTO_TSUME_VELOCITY)
     }
 
     pub fn hit_test_koto_puck(&self, point: (f32, f32), canvas: crate::layout_math::Rect) -> bool {
@@ -251,7 +254,8 @@ impl KotoView {
 
                 // Silk string standing wave with oshi-ite pitch modulation
                 let pitch_factor = 1.0 + self.current_pitch_cents() / 1200.0;
-                let wave1 = (col_t * 8.0 * std::f32::consts::PI * pitch_factor).sin() * (col_t * std::f32::consts::PI).sin();
+                let wave1 = (col_t * 8.0 * std::f32::consts::PI * pitch_factor).sin()
+                    * (col_t * std::f32::consts::PI).sin();
                 let wave2 = 0.3 * (col_t * 16.0 * std::f32::consts::PI * pitch_factor).sin();
                 let total_wave = (wave1 + wave2) * self.tsume_velocity;
                 let norm_wave = (total_wave + 1.0) * 0.5;
@@ -273,7 +277,12 @@ impl KotoView {
     }
 
     /// Render headless PNG snapshot visualizer for layout alignment, touch target verification, and WCAG contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep Navy (#0A0E18)
@@ -342,11 +351,13 @@ impl KotoView {
 
             for x_px in c_left..c_right {
                 let x_norm = (x_px - c_left) as f32 / canvas_w;
-                let wave = (x_norm * (4.0 + str_idx as f32) * std::f32::consts::PI * pitch_factor).sin()
+                let wave = (x_norm * (4.0 + str_idx as f32) * std::f32::consts::PI * pitch_factor)
+                    .sin()
                     * (x_norm * std::f32::consts::PI).sin()
                     * 14.0
                     * self.tsume_velocity;
-                let y_px = (center_y + wave).clamp(c_top as f32 + 2.0, c_bottom as f32 - 2.0) as usize;
+                let y_px =
+                    (center_y + wave).clamp(c_top as f32 + 2.0, c_bottom as f32 - 2.0) as usize;
 
                 let idx = (y_px * width + x_px) * 4;
                 if str_idx % 2 == 0 {
@@ -434,22 +445,58 @@ impl KotoView {
 
             ui.horizontal(|ui| {
                 ui.label("Preset:");
-                if ui.selectable_label(self.preset == KotoHudPreset::HirajoshiTraditionalSilk, "Hirajoshi Silk").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == KotoHudPreset::HirajoshiTraditionalSilk,
+                        "Hirajoshi Silk",
+                    )
+                    .clicked()
+                {
                     self.set_preset(KotoHudPreset::HirajoshiTraditionalSilk);
                 }
-                if ui.selectable_label(self.preset == KotoHudPreset::KokinJoshiUrbanClassical, "Kokin-joshi Urban").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == KotoHudPreset::KokinJoshiUrbanClassical,
+                        "Kokin-joshi Urban",
+                    )
+                    .clicked()
+                {
                     self.set_preset(KotoHudPreset::KokinJoshiUrbanClassical);
                 }
-                if ui.selectable_label(self.preset == KotoHudPreset::InSenContemporaryDramatic, "In-sen Dramatic").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == KotoHudPreset::InSenContemporaryDramatic,
+                        "In-sen Dramatic",
+                    )
+                    .clicked()
+                {
                     self.set_preset(KotoHudPreset::InSenContemporaryDramatic);
                 }
-                if ui.selectable_label(self.preset == KotoHudPreset::KumoiJoshiSpringRain, "Kumoi-joshi Spring").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == KotoHudPreset::KumoiJoshiSpringRain,
+                        "Kumoi-joshi Spring",
+                    )
+                    .clicked()
+                {
                     self.set_preset(KotoHudPreset::KumoiJoshiSpringRain);
                 }
-                if ui.selectable_label(self.preset == KotoHudPreset::RyukyuFestiveOkinawa, "Ryukyu Okinawan").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == KotoHudPreset::RyukyuFestiveOkinawa,
+                        "Ryukyu Okinawan",
+                    )
+                    .clicked()
+                {
                     self.set_preset(KotoHudPreset::RyukyuFestiveOkinawa);
                 }
-                if ui.selectable_label(self.preset == KotoHudPreset::ConcertGuzhengVirtuoso, "Guzheng Virtuoso").clicked() {
+                if ui
+                    .selectable_label(
+                        self.preset == KotoHudPreset::ConcertGuzhengVirtuoso,
+                        "Guzheng Virtuoso",
+                    )
+                    .clicked()
+                {
                     self.set_preset(KotoHudPreset::ConcertGuzhengVirtuoso);
                 }
             });
@@ -459,25 +506,54 @@ impl KotoView {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.label("Tsume Strike & Oshi-Ite Bending:");
-                    ui.add(egui::Slider::new(&mut self.tsume_velocity, MIN_KOTO_TSUME_VELOCITY..=MAX_KOTO_TSUME_VELOCITY).text("Tsume Velocity"));
-                    ui.add(egui::Slider::new(&mut self.oshi_ite_force_n, MIN_OSHI_ITE_FORCE_N..=MAX_OSHI_ITE_FORCE_N).text("Oshi-Ite Force (N)"));
-                    ui.add(egui::Slider::new(&mut self.hiki_iro_release, 0.0..=1.0).text("Hiki-Iro Release"));
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.tsume_velocity,
+                            MIN_KOTO_TSUME_VELOCITY..=MAX_KOTO_TSUME_VELOCITY,
+                        )
+                        .text("Tsume Velocity"),
+                    );
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.oshi_ite_force_n,
+                            MIN_OSHI_ITE_FORCE_N..=MAX_OSHI_ITE_FORCE_N,
+                        )
+                        .text("Oshi-Ite Force (N)"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.hiki_iro_release, 0.0..=1.0)
+                            .text("Hiki-Iro Release"),
+                    );
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
                     ui.label("Acoustics & Soundboard Coupling:");
-                    ui.add(egui::Slider::new(&mut self.behind_bridge_bleed, 0.0..=1.0).text("Behind-Bridge Bleed"));
-                    ui.add(egui::Slider::new(&mut self.body_wood_resonance, 0.0..=1.0).text("Paulownia Resonance"));
-                    ui.add(egui::Slider::new(&mut self.ji_bridge_offset, -0.20..=0.20).text("Ji Bridge Offset"));
+                    ui.add(
+                        egui::Slider::new(&mut self.behind_bridge_bleed, 0.0..=1.0)
+                            .text("Behind-Bridge Bleed"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.body_wood_resonance, 0.0..=1.0)
+                            .text("Paulownia Resonance"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.ji_bridge_offset, -0.20..=0.20)
+                            .text("Ji Bridge Offset"),
+                    );
                 });
             });
         });
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

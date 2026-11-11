@@ -305,4 +305,3 @@ mod tests {
         assert!(meets_wcag_aa(Color32::BLACK, Color32::WHITE));
     }
 }
-

@@ -3,10 +3,10 @@
 //
 // Physical Modeling Woodwind Tonehole Acoustic Radiation & Standing Wave HUD (Milestone 17).
 
-use std::f32::consts::PI;
 use crate::layout_math::Rect;
 use crate::touch_controls::ContrastColorPalette;
-use summoner_dsp::tonehole_grid::{NUM_TONEHOLES, ToneholeLattice, SPEED_OF_SOUND_MPS};
+use std::f32::consts::PI;
+use summoner_dsp::tonehole_grid::{ToneholeLattice, NUM_TONEHOLES, SPEED_OF_SOUND_MPS};
 
 #[cfg(feature = "gui")]
 use eframe::egui::{self, Color32, Stroke};
@@ -116,14 +116,19 @@ impl ToneholeMatrixView {
         let eff_len = self.lattice.effective_acoustic_length_m();
         self.fundamental_hz = (SPEED_OF_SOUND_MPS / (2.0 * eff_len)).clamp(40.0, 4000.0);
 
-        let open_count = self.hole_open_fractions.iter().filter(|&&f| f > 0.05).count();
+        let open_count = self
+            .hole_open_fractions
+            .iter()
+            .filter(|&&f| f > 0.05)
+            .count();
         self.radiated_power_mw = 8.0 + (open_count as f32 * 3.5) + (self.fundamental_hz / 100.0);
     }
 
     /// Evaluates standing wave acoustic pressure at relative position $x / L \in [0.0, 1.0]$.
     pub fn evaluate_standing_wave_pressure(&self, x_ratio: f32) -> f32 {
         let x = x_ratio.clamp(0.0, 1.0);
-        let eff_ratio = (self.lattice.effective_acoustic_length_m() / self.bore_length_m).clamp(0.1, 1.0);
+        let eff_ratio =
+            (self.lattice.effective_acoustic_length_m() / self.bore_length_m).clamp(0.1, 1.0);
 
         if x <= eff_ratio {
             let norm_x = x / eff_ratio;
@@ -186,9 +191,15 @@ impl ToneholeMatrixView {
 
         // Draw 6 Tonehole Indicators on bottom border
         for h in 0..NUM_TONEHOLES {
-            let col = 2 + ((self.lattice.toneholes[h].params.position_ratio * (plot_w as f32)).round() as usize)
-                .min(plot_w - 1);
-            let symbol = if self.hole_open_fractions[h] < 0.05 { 'X' } else { 'O' };
+            let col = 2
+                + ((self.lattice.toneholes[h].params.position_ratio * (plot_w as f32)).round()
+                    as usize)
+                    .min(plot_w - 1);
+            let symbol = if self.hole_open_fractions[h] < 0.05 {
+                'X'
+            } else {
+                'O'
+            };
             grid[height - 2][col] = symbol;
         }
 
@@ -363,7 +374,8 @@ impl ToneholeMatrixView {
                 for step in 0..=100 {
                     let freq = 100.0 + (step as f32 / 100.0) * 5900.0;
                     let r_mag = self.evaluate_reflection_magnitude(freq);
-                    let px = left_rect.min.x + 10.0 + (step as f32 / 100.0) * (left_rect.width() - 20.0);
+                    let px =
+                        left_rect.min.x + 10.0 + (step as f32 / 100.0) * (left_rect.width() - 20.0);
                     let py = left_rect.max.y - 15.0 - r_mag * (left_rect.height() - 45.0);
                     let curr_pt = egui::pos2(px, py);
 
@@ -391,12 +403,23 @@ impl ToneholeMatrixView {
                     let r_s = -1.0 / denom;
                     let t_s = (2.0 * z_ratio) / denom;
                     let hy = left_rect.min.y + 35.0 + h as f32 * 24.0;
-                    let status = if self.hole_open_fractions[h] < 0.05 { "CLOSED" } else { "OPEN" };
+                    let status = if self.hole_open_fractions[h] < 0.05 {
+                        "CLOSED"
+                    } else {
+                        "OPEN"
+                    };
 
                     painter.text(
                         egui::pos2(left_rect.min.x + 15.0, hy),
                         egui::Align2::LEFT_TOP,
-                        format!("Tonehole {}: {} | r_s = {:.3} | t_s = {:.3} | z_ratio = {:.2}", h + 1, status, r_s, t_s, z_ratio),
+                        format!(
+                            "Tonehole {}: {} | r_s = {:.3} | t_s = {:.3} | z_ratio = {:.2}",
+                            h + 1,
+                            status,
+                            r_s,
+                            t_s,
+                            z_ratio
+                        ),
                         egui::FontId::proportional(10.0),
                         Color32::from_rgb(0, 229, 255),
                     );
@@ -452,7 +475,11 @@ impl ToneholeMatrixView {
             painter.text(
                 btn_rect.center(),
                 egui::Align2::CENTER_CENTER,
-                format!("Hole {}: {}", h + 1, if is_closed { "CLOSED" } else { "OPEN" }),
+                format!(
+                    "Hole {}: {}",
+                    h + 1,
+                    if is_closed { "CLOSED" } else { "OPEN" }
+                ),
                 egui::FontId::proportional(11.0),
                 text_col,
             );
@@ -482,7 +509,11 @@ impl ToneholeMatrixView {
         let params = [
             (
                 "FUNDAMENTAL PITCH",
-                format!("{:.1} Hz (L_eff: {:.2} m)", self.fundamental_hz, self.lattice.effective_acoustic_length_m()),
+                format!(
+                    "{:.1} Hz (L_eff: {:.2} m)",
+                    self.fundamental_hz,
+                    self.lattice.effective_acoustic_length_m()
+                ),
                 Color32::from_rgb(0, 229, 255),
             ),
             (

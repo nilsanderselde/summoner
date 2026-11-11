@@ -19,11 +19,11 @@
 //! - [`VideoSyncEngine`]: Frame-accurate timeline scrubbing, SMPTE ruler alignment, and audio/video drift detection.
 //! - [`VideoAspectRatio`]: Common broadcast and cinematic display aspect ratios.
 
+use crate::audio_clip::AudioClipConfig;
+use crate::schema::TrackConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use summoner_core::timecode::{SmpteTimecode, TimecodeRate};
-use crate::audio_clip::AudioClipConfig;
-use crate::schema::TrackConfig;
 
 /// Helper to convert timeline seconds to `SmpteTimecode`.
 pub fn timecode_from_seconds(seconds: f64, rate: TimecodeRate) -> SmpteTimecode {
@@ -122,10 +122,12 @@ impl VideoClipConfig {
 
     /// Convert timeline seconds to exact frame index within this clip's media.
     pub fn timeline_sec_to_source_frame(&self, timeline_sec: f64) -> Option<u64> {
-        if timeline_sec < self.timeline_start_seconds || timeline_sec > self.timeline_end_seconds() {
+        if timeline_sec < self.timeline_start_seconds || timeline_sec > self.timeline_end_seconds()
+        {
             return None;
         }
-        let clip_relative_sec = timeline_sec - self.timeline_start_seconds + self.source_offset_seconds;
+        let clip_relative_sec =
+            timeline_sec - self.timeline_start_seconds + self.source_offset_seconds;
         let fps = self.frame_rate.frames_per_second();
         let frame_idx = (clip_relative_sec * fps).floor() as u64;
         Some(frame_idx.min(self.frame_count.saturating_sub(1)))
@@ -164,7 +166,10 @@ impl Default for VideoTrackConfig {
 
 impl VideoTrackConfig {
     /// Generates a linked `TrackConfig` and `AudioClipConfig` for extracted audio.
-    pub fn generate_linked_audio_track(&self, track_id: u64) -> (TrackConfig, Vec<AudioClipConfig>) {
+    pub fn generate_linked_audio_track(
+        &self,
+        track_id: u64,
+    ) -> (TrackConfig, Vec<AudioClipConfig>) {
         let mut audio_clips = Vec::new();
         for clip in &self.clips {
             let mut audio_clip = AudioClipConfig::new(
@@ -241,7 +246,14 @@ impl VideoThumbnail {
             rgba_data.push(rgb[2]);
             rgba_data.push(255);
         }
-        Self::new(frame_index, timestamp_seconds, timecode, width, height, rgba_data)
+        Self::new(
+            frame_index,
+            timestamp_seconds,
+            timecode,
+            width,
+            height,
+            rgba_data,
+        )
     }
 }
 
@@ -268,7 +280,8 @@ impl ThumbnailFilmstripCache {
                 self.thumbnails.remove(&first_key);
             }
         }
-        self.thumbnails.insert((clip_id.into(), thumbnail.frame_index), thumbnail);
+        self.thumbnails
+            .insert((clip_id.into(), thumbnail.frame_index), thumbnail);
     }
 
     pub fn get(&self, clip_id: &str, frame_index: u64) -> Option<&VideoThumbnail> {
@@ -307,7 +320,8 @@ impl ThumbnailFilmstripCache {
                 } else {
                     // Generate placeholder
                     let tc = timecode_from_seconds(t, clip.frame_rate);
-                    let placeholder = VideoThumbnail::placeholder(frame_idx, t, tc, 80, 45, [40, 40, 50]);
+                    let placeholder =
+                        VideoThumbnail::placeholder(frame_idx, t, tc, 80, 45, [40, 40, 50]);
                     strip.push(placeholder);
                 }
             }
@@ -398,7 +412,9 @@ impl VideoSyncEngine {
 
         let mut active_clip_id = None;
         for clip in &self.track.clips {
-            if timeline_seconds >= clip.timeline_start_seconds && timeline_seconds <= clip.timeline_end_seconds() {
+            if timeline_seconds >= clip.timeline_start_seconds
+                && timeline_seconds <= clip.timeline_end_seconds()
+            {
                 active_clip_id = Some(clip.id.clone());
                 break;
             }
@@ -431,7 +447,10 @@ impl VideoSyncEngine {
         if slip_frames.abs() <= 0.5 {
             VideoDriftStatus::InSync { drift_ms }
         } else if slip_frames.abs() <= 2.0 {
-            VideoDriftStatus::Slipping { drift_ms, slip_frames }
+            VideoDriftStatus::Slipping {
+                drift_ms,
+                slip_frames,
+            }
         } else {
             VideoDriftStatus::DriftExceeded {
                 drift_ms,
@@ -540,7 +559,10 @@ mod tests {
         // Drift of 50ms at 24fps (frame duration ~41.6ms) -> ~1.2 frames slip
         let slip_status = engine.check_clock_drift(48000, 48000, 1.050);
         match slip_status {
-            VideoDriftStatus::Slipping { drift_ms, slip_frames } => {
+            VideoDriftStatus::Slipping {
+                drift_ms,
+                slip_frames,
+            } => {
                 assert!((drift_ms - 50.0).abs() < 1e-3);
                 assert!((slip_frames - 1.2).abs() < 0.01);
             }
@@ -573,7 +595,10 @@ mod tests {
         let (audio_track, audio_clips) = track.generate_linked_audio_track(42);
         assert_eq!(audio_track.id, 42);
         assert_eq!(audio_clips.len(), 1);
-        assert_eq!(audio_clips[0].file_path, Some("video/interview.mov".to_string()));
+        assert_eq!(
+            audio_clips[0].file_path,
+            Some("video/interview.mov".to_string())
+        );
         assert_eq!(audio_clips[0].duration_beats, 120.0);
     }
 }

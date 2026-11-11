@@ -162,7 +162,11 @@ impl WoodwindFingeringEngine {
     /// Adds a keyframe waypoint to the custom trajectory.
     pub fn add_waypoint(&mut self, waypoint: WoodwindWaypoint) {
         self.waypoints.push(waypoint);
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     /// Evaluates continuous woodwind articulation parameters at timeline beat position.
@@ -170,7 +174,11 @@ impl WoodwindFingeringEngine {
         let eff_beat = if let Some(loop_len) = self.loop_length_beats {
             if loop_len > 0.0 {
                 let rem = beat % loop_len;
-                if rem < 0.0 { rem + loop_len } else { rem }
+                if rem < 0.0 {
+                    rem + loop_len
+                } else {
+                    rem
+                }
             } else {
                 beat
             }
@@ -286,7 +294,12 @@ impl WoodwindFingeringEngine {
             } => {
                 let is_overblown = eff_beat >= *jump_beat;
                 let (press, jet_dist, angle, art) = if is_overblown {
-                    (*overblow_pressure_kpa, 4.5, 0.15, WoodwindArticulation::OverblowHarmonic)
+                    (
+                        *overblow_pressure_kpa,
+                        4.5,
+                        0.15,
+                        WoodwindArticulation::OverblowHarmonic,
+                    )
                 } else {
                     (*base_pressure_kpa, 7.0, 0.0, WoodwindArticulation::Legato)
                 };
@@ -315,7 +328,11 @@ impl WoodwindFingeringEngine {
                 let g_len = gliss_length_beats.max(0.5);
                 let progress = ((eff_beat % g_len) / g_len) as f32; // 0.0 .. 1.0
                 let angle = (progress - 0.5) * 2.0 * angle_sweep_rad;
-                let fingering = if progress < 0.5 { *start_mask } else { *end_mask };
+                let fingering = if progress < 0.5 {
+                    *start_mask
+                } else {
+                    *end_mask
+                };
 
                 BreathBusSnapshot {
                     articulation: WoodwindArticulation::Legato,
@@ -365,9 +382,7 @@ impl WoodwindFingeringEngine {
                 }
             }
 
-            WoodwindGesturePattern::CustomSpline => {
-                self.evaluate_custom_spline(eff_beat)
-            }
+            WoodwindGesturePattern::CustomSpline => self.evaluate_custom_spline(eff_beat),
         }
     }
 
@@ -394,10 +409,17 @@ impl WoodwindFingeringEngine {
         }
 
         let n = self.waypoints.len();
-        let idx = match self.waypoints.binary_search_by(|wp| wp.beat.partial_cmp(&beat).unwrap()) {
+        let idx = match self
+            .waypoints
+            .binary_search_by(|wp| wp.beat.partial_cmp(&beat).unwrap())
+        {
             Ok(i) => i,
             Err(i) => {
-                if i == 0 { 0 } else { i - 1 }
+                if i == 0 {
+                    0
+                } else {
+                    i - 1
+                }
             }
         };
 
@@ -418,10 +440,18 @@ impl WoodwindFingeringEngine {
             };
         }
 
-        let wp0 = if idx == 0 { &self.waypoints[0] } else { &self.waypoints[idx - 1] };
+        let wp0 = if idx == 0 {
+            &self.waypoints[0]
+        } else {
+            &self.waypoints[idx - 1]
+        };
         let wp1 = &self.waypoints[idx];
         let wp2 = &self.waypoints[idx + 1];
-        let wp3 = if idx + 2 < n { &self.waypoints[idx + 2] } else { &self.waypoints[idx + 1] };
+        let wp3 = if idx + 2 < n {
+            &self.waypoints[idx + 2]
+        } else {
+            &self.waypoints[idx + 1]
+        };
 
         let span = (wp2.beat - wp1.beat).max(1e-6);
         let t = ((beat - wp1.beat) / span).clamp(0.0, 1.0) as f32;
@@ -437,30 +467,76 @@ impl WoodwindFingeringEngine {
                 wp1.breath_noise_mix,
             ),
             WoodwindInterpolationCurve::Linear => (
-                wp1.blowing_pressure_kpa + t * (wp2.blowing_pressure_kpa - wp1.blowing_pressure_kpa),
+                wp1.blowing_pressure_kpa
+                    + t * (wp2.blowing_pressure_kpa - wp1.blowing_pressure_kpa),
                 wp1.jet_distance_mm + t * (wp2.jet_distance_mm - wp1.jet_distance_mm),
-                wp1.embouchure_angle_rad + t * (wp2.embouchure_angle_rad - wp1.embouchure_angle_rad),
+                wp1.embouchure_angle_rad
+                    + t * (wp2.embouchure_angle_rad - wp1.embouchure_angle_rad),
                 wp1.vibrato_depth + t * (wp2.vibrato_depth - wp1.vibrato_depth),
                 wp1.vibrato_rate_hz + t * (wp2.vibrato_rate_hz - wp1.vibrato_rate_hz),
                 wp1.flutter_rate_hz + t * (wp2.flutter_rate_hz - wp1.flutter_rate_hz),
                 wp1.breath_noise_mix + t * (wp2.breath_noise_mix - wp1.breath_noise_mix),
             ),
             WoodwindInterpolationCurve::CubicCatmullRom => {
-                let p = Self::catmull_rom_1d(wp0.blowing_pressure_kpa, wp1.blowing_pressure_kpa, wp2.blowing_pressure_kpa, wp3.blowing_pressure_kpa, t);
-                let d = Self::catmull_rom_1d(wp0.jet_distance_mm, wp1.jet_distance_mm, wp2.jet_distance_mm, wp3.jet_distance_mm, t);
-                let a = Self::catmull_rom_1d(wp0.embouchure_angle_rad, wp1.embouchure_angle_rad, wp2.embouchure_angle_rad, wp3.embouchure_angle_rad, t);
-                let vd = Self::catmull_rom_1d(wp0.vibrato_depth, wp1.vibrato_depth, wp2.vibrato_depth, wp3.vibrato_depth, t);
-                let vr = Self::catmull_rom_1d(wp0.vibrato_rate_hz, wp1.vibrato_rate_hz, wp2.vibrato_rate_hz, wp3.vibrato_rate_hz, t);
-                let fl = Self::catmull_rom_1d(wp0.flutter_rate_hz, wp1.flutter_rate_hz, wp2.flutter_rate_hz, wp3.flutter_rate_hz, t);
-                let nm = Self::catmull_rom_1d(wp0.breath_noise_mix, wp1.breath_noise_mix, wp2.breath_noise_mix, wp3.breath_noise_mix, t);
+                let p = Self::catmull_rom_1d(
+                    wp0.blowing_pressure_kpa,
+                    wp1.blowing_pressure_kpa,
+                    wp2.blowing_pressure_kpa,
+                    wp3.blowing_pressure_kpa,
+                    t,
+                );
+                let d = Self::catmull_rom_1d(
+                    wp0.jet_distance_mm,
+                    wp1.jet_distance_mm,
+                    wp2.jet_distance_mm,
+                    wp3.jet_distance_mm,
+                    t,
+                );
+                let a = Self::catmull_rom_1d(
+                    wp0.embouchure_angle_rad,
+                    wp1.embouchure_angle_rad,
+                    wp2.embouchure_angle_rad,
+                    wp3.embouchure_angle_rad,
+                    t,
+                );
+                let vd = Self::catmull_rom_1d(
+                    wp0.vibrato_depth,
+                    wp1.vibrato_depth,
+                    wp2.vibrato_depth,
+                    wp3.vibrato_depth,
+                    t,
+                );
+                let vr = Self::catmull_rom_1d(
+                    wp0.vibrato_rate_hz,
+                    wp1.vibrato_rate_hz,
+                    wp2.vibrato_rate_hz,
+                    wp3.vibrato_rate_hz,
+                    t,
+                );
+                let fl = Self::catmull_rom_1d(
+                    wp0.flutter_rate_hz,
+                    wp1.flutter_rate_hz,
+                    wp2.flutter_rate_hz,
+                    wp3.flutter_rate_hz,
+                    t,
+                );
+                let nm = Self::catmull_rom_1d(
+                    wp0.breath_noise_mix,
+                    wp1.breath_noise_mix,
+                    wp2.breath_noise_mix,
+                    wp3.breath_noise_mix,
+                    t,
+                );
                 (p, d, a, vd, vr, fl, nm)
             }
             WoodwindInterpolationCurve::CubicBezier => {
                 let b = t * t * (3.0 - 2.0 * t); // Smoothstep S-curve
                 (
-                    wp1.blowing_pressure_kpa + b * (wp2.blowing_pressure_kpa - wp1.blowing_pressure_kpa),
+                    wp1.blowing_pressure_kpa
+                        + b * (wp2.blowing_pressure_kpa - wp1.blowing_pressure_kpa),
                     wp1.jet_distance_mm + b * (wp2.jet_distance_mm - wp1.jet_distance_mm),
-                    wp1.embouchure_angle_rad + b * (wp2.embouchure_angle_rad - wp1.embouchure_angle_rad),
+                    wp1.embouchure_angle_rad
+                        + b * (wp2.embouchure_angle_rad - wp1.embouchure_angle_rad),
                     wp1.vibrato_depth + b * (wp2.vibrato_depth - wp1.vibrato_depth),
                     wp1.vibrato_rate_hz + b * (wp2.vibrato_rate_hz - wp1.vibrato_rate_hz),
                     wp1.flutter_rate_hz + b * (wp2.flutter_rate_hz - wp1.flutter_rate_hz),
@@ -469,8 +545,16 @@ impl WoodwindFingeringEngine {
             }
         };
 
-        let fingering = if t < 0.5 { wp1.fingering_mask } else { wp2.fingering_mask };
-        let art = if t < 0.5 { wp1.articulation } else { wp2.articulation };
+        let fingering = if t < 0.5 {
+            wp1.fingering_mask
+        } else {
+            wp2.fingering_mask
+        };
+        let art = if t < 0.5 {
+            wp1.articulation
+        } else {
+            wp2.articulation
+        };
 
         BreathBusSnapshot {
             articulation: art,
@@ -599,8 +683,10 @@ mod tests {
         };
         engine.add_waypoint(WoodwindWaypoint::default());
 
-        let toml_str = toml::to_string_pretty(&engine).expect("Failed to serialize woodwind fingering engine");
-        let decoded: WoodwindFingeringEngine = toml::from_str(&toml_str).expect("Failed to deserialize woodwind fingering engine");
+        let toml_str =
+            toml::to_string_pretty(&engine).expect("Failed to serialize woodwind fingering engine");
+        let decoded: WoodwindFingeringEngine =
+            toml::from_str(&toml_str).expect("Failed to deserialize woodwind fingering engine");
 
         assert_eq!(engine.waypoints.len(), decoded.waypoints.len());
         assert_eq!(engine.interpolation, decoded.interpolation);

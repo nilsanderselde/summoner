@@ -80,7 +80,14 @@ pub mod pure_tests {
         assert!(view.is_master_mono);
 
         // Sync with param_bus
-        view.sync_with_param_bus(&project, &param_bus, &mut registry, &mut timeline, 0.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut registry,
+            &mut timeline,
+            0.0,
+            false,
+        );
         assert_eq!(param_bus.get(ParamId(9998)), Some(1.0));
 
         // Master mute

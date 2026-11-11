@@ -151,7 +151,11 @@ impl BowingGestureEngine {
     /// Adds a keyframe waypoint to the custom trajectory.
     pub fn add_waypoint(&mut self, waypoint: BowingWaypoint) {
         self.waypoints.push(waypoint);
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     /// Evaluates continuous bowing articulation parameters at timeline beat position.
@@ -159,7 +163,11 @@ impl BowingGestureEngine {
         let eff_beat = if let Some(loop_len) = self.loop_length_beats {
             if loop_len > 0.0 {
                 let rem = beat % loop_len;
-                if rem < 0.0 { rem + loop_len } else { rem }
+                if rem < 0.0 {
+                    rem + loop_len
+                } else {
+                    rem
+                }
             } else {
                 beat
             }
@@ -320,9 +328,7 @@ impl BowingGestureEngine {
                 }
             }
 
-            BowingGesturePattern::CustomSpline => {
-                self.evaluate_custom_spline(eff_beat)
-            }
+            BowingGesturePattern::CustomSpline => self.evaluate_custom_spline(eff_beat),
         }
     }
 
@@ -348,10 +354,17 @@ impl BowingGestureEngine {
         }
 
         let n = self.waypoints.len();
-        let idx = match self.waypoints.binary_search_by(|wp| wp.beat.partial_cmp(&beat).unwrap()) {
+        let idx = match self
+            .waypoints
+            .binary_search_by(|wp| wp.beat.partial_cmp(&beat).unwrap())
+        {
             Ok(i) => i,
             Err(i) => {
-                if i == 0 { 0 } else { i - 1 }
+                if i == 0 {
+                    0
+                } else {
+                    i - 1
+                }
             }
         };
 
@@ -371,10 +384,18 @@ impl BowingGestureEngine {
             };
         }
 
-        let wp0 = if idx == 0 { &self.waypoints[0] } else { &self.waypoints[idx - 1] };
+        let wp0 = if idx == 0 {
+            &self.waypoints[0]
+        } else {
+            &self.waypoints[idx - 1]
+        };
         let wp1 = &self.waypoints[idx];
         let wp2 = &self.waypoints[idx + 1];
-        let wp3 = if idx + 2 < n { &self.waypoints[idx + 2] } else { &self.waypoints[idx + 1] };
+        let wp3 = if idx + 2 < n {
+            &self.waypoints[idx + 2]
+        } else {
+            &self.waypoints[idx + 1]
+        };
 
         let span = (wp2.beat - wp1.beat).max(1e-6);
         let t = ((beat - wp1.beat) / span).clamp(0.0, 1.0) as f32;
@@ -392,7 +413,8 @@ impl BowingGestureEngine {
             GestureInterpolationCurve::Linear => (
                 wp1.bow_velocity_mps + t * (wp2.bow_velocity_mps - wp1.bow_velocity_mps),
                 wp1.bow_force_n + t * (wp2.bow_force_n - wp1.bow_force_n),
-                wp1.bridge_proximity_beta + t * (wp2.bridge_proximity_beta - wp1.bridge_proximity_beta),
+                wp1.bridge_proximity_beta
+                    + t * (wp2.bridge_proximity_beta - wp1.bridge_proximity_beta),
                 wp1.rosin_adhesion + t * (wp2.rosin_adhesion - wp1.rosin_adhesion),
                 wp1.string_damping + t * (wp2.string_damping - wp1.string_damping),
                 wp1.vibrato_depth + t * (wp2.vibrato_depth - wp1.vibrato_depth),
@@ -403,7 +425,8 @@ impl BowingGestureEngine {
                 (
                     wp1.bow_velocity_mps + t_ease * (wp2.bow_velocity_mps - wp1.bow_velocity_mps),
                     wp1.bow_force_n + t_ease * (wp2.bow_force_n - wp1.bow_force_n),
-                    wp1.bridge_proximity_beta + t_ease * (wp2.bridge_proximity_beta - wp1.bridge_proximity_beta),
+                    wp1.bridge_proximity_beta
+                        + t_ease * (wp2.bridge_proximity_beta - wp1.bridge_proximity_beta),
                     wp1.rosin_adhesion + t_ease * (wp2.rosin_adhesion - wp1.rosin_adhesion),
                     wp1.string_damping + t_ease * (wp2.string_damping - wp1.string_damping),
                     wp1.vibrato_depth + t_ease * (wp2.vibrato_depth - wp1.vibrato_depth),
@@ -411,18 +434,64 @@ impl BowingGestureEngine {
                 )
             }
             GestureInterpolationCurve::CubicCatmullRom => (
-                catmull_rom_1d(wp0.bow_velocity_mps, wp1.bow_velocity_mps, wp2.bow_velocity_mps, wp3.bow_velocity_mps, t),
-                catmull_rom_1d(wp0.bow_force_n, wp1.bow_force_n, wp2.bow_force_n, wp3.bow_force_n, t),
-                catmull_rom_1d(wp0.bridge_proximity_beta, wp1.bridge_proximity_beta, wp2.bridge_proximity_beta, wp3.bridge_proximity_beta, t),
-                catmull_rom_1d(wp0.rosin_adhesion, wp1.rosin_adhesion, wp2.rosin_adhesion, wp3.rosin_adhesion, t),
-                catmull_rom_1d(wp0.string_damping, wp1.string_damping, wp2.string_damping, wp3.string_damping, t),
-                catmull_rom_1d(wp0.vibrato_depth, wp1.vibrato_depth, wp2.vibrato_depth, wp3.vibrato_depth, t),
-                catmull_rom_1d(wp0.vibrato_rate_hz, wp1.vibrato_rate_hz, wp2.vibrato_rate_hz, wp3.vibrato_rate_hz, t),
+                catmull_rom_1d(
+                    wp0.bow_velocity_mps,
+                    wp1.bow_velocity_mps,
+                    wp2.bow_velocity_mps,
+                    wp3.bow_velocity_mps,
+                    t,
+                ),
+                catmull_rom_1d(
+                    wp0.bow_force_n,
+                    wp1.bow_force_n,
+                    wp2.bow_force_n,
+                    wp3.bow_force_n,
+                    t,
+                ),
+                catmull_rom_1d(
+                    wp0.bridge_proximity_beta,
+                    wp1.bridge_proximity_beta,
+                    wp2.bridge_proximity_beta,
+                    wp3.bridge_proximity_beta,
+                    t,
+                ),
+                catmull_rom_1d(
+                    wp0.rosin_adhesion,
+                    wp1.rosin_adhesion,
+                    wp2.rosin_adhesion,
+                    wp3.rosin_adhesion,
+                    t,
+                ),
+                catmull_rom_1d(
+                    wp0.string_damping,
+                    wp1.string_damping,
+                    wp2.string_damping,
+                    wp3.string_damping,
+                    t,
+                ),
+                catmull_rom_1d(
+                    wp0.vibrato_depth,
+                    wp1.vibrato_depth,
+                    wp2.vibrato_depth,
+                    wp3.vibrato_depth,
+                    t,
+                ),
+                catmull_rom_1d(
+                    wp0.vibrato_rate_hz,
+                    wp1.vibrato_rate_hz,
+                    wp2.vibrato_rate_hz,
+                    wp3.vibrato_rate_hz,
+                    t,
+                ),
             ),
         };
 
         ArticulationBusSnapshot {
-            technique: if t < 0.5 { wp1.technique } else { wp2.technique },
+            technique: if t < 0.5 {
+                wp1.technique
+            } else {
+                wp2.technique
+            },
             bow_velocity_mps: vel,
             bow_force_n: force.max(0.0),
             bridge_proximity_beta: beta_pos.clamp(0.02, 0.50),
@@ -560,7 +629,8 @@ mod tests {
         engine.add_waypoint(BowingWaypoint::default());
 
         let toml_str = toml::to_string_pretty(&engine).expect("Failed to serialize gesture engine");
-        let decoded: BowingGestureEngine = toml::from_str(&toml_str).expect("Failed to deserialize gesture engine");
+        let decoded: BowingGestureEngine =
+            toml::from_str(&toml_str).expect("Failed to deserialize gesture engine");
 
         assert_eq!(engine.waypoints.len(), decoded.waypoints.len());
         assert_eq!(engine.interpolation, decoded.interpolation);

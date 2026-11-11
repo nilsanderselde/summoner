@@ -5,15 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::ring_mod_view::{
-        RingModPreset, RingModulatorView, RingWaveformShape,
-        RING_MOD_PUCK_HIT_RADIUS,
-    };
-    use crate::views::dither_quantizer_view::{
-        DitherMode, DitherPreset, DitherQuantizerView,
-        DITHER_PUCK_HIT_RADIUS,
-    };
     use crate::layout_math::Rect;
+    use crate::views::dither_quantizer_view::{
+        DitherMode, DitherPreset, DitherQuantizerView, DITHER_PUCK_HIT_RADIUS,
+    };
+    use crate::views::ring_mod_view::{
+        RingModPreset, RingModulatorView, RingWaveformShape, RING_MOD_PUCK_HIT_RADIUS,
+    };
 
     #[test]
     fn test_turn120_pure_ring_modulator_initialization_and_physics() {
@@ -23,10 +21,42 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (RingModPreset::DalekRoboticVoice, "Dalek Robotic Voice (30Hz Sine)", 30.0, RingWaveformShape::Sine, 1.00, 0.20, 0.0),
-            (RingModPreset::ChimeBellHarmonics, "Chime Bell Harmonics (440Hz Tri)", 440.0, RingWaveformShape::Triangle, 0.85, 0.10, 45.0),
-            (RingModPreset::TremoloWarmSub, "Tremolo Warm Sub (5.5Hz Sine)", 5.5, RingWaveformShape::Sine, 0.35, 0.00, 0.0),
-            (RingModPreset::AlienQuadratureGlitch, "Alien Quadrature Glitch (1850Hz Sqr)", 1850.0, RingWaveformShape::Square, 1.00, 0.65, 90.0),
+            (
+                RingModPreset::DalekRoboticVoice,
+                "Dalek Robotic Voice (30Hz Sine)",
+                30.0,
+                RingWaveformShape::Sine,
+                1.00,
+                0.20,
+                0.0,
+            ),
+            (
+                RingModPreset::ChimeBellHarmonics,
+                "Chime Bell Harmonics (440Hz Tri)",
+                440.0,
+                RingWaveformShape::Triangle,
+                0.85,
+                0.10,
+                45.0,
+            ),
+            (
+                RingModPreset::TremoloWarmSub,
+                "Tremolo Warm Sub (5.5Hz Sine)",
+                5.5,
+                RingWaveformShape::Sine,
+                0.35,
+                0.00,
+                0.0,
+            ),
+            (
+                RingModPreset::AlienQuadratureGlitch,
+                "Alien Quadrature Glitch (1850Hz Sqr)",
+                1850.0,
+                RingWaveformShape::Square,
+                1.00,
+                0.65,
+                90.0,
+            ),
         ];
 
         for (p, exp_name, exp_freq, exp_wave, exp_depth, exp_asym, exp_phase) in presets {
@@ -52,7 +82,12 @@ pub mod pure_tests {
             let norm = RingModulatorView::freq_to_normalized(f);
             assert!(norm >= 0.0 && norm <= 1.0);
             let back = RingModulatorView::normalized_to_freq(norm);
-            assert!((back - f).abs() / f < 0.01, "Freq round-trip mismatch: {} vs {}", back, f);
+            assert!(
+                (back - f).abs() / f < 0.01,
+                "Freq round-trip mismatch: {} vs {}",
+                back,
+                f
+            );
         }
 
         // Depth normalization round-trip
@@ -108,10 +143,38 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (DitherPreset::RedBookCd16BitTpdf, "Red Book CD 16-Bit TPDF (-98 dB)", 16, DitherMode::Tpdf, 1.0, 12345),
-            (DitherPreset::PsychoacousticShaped24Bit, "Psychoacoustic 24-Bit Shaped (-146 dB)", 24, DitherMode::NoiseShaped, 1.5, 54321),
-            (DitherPreset::VintageSampler12Bit, "Vintage Sampler 12-Bit Crunch (-74 dB)", 12, DitherMode::NoiseShaped, 0.75, 9999),
-            (DitherPreset::LofiChiptune8BitRaw, "Lo-Fi Chiptune 8-Bit Raw (-50 dB)", 8, DitherMode::None, 0.0, 0),
+            (
+                DitherPreset::RedBookCd16BitTpdf,
+                "Red Book CD 16-Bit TPDF (-98 dB)",
+                16,
+                DitherMode::Tpdf,
+                1.0,
+                12345,
+            ),
+            (
+                DitherPreset::PsychoacousticShaped24Bit,
+                "Psychoacoustic 24-Bit Shaped (-146 dB)",
+                24,
+                DitherMode::NoiseShaped,
+                1.5,
+                54321,
+            ),
+            (
+                DitherPreset::VintageSampler12Bit,
+                "Vintage Sampler 12-Bit Crunch (-74 dB)",
+                12,
+                DitherMode::NoiseShaped,
+                0.75,
+                9999,
+            ),
+            (
+                DitherPreset::LofiChiptune8BitRaw,
+                "Lo-Fi Chiptune 8-Bit Raw (-50 dB)",
+                8,
+                DitherMode::None,
+                0.0,
+                0,
+            ),
         ];
 
         for (p, exp_name, exp_depth, exp_mode, exp_shaping, exp_seed) in presets {
@@ -177,10 +240,10 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::ring_mod_view::RingModulatorView;
-    use crate::views::dither_quantizer_view::DitherQuantizerView;
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use crate::views::dither_quantizer_view::DitherQuantizerView;
+    use crate::views::ring_mod_view::RingModulatorView;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::ParamBus;
@@ -210,8 +273,14 @@ pub mod gui_tests {
         aw_view.open_ring_mod_hud();
         assert!(aw_view.is_ring_mod_hud_open());
         aw_view.sync_ring_mod_hud_state();
-        assert!(aw_view.device_rack_state.node_param_values.contains_key("carrier_freq_hz"));
-        assert!(aw_view.inspector_state.node_param_values.contains_key("mod_depth"));
+        assert!(aw_view
+            .device_rack_state
+            .node_param_values
+            .contains_key("carrier_freq_hz"));
+        assert!(aw_view
+            .inspector_state
+            .node_param_values
+            .contains_key("mod_depth"));
         aw_view.close_ring_mod_hud();
         assert!(!aw_view.is_ring_mod_hud_open());
 
@@ -220,8 +289,14 @@ pub mod gui_tests {
         aw_view.open_dither_quantizer_hud();
         assert!(aw_view.is_dither_quantizer_hud_open());
         aw_view.sync_dither_quantizer_hud_state();
-        assert!(aw_view.device_rack_state.node_param_values.contains_key("bit_depth"));
-        assert!(aw_view.inspector_state.node_param_values.contains_key("shaping_intensity"));
+        assert!(aw_view
+            .device_rack_state
+            .node_param_values
+            .contains_key("bit_depth"));
+        assert!(aw_view
+            .inspector_state
+            .node_param_values
+            .contains_key("shaping_intensity"));
         aw_view.close_dither_quantizer_hud();
         assert!(!aw_view.is_dither_quantizer_hud_open());
     }
@@ -232,9 +307,17 @@ pub mod gui_tests {
         let actions = &palette.actions;
 
         let has_ring_mod = actions.iter().any(|a| a.action_id == "open_ring_mod_hud");
-        let has_dither = actions.iter().any(|a| a.action_id == "open_dither_quantizer_hud");
+        let has_dither = actions
+            .iter()
+            .any(|a| a.action_id == "open_dither_quantizer_hud");
 
-        assert!(has_ring_mod, "open_ring_mod_hud must be registered in command palette");
-        assert!(has_dither, "open_dither_quantizer_hud must be registered in command palette");
+        assert!(
+            has_ring_mod,
+            "open_ring_mod_hud must be registered in command palette"
+        );
+        assert!(
+            has_dither,
+            "open_dither_quantizer_hud must be registered in command palette"
+        );
     }
 }

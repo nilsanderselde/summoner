@@ -617,11 +617,14 @@ impl LadderFilterView {
         let filter_canvas = Rect::new(rect.min.x + 20.0, rect.min.y + 100.0, 480.0, 230.0);
         if response.dragged() {
             if let Some(pos) = response.interact_pointer_pos() {
-                if pos.x >= filter_canvas.x && pos.x <= filter_canvas.x + filter_canvas.width
-                    && pos.y >= filter_canvas.y && pos.y <= filter_canvas.y + filter_canvas.height
+                if pos.x >= filter_canvas.x
+                    && pos.x <= filter_canvas.x + filter_canvas.width
+                    && pos.y >= filter_canvas.y
+                    && pos.y <= filter_canvas.y + filter_canvas.height
                 {
                     let norm_x = ((pos.x - filter_canvas.x) / filter_canvas.width).clamp(0.0, 1.0);
-                    let norm_y = (1.0 - ((pos.y - filter_canvas.y) / filter_canvas.height)).clamp(0.0, 1.0);
+                    let norm_y =
+                        (1.0 - ((pos.y - filter_canvas.y) / filter_canvas.height)).clamp(0.0, 1.0);
                     self.filter_puck_pos = (norm_x, norm_y);
                     self.cutoff_freq_hz = Self::normalized_to_freq(norm_x);
                     self.resonance_q = Self::normalized_to_resonance(norm_y);

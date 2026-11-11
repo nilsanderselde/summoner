@@ -117,7 +117,12 @@ fn read_u32_be(bytes: &[u8], pos: &mut usize) -> Result<u32, String> {
     if *pos + 4 > bytes.len() {
         return Err("Unexpected EOF reading u32".to_string());
     }
-    let val = u32::from_be_bytes([bytes[*pos], bytes[*pos + 1], bytes[*pos + 2], bytes[*pos + 3]]);
+    let val = u32::from_be_bytes([
+        bytes[*pos],
+        bytes[*pos + 1],
+        bytes[*pos + 2],
+        bytes[*pos + 3],
+    ]);
     *pos += 4;
     Ok(val)
 }
@@ -283,7 +288,8 @@ impl SmfData {
                                     if let Some((start_tick, v)) =
                                         active_notes.remove(&(channel, note))
                                     {
-                                        let dur_ticks = current_ticks.saturating_sub(start_tick).max(1);
+                                        let dur_ticks =
+                                            current_ticks.saturating_sub(start_tick).max(1);
                                         parsed_notes.push(SmfNote {
                                             channel,
                                             pitch: note,
@@ -300,7 +306,8 @@ impl SmfData {
                             if pos + 1 < track_end {
                                 let note = bytes[pos];
                                 pos += 2;
-                                if let Some((start_tick, v)) = active_notes.remove(&(channel, note)) {
+                                if let Some((start_tick, v)) = active_notes.remove(&(channel, note))
+                                {
                                     let dur_ticks = current_ticks.saturating_sub(start_tick).max(1);
                                     parsed_notes.push(SmfNote {
                                         channel,

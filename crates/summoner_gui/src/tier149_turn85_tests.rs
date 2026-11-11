@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::hoa_spatializer_view::{
         HoaSpatialFormat, HoaSpatializerView, HOA_PUCK_HIT_RADIUS,
     };
     use crate::views::neural_timbre_morph_view::{
         NeuralTimbreMorphView, TimbrePreset, TIMBRE_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
     use summoner_core::param_bus::ParamId;
 
     #[test]
@@ -29,7 +29,11 @@ pub mod pure_tests {
         let formats = [
             (HoaSpatialFormat::HoaThirdOrder, 16, "HOA 3RD ORDER (16-CH)"),
             (HoaSpatialFormat::DolbyAtmos714, 12, "DOLBY ATMOS 7.1.4"),
-            (HoaSpatialFormat::BinauralHeadTrack, 2, "BINAURAL HEAD-TRACK"),
+            (
+                HoaSpatialFormat::BinauralHeadTrack,
+                2,
+                "BINAURAL HEAD-TRACK",
+            ),
             (HoaSpatialFormat::Ambisonics514, 10, "AMBISONICS 5.1.4"),
             (HoaSpatialFormat::DomeAcoustic916, 16, "DOME ACOUSTIC 9.1.6"),
         ];
@@ -87,9 +91,24 @@ pub mod pure_tests {
         let presets = [
             (TimbrePreset::CelloToSynthLead, 130.81, 8, "CELLO -> LEAD"),
             (TimbrePreset::SopranoToFlute, 440.00, 12, "SOPRANO -> FLUTE"),
-            (TimbrePreset::Analog303ToVocalTract, 65.41, 16, "303 -> VOCAL TRACT"),
-            (TimbrePreset::MetalPercussionToGlass, 523.25, 10, "PERC -> GLASS BELL"),
-            (TimbrePreset::DiffusionLatentRandom, 220.00, 20, "LATENT DIFFUSION"),
+            (
+                TimbrePreset::Analog303ToVocalTract,
+                65.41,
+                16,
+                "303 -> VOCAL TRACT",
+            ),
+            (
+                TimbrePreset::MetalPercussionToGlass,
+                523.25,
+                10,
+                "PERC -> GLASS BELL",
+            ),
+            (
+                TimbrePreset::DiffusionLatentRandom,
+                220.00,
+                20,
+                "LATENT DIFFUSION",
+            ),
         ];
         for (pr, f0, steps, name) in presets {
             view.set_preset(pr);
@@ -194,7 +213,11 @@ pub mod gui_tests {
     fn test_turn85_gui_lock_free_param_bus_dispatch_hoa_and_neural_timbre() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -215,10 +238,24 @@ pub mod gui_tests {
 
         view.sync_hoa_spatializer_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("azimuth_deg"), Some(&35.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("elevation_deg"), Some(&12.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("distance_m"), Some(&3.5));
-        assert_eq!(view.inspector_state.node_param_values.get("head_yaw_deg"), Some(&-8.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("azimuth_deg"),
+            Some(&35.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("elevation_deg"),
+            Some(&12.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("distance_m"),
+            Some(&3.5)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("head_yaw_deg"),
+            Some(&-8.0)
+        );
 
         let pid_az = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_dist = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 2);
@@ -235,11 +272,32 @@ pub mod gui_tests {
 
         view.sync_neural_timbre_morph_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("latent_z1"), Some(&0.85));
-        assert_eq!(view.device_rack_state.node_param_values.get("latent_z2"), Some(&-0.40));
-        assert_eq!(view.device_rack_state.node_param_values.get("tracked_f0_hz"), Some(&330.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("morph_weight_pct"), Some(&75.0));
-        assert_eq!(view.inspector_state.node_param_values.get("denoising_steps"), Some(&14.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("latent_z1"),
+            Some(&0.85)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("latent_z2"),
+            Some(&-0.40)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("tracked_f0_hz"),
+            Some(&330.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("morph_weight_pct"),
+            Some(&75.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("denoising_steps"),
+            Some(&14.0)
+        );
 
         let pid_z1 = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_f0 = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 2);
@@ -289,11 +347,12 @@ pub mod gui_tests {
         }];
 
         inspector_state.selected_node_kind = Some("NeuralTimbreMorphView".to_string());
-        inspector_state.chain_devices = vec![crate::views::modern_device_rack::RackChainDeviceVisual {
-            kind: "NeuralTimbreMorphView".to_string(),
-            display_name: "Neural Timbre Morpher".to_string(),
-            is_bypassed: false,
-        }];
+        inspector_state.chain_devices =
+            vec![crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind: "NeuralTimbreMorphView".to_string(),
+                display_name: "Neural Timbre Morpher".to_string(),
+                is_bypassed: false,
+            }];
 
         let bus = ParamBus::new();
 
@@ -309,10 +368,22 @@ pub mod gui_tests {
     #[test]
     fn test_turn85_gui_command_palette_registration_hoa_and_neural_timbre() {
         let palette = CommandPalette::new();
-        let has_hoa = palette.actions.iter().any(|a| a.action_id == "open_hoa_spatializer_hud");
-        let has_timbre = palette.actions.iter().any(|a| a.action_id == "open_neural_timbre_morph_hud");
+        let has_hoa = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_hoa_spatializer_hud");
+        let has_timbre = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_neural_timbre_morph_hud");
 
-        assert!(has_hoa, "Expected open_hoa_spatializer_hud in CommandPalette");
-        assert!(has_timbre, "Expected open_neural_timbre_morph_hud in CommandPalette");
+        assert!(
+            has_hoa,
+            "Expected open_hoa_spatializer_hud in CommandPalette"
+        );
+        assert!(
+            has_timbre,
+            "Expected open_neural_timbre_morph_hud in CommandPalette"
+        );
     }
 }

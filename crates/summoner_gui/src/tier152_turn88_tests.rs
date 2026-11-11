@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::neural_vocoder_morph_view::{
         NeuralVocoderMorphView, VocoderMorphMode, NEURAL_VOCODER_PUCK_HIT_RADIUS,
     };
     use crate::views::neural_wavetable_view::{
         LatentArchitecture, NeuralWavetableView, NEURAL_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn88_pure_neural_vocoder_morph_initialization_and_kinematics() {
@@ -86,11 +86,41 @@ pub mod pure_tests {
 
         // Architecture profiles & nominal parameters
         let archs = [
-            (LatentArchitecture::VaeContinuous, 0.85, 0.45, 98.4, "VAE CONTINUOUS"),
-            (LatentArchitecture::TransformerDyn, 2.40, 0.75, 97.8, "TRANSFORMER DYN"),
-            (LatentArchitecture::DiffusionRes, 0.35, 0.30, 99.6, "DIFFUSION RES"),
-            (LatentArchitecture::Hypersphere4D, 1.20, 0.90, 98.9, "HYPERSPHERE 4D"),
-            (LatentArchitecture::SpectralFlow, 0.65, 0.55, 99.2, "SPECTRAL FLOW"),
+            (
+                LatentArchitecture::VaeContinuous,
+                0.85,
+                0.45,
+                98.4,
+                "VAE CONTINUOUS",
+            ),
+            (
+                LatentArchitecture::TransformerDyn,
+                2.40,
+                0.75,
+                97.8,
+                "TRANSFORMER DYN",
+            ),
+            (
+                LatentArchitecture::DiffusionRes,
+                0.35,
+                0.30,
+                99.6,
+                "DIFFUSION RES",
+            ),
+            (
+                LatentArchitecture::Hypersphere4D,
+                1.20,
+                0.90,
+                98.9,
+                "HYPERSPHERE 4D",
+            ),
+            (
+                LatentArchitecture::SpectralFlow,
+                0.65,
+                0.55,
+                99.2,
+                "SPECTRAL FLOW",
+            ),
         ];
         for (arch, spd, rad, fid, name) in archs {
             view.set_architecture(arch);
@@ -190,7 +220,11 @@ pub mod gui_tests {
     fn test_turn88_gui_lock_free_param_bus_dispatch_vocoder_and_wavetable() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -203,8 +237,14 @@ pub mod gui_tests {
         view.live_param_bus = Some(Arc::clone(&arc_bus));
 
         // Test Vocoder Morpher sync
-        let norm_f1 = crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView::f1_freq_to_normalized(620.0);
-        let norm_f2 = crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView::f2_freq_to_normalized(1850.0);
+        let norm_f1 =
+            crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView::f1_freq_to_normalized(
+                620.0,
+            );
+        let norm_f2 =
+            crate::views::neural_vocoder_morph_view::NeuralVocoderMorphView::f2_freq_to_normalized(
+                1850.0,
+            );
         view.neural_vocoder_morph_view.formant_puck_pos = (norm_f1, norm_f2);
         view.neural_vocoder_morph_view.articulation_depth_pct = 88.0;
         view.neural_vocoder_morph_view.carrier_harmonics_mix = 70.0;
@@ -213,11 +253,46 @@ pub mod gui_tests {
 
         view.sync_neural_vocoder_morph_hud_state();
 
-        assert!((view.device_rack_state.node_param_values.get("f1_freq_hz").copied().unwrap_or(0.0) - 620.0).abs() < 1e-2);
-        assert!((view.device_rack_state.node_param_values.get("f2_freq_hz").copied().unwrap_or(0.0) - 1850.0).abs() < 1e-2);
-        assert_eq!(view.device_rack_state.node_param_values.get("articulation_depth_pct"), Some(&88.0));
-        assert_eq!(view.inspector_state.node_param_values.get("carrier_harmonics_mix"), Some(&70.0));
-        assert_eq!(view.inspector_state.node_param_values.get("voicing_probability_pct"), Some(&95.0));
+        assert!(
+            (view
+                .device_rack_state
+                .node_param_values
+                .get("f1_freq_hz")
+                .copied()
+                .unwrap_or(0.0)
+                - 620.0)
+                .abs()
+                < 1e-2
+        );
+        assert!(
+            (view
+                .device_rack_state
+                .node_param_values
+                .get("f2_freq_hz")
+                .copied()
+                .unwrap_or(0.0)
+                - 1850.0)
+                .abs()
+                < 1e-2
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("articulation_depth_pct"),
+            Some(&88.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("carrier_harmonics_mix"),
+            Some(&70.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("voicing_probability_pct"),
+            Some(&95.0)
+        );
 
         let pid_f1 = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_f2 = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -232,11 +307,26 @@ pub mod gui_tests {
 
         view.sync_neural_wavetable_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("latent_z1"), Some(&1.25));
-        assert_eq!(view.device_rack_state.node_param_values.get("latent_z2"), Some(&-0.80));
-        assert_eq!(view.device_rack_state.node_param_values.get("latent_z3"), Some(&0.45));
-        assert_eq!(view.inspector_state.node_param_values.get("morph_speed_hz"), Some(&3.20));
-        assert_eq!(view.inspector_state.node_param_values.get("orbit_radius"), Some(&0.85));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("latent_z1"),
+            Some(&1.25)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("latent_z2"),
+            Some(&-0.80)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("latent_z3"),
+            Some(&0.45)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("morph_speed_hz"),
+            Some(&3.20)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("orbit_radius"),
+            Some(&0.85)
+        );
 
         let pid_z1 = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_z2 = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -250,13 +340,18 @@ pub mod gui_tests {
         let ctx = egui::Context::default();
 
         // 1. Vocoder Morpher trigger propagation from rack
-        view.device_rack_state.requested_open_neural_vocoder_morph_hud = true;
+        view.device_rack_state
+            .requested_open_neural_vocoder_morph_hud = true;
         let _ = ctx.run(egui::RawInput::default(), |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 view.show(ui);
             });
         });
-        assert!(!view.device_rack_state.requested_open_neural_vocoder_morph_hud);
+        assert!(
+            !view
+                .device_rack_state
+                .requested_open_neural_vocoder_morph_hud
+        );
         assert!(view.is_neural_vocoder_morph_hud_open());
         view.close_neural_vocoder_morph_hud();
 
@@ -275,13 +370,25 @@ pub mod gui_tests {
     #[test]
     fn test_turn88_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let voc_action = palette.actions.iter().find(|a| a.action_id == "open_neural_vocoder_morph_hud");
-        assert!(voc_action.is_some(), "open_neural_vocoder_morph_hud must be registered in command palette");
+        let voc_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_vocoder_morph_hud");
+        assert!(
+            voc_action.is_some(),
+            "open_neural_vocoder_morph_hud must be registered in command palette"
+        );
         let voc = voc_action.unwrap();
         assert_eq!(voc.category, "Synthesis");
 
-        let wt_action = palette.actions.iter().find(|a| a.action_id == "open_neural_wavetable_hud");
-        assert!(wt_action.is_some(), "open_neural_wavetable_hud must be registered in command palette");
+        let wt_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_wavetable_hud");
+        assert!(
+            wt_action.is_some(),
+            "open_neural_wavetable_hud must be registered in command palette"
+        );
         let wt = wt_action.unwrap();
         assert_eq!(wt.category, "Synthesis");
     }

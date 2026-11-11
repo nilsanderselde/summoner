@@ -41,7 +41,10 @@ pub mod pure_tests {
             Some(expected_key.as_str())
         );
 
-        let editor = view.automation_editor.as_ref().expect("Editor must be initialized");
+        let editor = view
+            .automation_editor
+            .as_ref()
+            .expect("Editor must be initialized");
         assert_eq!(editor.min_display, -1.0);
         assert_eq!(editor.max_display, 1.0);
         assert_eq!(editor.unit_name, "%");
@@ -66,7 +69,10 @@ pub mod pure_tests {
         let track_id = if !project.tracks.is_empty() {
             project.tracks[view.selected_track_idx].id as u32
         } else {
-            view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1) as u32
+            view.tracks
+                .get(view.selected_track_idx)
+                .map(|t| t.id)
+                .unwrap_or(1) as u32
         };
         let mut bus = ParamBus::new();
         let mut reg = AutomationRegistry::new();

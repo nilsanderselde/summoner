@@ -10,8 +10,8 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::award_winning_gui_view::{AwardWinningGuiView, ModularPortKind};
     use crate::dsp_node_ui::DspNodeRegistry;
+    use crate::views::award_winning_gui_view::{AwardWinningGuiView, ModularPortKind};
     use summoner_core::param_bus::{ParamBus, ParamId};
     use summoner_project::schema::ProjectConfig;
     use summoner_sequencer::automation::AutomationRegistry;
@@ -21,7 +21,11 @@ pub mod pure_tests {
     fn test_turn19_modular_node_bypass_toggle_and_param_bus_sync() {
         let mut view = AwardWinningGuiView::new();
         let project = ProjectConfig::default();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1) as u32;
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1) as u32;
         let mut bus = ParamBus::new();
         let mut reg = AutomationRegistry::new();
         let mut timeline = AutomationTimeline::new();
@@ -45,16 +49,23 @@ pub mod pure_tests {
         view.sync_with_param_bus(&project, &bus, &mut reg, &mut timeline, playhead, true);
 
         // Verify ParamBus was updated at track_id * 1000 + 600 + 0
-        let val = bus.get(ParamId(track_id * 1000 + 600)).expect("Bypass ParamId should exist");
+        let val = bus
+            .get(ParamId(track_id * 1000 + 600))
+            .expect("Bypass ParamId should exist");
         assert_eq!(val, 1.0, "ParamBus should receive 1.0 for bypassed node");
 
         // Verify AutomationRegistry has recorded parameter
-        let reg_val = reg.get_param(&format!("modular_{}_bypassed", "osc_1")).map(|p| p.get());
+        let reg_val = reg
+            .get_param(&format!("modular_{}_bypassed", "osc_1"))
+            .map(|p| p.get());
         assert_eq!(reg_val, Some(1.0));
 
         // Verify AutomationTimeline has recorded the automation point
         let lane = timeline.lanes.get(&format!("modular_{}_bypassed", "osc_1"));
-        assert!(lane.is_some(), "Automation lane for modular bypass must be created");
+        assert!(
+            lane.is_some(),
+            "Automation lane for modular bypass must be created"
+        );
         let points = &lane.unwrap().curve.points;
         assert_eq!(points.len(), 1);
         assert_eq!(points[0].beat, 4.0);
@@ -75,15 +86,29 @@ pub mod pure_tests {
         let initial_graph_nodes = view.audio_graph.lock().unwrap().nodes.len();
 
         let source_id = "filter_1";
-        let source_pos = view.modular_nodes.iter().find(|n| n.id == source_id).unwrap().pos;
+        let source_pos = view
+            .modular_nodes
+            .iter()
+            .find(|n| n.id == source_id)
+            .unwrap()
+            .pos;
 
         // Duplicate filter_1
-        let copy_id = view.duplicate_modular_node(source_id).expect("Duplicate should succeed");
+        let copy_id = view
+            .duplicate_modular_node(source_id)
+            .expect("Duplicate should succeed");
 
         assert_eq!(view.modular_nodes.len(), initial_node_count + 1);
-        assert_eq!(view.audio_graph.lock().unwrap().nodes.len(), initial_graph_nodes + 1);
+        assert_eq!(
+            view.audio_graph.lock().unwrap().nodes.len(),
+            initial_graph_nodes + 1
+        );
 
-        let copy_node = view.modular_nodes.iter().find(|n| n.id == copy_id).expect("Copied node must exist");
+        let copy_node = view
+            .modular_nodes
+            .iter()
+            .find(|n| n.id == copy_id)
+            .expect("Copied node must exist");
         assert_eq!(copy_node.kind_id, "FilterSvf");
         assert!(copy_node.display_name.contains("(Copy)"));
         assert_eq!(copy_node.pos.0, source_pos.0 + 25.0);
@@ -91,7 +116,10 @@ pub mod pure_tests {
         assert_eq!(copy_node.ports.len(), 3);
 
         // Selected modular node should point to the duplicate
-        assert_eq!(view.selected_modular_node_id.as_deref(), Some(copy_id.as_str()));
+        assert_eq!(
+            view.selected_modular_node_id.as_deref(),
+            Some(copy_id.as_str())
+        );
     }
 
     #[test]
@@ -110,8 +138,14 @@ pub mod pure_tests {
 
         // Both cords connected to filter_1 must be removed
         for cord in &view.patch_cords {
-            assert_ne!(cord.from_node_id, "filter_1", "No cords should originate from removed node");
-            assert_ne!(cord.to_node_id, "filter_1", "No cords should terminate at removed node");
+            assert_ne!(
+                cord.from_node_id, "filter_1",
+                "No cords should originate from removed node"
+            );
+            assert_ne!(
+                cord.to_node_id, "filter_1",
+                "No cords should terminate at removed node"
+            );
         }
         // Only env_1 -> vca_1 cord should remain
         assert_eq!(view.patch_cords.len(), 1);
@@ -130,42 +164,74 @@ pub mod pure_tests {
         let initial_node_count = view.modular_nodes.len();
 
         // 1. Oscillator category
-        let osc_desc = registry.get("NonlinearRabinovichFabrikantChaosSynthesizer")
+        let osc_desc = registry
+            .get("NonlinearRabinovichFabrikantChaosSynthesizer")
             .expect("Rabinovich Fabrikant oscillator should exist in registry");
         view.add_modular_node_from_descriptor(osc_desc);
 
         // 2. FilterEq category
-        let filter_desc = registry.get("NonlinearSteinerParkerSynth12dbFilter")
+        let filter_desc = registry
+            .get("NonlinearSteinerParkerSynth12dbFilter")
             .expect("Steiner Parker filter should exist in registry");
         view.add_modular_node_from_descriptor(filter_desc);
 
         // 3. DynamicsMaster category
-        let dyn_desc = registry.get("MultibandMasteringDiodeBridgeLimiter")
+        let dyn_desc = registry
+            .get("MultibandMasteringDiodeBridgeLimiter")
             .expect("Diode Bridge Limiter should exist in registry");
         view.add_modular_node_from_descriptor(dyn_desc);
 
         // 4. SpatialSurround category
-        let spatial_desc = registry.get("AmbisonicThirdOrderPlanarSoundfieldDecoder")
+        let spatial_desc = registry
+            .get("AmbisonicThirdOrderPlanarSoundfieldDecoder")
             .expect("Ambisonic Decoder should exist in registry");
         view.add_modular_node_from_descriptor(spatial_desc);
 
         // 5. Modulation category
-        let mod_desc = registry.get("ChaoticDoubleWellDuffingLfoModulator")
+        let mod_desc = registry
+            .get("ChaoticDoubleWellDuffingLfoModulator")
             .expect("Duffing LFO should exist in registry");
         view.add_modular_node_from_descriptor(mod_desc);
 
         assert_eq!(view.modular_nodes.len(), initial_node_count + 5);
 
         // Verify port configurations match categories
-        let added_osc = view.modular_nodes.iter().find(|n| n.kind_id == "NonlinearRabinovichFabrikantChaosSynthesizer").unwrap();
-        assert!(added_osc.ports.iter().any(|p| p.kind == ModularPortKind::AudioOut));
-        assert!(added_osc.ports.iter().any(|p| p.kind == ModularPortKind::ModulationIn));
+        let added_osc = view
+            .modular_nodes
+            .iter()
+            .find(|n| n.kind_id == "NonlinearRabinovichFabrikantChaosSynthesizer")
+            .unwrap();
+        assert!(added_osc
+            .ports
+            .iter()
+            .any(|p| p.kind == ModularPortKind::AudioOut));
+        assert!(added_osc
+            .ports
+            .iter()
+            .any(|p| p.kind == ModularPortKind::ModulationIn));
 
-        let added_spatial = view.modular_nodes.iter().find(|n| n.kind_id == "AmbisonicThirdOrderPlanarSoundfieldDecoder").unwrap();
-        assert!(added_spatial.ports.iter().any(|p| p.id == "in_l" && p.kind == ModularPortKind::AudioIn));
-        assert!(added_spatial.ports.iter().any(|p| p.id == "out_l" && p.kind == ModularPortKind::AudioOut));
+        let added_spatial = view
+            .modular_nodes
+            .iter()
+            .find(|n| n.kind_id == "AmbisonicThirdOrderPlanarSoundfieldDecoder")
+            .unwrap();
+        assert!(added_spatial
+            .ports
+            .iter()
+            .any(|p| p.id == "in_l" && p.kind == ModularPortKind::AudioIn));
+        assert!(added_spatial
+            .ports
+            .iter()
+            .any(|p| p.id == "out_l" && p.kind == ModularPortKind::AudioOut));
 
-        let added_mod = view.modular_nodes.iter().find(|n| n.kind_id == "ChaoticDoubleWellDuffingLfoModulator").unwrap();
-        assert!(added_mod.ports.iter().any(|p| p.kind == ModularPortKind::ModulationOut));
+        let added_mod = view
+            .modular_nodes
+            .iter()
+            .find(|n| n.kind_id == "ChaoticDoubleWellDuffingLfoModulator")
+            .unwrap();
+        assert!(added_mod
+            .ports
+            .iter()
+            .any(|p| p.kind == ModularPortKind::ModulationOut));
     }
 }

@@ -62,8 +62,16 @@ pub mod pure_tests {
                 param_id: lane_speed.clone(),
                 curve: AutomationCurve {
                     points: vec![
-                        AutomationPoint { beat: 0.0, value: 3.14, interp: Interpolation::Linear },
-                        AutomationPoint { beat: 4.0, value: 12.56, interp: Interpolation::Linear },
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 3.14,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 4.0,
+                            value: 12.56,
+                            interp: Interpolation::Linear,
+                        },
                     ],
                 },
             },
@@ -75,19 +83,37 @@ pub mod pure_tests {
                 param_id: lane_force.clone(),
                 curve: AutomationCurve {
                     points: vec![
-                        AutomationPoint { beat: 0.0, value: 1.0, interp: Interpolation::Linear },
-                        AutomationPoint { beat: 2.0, value: 9.0, interp: Interpolation::Linear },
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 1.0,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 2.0,
+                            value: 9.0,
+                            interp: Interpolation::Linear,
+                        },
                     ],
                 },
             },
         );
 
         // Evaluate at beat 2.0
-        let val_speed = timeline.lanes.get(&lane_speed).unwrap().curve.evaluate_at_beat(2.0);
+        let val_speed = timeline
+            .lanes
+            .get(&lane_speed)
+            .unwrap()
+            .curve
+            .evaluate_at_beat(2.0);
         assert!((val_speed - 7.85).abs() < 1e-4);
 
         // Evaluate at beat 1.0
-        let val_force = timeline.lanes.get(&lane_force).unwrap().curve.evaluate_at_beat(1.0);
+        let val_force = timeline
+            .lanes
+            .get(&lane_force)
+            .unwrap()
+            .curve
+            .evaluate_at_beat(1.0);
         assert!((val_force - 5.0).abs() < 1e-4);
     }
 }
@@ -95,12 +121,14 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
+    use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use crate::views::modern_device_rack::{
+        show_modern_device_rack_with_context, ModernDeviceRackState,
+    };
+    use crate::views::modern_inspector::ModernInspectorState;
     use eframe::egui;
     use summoner_core::param_bus::ParamBus;
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_device_rack::{show_modern_device_rack_with_context, ModernDeviceRackState};
-    use crate::views::modern_inspector::ModernInspectorState;
-    use crate::command_palette::CommandPalette;
 
     #[test]
     fn test_turn48_gui_award_winning_view_hurdy_and_trompette_modal_lifecycle() {
@@ -249,8 +277,18 @@ pub mod gui_tests {
         view.sync_hurdy_gurdy_hud_state();
 
         // Verify live synchronization to node_param_values and ParamBus
-        assert_eq!(view.device_rack_state.node_param_values.get("crank_speed_rad_s"), Some(&9.42));
-        assert_eq!(view.inspector_state.node_param_values.get("wrist_acceleration_pulse"), Some(&3.2));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("crank_speed_rad_s"),
+            Some(&9.42)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("wrist_acceleration_pulse"),
+            Some(&3.2)
+        );
 
         assert_eq!(bus.get(t1_s0_speed), Some(9.42));
         assert_eq!(bus.get(t1_s0_pulse), Some(3.2));
@@ -264,10 +302,14 @@ pub mod gui_tests {
         palette.open();
         palette.search_query = "Hurdy".into();
         let filtered = palette.get_filtered_actions();
-        assert!(filtered.iter().any(|a| a.action_id == "open_hurdy_gurdy_hud"));
+        assert!(filtered
+            .iter()
+            .any(|a| a.action_id == "open_hurdy_gurdy_hud"));
 
         palette.search_query = "Trompette".into();
         let filtered2 = palette.get_filtered_actions();
-        assert!(filtered2.iter().any(|a| a.action_id == "open_trompette_hud"));
+        assert!(filtered2
+            .iter()
+            .any(|a| a.action_id == "open_trompette_hud"));
     }
 }

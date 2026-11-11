@@ -523,4 +523,3 @@ impl Mpegh3DSpatializerView {
         self.render_ascii(40, 16).join("\n")
     }
 }
-

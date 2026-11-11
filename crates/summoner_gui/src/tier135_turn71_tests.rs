@@ -150,8 +150,8 @@ pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn71_gui_award_winning_view_headless_rendering_without_panic() {
@@ -195,7 +195,11 @@ pub mod gui_tests {
     fn test_turn71_gui_live_parambus_slot_dispatch() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -218,9 +222,20 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(4.2));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(9.5));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("tension_pct"), Some(&75.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("dispersion_chirp_pct"), Some(&82.0));
-        assert_eq!(view.inspector_state.node_param_values.get("tension_pct"), Some(&75.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("tension_pct"),
+            Some(&75.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("dispersion_chirp_pct"),
+            Some(&82.0)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("tension_pct"),
+            Some(&75.0)
+        );
 
         // 2. Sync Comb Resonator HUD
         view.comb_resonator_view.base_frequency_hz = 520.0;
@@ -234,9 +249,22 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(7200.0));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(45.0));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("base_frequency_hz"), Some(&520.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("feedback_pct"), Some(&88.0));
-        assert_eq!(view.inspector_state.node_param_values.get("base_frequency_hz"), Some(&520.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("base_frequency_hz"),
+            Some(&520.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("feedback_pct"),
+            Some(&88.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("base_frequency_hz"),
+            Some(&520.0)
+        );
     }
 
     #[test]
@@ -269,13 +297,19 @@ pub mod gui_tests {
     #[test]
     fn test_turn71_gui_command_palette_action_registration() {
         let palette = CommandPalette::new();
-        let spring_action = palette.actions.iter().find(|a| a.action_id == "open_spring_reverb_hud");
+        let spring_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_spring_reverb_hud");
         assert!(spring_action.is_some());
         let spring = spring_action.unwrap();
         assert_eq!(spring.category, "Physical Modeling");
         assert!(spring.label.contains("Spring Reverb"));
 
-        let comb_action = palette.actions.iter().find(|a| a.action_id == "open_comb_resonator_hud");
+        let comb_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_comb_resonator_hud");
         assert!(comb_action.is_some());
         let comb = comb_action.unwrap();
         assert_eq!(comb.category, "Physical Modeling");

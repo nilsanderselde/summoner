@@ -58,7 +58,8 @@ impl HarmonicContext {
 
         if pcs == vec![0, 4, 7] || (pcs.contains(&0) && pcs.contains(&4) && pcs.contains(&7)) {
             "C Major".to_string()
-        } else if pcs == vec![0, 3, 7] || (pcs.contains(&0) && pcs.contains(&3) && pcs.contains(&7)) {
+        } else if pcs == vec![0, 3, 7] || (pcs.contains(&0) && pcs.contains(&3) && pcs.contains(&7))
+        {
             "C Minor".to_string()
         } else if pcs.contains(&7) && pcs.contains(&11) && pcs.contains(&2) {
             "G Major (V)".to_string()
@@ -79,7 +80,9 @@ impl HarmonicContext {
         let current_label = self.analyze_active_chord();
         let tension = self.analyze_current_tension();
 
-        if tension.predicted_cadence == CadenceType::Authentic || current_label.contains("Major (V)") {
+        if tension.predicted_cadence == CadenceType::Authentic
+            || current_label.contains("Major (V)")
+        {
             vec![60, 64, 67] // Resolve to Tonic C Major (I)
         } else if current_label.contains("Major") || current_label == "Silence" {
             vec![67, 71, 74] // Build tension towards G Major (V)
@@ -159,8 +162,10 @@ impl HarmonicBusBridge {
     #[inline]
     pub fn update_from_tension(&self, root: u16, tension: &HarmonicTension) {
         self.root_note.store(root as u32, Ordering::Relaxed);
-        self.tension_score.store(tension.total_tension.to_bits(), Ordering::Relaxed);
-        self.cadence_type.store(tension.predicted_cadence as u32, Ordering::Relaxed);
+        self.tension_score
+            .store(tension.total_tension.to_bits(), Ordering::Relaxed);
+        self.cadence_type
+            .store(tension.predicted_cadence as u32, Ordering::Relaxed);
     }
 
     #[inline]

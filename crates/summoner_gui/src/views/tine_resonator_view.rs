@@ -155,11 +155,13 @@ impl TineResonatorView {
 
             // Clamped-free beam fundamental mode: cosh(kx) - cos(kx) - 0.734*(sinh(kx) - sin(kx))
             let k1 = 1.875;
-            let mode1 = (k1 * x).cosh() - (k1 * x).cos() - 0.7341 * ((k1 * x).sinh() - (k1 * x).sin());
+            let mode1 =
+                (k1 * x).cosh() - (k1 * x).cos() - 0.7341 * ((k1 * x).sinh() - (k1 * x).sin());
 
             // 2nd inharmonic bell mode (k2 = 4.694)
             let k2 = 4.694;
-            let mode2 = (k2 * x).cosh() - (k2 * x).cos() - 1.0185 * ((k2 * x).sinh() - (k2 * x).sin());
+            let mode2 =
+                (k2 * x).cosh() - (k2 * x).cos() - 1.0185 * ((k2 * x).sinh() - (k2 * x).sin());
 
             // Combined beam displacement scaled by stiffness
             let combined = mode1 * 0.75 + mode2 * (0.25 * self.beam_stiffness);
@@ -173,8 +175,10 @@ impl TineResonatorView {
         let mut orbit = [(0.0f32, 0.0f32); 32];
         for (i, slot) in orbit.iter_mut().enumerate() {
             let phase = (i as f32 / 32.0) * 2.0 * PI;
-            let intensity_l = (phase.sin() * 0.5 + 0.5) * self.tremolo_depth + (1.0 - self.tremolo_depth);
-            let intensity_r = ((phase + self.tremolo_phase_offset).sin() * 0.5 + 0.5) * self.tremolo_depth
+            let intensity_l =
+                (phase.sin() * 0.5 + 0.5) * self.tremolo_depth + (1.0 - self.tremolo_depth);
+            let intensity_r = ((phase + self.tremolo_phase_offset).sin() * 0.5 + 0.5)
+                * self.tremolo_depth
                 + (1.0 - self.tremolo_depth);
             *slot = (intensity_l, intensity_r);
         }
@@ -193,19 +197,31 @@ impl TineResonatorView {
     /// Renders ASCII diagnostic representation.
     pub fn render_ascii(&self, width: usize, height: usize) -> Vec<String> {
         let mut lines = Vec::with_capacity(height);
-        let header = format!("┌─ [TINE RESONATOR & TREMOLO CANVAS] F0: {:.1}Hz ─┐", self.fundamental_hz);
+        let header = format!(
+            "┌─ [TINE RESONATOR & TREMOLO CANVAS] F0: {:.1}Hz ─┐",
+            self.fundamental_hz
+        );
         let pad = width.saturating_sub(header.len());
         lines.push(format!("{}{}", header, "─".repeat(pad)));
 
         lines.push(format!(
             "│ Tonebar Coupling: {:.2} | Beam Stiffness: {:.2} | Tremolo: {:.1}Hz ({:.0}%) │",
-            self.tonebar_coupling, self.beam_stiffness, self.tremolo_rate_hz, self.tremolo_depth * 100.0
+            self.tonebar_coupling,
+            self.beam_stiffness,
+            self.tremolo_rate_hz,
+            self.tremolo_depth * 100.0
         ));
 
         let beam = self.evaluate_beam_deflection();
         let mut beam_str = String::from("│ Tine Deflection: [");
         for val in beam.iter().take(20) {
-            let ch = if *val > 0.6 { '▀' } else if *val > 0.2 { '─' } else { '_' };
+            let ch = if *val > 0.6 {
+                '▀'
+            } else if *val > 0.2 {
+                '─'
+            } else {
+                '_'
+            };
             beam_str.push(ch);
         }
         beam_str.push_str("] Tip │");
@@ -214,12 +230,24 @@ impl TineResonatorView {
         let orbit = self.evaluate_tremolo_lissajous();
         let mut orbit_str = String::from("│ Optical Pan: L:[");
         for (l, _r) in orbit.iter().take(12) {
-            let ch = if *l > 0.7 { '█' } else if *l > 0.3 { '▒' } else { '░' };
+            let ch = if *l > 0.7 {
+                '█'
+            } else if *l > 0.3 {
+                '▒'
+            } else {
+                '░'
+            };
             orbit_str.push(ch);
         }
         orbit_str.push_str("] R:[");
         for (_l, r) in orbit.iter().take(12) {
-            let ch = if *r > 0.7 { '█' } else if *r > 0.3 { '▒' } else { '░' };
+            let ch = if *r > 0.7 {
+                '█'
+            } else if *r > 0.3 {
+                '▒'
+            } else {
+                '░'
+            };
             orbit_str.push(ch);
         }
         orbit_str.push_str("] │");
@@ -339,7 +367,8 @@ impl TineResonatorView {
             if let Some(pos) = response.interact_pointer_pos() {
                 if left_rect.contains(pos) {
                     let norm_x = ((pos.x - left_rect.min.x) / left_rect.width()).clamp(0.0, 1.0);
-                    let norm_y = (1.0 - ((pos.y - left_rect.min.y) / left_rect.height())).clamp(0.0, 1.0);
+                    let norm_y =
+                        (1.0 - ((pos.y - left_rect.min.y) / left_rect.height())).clamp(0.0, 1.0);
                     self.update_physics_from_puck(norm_x, norm_y);
                     self.profile = TineResonatorProfile::CustomHybrid;
                 }
@@ -368,7 +397,10 @@ impl TineResonatorView {
             let py = mount_y - val * (left_rect.height() * 0.35);
             let pt = egui::pos2(px, py);
             if let Some(prev) = prev_pt {
-                painter.line_segment([prev, pt], Stroke::new(2.5_f32, Color32::from_rgb(255, 183, 3)));
+                painter.line_segment(
+                    [prev, pt],
+                    Stroke::new(2.5_f32, Color32::from_rgb(255, 183, 3)),
+                );
             }
             prev_pt = Some(pt);
         }
@@ -394,8 +426,16 @@ impl TineResonatorView {
         let puck_x = left_rect.min.x + self.puck_pos.0 * left_rect.width();
         let puck_y = left_rect.min.y + (1.0 - self.puck_pos.1) * left_rect.height();
         let puck_center = egui::pos2(puck_x, puck_y);
-        painter.circle_filled(puck_center, TINE_PUCK_HIT_RADIUS, Color32::from_rgba_premultiplied(255, 183, 3, 40));
-        painter.circle_stroke(puck_center, TINE_PUCK_HIT_RADIUS, Stroke::new(1.5_f32, Color32::from_rgb(255, 183, 3)));
+        painter.circle_filled(
+            puck_center,
+            TINE_PUCK_HIT_RADIUS,
+            Color32::from_rgba_premultiplied(255, 183, 3, 40),
+        );
+        painter.circle_stroke(
+            puck_center,
+            TINE_PUCK_HIT_RADIUS,
+            Stroke::new(1.5_f32, Color32::from_rgb(255, 183, 3)),
+        );
         painter.circle_filled(puck_center, 4.0, Color32::from_rgb(255, 255, 255));
 
         // Readout Labels on Left Canvas
@@ -431,11 +471,17 @@ impl TineResonatorView {
         let r_cx = right_rect.center().x;
         let r_cy = right_rect.center().y;
         painter.line_segment(
-            [egui::pos2(right_rect.min.x + 10.0, r_cy), egui::pos2(right_rect.max.x - 10.0, r_cy)],
+            [
+                egui::pos2(right_rect.min.x + 10.0, r_cy),
+                egui::pos2(right_rect.max.x - 10.0, r_cy),
+            ],
             Stroke::new(1.0_f32, Color32::from_rgb(30, 42, 60)),
         );
         painter.line_segment(
-            [egui::pos2(r_cx, right_rect.min.y + 10.0), egui::pos2(r_cx, right_rect.max.y - 10.0)],
+            [
+                egui::pos2(r_cx, right_rect.min.y + 10.0),
+                egui::pos2(r_cx, right_rect.max.y - 10.0),
+            ],
             Stroke::new(1.0_f32, Color32::from_rgb(30, 42, 60)),
         );
 
@@ -449,22 +495,36 @@ impl TineResonatorView {
             let py = r_cy - (r_val - 0.5) * 2.0 * orb_h;
             let pt = egui::pos2(px, py);
             if let Some(prev) = prev_orb {
-                painter.line_segment([prev, pt], Stroke::new(2.0_f32, Color32::from_rgb(0, 245, 212)));
+                painter.line_segment(
+                    [prev, pt],
+                    Stroke::new(2.0_f32, Color32::from_rgb(0, 245, 212)),
+                );
             }
             prev_orb = Some(pt);
         }
 
         // Active Panning Marker
         let active_pan = orbit[0];
-        let p_pt = egui::pos2(r_cx + (active_pan.0 - 0.5) * 2.0 * orb_w, r_cy - (active_pan.1 - 0.5) * 2.0 * orb_h);
+        let p_pt = egui::pos2(
+            r_cx + (active_pan.0 - 0.5) * 2.0 * orb_w,
+            r_cy - (active_pan.1 - 0.5) * 2.0 * orb_h,
+        );
         painter.circle_filled(p_pt, 5.0, Color32::from_rgb(255, 255, 255));
-        painter.circle_stroke(p_pt, 7.0, Stroke::new(1.5_f32, Color32::from_rgb(0, 245, 212)));
+        painter.circle_stroke(
+            p_pt,
+            7.0,
+            Stroke::new(1.5_f32, Color32::from_rgb(0, 245, 212)),
+        );
 
         // Readout Labels on Right Canvas
         painter.text(
             egui::pos2(right_rect.min.x + 8.0, right_rect.min.y + 8.0),
             egui::Align2::LEFT_TOP,
-            format!("Optical Tremolo: {:.1} Hz ({:.0}%)", self.tremolo_rate_hz, self.tremolo_depth * 100.0),
+            format!(
+                "Optical Tremolo: {:.1} Hz ({:.0}%)",
+                self.tremolo_rate_hz,
+                self.tremolo_depth * 100.0
+            ),
             FontId::proportional(11.0),
             Color32::from_rgb(0, 245, 212),
         );
@@ -496,15 +556,29 @@ impl TineResonatorView {
                 // 1. Fundamental F0
                 ui.vertical(|ui| {
                     ui.set_width(col_w);
-                    ui.label(RichText::new("FUNDAMENTAL F0").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
-                    ui.add(egui::Slider::new(&mut self.fundamental_hz, 50.0..=1000.0).suffix(" Hz").logarithmic(true));
+                    ui.label(
+                        RichText::new("FUNDAMENTAL F0")
+                            .font(FontId::proportional(10.0))
+                            .strong()
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.fundamental_hz, 50.0..=1000.0)
+                            .suffix(" Hz")
+                            .logarithmic(true),
+                    );
                 });
                 ui.add_space(12.0);
 
                 // 2. Tremolo Rate
                 ui.vertical(|ui| {
                     ui.set_width(col_w);
-                    ui.label(RichText::new("TREMOLO RATE").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                    ui.label(
+                        RichText::new("TREMOLO RATE")
+                            .font(FontId::proportional(10.0))
+                            .strong()
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
                     ui.add(egui::Slider::new(&mut self.tremolo_rate_hz, 0.2..=15.0).suffix(" Hz"));
                 });
                 ui.add_space(12.0);
@@ -512,7 +586,12 @@ impl TineResonatorView {
                 // 3. Tremolo Depth
                 ui.vertical(|ui| {
                     ui.set_width(col_w);
-                    ui.label(RichText::new("TREMOLO DEPTH").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
+                    ui.label(
+                        RichText::new("TREMOLO DEPTH")
+                            .font(FontId::proportional(10.0))
+                            .strong()
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
                     ui.add(egui::Slider::new(&mut self.tremolo_depth, 0.0..=1.0));
                 });
                 ui.add_space(12.0);
@@ -520,15 +599,28 @@ impl TineResonatorView {
                 // 4. Tremolo Phase Offset
                 ui.vertical(|ui| {
                     ui.set_width(col_w);
-                    ui.label(RichText::new("PHASE OFFSET").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(148, 163, 184)));
-                    ui.add(egui::Slider::new(&mut self.tremolo_phase_offset, 0.0..=PI).custom_formatter(|n, _| format!("{:.0}°", n.to_degrees())));
+                    ui.label(
+                        RichText::new("PHASE OFFSET")
+                            .font(FontId::proportional(10.0))
+                            .strong()
+                            .color(Color32::from_rgb(148, 163, 184)),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.tremolo_phase_offset, 0.0..=PI)
+                            .custom_formatter(|n, _| format!("{:.0}°", n.to_degrees())),
+                    );
                 });
             });
         });
     }
 
     /// Renders a headless PNG snapshot to the specified path.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep slate #0A0E18
@@ -608,7 +700,12 @@ impl TineResonatorView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 

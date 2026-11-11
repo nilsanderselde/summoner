@@ -6,13 +6,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::cassotto_chamber_view::{
-        CassottoChamberView, CassottoChamberProfile, CASSOTTO_PUCK_HIT_RADIUS,
+        CassottoChamberProfile, CassottoChamberView, CASSOTTO_PUCK_HIT_RADIUS,
     };
     use crate::views::zero_gravity_fluid_view::{
-        ZeroGravityFluidView, FluidAcousticRegime, FLUID_PUCK_HIT_RADIUS,
+        FluidAcousticRegime, ZeroGravityFluidView, FLUID_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn113_pure_cassotto_chamber_initialization_and_kinematics() {
@@ -22,11 +22,51 @@ pub mod pure_tests {
 
         // Profiles and expected values
         let profiles = [
-            (CassottoChamberProfile::DobleCassottoBandoneon, "Doble Cassotto Bandoneon (Premier Chamber)", 460.0, 1420.0, 2600.0, 3.8, 0.85),
-            (CassottoChamberProfile::StandardAccordionChamber, "Standard Double Cassotto (Italian Maple)", 520.0, 1680.0, 3200.0, 3.2, 0.75),
-            (CassottoChamberProfile::ConcertinaSpruceCavity, "Vintage Concertina Spruce Body", 680.0, 2100.0, 4800.0, 2.4, 0.50),
-            (CassottoChamberProfile::HarmoniumResonantBox, "Harmonium Resonant Soundbox", 340.0, 1150.0, 2100.0, 4.5, 0.95),
-            (CassottoChamberProfile::OpenAirBayan, "Open-Air Russian Bayan (Direct)", 850.0, 2800.0, 8000.0, 1.5, 0.25),
+            (
+                CassottoChamberProfile::DobleCassottoBandoneon,
+                "Doble Cassotto Bandoneon (Premier Chamber)",
+                460.0,
+                1420.0,
+                2600.0,
+                3.8,
+                0.85,
+            ),
+            (
+                CassottoChamberProfile::StandardAccordionChamber,
+                "Standard Double Cassotto (Italian Maple)",
+                520.0,
+                1680.0,
+                3200.0,
+                3.2,
+                0.75,
+            ),
+            (
+                CassottoChamberProfile::ConcertinaSpruceCavity,
+                "Vintage Concertina Spruce Body",
+                680.0,
+                2100.0,
+                4800.0,
+                2.4,
+                0.50,
+            ),
+            (
+                CassottoChamberProfile::HarmoniumResonantBox,
+                "Harmonium Resonant Soundbox",
+                340.0,
+                1150.0,
+                2100.0,
+                4.5,
+                0.95,
+            ),
+            (
+                CassottoChamberProfile::OpenAirBayan,
+                "Open-Air Russian Bayan (Direct)",
+                850.0,
+                2800.0,
+                8000.0,
+                1.5,
+                0.25,
+            ),
         ];
 
         for (p, expected_name, exp_f1, exp_f2, exp_fc, exp_q, exp_warmth) in profiles {
@@ -89,11 +129,46 @@ pub mod pure_tests {
 
         // Regimes and expected values
         let regimes = [
-            (FluidAcousticRegime::MicrogravityWaterSphere, "Microgravity Water Sphere (Capillary Wave)", 1.0, 1482.0, 72.8, 0.995),
-            (FluidAcousticRegime::SupercriticalCo2Vortex, "Supercritical CO2 Vortex Breakdown", 0.05, 330.0, 18.5, 0.990),
-            (FluidAcousticRegime::LiquidHeliumSuperfluid, "Liquid Helium-4 Quantum Superfluid", 0.001, 220.0, 0.35, 0.999),
-            (FluidAcousticRegime::ViscousGlycerinDroplet, "Viscous Glycerin Acoustic Droplet", 50.0, 1920.0, 63.4, 0.950),
-            (FluidAcousticRegime::FerrofluidMagneticSuspension, "Ferrofluid Magnetic Core Suspension", 25.0, 1250.0, 45.0, 0.980),
+            (
+                FluidAcousticRegime::MicrogravityWaterSphere,
+                "Microgravity Water Sphere (Capillary Wave)",
+                1.0,
+                1482.0,
+                72.8,
+                0.995,
+            ),
+            (
+                FluidAcousticRegime::SupercriticalCo2Vortex,
+                "Supercritical CO2 Vortex Breakdown",
+                0.05,
+                330.0,
+                18.5,
+                0.990,
+            ),
+            (
+                FluidAcousticRegime::LiquidHeliumSuperfluid,
+                "Liquid Helium-4 Quantum Superfluid",
+                0.001,
+                220.0,
+                0.35,
+                0.999,
+            ),
+            (
+                FluidAcousticRegime::ViscousGlycerinDroplet,
+                "Viscous Glycerin Acoustic Droplet",
+                50.0,
+                1920.0,
+                63.4,
+                0.950,
+            ),
+            (
+                FluidAcousticRegime::FerrofluidMagneticSuspension,
+                "Ferrofluid Magnetic Core Suspension",
+                25.0,
+                1250.0,
+                45.0,
+                0.980,
+            ),
         ];
 
         for (r, expected_name, exp_visc, exp_c, exp_tension, exp_damp) in regimes {
@@ -151,8 +226,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -181,19 +256,31 @@ pub mod gui_tests {
         view.sync_cassotto_chamber_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("aperture").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("aperture")
+                .copied(),
             Some(0.72)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("wood_warmth").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("wood_warmth")
+                .copied(),
             Some(1.25)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("aperture").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("aperture")
+                .copied(),
             Some(0.72)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("wood_warmth").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("wood_warmth")
+                .copied(),
             Some(1.25)
         );
 
@@ -205,19 +292,31 @@ pub mod gui_tests {
         view.sync_zero_gravity_fluid_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("viscosity_cst").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("viscosity_cst")
+                .copied(),
             Some(2.45)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("sound_speed_mps").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("sound_speed_mps")
+                .copied(),
             Some(1620.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("viscosity_cst").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("viscosity_cst")
+                .copied(),
             Some(2.45)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("sound_speed_mps").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("sound_speed_mps")
+                .copied(),
             Some(1620.0)
         );
 
@@ -232,12 +331,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let cas_action = palette.actions.iter().find(|a| a.action_id == "open_cassotto_chamber_hud");
-        assert!(cas_action.is_some(), "open_cassotto_chamber_hud should be registered");
+        let cas_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_cassotto_chamber_hud");
+        assert!(
+            cas_action.is_some(),
+            "open_cassotto_chamber_hud should be registered"
+        );
         assert_eq!(cas_action.unwrap().category, "Physical Modeling");
 
-        let fluid_action = palette.actions.iter().find(|a| a.action_id == "open_zero_gravity_fluid_hud");
-        assert!(fluid_action.is_some(), "open_zero_gravity_fluid_hud should be registered");
+        let fluid_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_zero_gravity_fluid_hud");
+        assert!(
+            fluid_action.is_some(),
+            "open_zero_gravity_fluid_hud should be registered"
+        );
         assert_eq!(fluid_action.unwrap().category, "Physical Modeling");
     }
 }

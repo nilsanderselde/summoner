@@ -5,15 +5,15 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
+    use crate::views::bci_eeg_decoder_view::{
+        BciEegDecoderView, BciEegPreset, BCI_EEG_PUCK_HIT_RADIUS, NUM_10_20_ELECTRODES,
+        SCALP_ELECTRODES_10_20,
+    };
     use crate::views::spectrogram_art_view::{
         SpectroColorMode, SpectroFrequencyMapping, SpectrogramArtPreset, SpectrogramArtView,
         SPECTROGRAM_ART_PUCK_HIT_RADIUS,
     };
-    use crate::views::bci_eeg_decoder_view::{
-        BciEegDecoderView, BciEegPreset, BCI_EEG_PUCK_HIT_RADIUS,
-        NUM_10_20_ELECTRODES, SCALP_ELECTRODES_10_20,
-    };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn119_pure_spectrogram_art_initialization_and_physics() {
@@ -23,10 +23,46 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (SpectrogramArtPreset::AphexTwinFace, "Aphex Twin Silhouette (50Hz - 15kHz)", 50.0, 15000.0, 128, SpectroFrequencyMapping::Logarithmic, SpectroColorMode::GrayscaleLuma, 4.0),
-            (SpectrogramArtPreset::GeometricFractal, "Geometric Mandelbrot Fractal (80Hz - 12kHz)", 80.0, 12000.0, 96, SpectroFrequencyMapping::Logarithmic, SpectroColorMode::RGBHarmonicNote, 6.0),
-            (SpectrogramArtPreset::CyberpunkMatrix, "Cyberpunk Matrix Waterfall (100Hz - 18kHz)", 100.0, 18000.0, 192, SpectroFrequencyMapping::Linear, SpectroColorMode::RGBHarmonicNote, 3.0),
-            (SpectrogramArtPreset::CosmicWaterfall, "Cosmic Stellar Nebulae (30Hz - 20kHz)", 30.0, 20000.0, 64, SpectroFrequencyMapping::Logarithmic, SpectroColorMode::GrayscaleLuma, 8.0),
+            (
+                SpectrogramArtPreset::AphexTwinFace,
+                "Aphex Twin Silhouette (50Hz - 15kHz)",
+                50.0,
+                15000.0,
+                128,
+                SpectroFrequencyMapping::Logarithmic,
+                SpectroColorMode::GrayscaleLuma,
+                4.0,
+            ),
+            (
+                SpectrogramArtPreset::GeometricFractal,
+                "Geometric Mandelbrot Fractal (80Hz - 12kHz)",
+                80.0,
+                12000.0,
+                96,
+                SpectroFrequencyMapping::Logarithmic,
+                SpectroColorMode::RGBHarmonicNote,
+                6.0,
+            ),
+            (
+                SpectrogramArtPreset::CyberpunkMatrix,
+                "Cyberpunk Matrix Waterfall (100Hz - 18kHz)",
+                100.0,
+                18000.0,
+                192,
+                SpectroFrequencyMapping::Linear,
+                SpectroColorMode::RGBHarmonicNote,
+                3.0,
+            ),
+            (
+                SpectrogramArtPreset::CosmicWaterfall,
+                "Cosmic Stellar Nebulae (30Hz - 20kHz)",
+                30.0,
+                20000.0,
+                64,
+                SpectroFrequencyMapping::Logarithmic,
+                SpectroColorMode::GrayscaleLuma,
+                8.0,
+            ),
         ];
 
         for (p, exp_name, exp_min, exp_max, exp_density, exp_map, exp_color, exp_dur) in presets {
@@ -82,7 +118,12 @@ pub mod pure_tests {
         assert!((view.playhead_pos - 0.45).abs() < 1e-3);
 
         // Synthetic pixel evaluations for all presets stay in [0.0 ..= 1.0]
-        for p in [SpectrogramArtPreset::AphexTwinFace, SpectrogramArtPreset::GeometricFractal, SpectrogramArtPreset::CyberpunkMatrix, SpectrogramArtPreset::CosmicWaterfall] {
+        for p in [
+            SpectrogramArtPreset::AphexTwinFace,
+            SpectrogramArtPreset::GeometricFractal,
+            SpectrogramArtPreset::CyberpunkMatrix,
+            SpectrogramArtPreset::CosmicWaterfall,
+        ] {
             view.preset = p;
             for u_step in 0..5 {
                 for v_step in 0..5 {
@@ -120,10 +161,50 @@ pub mod pure_tests {
 
         // Presets and expected parameters
         let presets = [
-            (BciEegPreset::DeepAlphaFlow, "Deep Alpha Flow (Creative Flow State)", 0.15, 0.60, 0.85, 0.20, 0.10, 0.70, 0.30),
-            (BciEegPreset::HighGammaInsight, "High Gamma Insight (Cognitive Burst)", 0.05, 0.15, 0.30, 0.75, 0.90, 0.85, 0.80),
-            (BciEegPreset::ThetaDreamTrance, "Theta Dream Trance (Ambient Hypnagogia)", 0.50, 0.88, 0.45, 0.10, 0.05, 0.50, 0.15),
-            (BciEegPreset::ActiveBetaFocus, "Active Beta Focus (Surgical Precision)", 0.10, 0.25, 0.40, 0.80, 0.35, 0.20, 0.65),
+            (
+                BciEegPreset::DeepAlphaFlow,
+                "Deep Alpha Flow (Creative Flow State)",
+                0.15,
+                0.60,
+                0.85,
+                0.20,
+                0.10,
+                0.70,
+                0.30,
+            ),
+            (
+                BciEegPreset::HighGammaInsight,
+                "High Gamma Insight (Cognitive Burst)",
+                0.05,
+                0.15,
+                0.30,
+                0.75,
+                0.90,
+                0.85,
+                0.80,
+            ),
+            (
+                BciEegPreset::ThetaDreamTrance,
+                "Theta Dream Trance (Ambient Hypnagogia)",
+                0.50,
+                0.88,
+                0.45,
+                0.10,
+                0.05,
+                0.50,
+                0.15,
+            ),
+            (
+                BciEegPreset::ActiveBetaFocus,
+                "Active Beta Focus (Surgical Precision)",
+                0.10,
+                0.25,
+                0.40,
+                0.80,
+                0.35,
+                0.20,
+                0.65,
+            ),
         ];
 
         for (p, exp_name, exp_d, exp_th, exp_a, exp_b, exp_g, exp_val, exp_ar) in presets {
@@ -199,8 +280,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -243,9 +324,27 @@ pub mod gui_tests {
         view.spectrogram_art_view.max_freq_hz = 16000.0;
         view.sync_spectrogram_art_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("playhead_pos").copied(), Some(0.55));
-        assert_eq!(view.device_rack_state.node_param_values.get("spectral_density").copied(), Some(160.0));
-        assert_eq!(view.inspector_state.node_param_values.get("playhead_pos").copied(), Some(0.55));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("playhead_pos")
+                .copied(),
+            Some(0.55)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("spectral_density")
+                .copied(),
+            Some(160.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("playhead_pos")
+                .copied(),
+            Some(0.55)
+        );
 
         view.bci_eeg_decoder_view.alpha_power = 0.88;
         view.bci_eeg_decoder_view.beta_power = 0.42;
@@ -253,15 +352,37 @@ pub mod gui_tests {
         view.bci_eeg_decoder_view.cv_modulation_out = 0.75;
         view.sync_bci_eeg_decoder_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("alpha_power").copied(), Some(0.88));
-        assert_eq!(view.device_rack_state.node_param_values.get("beta_power").copied(), Some(0.42));
-        assert_eq!(view.inspector_state.node_param_values.get("alpha_power").copied(), Some(0.88));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("alpha_power")
+                .copied(),
+            Some(0.88)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("beta_power")
+                .copied(),
+            Some(0.42)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("alpha_power")
+                .copied(),
+            Some(0.88)
+        );
 
         // 5. Command Palette Action Verification
         let palette = CommandPalette::new();
         let actions = &palette.actions;
-        assert!(actions.iter().any(|a| a.action_id == "open_spectrogram_art_hud"));
-        assert!(actions.iter().any(|a| a.action_id == "open_bci_eeg_decoder_hud"));
+        assert!(actions
+            .iter()
+            .any(|a| a.action_id == "open_spectrogram_art_hud"));
+        assert!(actions
+            .iter()
+            .any(|a| a.action_id == "open_bci_eeg_decoder_hud"));
 
         // 6. Trigger Requests from Inspector and Device Rack
         view.inspector_state.requested_open_spectrogram_art_hud = true;

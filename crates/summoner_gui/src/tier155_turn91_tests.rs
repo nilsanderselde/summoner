@@ -5,13 +5,11 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
+    use crate::views::bbd_chorus_view::{BbdChorusView, BbdClockMode, BBD_PUCK_HIT_RADIUS};
     use crate::views::bitcrusher_morph_view::{
         BitcrusherMorphView, MorphQuantizeMode, BITCRUSHER_PUCK_HIT_RADIUS,
     };
-    use crate::views::bbd_chorus_view::{
-        BbdChorusView, BbdClockMode, BBD_PUCK_HIT_RADIUS,
-    };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn91_pure_bitcrusher_morph_initialization_and_kinematics() {
@@ -176,7 +174,11 @@ pub mod gui_tests {
     fn test_turn91_gui_lock_free_param_bus_dispatch_bitcrusher_and_bbd_chorus() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -198,12 +200,34 @@ pub mod gui_tests {
 
         view.sync_bitcrusher_morph_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("bit_depth"), Some(&8.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("downsample_ratio"), Some(&16.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("jitter_pct"), Some(&25.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("anti_alias_cutoff_hz"), Some(&6500.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("pre_drive_db"), Some(&6.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("mix_pct"), Some(&85.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("bit_depth"),
+            Some(&8.5)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("downsample_ratio"),
+            Some(&16.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("jitter_pct"),
+            Some(&25.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("anti_alias_cutoff_hz"),
+            Some(&6500.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("pre_drive_db"),
+            Some(&6.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("mix_pct"),
+            Some(&85.0)
+        );
 
         let pid_bits = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_down = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -218,10 +242,28 @@ pub mod gui_tests {
 
         view.sync_bbd_chorus_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("stereo_spread_percent"), Some(&90.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("feedback_percent"), Some(&45.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("mix_percent"), Some(&60.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("bbd_clock_rate_khz"), Some(&32.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("stereo_spread_percent"),
+            Some(&90.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("feedback_percent"),
+            Some(&45.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("mix_percent"),
+            Some(&60.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("bbd_clock_rate_khz"),
+            Some(&32.0)
+        );
 
         let pid_spread = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_fb = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -260,13 +302,25 @@ pub mod gui_tests {
     #[test]
     fn test_turn91_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let bc_action = palette.actions.iter().find(|a| a.action_id == "open_bitcrusher_morph_hud");
-        assert!(bc_action.is_some(), "open_bitcrusher_morph_hud must be registered in command palette");
+        let bc_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_bitcrusher_morph_hud");
+        assert!(
+            bc_action.is_some(),
+            "open_bitcrusher_morph_hud must be registered in command palette"
+        );
         let bc = bc_action.unwrap();
         assert_eq!(bc.category, "Distortion / Lo-Fi");
 
-        let bbd_action = palette.actions.iter().find(|a| a.action_id == "open_bbd_chorus_hud");
-        assert!(bbd_action.is_some(), "open_bbd_chorus_hud must be registered in command palette");
+        let bbd_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_bbd_chorus_hud");
+        assert!(
+            bbd_action.is_some(),
+            "open_bbd_chorus_hud must be registered in command palette"
+        );
         let bbd = bbd_action.unwrap();
         assert_eq!(bbd.category, "Modulation / Time");
     }

@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::transient_designer_view::{
-        TransientMode, TransientDesignerView, TRANSIENT_DESIGNER_HANDLE_HIT_RADIUS,
+        TransientDesignerView, TransientMode, TRANSIENT_DESIGNER_HANDLE_HIT_RADIUS,
     };
     use crate::views::upward_compressor_view::{
         UpwardCompressionProfile, UpwardCompressorView, UPWARD_COMPRESSOR_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn101_pure_transient_designer_initialization_and_kinematics() {
@@ -106,9 +106,18 @@ pub mod pure_tests {
         let profiles = [
             (UpwardCompressionProfile::LowLevelDetail, "Low Level Detail"),
             (UpwardCompressionProfile::OttAggressive, "OTT Aggressive"),
-            (UpwardCompressionProfile::BroadcastDensity, "Broadcast Density"),
-            (UpwardCompressionProfile::VocalAirExtract, "Vocal Air Extract"),
-            (UpwardCompressionProfile::LinearPhaseMaster, "Linear Phase Master"),
+            (
+                UpwardCompressionProfile::BroadcastDensity,
+                "Broadcast Density",
+            ),
+            (
+                UpwardCompressionProfile::VocalAirExtract,
+                "Vocal Air Extract",
+            ),
+            (
+                UpwardCompressionProfile::LinearPhaseMaster,
+                "Linear Phase Master",
+            ),
         ];
 
         for (profile, expected_name) in profiles {
@@ -171,11 +180,11 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use crate::views::modern_inspector::show_modern_inspector_with_context;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_inspector::show_modern_inspector_with_context;
 
     #[test]
     fn test_turn101_gui_modal_window_lifecycles() {
@@ -215,7 +224,11 @@ pub mod gui_tests {
     fn test_turn101_gui_lock_free_param_bus_dispatch_transient_and_upward() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -235,10 +248,30 @@ pub mod gui_tests {
 
         view.sync_transient_designer_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("attack_gain_db"), Some(&9.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("sustain_gain_db"), Some(&-4.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("punch_freq_hz"), Some(&110.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("output_gain_db"), Some(&1.5));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("attack_gain_db"),
+            Some(&9.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("sustain_gain_db"),
+            Some(&-4.5)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("punch_freq_hz"),
+            Some(&110.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("output_gain_db"),
+            Some(&1.5)
+        );
 
         let pid_atk = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_sus = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -259,10 +292,26 @@ pub mod gui_tests {
 
         view.sync_upward_compressor_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("threshold_dbfs"), Some(&-38.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("max_boost_db"), Some(&12.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("ratio"), Some(&3.2));
-        assert_eq!(view.device_rack_state.node_param_values.get("active_gain_boost_db"), Some(&7.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("threshold_dbfs"),
+            Some(&-38.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("max_boost_db"),
+            Some(&12.5)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("ratio"),
+            Some(&3.2)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("active_gain_boost_db"),
+            Some(&7.0)
+        );
 
         let pid_th = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_bst = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);

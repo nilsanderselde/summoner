@@ -36,7 +36,10 @@ pub mod pure_tests {
             view.requested_modular_automation_param.as_deref(),
             Some("modular_filter_1_cutoff")
         );
-        let editor = view.automation_editor.as_ref().expect("Editor must be initialized");
+        let editor = view
+            .automation_editor
+            .as_ref()
+            .expect("Editor must be initialized");
         assert_eq!(editor.min_display, 20.0);
         assert_eq!(editor.max_display, 20000.0);
         assert_eq!(editor.unit_name, "Hz");
@@ -108,7 +111,10 @@ pub mod pure_tests {
         let track_id = if !project.tracks.is_empty() {
             project.tracks[view.selected_track_idx].id as u32
         } else {
-            view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1) as u32
+            view.tracks
+                .get(view.selected_track_idx)
+                .map(|t| t.id)
+                .unwrap_or(1) as u32
         };
         let mut bus = ParamBus::new();
         let mut reg = AutomationRegistry::new();
@@ -125,12 +131,19 @@ pub mod pure_tests {
                 bus.register(pid, 0.0);
             }
         }
-        let filter_n_idx = view.modular_nodes.iter().position(|n| n.id == "filter_1").unwrap();
+        let filter_n_idx = view
+            .modular_nodes
+            .iter()
+            .position(|n| n.id == "filter_1")
+            .unwrap();
         let cutoff_pid = ParamId(track_id * 1000 + 500 + (filter_n_idx as u32 * 16));
 
         // 3. Sync at beat 0.0 (editor curve syncs to timeline, then timeline evaluates at beat 0.0)
         view.sync_with_param_bus(&project, &bus, &mut reg, &mut timeline, 0.0, false);
-        assert_eq!(view.get_modular_node_param("filter_1", "cutoff"), Some(20.0));
+        assert_eq!(
+            view.get_modular_node_param("filter_1", "cutoff"),
+            Some(20.0)
+        );
         assert_eq!(bus.get(cutoff_pid), Some(20.0));
 
         // 4. Advance playhead to beat 8.0 (halfway on 16-beat timeline -> 50% = 10010.0 Hz)
@@ -141,7 +154,10 @@ pub mod pure_tests {
 
         // 5. Advance playhead to beat 16.0 (full scale -> 20000.0 Hz)
         view.sync_with_param_bus(&project, &bus, &mut reg, &mut timeline, 16.0, false);
-        assert_eq!(view.get_modular_node_param("filter_1", "cutoff"), Some(20000.0));
+        assert_eq!(
+            view.get_modular_node_param("filter_1", "cutoff"),
+            Some(20000.0)
+        );
         assert_eq!(bus.get(cutoff_pid), Some(20000.0));
     }
 
@@ -152,7 +168,10 @@ pub mod pure_tests {
         let track_id = if !project.tracks.is_empty() {
             project.tracks[view.selected_track_idx].id as u32
         } else {
-            view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1) as u32
+            view.tracks
+                .get(view.selected_track_idx)
+                .map(|t| t.id)
+                .unwrap_or(1) as u32
         };
         let mut bus = ParamBus::new();
         let mut reg = AutomationRegistry::new();
@@ -205,17 +224,31 @@ pub mod pure_tests {
         assert!(view.select_modular_node("filter_1"));
         assert_eq!(view.selected_modular_node_id.as_deref(), Some("filter_1"));
         assert_eq!(view.inspector_state.target_name, "Filter SVF");
-        assert_eq!(view.inspector_state.node_param_values.get("cutoff"), Some(&1200.0));
+        assert_eq!(
+            view.inspector_state.node_param_values.get("cutoff"),
+            Some(&1200.0)
+        );
 
         // 2. Modify parameter in Inspector map and call sync
-        view.inspector_state.node_param_values.insert("cutoff".to_string(), 4800.0);
+        view.inspector_state
+            .node_param_values
+            .insert("cutoff".to_string(), 4800.0);
         view.sync_selected_modular_node_params();
-        assert_eq!(view.get_modular_node_param("filter_1", "cutoff"), Some(4800.0));
+        assert_eq!(
+            view.get_modular_node_param("filter_1", "cutoff"),
+            Some(4800.0)
+        );
 
         // 3. Modify parameter on modular faceplate and call sync
         view.set_modular_node_param("filter_1", "cutoff", 7500.0);
         view.sync_selected_modular_node_params();
-        assert_eq!(view.inspector_state.node_param_values.get("cutoff"), Some(&7500.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("cutoff"), Some(&7500.0));
+        assert_eq!(
+            view.inspector_state.node_param_values.get("cutoff"),
+            Some(&7500.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("cutoff"),
+            Some(&7500.0)
+        );
     }
 }

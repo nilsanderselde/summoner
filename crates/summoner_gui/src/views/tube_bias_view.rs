@@ -220,11 +220,40 @@ impl TubeBiasView {
         }
 
         // Header Panel (y: 10..46, x: 20..width-20)
-        fill_rounded_rect_tube(&mut pixels, width, height, 20, 10, width - 40, 36, 4, [18, 24, 38, 255]);
+        fill_rounded_rect_tube(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            4,
+            [18, 24, 38, 255],
+        );
 
         // Left Panel: Anode Load-Line & Q-Point Canvas (x: 20..380, y: 56..280)
-        fill_rounded_rect_tube(&mut pixels, width, height, 20, 56, 360, 224, 6, [10, 14, 22, 255]);
-        draw_rect_border_tube(&mut pixels, width, height, 20, 56, 360, 224, [45, 60, 85, 255]);
+        fill_rounded_rect_tube(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            360,
+            224,
+            6,
+            [10, 14, 22, 255],
+        );
+        draw_rect_border_tube(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            360,
+            224,
+            [45, 60, 85, 255],
+        );
 
         // Grid lines on load-line canvas
         for i in 1..4 {
@@ -235,18 +264,62 @@ impl TubeBiasView {
         }
 
         // DC Load Line (orange line from top-left to bottom-right)
-        draw_line_segment_tube(&mut pixels, width, height, 40.0, 80.0, 360.0, 260.0, [255, 107, 43, 255]);
+        draw_line_segment_tube(
+            &mut pixels,
+            width,
+            height,
+            40.0,
+            80.0,
+            360.0,
+            260.0,
+            [255, 107, 43, 255],
+        );
 
         // Bias Q-Point Puck (Gold center, ring with >= 22pt radius -> 44x44pt bounding hit box)
         let qx = 20.0 + self.q_point_norm.0 * 360.0;
         let qy = 56.0 + (1.0 - self.q_point_norm.1) * 224.0;
-        draw_circle_ring_tube(&mut pixels, width, height, qx, qy, TUBE_PUCK_HIT_RADIUS, [255, 215, 0, 160]);
+        draw_circle_ring_tube(
+            &mut pixels,
+            width,
+            height,
+            qx,
+            qy,
+            TUBE_PUCK_HIT_RADIUS,
+            [255, 215, 0, 160],
+        );
         draw_circle_filled_tube(&mut pixels, width, height, qx, qy, 14.0, [255, 215, 0, 255]);
-        draw_circle_filled_tube(&mut pixels, width, height, qx, qy, 4.0, [255, 255, 255, 255]);
+        draw_circle_filled_tube(
+            &mut pixels,
+            width,
+            height,
+            qx,
+            qy,
+            4.0,
+            [255, 255, 255, 255],
+        );
 
         // Right Panel: Harmonic Distortion Spectrum & Scope (x: 400..760, y: 56..280)
-        fill_rounded_rect_tube(&mut pixels, width, height, 400, 56, 360, 224, 6, [10, 14, 22, 255]);
-        draw_rect_border_tube(&mut pixels, width, height, 400, 56, 360, 224, [45, 60, 85, 255]);
+        fill_rounded_rect_tube(
+            &mut pixels,
+            width,
+            height,
+            400,
+            56,
+            360,
+            224,
+            6,
+            [10, 14, 22, 255],
+        );
+        draw_rect_border_tube(
+            &mut pixels,
+            width,
+            height,
+            400,
+            56,
+            360,
+            224,
+            [45, 60, 85, 255],
+        );
 
         // Scope Waveform
         let scope_mid_y = 120.0f32;
@@ -263,7 +336,16 @@ impl TubeBiasView {
             let cx = 420.0 + (i as f32 / 99.0) * 320.0;
             let cy = scope_mid_y - sat * 35.0;
             if let Some((px, py)) = prev_pt {
-                draw_line_segment_tube(&mut pixels, width, height, px, py, cx, cy, [0, 255, 180, 255]);
+                draw_line_segment_tube(
+                    &mut pixels,
+                    width,
+                    height,
+                    px,
+                    py,
+                    cx,
+                    cy,
+                    [0, 255, 180, 255],
+                );
             }
             prev_pt = Some((cx, cy));
         }
@@ -284,15 +366,53 @@ impl TubeBiasView {
                 [255, 107, 43, 255] // Odd harmonic orange
             };
 
-            fill_rect_tube(&mut pixels, width, height, bx, by.saturating_sub(bar_h), 35, bar_h, col);
+            fill_rect_tube(
+                &mut pixels,
+                width,
+                height,
+                bx,
+                by.saturating_sub(bar_h),
+                35,
+                bar_h,
+                col,
+            );
         }
 
         // Bottom Controls Bar (x: 20..760, y: 295..480)
-        fill_rounded_rect_tube(&mut pixels, width, height, 20, 295, 760, 185, 6, [18, 25, 38, 255]);
+        fill_rounded_rect_tube(
+            &mut pixels,
+            width,
+            height,
+            20,
+            295,
+            760,
+            185,
+            6,
+            [18, 25, 38, 255],
+        );
 
         // Compliance Badge (x: 35..765, y: 430..465)
-        fill_rounded_rect_tube(&mut pixels, width, height, 35, 430, 730, 36, 4, [16, 35, 28, 255]);
-        draw_rect_border_tube(&mut pixels, width, height, 35, 430, 730, 36, [0, 255, 180, 255]);
+        fill_rounded_rect_tube(
+            &mut pixels,
+            width,
+            height,
+            35,
+            430,
+            730,
+            36,
+            4,
+            [16, 35, 28, 255],
+        );
+        draw_rect_border_tube(
+            &mut pixels,
+            width,
+            height,
+            35,
+            430,
+            730,
+            36,
+            [0, 255, 180, 255],
+        );
 
         encode_minimal_png(path, &pixels, width, height)
     }
@@ -513,8 +633,10 @@ impl TubeBiasView {
         let load_rect = Rect::new(rect.min.x + 20.0, rect.min.y + 56.0, 370.0, 224.0);
         if response.dragged() {
             if let Some(pos) = response.interact_pointer_pos() {
-                if pos.x >= load_rect.x && pos.x <= load_rect.x + load_rect.width
-                    && pos.y >= load_rect.y && pos.y <= load_rect.y + load_rect.height
+                if pos.x >= load_rect.x
+                    && pos.x <= load_rect.x + load_rect.width
+                    && pos.y >= load_rect.y
+                    && pos.y <= load_rect.y + load_rect.height
                 {
                     let norm_x = ((pos.x - load_rect.x) / load_rect.width).clamp(0.0, 1.0);
                     let norm_y = (1.0 - ((pos.y - load_rect.y) / load_rect.height)).clamp(0.0, 1.0);
@@ -537,7 +659,16 @@ impl TubeBiasView {
 // ----------------------------------------------------------------------------
 
 #[allow(clippy::too_many_arguments)]
-fn fill_rect_tube(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+fn fill_rect_tube(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    col: [u8; 4],
+) {
     for y in ry..(ry + rh).min(h) {
         for x in rx..(rx + rw).min(w) {
             let idx = ((y * w + x) * 4) as usize;
@@ -588,7 +719,16 @@ fn fill_rounded_rect_tube(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_rect_border_tube(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+fn draw_rect_border_tube(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    col: [u8; 4],
+) {
     for x in rx..(rx + rw).min(w) {
         if ry < h {
             let idx = ((ry * w + x) * 4) as usize;
@@ -611,8 +751,18 @@ fn draw_rect_border_tube(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u
     }
 }
 
-fn draw_horizontal_line_tube(buf: &mut [u8], w: u32, h: u32, x0: u32, x1: u32, y: u32, col: [u8; 4]) {
-    if y >= h { return; }
+fn draw_horizontal_line_tube(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: u32,
+    x1: u32,
+    y: u32,
+    col: [u8; 4],
+) {
+    if y >= h {
+        return;
+    }
     for x in x0.min(w)..=x1.min(w - 1) {
         let idx = ((y * w + x) * 4) as usize;
         buf[idx..idx + 4].copy_from_slice(&col);
@@ -620,7 +770,9 @@ fn draw_horizontal_line_tube(buf: &mut [u8], w: u32, h: u32, x0: u32, x1: u32, y
 }
 
 fn draw_vertical_line_tube(buf: &mut [u8], w: u32, h: u32, x: u32, y0: u32, y1: u32, col: [u8; 4]) {
-    if x >= w { return; }
+    if x >= w {
+        return;
+    }
     for y in y0.min(h)..=y1.min(h - 1) {
         let idx = ((y * w + x) * 4) as usize;
         buf[idx..idx + 4].copy_from_slice(&col);
@@ -628,7 +780,16 @@ fn draw_vertical_line_tube(buf: &mut [u8], w: u32, h: u32, x: u32, y0: u32, y1: 
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_line_segment_tube(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+fn draw_line_segment_tube(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    col: [u8; 4],
+) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let steps = (dx.abs().max(dy.abs()) * 2.0).max(1.0) as u32;
@@ -683,7 +844,12 @@ fn draw_circle_ring_tube(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f3
 }
 
 /// Minimal PNG encoder writing uncompressed raw RGBA stream into compliant PNG container.
-fn encode_minimal_png(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::new();
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 
@@ -777,8 +943,18 @@ mod tests {
 
     #[test]
     fn test_tube_bias_view_hit_target_dimensions() {
-        const { assert!(MIN_HIT_TARGET_PT >= 44.0, "Hit targets must be >= 44pt for touch accessibility") };
-        const { assert!(TUBE_PUCK_HIT_RADIUS * 2.0 >= 44.0, "Puck hit bounds must be >= 44pt") };
+        const {
+            assert!(
+                MIN_HIT_TARGET_PT >= 44.0,
+                "Hit targets must be >= 44pt for touch accessibility"
+            )
+        };
+        const {
+            assert!(
+                TUBE_PUCK_HIT_RADIUS * 2.0 >= 44.0,
+                "Puck hit bounds must be >= 44pt"
+            )
+        };
     }
 
     #[test]
@@ -789,7 +965,8 @@ mod tests {
         let _ = view.render_snapshot_png("../../scratch/renders/tube_bias_view.png", 800, 520);
         assert!(res.is_ok(), "Snapshot render must succeed: {:?}", res);
         assert!(
-            std::path::Path::new(render_path).exists() || std::path::Path::new("../../scratch/renders/tube_bias_view.png").exists(),
+            std::path::Path::new(render_path).exists()
+                || std::path::Path::new("../../scratch/renders/tube_bias_view.png").exists(),
             "Rendered snapshot PNG must exist at {}",
             render_path
         );

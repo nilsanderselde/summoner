@@ -10,9 +10,9 @@
 //!
 //! Enforces zero heap allocations in audio loops under `AllocGuard`.
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use summoner_core::formant_bus::{FormantBus, IpaVowel};
 use summoner_core::param_bus::{ParamBus, ParamId};
@@ -154,73 +154,109 @@ impl VowelGraph {
             IpaVowel::CloseFrontI,
             [270.0, 2290.0, 3010.0, 3500.0],
             [50.0, 90.0, 120.0, 150.0],
-            0.92, 0.95, 1.25, 0.0,
+            0.92,
+            0.95,
+            1.25,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::CloseMidFrontE,
             [390.0, 2300.0, 2850.0, 3500.0],
             [60.0, 100.0, 130.0, 160.0],
-            0.82, 0.75, 1.30, 0.0,
+            0.82,
+            0.75,
+            1.30,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::OpenMidFrontEps,
             [530.0, 1840.0, 2480.0, 3500.0],
             [70.0, 110.0, 140.0, 170.0],
-            0.70, 0.55, 1.35, 0.0,
+            0.70,
+            0.55,
+            1.35,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::NearOpenFrontAsh,
             [660.0, 1720.0, 2410.0, 3500.0],
             [80.0, 120.0, 150.0, 180.0],
-            0.60, 0.35, 1.45, 0.0,
+            0.60,
+            0.35,
+            1.45,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::OpenFrontA,
             [730.0, 1090.0, 2440.0, 3500.0],
             [90.0, 130.0, 160.0, 190.0],
-            0.40, 0.15, 1.60, 0.0,
+            0.40,
+            0.15,
+            1.60,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::OpenBackA,
             [700.0, 1220.0, 2600.0, 3500.0],
             [85.0, 125.0, 155.0, 185.0],
-            0.25, 0.15, 1.50, 0.0,
+            0.25,
+            0.15,
+            1.50,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::OpenMidBackO,
             [570.0, 840.0, 2410.0, 3500.0],
             [75.0, 115.0, 145.0, 175.0],
-            0.20, 0.45, 0.70, 0.0,
+            0.20,
+            0.45,
+            0.70,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::CloseMidBackO,
             [460.0, 1100.0, 2500.0, 3500.0],
             [65.0, 105.0, 135.0, 165.0],
-            0.15, 0.70, 0.50, 0.0,
+            0.15,
+            0.70,
+            0.50,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::CloseBackU,
             [300.0, 870.0, 2240.0, 3500.0],
             [55.0, 95.0, 125.0, 155.0],
-            0.10, 0.90, 0.30, 0.0,
+            0.10,
+            0.90,
+            0.30,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::MidCentralSchwa,
             [500.0, 1500.0, 2500.0, 3500.0],
             [70.0, 110.0, 140.0, 170.0],
-            0.50, 0.50, 1.00, 0.0,
+            0.50,
+            0.50,
+            1.00,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::CloseFrontY,
             [270.0, 1900.0, 2100.0, 3500.0],
             [50.0, 90.0, 120.0, 150.0],
-            0.90, 0.95, 0.35, 0.0,
+            0.90,
+            0.95,
+            0.35,
+            0.0,
         ));
         graph.add_node(VowelNode::new(
             IpaVowel::CloseMidFrontOe,
             [400.0, 1600.0, 2250.0, 3500.0],
             [60.0, 100.0, 130.0, 160.0],
-            0.75, 0.70, 0.45, 0.0,
+            0.75,
+            0.70,
+            0.45,
+            0.0,
         ));
 
         // Default waypoint trajectory: /i/ -> /e/ -> /a/ -> /o/ -> /u/
@@ -276,7 +312,8 @@ impl VowelGraph {
         let num_w = self.waypoints.len();
         if num_w == 1 {
             let n = &self.nodes[self.waypoints[0].min(self.nodes.len() - 1)];
-            let areas = Self::synthesize_cylinder_areas(n.tongue_position, n.tongue_height, n.lip_opening);
+            let areas =
+                Self::synthesize_cylinder_areas(n.tongue_position, n.tongue_height, n.lip_opening);
             return FormantTrajectoryPoint {
                 formants_hz: n.formants_hz,
                 bandwidths_hz: n.bandwidths_hz,
@@ -295,10 +332,18 @@ impl VowelGraph {
         let seg_idx = (segment_pos.floor() as usize).min(num_w - 2);
         let seg_frac = segment_pos - seg_idx as f32;
 
-        let i0 = if seg_idx == 0 { self.waypoints[0] } else { self.waypoints[seg_idx - 1] };
+        let i0 = if seg_idx == 0 {
+            self.waypoints[0]
+        } else {
+            self.waypoints[seg_idx - 1]
+        };
         let i1 = self.waypoints[seg_idx];
         let i2 = self.waypoints[seg_idx + 1];
-        let i3 = if seg_idx + 2 < num_w { self.waypoints[seg_idx + 2] } else { self.waypoints[seg_idx + 1] };
+        let i3 = if seg_idx + 2 < num_w {
+            self.waypoints[seg_idx + 2]
+        } else {
+            self.waypoints[seg_idx + 1]
+        };
 
         let n0 = &self.nodes[i0.min(self.nodes.len() - 1)];
         let n1 = &self.nodes[i1.min(self.nodes.len() - 1)];
@@ -314,23 +359,54 @@ impl VowelGraph {
                 n2.formants_hz[k],
                 n3.formants_hz[k],
                 seg_frac,
-            ).max(50.0);
+            )
+            .max(50.0);
             bandwidths_hz[k] = Self::catmull_rom_1d(
                 n0.bandwidths_hz[k],
                 n1.bandwidths_hz[k],
                 n2.bandwidths_hz[k],
                 n3.bandwidths_hz[k],
                 seg_frac,
-            ).max(20.0);
+            )
+            .max(20.0);
         }
 
-        let tongue_pos = Self::catmull_rom_1d(n0.tongue_position, n1.tongue_position, n2.tongue_position, n3.tongue_position, seg_frac).clamp(0.0, 1.0);
-        let tongue_height = Self::catmull_rom_1d(n0.tongue_height, n1.tongue_height, n2.tongue_height, n3.tongue_height, seg_frac).clamp(0.0, 1.0);
-        let lip_opening = Self::catmull_rom_1d(n0.lip_opening, n1.lip_opening, n2.lip_opening, n3.lip_opening, seg_frac).clamp(0.1, 2.5);
-        let velum_opening = Self::catmull_rom_1d(n0.velum_opening, n1.velum_opening, n2.velum_opening, n3.velum_opening, seg_frac).clamp(0.0, 1.0);
+        let tongue_pos = Self::catmull_rom_1d(
+            n0.tongue_position,
+            n1.tongue_position,
+            n2.tongue_position,
+            n3.tongue_position,
+            seg_frac,
+        )
+        .clamp(0.0, 1.0);
+        let tongue_height = Self::catmull_rom_1d(
+            n0.tongue_height,
+            n1.tongue_height,
+            n2.tongue_height,
+            n3.tongue_height,
+            seg_frac,
+        )
+        .clamp(0.0, 1.0);
+        let lip_opening = Self::catmull_rom_1d(
+            n0.lip_opening,
+            n1.lip_opening,
+            n2.lip_opening,
+            n3.lip_opening,
+            seg_frac,
+        )
+        .clamp(0.1, 2.5);
+        let velum_opening = Self::catmull_rom_1d(
+            n0.velum_opening,
+            n1.velum_opening,
+            n2.velum_opening,
+            n3.velum_opening,
+            seg_frac,
+        )
+        .clamp(0.0, 1.0);
 
         let nearest_vowel = if seg_frac < 0.5 { n1.vowel } else { n2.vowel };
-        let cylinder_areas = Self::synthesize_cylinder_areas(tongue_pos, tongue_height, lip_opening);
+        let cylinder_areas =
+            Self::synthesize_cylinder_areas(tongue_pos, tongue_height, lip_opening);
 
         FormantTrajectoryPoint {
             formants_hz,
@@ -345,7 +421,11 @@ impl VowelGraph {
     }
 
     /// Synthesizes 44-cylinder cross-sectional areas from tongue position, height, and lip opening.
-    pub fn synthesize_cylinder_areas(tongue_pos: f32, tongue_height: f32, lip_opening: f32) -> [f32; 44] {
+    pub fn synthesize_cylinder_areas(
+        tongue_pos: f32,
+        tongue_height: f32,
+        lip_opening: f32,
+    ) -> [f32; 44] {
         let mut areas = [2.5f32; 44];
         let center_idx = 12.0 + tongue_pos.clamp(0.0, 1.0) * 24.0;
         let width = 7.0;
@@ -386,8 +466,18 @@ impl VowelGraph {
         let pt = self.evaluate_trajectory(t);
 
         formant_bus.set_active_vowel(pt.nearest_vowel);
-        formant_bus.set_formants(pt.formants_hz[0], pt.formants_hz[1], pt.formants_hz[2], pt.formants_hz[3]);
-        formant_bus.set_articulators(pt.tongue_position, pt.tongue_height, pt.lip_opening, pt.velum_opening);
+        formant_bus.set_formants(
+            pt.formants_hz[0],
+            pt.formants_hz[1],
+            pt.formants_hz[2],
+            pt.formants_hz[3],
+        );
+        formant_bus.set_articulators(
+            pt.tongue_position,
+            pt.tongue_height,
+            pt.lip_opening,
+            pt.velum_opening,
+        );
         formant_bus.set_trajectory_progress(t, true);
 
         formant_bus.dispatch_to_param_bus(param_bus, base_param_id);
@@ -422,7 +512,10 @@ mod tests {
             IpaVowel::CloseFrontI,
             [270.0, 2290.0, 3010.0, 3500.0],
             [50.0, 90.0, 120.0, 150.0],
-            0.92, 0.95, 1.25, 0.0,
+            0.92,
+            0.95,
+            1.25,
+            0.0,
         );
         let (x, y) = node_i.chart_coordinates();
         assert!(x > 0.70, "Vowel /i/ should be front (high X)");

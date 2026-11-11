@@ -580,4 +580,3 @@ impl Hoa5BinauralView {
         self.render_ascii(40, 16).join("\n")
     }
 }
-

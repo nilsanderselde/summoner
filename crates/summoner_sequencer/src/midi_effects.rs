@@ -99,7 +99,7 @@ impl ArpRate {
 pub struct ArpeggiatorDevice {
     pub pattern: ArpPattern,
     pub rate: ArpRate,
-    pub octaves: u8, // 1 to 4
+    pub octaves: u8,      // 1 to 4
     pub gate_length: f64, // 0.1 to 2.0 (fraction of step)
     pub enabled: bool,
     held_notes: Vec<(u8, u8)>, // (note, velocity) in arrival order
@@ -292,14 +292,14 @@ impl MidiEffect for ArpeggiatorDevice {
 pub enum ChordType {
     #[default]
     MajorTriad, // +4, +7
-    MinorTriad, // +3, +7
-    Octave,     // +12
-    Fifth,      // +7
-    Dominant7th,// +4, +7, +10
-    Major7th,   // +4, +7, +11
-    Minor7th,   // +3, +7, +10
-    Sus4,       // +5, +7
-    Add9,       // +4, +7, +14
+    MinorTriad,  // +3, +7
+    Octave,      // +12
+    Fifth,       // +7
+    Dominant7th, // +4, +7, +10
+    Major7th,    // +4, +7, +11
+    Minor7th,    // +3, +7, +10
+    Sus4,        // +5, +7
+    Add9,        // +4, +7, +14
 }
 
 impl ChordType {
@@ -424,15 +424,15 @@ impl ScaleMode {
     /// Bitmask of 12 semitones present in the scale relative to root (bit 0 = root).
     pub fn semitone_mask(&self) -> u16 {
         match self {
-            ScaleMode::Major => 0b101010110101,          // 0, 2, 4, 5, 7, 9, 11
-            ScaleMode::Minor => 0b010110101101,          // 0, 2, 3, 5, 7, 8, 10
-            ScaleMode::HarmonicMinor => 0b100110101101,  // 0, 2, 3, 5, 7, 8, 11
-            ScaleMode::Dorian => 0b010101101101,         // 0, 2, 3, 5, 7, 9, 10
-            ScaleMode::Phrygian => 0b010110101011,       // 0, 1, 3, 5, 7, 8, 10
-            ScaleMode::Mixolydian => 0b011010110101,     // 0, 2, 4, 5, 7, 9, 10
-            ScaleMode::PentatonicMajor => 0b001001010101,// 0, 2, 4, 7, 9
-            ScaleMode::PentatonicMinor => 0b010010100101,// 0, 3, 5, 7, 10
-            ScaleMode::Blues => 0b010010110101,          // 0, 3, 5, 6, 7, 10
+            ScaleMode::Major => 0b101010110101, // 0, 2, 4, 5, 7, 9, 11
+            ScaleMode::Minor => 0b010110101101, // 0, 2, 3, 5, 7, 8, 10
+            ScaleMode::HarmonicMinor => 0b100110101101, // 0, 2, 3, 5, 7, 8, 11
+            ScaleMode::Dorian => 0b010101101101, // 0, 2, 3, 5, 7, 9, 10
+            ScaleMode::Phrygian => 0b010110101011, // 0, 1, 3, 5, 7, 8, 10
+            ScaleMode::Mixolydian => 0b011010110101, // 0, 2, 4, 5, 7, 9, 10
+            ScaleMode::PentatonicMajor => 0b001001010101, // 0, 2, 4, 7, 9
+            ScaleMode::PentatonicMinor => 0b010010100101, // 0, 3, 5, 7, 10
+            ScaleMode::Blues => 0b010010110101, // 0, 3, 5, 6, 7, 10
         }
     }
 }
@@ -701,8 +701,8 @@ impl MidiEffect for NoteLengthDevice {
 /// Insertable Random MIDI Device: velocity jitter, pitch probability, and note drop.
 #[derive(Debug, Clone)]
 pub struct RandomMidiDevice {
-    pub chance: f32, // 0.0 to 1.0 (probability note passes)
-    pub velocity_random_range: i8, // +/- range added to velocity
+    pub chance: f32,                // 0.0 to 1.0 (probability note passes)
+    pub velocity_random_range: i8,  // +/- range added to velocity
     pub pitch_random_semitones: i8, // +/- random semitone range
     pub enabled: bool,
     seed: u32,
@@ -827,7 +827,11 @@ impl MidiEffectChain {
         self.devices.push(Box::new(device));
     }
 
-    pub fn process(&mut self, mut events: Vec<MidiEvent>, ctx: &MidiEffectContext) -> Vec<MidiEvent> {
+    pub fn process(
+        &mut self,
+        mut events: Vec<MidiEvent>,
+        ctx: &MidiEffectContext,
+    ) -> Vec<MidiEvent> {
         if self.bypassed {
             return events;
         }

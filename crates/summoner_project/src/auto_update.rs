@@ -58,7 +58,10 @@ impl UpdateSemVer {
 
         let parts: Vec<&str> = num_part.split('.').collect();
         if parts.len() < 3 {
-            return Err(format!("Invalid semver string '{}': expected major.minor.patch", s));
+            return Err(format!(
+                "Invalid semver string '{}': expected major.minor.patch",
+                s
+            ));
         }
 
         let major = parts[0]
@@ -360,7 +363,10 @@ impl CrashReportDispatcher {
     /// Strictly rejects if user has not explicitly consented.
     pub fn prepare_report(&self, dump: &CrashDump) -> Result<SanitizedCrashReport, String> {
         if !self.consent.opted_in {
-            return Err("Telemetry consent refused: User has not opted in to automated crash reporting.".to_string());
+            return Err(
+                "Telemetry consent refused: User has not opted in to automated crash reporting."
+                    .to_string(),
+            );
         }
 
         let anonymize = self.consent.anonymize_file_paths;
@@ -376,7 +382,10 @@ impl CrashReportDispatcher {
         if self.consent.include_system_specs {
             for (k, v) in &dump.system_metadata {
                 let key_lower = k.to_lowercase();
-                if key_lower.contains("user") || key_lower.contains("path") || key_lower.contains("token") {
+                if key_lower.contains("user")
+                    || key_lower.contains("path")
+                    || key_lower.contains("token")
+                {
                     sanitized_metadata.insert(k.clone(), "<REDACTED>".to_string());
                 } else {
                     sanitized_metadata.insert(k.clone(), Self::sanitize_text(v, anonymize));
@@ -537,10 +546,8 @@ mod tests {
             anonymize_file_paths: true,
         };
 
-        let mut dispatcher = CrashReportDispatcher::new(
-            "https://telemetry.summoner-audio.org/v1/crash",
-            consent,
-        );
+        let mut dispatcher =
+            CrashReportDispatcher::new("https://telemetry.summoner-audio.org/v1/crash", consent);
 
         let report_id = dispatcher.enqueue_report(&dump).unwrap();
         assert_eq!(report_id, "dump-002");

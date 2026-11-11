@@ -196,7 +196,9 @@ impl HarmonicTensionAnalyzer {
         let total_tension = (avg_roughness * 0.60 + tonal_dist * 0.40).clamp(0.0, 1.0);
 
         // Predict cadence tendency based on pitch class contents
-        let predicted_cadence = if pcs.contains(&((tonic_pc + 7) % 12)) && (pcs.contains(&((tonic_pc + 11) % 12)) || pcs.contains(&((tonic_pc + 2) % 12))) {
+        let predicted_cadence = if pcs.contains(&((tonic_pc + 7) % 12))
+            && (pcs.contains(&((tonic_pc + 11) % 12)) || pcs.contains(&((tonic_pc + 2) % 12)))
+        {
             // Dominant V or V7 contains Leading tone -> Authentic cadence
             CadenceType::Authentic
         } else if pcs.contains(&((tonic_pc + 5) % 12)) && pcs.contains(&((tonic_pc + 9) % 12)) {
@@ -376,13 +378,7 @@ mod tests {
         };
 
         let engine = CadenceEngine::new();
-        engine.dispatch_to_param_bus(
-            &tension,
-            &param_bus,
-            ParamId(20),
-            ParamId(21),
-            ParamId(22),
-        );
+        engine.dispatch_to_param_bus(&tension, &param_bus, ParamId(20), ParamId(21), ParamId(22));
 
         assert_eq!(p_tension.get(), 0.65);
         assert_eq!(p_cadence.get(), 0.0); // Authentic = 0.0

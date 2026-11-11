@@ -95,25 +95,47 @@ pub mod pure_tests {
         let lane_slot0 = "track_1_node_0_cutoff".to_string();
         let lane_slot1 = "track_1_node_1_water_fill_level".to_string();
 
-        timeline.lanes.insert(lane_slot0.clone(), AutomationLane {
-            param_id: lane_slot0.clone(),
-            curve: AutomationCurve {
-                points: vec![
-                    AutomationPoint { beat: 0.0, value: 0.3, interp: Interpolation::Linear },
-                    AutomationPoint { beat: 8.0, value: 0.9, interp: Interpolation::Linear },
-                ],
+        timeline.lanes.insert(
+            lane_slot0.clone(),
+            AutomationLane {
+                param_id: lane_slot0.clone(),
+                curve: AutomationCurve {
+                    points: vec![
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 0.3,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 8.0,
+                            value: 0.9,
+                            interp: Interpolation::Linear,
+                        },
+                    ],
+                },
             },
-        });
+        );
 
-        timeline.lanes.insert(lane_slot1.clone(), AutomationLane {
-            param_id: lane_slot1.clone(),
-            curve: AutomationCurve {
-                points: vec![
-                    AutomationPoint { beat: 0.0, value: 0.1, interp: Interpolation::Linear },
-                    AutomationPoint { beat: 4.0, value: 0.8, interp: Interpolation::Linear },
-                ],
+        timeline.lanes.insert(
+            lane_slot1.clone(),
+            AutomationLane {
+                param_id: lane_slot1.clone(),
+                curve: AutomationCurve {
+                    points: vec![
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 0.1,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 4.0,
+                            value: 0.8,
+                            interp: Interpolation::Linear,
+                        },
+                    ],
+                },
             },
-        });
+        );
 
         assert_eq!(timeline.evaluate(&lane_slot0, 0.0), Some(0.3));
         assert_eq!(timeline.evaluate(&lane_slot0, 4.0), Some(0.6));
@@ -128,13 +150,13 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
+    use crate::layout_math::Rect;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::views::crystal_resonator_view::{
         CrystalMaterialProfile, CrystalResonatorView, CRYSTAL_PUCK_HIT_RADIUS, NUM_CRYSTAL_MODES,
     };
     use crate::views::modern_device_rack::ModernDeviceRackState;
     use crate::views::modern_inspector::ModernInspectorState;
-    use crate::layout_math::Rect;
     use summoner_core::param_bus::{ParamBus, ParamId};
     use summoner_project::schema::ProjectConfig;
     use summoner_sequencer::automation::AutomationRegistry;
@@ -144,17 +166,33 @@ pub mod gui_tests {
     fn test_turn46_gui_crystal_resonator_physics_and_doublets() {
         let mut view = CrystalResonatorView::new();
 
-        assert_eq!(view.material_profile, CrystalMaterialProfile::PureQuartzCrystal);
+        assert_eq!(
+            view.material_profile,
+            CrystalMaterialProfile::PureQuartzCrystal
+        );
         assert_eq!(view.root_freq_hz, 432.0);
         assert_eq!(view.modal_amplitudes.len(), NUM_CRYSTAL_MODES);
 
         // Verify all 8 modes have positive frequencies and realistic degenerate doublet splitting
         for i in 0..NUM_CRYSTAL_MODES {
             let (fa, fb) = view.modal_frequencies[i];
-            assert!(fa > 20.0, "Mode frequency fa must be in audible range: {}", fa);
-            assert!(fb > fa, "Doublet mode B must exceed mode A: {} vs {}", fb, fa);
+            assert!(
+                fa > 20.0,
+                "Mode frequency fa must be in audible range: {}",
+                fa
+            );
+            assert!(
+                fb > fa,
+                "Doublet mode B must exceed mode A: {} vs {}",
+                fb,
+                fa
+            );
             let df = fb - fa;
-            assert!(df >= 0.1 && df <= 5.0, "Doublet splitting delta f must be [0.1, 5.0] Hz: {}", df);
+            assert!(
+                df >= 0.1 && df <= 5.0,
+                "Doublet splitting delta f must be [0.1, 5.0] Hz: {}",
+                df
+            );
         }
 
         // Test Franklin Chalice material profile
@@ -183,13 +221,19 @@ pub mod gui_tests {
         view.water_fill_pct = 0.25;
         view.update_physics();
         let f0_quarter = view.effective_f0_hz;
-        assert!(f0_quarter < f0_dry, "Quarter fill must lower pitch below dry");
+        assert!(
+            f0_quarter < f0_dry,
+            "Quarter fill must lower pitch below dry"
+        );
 
         // 100% full water fill
         view.water_fill_pct = 1.0;
         view.update_physics();
         let f0_full = view.effective_f0_hz;
-        assert!(f0_full < f0_quarter, "Full fill must lower pitch below quarter fill");
+        assert!(
+            f0_full < f0_quarter,
+            "Full fill must lower pitch below quarter fill"
+        );
 
         // Upper modal damping from water presence
         assert!(view.modal_amplitudes[7] < view.modal_amplitudes[0]);
@@ -204,7 +248,12 @@ pub mod gui_tests {
             CRYSTAL_PUCK_HIT_RADIUS
         );
 
-        let canvas = Rect { x: 100.0, y: 100.0, width: 300.0, height: 300.0 };
+        let canvas = Rect {
+            x: 100.0,
+            y: 100.0,
+            width: 300.0,
+            height: 300.0,
+        };
         let puck_x = canvas.x + view.puck_pos.0 * canvas.width;
         let puck_y = canvas.y + (1.0 - view.puck_pos.1) * canvas.height;
 
@@ -226,8 +275,14 @@ pub mod gui_tests {
         assert!(lines[21].starts_with('+'));
 
         let text = lines.join("\n");
-        assert!(text.contains('W'), "ASCII rendering must display wand friction puck 'W'");
-        assert!(text.contains('#'), "ASCII rendering must display thin-shell modal resonance bars '#'");
+        assert!(
+            text.contains('W'),
+            "ASCII rendering must display wand friction puck 'W'"
+        );
+        assert!(
+            text.contains('#'),
+            "ASCII rendering must display thin-shell modal resonance bars '#'"
+        );
     }
 
     #[test]
@@ -264,16 +319,25 @@ pub mod gui_tests {
         // When secondary slot is selected (e.g. Slot 1 = CrystalResonator), auto-prefix with node_{slot}_{param}
         rack.selected_chain_idx = 1;
         rack.request_automation("water_fill_level");
-        assert_eq!(rack.requested_automation_param, Some("node_1_water_fill_level".to_string()));
+        assert_eq!(
+            rack.requested_automation_param,
+            Some("node_1_water_fill_level".to_string())
+        );
 
         let mut insp = ModernInspectorState::default();
         insp.selected_chain_idx = 0;
         insp.request_automation("resonance");
-        assert_eq!(insp.requested_automation_param, Some("resonance".to_string()));
+        assert_eq!(
+            insp.requested_automation_param,
+            Some("resonance".to_string())
+        );
 
         insp.selected_chain_idx = 2;
         insp.request_automation("q_scale");
-        assert_eq!(insp.requested_automation_param, Some("node_2_q_scale".to_string()));
+        assert_eq!(
+            insp.requested_automation_param,
+            Some("node_2_q_scale".to_string())
+        );
     }
 
     #[test]
@@ -283,14 +347,19 @@ pub mod gui_tests {
 
         // Ensure track has multi-device chain
         view.device_rack_state.ensure_chain();
-        let slot1_idx = view.device_rack_state.add_device("CrystalResonator", "Crystal Bowl");
+        let slot1_idx = view
+            .device_rack_state
+            .add_device("CrystalResonator", "Crystal Bowl");
         assert_eq!(slot1_idx, 1);
         view.device_rack_state.select_device(slot1_idx);
 
         // Open automation with raw parameter name while slot 1 is active:
         // open_track_automation_editor must automatically resolve to node_1_water_fill_level
         let res = view.open_track_automation_editor(track_id, "water_fill_level");
-        assert!(res, "Opening automation for active device slot parameter must succeed");
+        assert!(
+            res,
+            "Opening automation for active device slot parameter must succeed"
+        );
         assert!(view.show_automation_editor_window);
         assert_eq!(
             view.requested_modular_automation_param,

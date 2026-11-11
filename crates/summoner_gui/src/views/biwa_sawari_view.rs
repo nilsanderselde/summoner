@@ -138,13 +138,15 @@ impl BiwaSawariView {
     pub fn update_physics(&mut self) {
         // String peak displacement scales with bachi impact force and decreases slightly with high tension bending
         let tension_factor = 1.0 - (self.silk_string_tension_bend / 600.0) * 0.35;
-        self.string_displacement_peak_mm = (0.2 + self.bachi_plectrum_velocity * 1.8 * tension_factor).clamp(0.05, 3.0);
+        self.string_displacement_peak_mm =
+            (0.2 + self.bachi_plectrum_velocity * 1.8 * tension_factor).clamp(0.05, 3.0);
 
         // Sawari buzzing intensity: maximum when string displacement substantially exceeds the clearance gap
         let ratio = self.string_displacement_peak_mm / self.sawari_buzz_clearance.max(0.01);
         if ratio > 1.0 {
             let buzz = 1.0 - (-0.7 * (ratio - 1.0)).exp();
-            self.sawari_buzz_intensity = (buzz * (0.6 + self.mulberry_casing_resonance * 0.4)).clamp(0.0, 1.0);
+            self.sawari_buzz_intensity =
+                (buzz * (0.6 + self.mulberry_casing_resonance * 0.4)).clamp(0.0, 1.0);
         } else {
             // String amplitude below sawari ridge: minimal contact buzz
             self.sawari_buzz_intensity = (ratio * 0.25).clamp(0.0, 0.3);
@@ -175,7 +177,8 @@ impl BiwaSawariView {
     pub fn evaluate_string_displacement(&self, phase: f32) -> f32 {
         let t = phase * std::f32::consts::TAU;
         // Unconstrained string motion: fundamental + 2nd + 3rd harmonic
-        let raw = self.string_displacement_peak_mm * (t.sin() + 0.35 * (2.0 * t).sin() + 0.15 * (3.0 * t).sin());
+        let raw = self.string_displacement_peak_mm
+            * (t.sin() + 0.35 * (2.0 * t).sin() + 0.15 * (3.0 * t).sin());
         let barrier = -self.sawari_buzz_clearance;
 
         // Unilateral obstacle collision: string cannot penetrate sawari ridge below barrier
@@ -225,13 +228,20 @@ impl BiwaSawariView {
         out.push_str(&format!("Preset: {}\n", self.preset.name()));
         out.push_str(&format!(
             "Bachi Velocity: {:.2} | Sawari Gap: {:.2} mm | String Displacement: {:.2} mm\n",
-            self.bachi_plectrum_velocity, self.sawari_buzz_clearance, self.string_displacement_peak_mm
+            self.bachi_plectrum_velocity,
+            self.sawari_buzz_clearance,
+            self.string_displacement_peak_mm
         ));
         out.push_str(&format!(
             "Silk Tension Bend: {:.1} cents | Mulberry Resonance: {:.2} | Buzz Intensity: {:.2}\n",
-            self.silk_string_tension_bend, self.mulberry_casing_resonance, self.sawari_buzz_intensity
+            self.silk_string_tension_bend,
+            self.mulberry_casing_resonance,
+            self.sawari_buzz_intensity
         ));
-        out.push_str(&format!("Touch Target Radius: {:.1} pt [PASS: >=44pt]\n", BIWA_PUCK_HIT_RADIUS));
+        out.push_str(&format!(
+            "Touch Target Radius: {:.1} pt [PASS: >=44pt]\n",
+            BIWA_PUCK_HIT_RADIUS
+        ));
         out.push_str("String Displacement Waveform y(t) with Unilateral Barrier Collision:\n");
 
         let cols = 32;
@@ -260,7 +270,12 @@ impl BiwaSawariView {
         out.push_str("Sawari Harmonic Spectrum (H1..H8):\n");
         for (i, &amp) in harmonics.iter().enumerate() {
             let bars = (amp * 16.0).round() as usize;
-            out.push_str(&format!("H{}: {:2} |{}\n", i + 1, (amp * 100.0) as usize, "=".repeat(bars)));
+            out.push_str(&format!(
+                "H{}: {:2} |{}\n",
+                i + 1,
+                (amp * 100.0) as usize,
+                "=".repeat(bars)
+            ));
         }
         out.push_str("=====================================================================\n");
         out

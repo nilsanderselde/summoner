@@ -244,7 +244,11 @@ impl CassottoChamberView {
         banner.push_str("=== PHYSICAL MODELING WOODEN CASSOTTO TONE CHAMBER & SOUNDBOX HUD ===\n");
         banner.push_str(&format!(
             "Profile: {} | Aperture: {:.0}% | Warmth: {:.2}x | Cutoff: {:.0} Hz | Q: {:.1}\n",
-            self.profile.name(), self.aperture * 100.0, self.wood_warmth, self.lowpass_cutoff_hz, self.cavity_q
+            self.profile.name(),
+            self.aperture * 100.0,
+            self.wood_warmth,
+            self.lowpass_cutoff_hz,
+            self.cavity_q
         ));
         banner.push_str("Touch Target Compliance: [PASS: >=44pt] Bounding Radius: 22.0pt\n");
         banner.push_str(&lines.join("\n"));

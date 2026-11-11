@@ -26,7 +26,10 @@ pub mod pure_tests {
         assert_eq!(ArrangerSnapResolution::BeatEighth.snap(1.2), 1.0);
         assert_eq!(ArrangerSnapResolution::BeatEighth.snap(1.3), 1.5);
 
-        assert_eq!(ArrangerSnapResolution::BeatSixteenth.name(), "1/16 Beat (0.25b)");
+        assert_eq!(
+            ArrangerSnapResolution::BeatSixteenth.name(),
+            "1/16 Beat (0.25b)"
+        );
         assert_eq!(ArrangerSnapResolution::BeatSixteenth.step_beats(), 0.25);
         assert_eq!(ArrangerSnapResolution::BeatSixteenth.snap(0.6), 0.5);
         assert_eq!(ArrangerSnapResolution::BeatSixteenth.snap(0.7), 0.75);

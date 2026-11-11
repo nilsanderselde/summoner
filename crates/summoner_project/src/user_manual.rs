@@ -256,7 +256,9 @@ impl UserManual {
     pub fn generate_full_markdown_manual(&self) -> String {
         let mut md = String::new();
         md.push_str("# Summoner DAW -- Comprehensive User Manual\n\n");
-        md.push_str("Welcome to Summoner, the deterministic, headless-first digital audio workstation.\n\n");
+        md.push_str(
+            "Welcome to Summoner, the deterministic, headless-first digital audio workstation.\n\n",
+        );
         md.push_str("## Table of Contents\n\n");
 
         let categories = [
@@ -299,7 +301,10 @@ impl UserManual {
 
             for topic in cat_topics {
                 md.push_str(&format!("### {}\n\n", topic.title));
-                md.push_str(&format!("*Category: {}*\n\n", topic.category.display_name()));
+                md.push_str(&format!(
+                    "*Category: {}*\n\n",
+                    topic.category.display_name()
+                ));
                 if let Some(ref sc) = topic.keyboard_shortcut {
                     md.push_str(&format!("**Keyboard Shortcut:** `{}`\n\n", sc));
                 }
@@ -548,4 +553,3 @@ mod tests {
         assert!(md.contains("Rear-Panel CV/Gate Patching"));
     }
 }
-

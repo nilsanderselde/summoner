@@ -253,14 +253,18 @@ impl Hoa5RadarView {
     /// Synchronizes normalized polar coordinates from active azimuth and distance.
     pub fn sync_puck_from_polar(&mut self) {
         let az_norm = self.azimuth_deg / 180.0; // [-1.0 .. 1.0]
-        let dist_norm = ((self.distance_m - MIN_RADAR_DISTANCE_M) / (MAX_RADAR_DISTANCE_M - MIN_RADAR_DISTANCE_M)).clamp(0.0, 1.0);
+        let dist_norm = ((self.distance_m - MIN_RADAR_DISTANCE_M)
+            / (MAX_RADAR_DISTANCE_M - MIN_RADAR_DISTANCE_M))
+            .clamp(0.0, 1.0);
         self.puck_polar_norm = (az_norm, dist_norm);
     }
 
     /// Converts normalized polar coordinates back to azimuth and distance.
     pub fn sync_polar_from_puck(&mut self) {
-        self.azimuth_deg = (self.puck_polar_norm.0 * 180.0).clamp(MIN_RADAR_AZIMUTH_DEG, MAX_RADAR_AZIMUTH_DEG);
-        self.distance_m = (MIN_RADAR_DISTANCE_M + self.puck_polar_norm.1 * (MAX_RADAR_DISTANCE_M - MIN_RADAR_DISTANCE_M))
+        self.azimuth_deg =
+            (self.puck_polar_norm.0 * 180.0).clamp(MIN_RADAR_AZIMUTH_DEG, MAX_RADAR_AZIMUTH_DEG);
+        self.distance_m = (MIN_RADAR_DISTANCE_M
+            + self.puck_polar_norm.1 * (MAX_RADAR_DISTANCE_M - MIN_RADAR_DISTANCE_M))
             .clamp(MIN_RADAR_DISTANCE_M, MAX_RADAR_DISTANCE_M);
     }
 
@@ -273,7 +277,7 @@ impl Hoa5RadarView {
 
         let x = self.distance_m * cos_el * az_rad.sin(); // +X = Right
         let y = self.distance_m * cos_el * az_rad.cos(); // +Y = Front
-        let z = self.distance_m * sin_el;               // +Z = Up
+        let z = self.distance_m * sin_el; // +Z = Up
         (x, y, z)
     }
 
@@ -285,11 +289,13 @@ impl Hoa5RadarView {
 
         if self.trajectory_mode != TrajectoryMode::ManualStatic {
             let prev_dist = self.distance_m;
-            self.trajectory_phase = (self.trajectory_phase + dt_sec * self.trajectory_speed_hz * 2.0 * PI) % (2.0 * PI);
+            self.trajectory_phase =
+                (self.trajectory_phase + dt_sec * self.trajectory_speed_hz * 2.0 * PI) % (2.0 * PI);
 
             match self.trajectory_mode {
                 TrajectoryMode::HorizontalOrbit => {
-                    self.azimuth_deg = ((self.trajectory_phase.to_degrees() + 180.0) % 360.0) - 180.0;
+                    self.azimuth_deg =
+                        ((self.trajectory_phase.to_degrees() + 180.0) % 360.0) - 180.0;
                 }
                 TrajectoryMode::Figure8Lissajous => {
                     let az = (self.trajectory_phase.sin() * 140.0).clamp(-180.0, 180.0);
@@ -306,7 +312,9 @@ impl Hoa5RadarView {
                     // Linear flyby from left -15m to right +15m at Y=2m
                     let x = -15.0 + norm * 30.0;
                     let y = 2.0;
-                    let dist = (x * x + y * y).sqrt().clamp(MIN_RADAR_DISTANCE_M, MAX_RADAR_DISTANCE_M);
+                    let dist = (x * x + y * y)
+                        .sqrt()
+                        .clamp(MIN_RADAR_DISTANCE_M, MAX_RADAR_DISTANCE_M);
                     let az = x.atan2(y).to_degrees();
                     self.azimuth_deg = az;
                     self.distance_m = dist;
@@ -349,7 +357,7 @@ impl Hoa5RadarView {
         // Cartesian directional cosines
         let x = cos_el * sin_az; // Right
         let y = cos_el * cos_az; // Front
-        let z = sin_el;          // Up
+        let z = sin_el; // Up
 
         // ORDER 0 (ACN 0: W - Monopole)
         levels[0] = 0.7071 * dist_att;
@@ -507,7 +515,9 @@ impl Hoa5RadarView {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 // Wavefront Ripples Toggle
                 let wave_btn = if self.wavefront_anim_enabled {
-                    egui::RichText::new("🌊 Wavefronts ON").color(Color32::from_rgb(34, 211, 238)).strong()
+                    egui::RichText::new("🌊 Wavefronts ON")
+                        .color(Color32::from_rgb(34, 211, 238))
+                        .strong()
                 } else {
                     egui::RichText::new("🌊 Wavefronts OFF").color(Color32::from_rgb(148, 163, 184))
                 };
@@ -519,17 +529,32 @@ impl Hoa5RadarView {
 
                 // Ambisonics Spatial Order Selector
                 egui::ComboBox::from_id_source("hoa5_order_select")
-                    .selected_text(format!("Order {} ({} Ch)", self.ambisonic_order, (self.ambisonic_order + 1).pow(2)))
+                    .selected_text(format!(
+                        "Order {} ({} Ch)",
+                        self.ambisonic_order,
+                        (self.ambisonic_order + 1).pow(2)
+                    ))
                     .show_ui(ui, |ui| {
                         for ord in 1..=5 {
                             let ch = (ord + 1) * (ord + 1);
-                            if ui.selectable_value(&mut self.ambisonic_order, ord, format!("Order {} ({} Channels)", ord, ch)).clicked() {
+                            if ui
+                                .selectable_value(
+                                    &mut self.ambisonic_order,
+                                    ord,
+                                    format!("Order {} ({} Channels)", ord, ch),
+                                )
+                                .clicked()
+                            {
                                 self.update_spherical_harmonics();
                             }
                         }
                     });
 
-                ui.label(egui::RichText::new("Order:").font(FontId::proportional(11.0)).color(Color32::from_rgb(148, 163, 184)));
+                ui.label(
+                    egui::RichText::new("Order:")
+                        .font(FontId::proportional(11.0))
+                        .color(Color32::from_rgb(148, 163, 184)),
+                );
 
                 ui.add_space(6.0);
 
@@ -566,24 +591,48 @@ impl Hoa5RadarView {
 
         // Dark radar background
         painter.rect_filled(rect, 4.0, Color32::from_rgb(6, 10, 18));
-        painter.rect_stroke(rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(24, 38, 60)));
+        painter.rect_stroke(
+            rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(24, 38, 60)),
+        );
 
         // Outer radar circular perimeter
-        painter.circle_stroke(center, max_radius, Stroke::new(1.5_f32, Color32::from_rgb(14, 165, 233)));
+        painter.circle_stroke(
+            center,
+            max_radius,
+            Stroke::new(1.5_f32, Color32::from_rgb(14, 165, 233)),
+        );
         painter.circle_filled(center, max_radius, Color32::from_rgb(8, 14, 26));
 
         // 12 Compass Radials (every 30 degrees)
         for i in 0..12 {
             let angle_rad = (i as f32 * 30.0 - 90.0).to_radians();
-            let p_edge = Pos2::new(center.x + angle_rad.cos() * max_radius, center.y + angle_rad.sin() * max_radius);
-            painter.line_segment([center, p_edge], Stroke::new(0.5_f32, Color32::from_rgb(20, 35, 55)));
+            let p_edge = Pos2::new(
+                center.x + angle_rad.cos() * max_radius,
+                center.y + angle_rad.sin() * max_radius,
+            );
+            painter.line_segment(
+                [center, p_edge],
+                Stroke::new(0.5_f32, Color32::from_rgb(20, 35, 55)),
+            );
         }
 
         // Concentric distance range rings: 1m, 3m, 5m, 10m, 15m, 20m
-        let dist_markers = [(1.0, "1m"), (3.0, "3m"), (5.0, "5m"), (10.0, "10m"), (15.0, "15m")];
+        let dist_markers = [
+            (1.0, "1m"),
+            (3.0, "3m"),
+            (5.0, "5m"),
+            (10.0, "10m"),
+            (15.0, "15m"),
+        ];
         for (dist, label) in dist_markers {
             let r = (dist / MAX_RADAR_DISTANCE_M) * max_radius;
-            painter.circle_stroke(center, r, Stroke::new(0.6_f32, Color32::from_rgb(30, 48, 75)));
+            painter.circle_stroke(
+                center,
+                r,
+                Stroke::new(0.6_f32, Color32::from_rgb(30, 48, 75)),
+            );
             painter.text(
                 Pos2::new(center.x + 4.0, center.y - r + 3.0),
                 Align2::LEFT_BOTTOM,
@@ -594,16 +643,47 @@ impl Hoa5RadarView {
         }
 
         // Cardinal compass directions (N, E, S, W)
-        painter.text(Pos2::new(center.x, center.y - max_radius + 12.0), Align2::CENTER_CENTER, "N (0°)", FontId::proportional(10.0), Color32::from_rgb(56, 189, 248));
-        painter.text(Pos2::new(center.x + max_radius - 16.0, center.y), Align2::CENTER_CENTER, "E (+90°)", FontId::proportional(10.0), Color32::from_rgb(148, 163, 184));
-        painter.text(Pos2::new(center.x, center.y + max_radius - 12.0), Align2::CENTER_CENTER, "S (±180°)", FontId::proportional(10.0), Color32::from_rgb(148, 163, 184));
-        painter.text(Pos2::new(center.x - max_radius + 16.0, center.y), Align2::CENTER_CENTER, "W (-90°)", FontId::proportional(10.0), Color32::from_rgb(148, 163, 184));
+        painter.text(
+            Pos2::new(center.x, center.y - max_radius + 12.0),
+            Align2::CENTER_CENTER,
+            "N (0°)",
+            FontId::proportional(10.0),
+            Color32::from_rgb(56, 189, 248),
+        );
+        painter.text(
+            Pos2::new(center.x + max_radius - 16.0, center.y),
+            Align2::CENTER_CENTER,
+            "E (+90°)",
+            FontId::proportional(10.0),
+            Color32::from_rgb(148, 163, 184),
+        );
+        painter.text(
+            Pos2::new(center.x, center.y + max_radius - 12.0),
+            Align2::CENTER_CENTER,
+            "S (±180°)",
+            FontId::proportional(10.0),
+            Color32::from_rgb(148, 163, 184),
+        );
+        painter.text(
+            Pos2::new(center.x - max_radius + 16.0, center.y),
+            Align2::CENTER_CENTER,
+            "W (-90°)",
+            FontId::proportional(10.0),
+            Color32::from_rgb(148, 163, 184),
+        );
 
         // Listener head / center microphone array at origin
         painter.circle_filled(center, 7.0, Color32::from_rgb(16, 185, 129));
-        painter.circle_stroke(center, 9.0, Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)));
+        painter.circle_stroke(
+            center,
+            9.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(52, 211, 153)),
+        );
         // Nose pointing North
-        painter.line_segment([center, Pos2::new(center.x, center.y - 12.0)], Stroke::new(2.0_f32, Color32::from_rgb(16, 185, 129)));
+        painter.line_segment(
+            [center, Pos2::new(center.x, center.y - 12.0)],
+            Stroke::new(2.0_f32, Color32::from_rgb(16, 185, 129)),
+        );
 
         // Calculate 2D screen positions for the sound object
         let az_rad = self.azimuth_deg.to_radians();
@@ -628,13 +708,20 @@ impl Hoa5RadarView {
                 let ripple_r = ring_phase * 65.0 + 8.0;
                 let alpha = ((1.0 - ring_phase) * 160.0) as u8;
                 let ripple_color = Color32::from_rgba_premultiplied(34, 211, 238, alpha);
-                painter.circle_stroke(elevated_puck_pos, ripple_r, Stroke::new(1.2_f32, ripple_color));
+                painter.circle_stroke(
+                    elevated_puck_pos,
+                    ripple_r,
+                    Stroke::new(1.2_f32, ripple_color),
+                );
             }
         }
 
         // Draw 3D elevation height line from ground shadow to elevated puck
         painter.circle_filled(ground_pos, 4.0, Color32::from_rgb(30, 41, 59));
-        painter.line_segment([ground_pos, elevated_puck_pos], Stroke::new(1.2_f32, Color32::from_rgb(148, 163, 184)));
+        painter.line_segment(
+            [ground_pos, elevated_puck_pos],
+            Stroke::new(1.2_f32, Color32::from_rgb(148, 163, 184)),
+        );
 
         // Sound source draggable puck (>= 44x44pt hit bounding target)
         let puck_color = if self.is_dragging_puck {
@@ -643,13 +730,23 @@ impl Hoa5RadarView {
             Color32::from_rgb(244, 63, 94)
         };
         painter.circle_filled(elevated_puck_pos, 9.0, puck_color);
-        painter.circle_stroke(elevated_puck_pos, HOA5_RADAR_PUCK_HIT_RADIUS, Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(244, 63, 94, 60)));
+        painter.circle_stroke(
+            elevated_puck_pos,
+            HOA5_RADAR_PUCK_HIT_RADIUS,
+            Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(244, 63, 94, 60)),
+        );
 
         // Trajectory motion vector arrow if moving
         if self.trajectory_mode != TrajectoryMode::ManualStatic {
             let tangent_angle = az_rad + PI / 2.0;
-            let arrow_tip = Pos2::new(elevated_puck_pos.x + tangent_angle.cos() * 18.0, elevated_puck_pos.y + tangent_angle.sin() * 18.0);
-            painter.line_segment([elevated_puck_pos, arrow_tip], Stroke::new(2.0_f32, Color32::from_rgb(251, 191, 36)));
+            let arrow_tip = Pos2::new(
+                elevated_puck_pos.x + tangent_angle.cos() * 18.0,
+                elevated_puck_pos.y + tangent_angle.sin() * 18.0,
+            );
+            painter.line_segment(
+                [elevated_puck_pos, arrow_tip],
+                Stroke::new(2.0_f32, Color32::from_rgb(251, 191, 36)),
+            );
         }
 
         // Interactive puck dragging on the polar radar canvas
@@ -662,8 +759,11 @@ impl Hoa5RadarView {
                 let angle_rad = dx.atan2(dy);
                 let dist_px = (dx * dx + dy * dy).sqrt().min(max_radius);
 
-                self.azimuth_deg = angle_rad.to_degrees().clamp(MIN_RADAR_AZIMUTH_DEG, MAX_RADAR_AZIMUTH_DEG);
-                self.distance_m = (MIN_RADAR_DISTANCE_M + (dist_px / max_radius) * (MAX_RADAR_DISTANCE_M - MIN_RADAR_DISTANCE_M))
+                self.azimuth_deg = angle_rad
+                    .to_degrees()
+                    .clamp(MIN_RADAR_AZIMUTH_DEG, MAX_RADAR_AZIMUTH_DEG);
+                self.distance_m = (MIN_RADAR_DISTANCE_M
+                    + (dist_px / max_radius) * (MAX_RADAR_DISTANCE_M - MIN_RADAR_DISTANCE_M))
                     .clamp(MIN_RADAR_DISTANCE_M, MAX_RADAR_DISTANCE_M);
 
                 self.sync_puck_from_polar();
@@ -678,7 +778,10 @@ impl Hoa5RadarView {
         painter.text(
             Pos2::new(rect.left() + 8.0, rect.bottom() - 10.0),
             Align2::LEFT_BOTTOM,
-            format!("Az: {:+.1}° | Dist: {:.2}m | 3D: [{:+.1}, {:+.1}, {:+.1}]m", self.azimuth_deg, self.distance_m, x, y, z),
+            format!(
+                "Az: {:+.1}° | Dist: {:.2}m | 3D: [{:+.1}, {:+.1}, {:+.1}]m",
+                self.azimuth_deg, self.distance_m, x, y, z
+            ),
             FontId::proportional(9.5),
             Color32::from_rgb(226, 232, 240),
         );
@@ -693,15 +796,33 @@ impl Hoa5RadarView {
             // Elevation Control Strip
             ui.group(|ui| {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("3D Elevation Angle:").font(FontId::proportional(11.0)).strong());
+                    ui.label(
+                        egui::RichText::new("3D Elevation Angle:")
+                            .font(FontId::proportional(11.0))
+                            .strong(),
+                    );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(egui::RichText::new(format!("{:+.1}°", self.elevation_deg)).font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(56, 189, 248)));
+                        ui.label(
+                            egui::RichText::new(format!("{:+.1}°", self.elevation_deg))
+                                .font(FontId::proportional(11.0))
+                                .strong()
+                                .color(Color32::from_rgb(56, 189, 248)),
+                        );
                     });
                 });
 
                 let prev_el = self.elevation_deg;
-                if ui.add(egui::Slider::new(&mut self.elevation_deg, MIN_RADAR_ELEVATION_DEG..=MAX_RADAR_ELEVATION_DEG).suffix("°")).changed()
-                    && (self.elevation_deg - prev_el).abs() > 0.01 {
+                if ui
+                    .add(
+                        egui::Slider::new(
+                            &mut self.elevation_deg,
+                            MIN_RADAR_ELEVATION_DEG..=MAX_RADAR_ELEVATION_DEG,
+                        )
+                        .suffix("°"),
+                    )
+                    .changed()
+                    && (self.elevation_deg - prev_el).abs() > 0.01
+                {
                     self.update_spherical_harmonics();
                 }
             });
@@ -711,22 +832,44 @@ impl Hoa5RadarView {
             // Energy Focus & Spread
             ui.group(|ui| {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Energy Focus (Max-rE):").font(FontId::proportional(10.5)));
+                    ui.label(
+                        egui::RichText::new("Energy Focus (Max-rE):")
+                            .font(FontId::proportional(10.5)),
+                    );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(egui::RichText::new(format!("{:.0}%", self.energy_focus * 100.0)).font(FontId::proportional(10.5)).color(Color32::from_rgb(34, 211, 238)));
+                        ui.label(
+                            egui::RichText::new(format!("{:.0}%", self.energy_focus * 100.0))
+                                .font(FontId::proportional(10.5))
+                                .color(Color32::from_rgb(34, 211, 238)),
+                        );
                     });
                 });
-                if ui.add(egui::Slider::new(&mut self.energy_focus, 0.1..=1.0).show_value(false)).changed() {
+                if ui
+                    .add(egui::Slider::new(&mut self.energy_focus, 0.1..=1.0).show_value(false))
+                    .changed()
+                {
                     self.update_spherical_harmonics();
                 }
 
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Spatial Spread:").font(FontId::proportional(10.5)));
+                    ui.label(
+                        egui::RichText::new("Spatial Spread:").font(FontId::proportional(10.5)),
+                    );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(egui::RichText::new(format!("{:.0}°", self.spatial_spread_deg)).font(FontId::proportional(10.5)).color(Color32::from_rgb(148, 163, 184)));
+                        ui.label(
+                            egui::RichText::new(format!("{:.0}°", self.spatial_spread_deg))
+                                .font(FontId::proportional(10.5))
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
                     });
                 });
-                if ui.add(egui::Slider::new(&mut self.spatial_spread_deg, 0.0..=90.0).show_value(false)).changed() {
+                if ui
+                    .add(
+                        egui::Slider::new(&mut self.spatial_spread_deg, 0.0..=90.0)
+                            .show_value(false),
+                    )
+                    .changed()
+                {
                     self.update_spherical_harmonics();
                 }
             });
@@ -736,14 +879,24 @@ impl Hoa5RadarView {
             // Doppler Metrics & Velocity
             ui.group(|ui| {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("Acoustic Doppler Ratio:").font(FontId::proportional(10.5)));
+                    ui.label(
+                        egui::RichText::new("Acoustic Doppler Ratio:")
+                            .font(FontId::proportional(10.5)),
+                    );
                     let doppler_color = if (self.doppler_frequency_ratio - 1.0).abs() > 0.02 {
                         Color32::from_rgb(251, 191, 36)
                     } else {
                         Color32::from_rgb(16, 185, 129)
                     };
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(egui::RichText::new(format!("{:.3}x ({:+.1} m/s)", self.doppler_frequency_ratio, self.source_velocity_mps)).font(FontId::proportional(10.5)).color(doppler_color));
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "{:.3}x ({:+.1} m/s)",
+                                self.doppler_frequency_ratio, self.source_velocity_mps
+                            ))
+                            .font(FontId::proportional(10.5))
+                            .color(doppler_color),
+                        );
                     });
                 });
             });
@@ -753,35 +906,87 @@ impl Hoa5RadarView {
             // 36-Channel Spherical Harmonic Energy Decomposition Matrix
             ui.group(|ui| {
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new("36-Ch Spherical Harmonic Decomposition").font(FontId::proportional(11.0)).strong());
+                    ui.label(
+                        egui::RichText::new("36-Ch Spherical Harmonic Decomposition")
+                            .font(FontId::proportional(11.0))
+                            .strong(),
+                    );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(egui::RichText::new("ACN 0..35").font(FontId::proportional(9.5)).color(Color32::from_rgb(100, 116, 139)));
+                        ui.label(
+                            egui::RichText::new("ACN 0..35")
+                                .font(FontId::proportional(9.5))
+                                .color(Color32::from_rgb(100, 116, 139)),
+                        );
                     });
                 });
                 ui.add_space(2.0);
 
                 let order_info = [
-                    (0, "O0: Monopole (W)", 0..=0, Color32::from_rgb(16, 185, 129)),
-                    (1, "O1: Dipoles (Y, Z, X)", 1..=3, Color32::from_rgb(6, 182, 212)),
-                    (2, "O2: Quadrupoles (5ch)", 4..=8, Color32::from_rgb(56, 189, 248)),
-                    (3, "O3: Octupoles (7ch)", 9..=15, Color32::from_rgb(129, 140, 248)),
-                    (4, "O4: Hexadecapoles (9ch)", 16..=24, Color32::from_rgb(245, 158, 11)),
-                    (5, "O5: Triacontadipoles (11ch)", 25..=35, Color32::from_rgb(244, 63, 94)),
+                    (
+                        0,
+                        "O0: Monopole (W)",
+                        0..=0,
+                        Color32::from_rgb(16, 185, 129),
+                    ),
+                    (
+                        1,
+                        "O1: Dipoles (Y, Z, X)",
+                        1..=3,
+                        Color32::from_rgb(6, 182, 212),
+                    ),
+                    (
+                        2,
+                        "O2: Quadrupoles (5ch)",
+                        4..=8,
+                        Color32::from_rgb(56, 189, 248),
+                    ),
+                    (
+                        3,
+                        "O3: Octupoles (7ch)",
+                        9..=15,
+                        Color32::from_rgb(129, 140, 248),
+                    ),
+                    (
+                        4,
+                        "O4: Hexadecapoles (9ch)",
+                        16..=24,
+                        Color32::from_rgb(245, 158, 11),
+                    ),
+                    (
+                        5,
+                        "O5: Triacontadipoles (11ch)",
+                        25..=35,
+                        Color32::from_rgb(244, 63, 94),
+                    ),
                 ];
 
                 for (ord_idx, name, range, color) in order_info {
                     if ord_idx <= self.ambisonic_order {
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new(name).font(FontId::proportional(9.5)).color(color));
+                            ui.label(
+                                egui::RichText::new(name)
+                                    .font(FontId::proportional(9.5))
+                                    .color(color),
+                            );
                             let energy = self.order_energies[ord_idx];
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                ui.label(egui::RichText::new(format!("{:.2}", energy)).font(FontId::proportional(9.0)).color(Color32::from_rgb(148, 163, 184)));
-                            });
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    ui.label(
+                                        egui::RichText::new(format!("{:.2}", energy))
+                                            .font(FontId::proportional(9.0))
+                                            .color(Color32::from_rgb(148, 163, 184)),
+                                    );
+                                },
+                            );
                         });
 
                         // Mini visualizer energy bars for this order
                         let bar_h = 10.0;
-                        let (resp, painter) = ui.allocate_painter(Vec2::new(ui.available_width(), bar_h), egui::Sense::hover());
+                        let (resp, painter) = ui.allocate_painter(
+                            Vec2::new(ui.available_width(), bar_h),
+                            egui::Sense::hover(),
+                        );
                         let r = resp.rect;
                         painter.rect_filled(r, 2.0, Color32::from_rgb(12, 18, 28));
 
@@ -809,7 +1014,11 @@ impl Hoa5RadarView {
     fn show_bottom_toolbar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             // Trajectory pattern mode
-            ui.label(egui::RichText::new("3D Motion:").font(FontId::proportional(11.0)).strong());
+            ui.label(
+                egui::RichText::new("3D Motion:")
+                    .font(FontId::proportional(11.0))
+                    .strong(),
+            );
             egui::ComboBox::from_id_source("hoa5_traj_mode")
                 .selected_text(self.trajectory_mode.name())
                 .show_ui(ui, |ui| {
@@ -821,7 +1030,10 @@ impl Hoa5RadarView {
                         TrajectoryMode::DopplerFlybySweep,
                     ];
                     for m in modes {
-                        if ui.selectable_label(self.trajectory_mode == m, m.name()).clicked() {
+                        if ui
+                            .selectable_label(self.trajectory_mode == m, m.name())
+                            .clicked()
+                        {
                             self.trajectory_mode = m;
                         }
                     }

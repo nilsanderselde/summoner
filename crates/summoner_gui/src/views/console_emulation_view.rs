@@ -128,7 +128,10 @@ impl ConsoleEmulationView {
 
     pub fn update_acoustics(&mut self) {
         let drive_factor = 10.0f32.powf(self.drive_db / 20.0);
-        let base_thd = (drive_factor - 1.0) * 0.8 * self.transformer_saturation * (0.5 + self.thd_coloration * 0.5);
+        let base_thd = (drive_factor - 1.0)
+            * 0.8
+            * self.transformer_saturation
+            * (0.5 + self.thd_coloration * 0.5);
         self.thd_percentage = base_thd.clamp(0.01, 15.0);
     }
 
@@ -163,13 +166,19 @@ impl ConsoleEmulationView {
         // Peaking transformer bump
         let q = 0.85;
         let diff = (f / self.transformer_center_hz).ln();
-        let bump = self.transformer_bump_db * (-0.5 * (diff / (1.0 / q)).powi(2)).exp() * self.transformer_saturation;
+        let bump = self.transformer_bump_db
+            * (-0.5 * (diff / (1.0 / q)).powi(2)).exp()
+            * self.transformer_saturation;
 
         // Mode specific top-end / low-end coloration
         let shelf = match self.preset {
             ConsoleDeskPreset::NeveVintage8048 => {
                 // Silky gentle HF roll-off above 14 kHz
-                if f > 12000.0 { -1.5 * ((f - 12000.0) / 10000.0).min(1.0) } else { 0.0 }
+                if f > 12000.0 {
+                    -1.5 * ((f - 12000.0) / 10000.0).min(1.0)
+                } else {
+                    0.0
+                }
             }
             ConsoleDeskPreset::SslGSeries4000 => {
                 // Presence sheen bump at 10 kHz
@@ -178,7 +187,11 @@ impl ConsoleEmulationView {
             }
             ConsoleDeskPreset::ApiDiscrete1608 => {
                 // Tight sub-bass roll-off below 35 Hz
-                if f < 35.0 { -2.0 * (1.0 - f / 35.0) } else { 0.0 }
+                if f < 35.0 {
+                    -2.0 * (1.0 - f / 35.0)
+                } else {
+                    0.0
+                }
             }
         };
 
@@ -216,7 +229,9 @@ impl ConsoleEmulationView {
     /// Hit-tests the 2D console puck within a bounding rectangle.
     pub fn hit_test_console_puck(&self, pointer_pos: (f32, f32), canvas_rect: Rect) -> bool {
         let puck_x = canvas_rect.x + 15.0 + self.puck_pos.0 * (canvas_rect.width - 30.0);
-        let puck_y = canvas_rect.y + canvas_rect.height - 15.0 - self.puck_pos.1 * (canvas_rect.height - 30.0);
+        let puck_y = canvas_rect.y + canvas_rect.height
+            - 15.0
+            - self.puck_pos.1 * (canvas_rect.height - 30.0);
         let dx = pointer_pos.0 - puck_x;
         let dy = pointer_pos.1 - puck_y;
         (dx * dx + dy * dy).sqrt() <= CONSOLE_PUCK_HIT_RADIUS

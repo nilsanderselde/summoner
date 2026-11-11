@@ -152,7 +152,13 @@ impl SpatialTrajectoryView {
     }
 
     /// Projects 3D spherical position (azimuth, elevation, distance) onto 2D polar canvas coordinates.
-    pub fn spherical_to_canvas(&self, az: f32, dist: f32, center: (f32, f32), radius_px: f32) -> (f32, f32) {
+    pub fn spherical_to_canvas(
+        &self,
+        az: f32,
+        dist: f32,
+        center: (f32, f32),
+        radius_px: f32,
+    ) -> (f32, f32) {
         let norm_r = (dist / self.max_radius_m).clamp(0.0, 1.0) * radius_px;
         // Azimuth: 0 = top (y-axis negative), +PI/2 = right (x-axis positive)
         let x = center.0 + norm_r * az.sin();
@@ -161,7 +167,12 @@ impl SpatialTrajectoryView {
     }
 
     /// Inverse projects 2D canvas coordinates into azimuth and distance.
-    pub fn canvas_to_spherical(&self, pos: (f32, f32), center: (f32, f32), radius_px: f32) -> (f32, f32) {
+    pub fn canvas_to_spherical(
+        &self,
+        pos: (f32, f32),
+        center: (f32, f32),
+        radius_px: f32,
+    ) -> (f32, f32) {
         let dx = pos.0 - center.0;
         let dy = -(pos.1 - center.1); // Invert Y
         let dist_px = (dx * dx + dy * dy).sqrt();
@@ -172,8 +183,18 @@ impl SpatialTrajectoryView {
     }
 
     /// Tests if a screen coordinate hits the 3D Source Puck (>= 22pt radius -> 44x44pt touch bounding box).
-    pub fn hit_test_source_puck(&self, pos: (f32, f32), center: (f32, f32), radius_px: f32) -> bool {
-        let (px, py) = self.spherical_to_canvas(self.source_azimuth_rad, self.source_distance_m, center, radius_px);
+    pub fn hit_test_source_puck(
+        &self,
+        pos: (f32, f32),
+        center: (f32, f32),
+        radius_px: f32,
+    ) -> bool {
+        let (px, py) = self.spherical_to_canvas(
+            self.source_azimuth_rad,
+            self.source_distance_m,
+            center,
+            radius_px,
+        );
         let dx = pos.0 - px;
         let dy = pos.1 - py;
         (dx * dx + dy * dy).sqrt() <= SPATIAL_PUCK_HIT_RADIUS
@@ -244,7 +265,10 @@ impl SpatialTrajectoryView {
 
         let footer = format!(
             "Mode:{:?} Dens:{:.0} Dur:{:.0}ms Spray:{:.0}% [PASS: >=44pt]",
-            self.path_type, self.grain_density, self.grain_duration_ms, self.grain_spray * 100.0
+            self.path_type,
+            self.grain_density,
+            self.grain_duration_ms,
+            self.grain_spray * 100.0
         );
         lines.push(footer);
         lines
@@ -270,11 +294,40 @@ impl SpatialTrajectoryView {
         }
 
         // Header Panel (y: 10..46, x: 20..width-20)
-        fill_rounded_rect_spat(&mut pixels, width, height, 20, 10, width - 40, 36, 4, [18, 24, 38, 255]);
+        fill_rounded_rect_spat(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            4,
+            [18, 24, 38, 255],
+        );
 
         // Left Panel: 3D Polar Orbit Canvas (x: 20..420, y: 56..330)
-        fill_rounded_rect_spat(&mut pixels, width, height, 20, 56, 400, 274, 6, [10, 14, 22, 255]);
-        draw_rect_border_spat(&mut pixels, width, height, 20, 56, 400, 274, [45, 60, 85, 255]);
+        fill_rounded_rect_spat(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            400,
+            274,
+            6,
+            [10, 14, 22, 255],
+        );
+        draw_rect_border_spat(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            400,
+            274,
+            [45, 60, 85, 255],
+        );
 
         let center_x = 220.0f32;
         let center_y = 193.0f32;
@@ -283,12 +336,36 @@ impl SpatialTrajectoryView {
         // Polar grid distance concentric rings (2m, 4m, 6m, 8m, 10m)
         for i in 1..=5 {
             let r = max_rad_px * (i as f32 / 5.0);
-            draw_circle_ring_spat(&mut pixels, width, height, center_x, center_y, r, [30, 45, 65, 180]);
+            draw_circle_ring_spat(
+                &mut pixels,
+                width,
+                height,
+                center_x,
+                center_y,
+                r,
+                [30, 45, 65, 180],
+            );
         }
 
         // Polar crosshairs (Front/Back, Left/Right)
-        draw_horizontal_line_spat(&mut pixels, width, height, (center_x - max_rad_px) as u32, (center_x + max_rad_px) as u32, center_y as u32, [35, 50, 75, 200]);
-        draw_vertical_line_spat(&mut pixels, width, height, center_x as u32, (center_y - max_rad_px) as u32, (center_y + max_rad_px) as u32, [35, 50, 75, 200]);
+        draw_horizontal_line_spat(
+            &mut pixels,
+            width,
+            height,
+            (center_x - max_rad_px) as u32,
+            (center_x + max_rad_px) as u32,
+            center_y as u32,
+            [35, 50, 75, 200],
+        );
+        draw_vertical_line_spat(
+            &mut pixels,
+            width,
+            height,
+            center_x as u32,
+            (center_y - max_rad_px) as u32,
+            (center_y + max_rad_px) as u32,
+            [35, 50, 75, 200],
+        );
 
         // Draw Trajectory Path Orbit Ribbon
         let mut prev_pt: Option<(f32, f32)> = None;
@@ -297,16 +374,35 @@ impl SpatialTrajectoryView {
         for step in 0..=80 {
             let beat = (step as f64 / 80.0) * 16.0;
             let vec = sim_track.evaluate_at_beat(beat);
-            let (cx, cy) = self.spherical_to_canvas(vec.azimuth_rad, vec.distance_m, (center_x, center_y), max_rad_px);
+            let (cx, cy) = self.spherical_to_canvas(
+                vec.azimuth_rad,
+                vec.distance_m,
+                (center_x, center_y),
+                max_rad_px,
+            );
             if let Some((px, py)) = prev_pt {
-                draw_line_segment_spat(&mut pixels, width, height, px, py, cx, cy, [0, 229, 255, 180]);
+                draw_line_segment_spat(
+                    &mut pixels,
+                    width,
+                    height,
+                    px,
+                    py,
+                    cx,
+                    cy,
+                    [0, 229, 255, 180],
+                );
             }
             prev_pt = Some((cx, cy));
         }
 
         // Draw Granular Cloud Particles around source puck
         for p in &self.particles {
-            let (gx, gy) = self.spherical_to_canvas(p.azimuth_rad, p.distance_m, (center_x, center_y), max_rad_px);
+            let (gx, gy) = self.spherical_to_canvas(
+                p.azimuth_rad,
+                p.distance_m,
+                (center_x, center_y),
+                max_rad_px,
+            );
             let col = if p.is_reverse {
                 [255, 107, 43, (p.alpha * 255.0) as u8]
             } else {
@@ -316,47 +412,182 @@ impl SpatialTrajectoryView {
         }
 
         // Listener Head Icon (Center)
-        draw_circle_filled_spat(&mut pixels, width, height, center_x, center_y, 8.0, [255, 255, 255, 255]);
-        draw_circle_ring_spat(&mut pixels, width, height, center_x, center_y, 12.0, [0, 229, 255, 200]);
+        draw_circle_filled_spat(
+            &mut pixels,
+            width,
+            height,
+            center_x,
+            center_y,
+            8.0,
+            [255, 255, 255, 255],
+        );
+        draw_circle_ring_spat(
+            &mut pixels,
+            width,
+            height,
+            center_x,
+            center_y,
+            12.0,
+            [0, 229, 255, 200],
+        );
 
         // Source 3D Puck (Gold, >= 22pt radius -> 44x44pt bounding hit target)
-        let (sx, sy) = self.spherical_to_canvas(self.source_azimuth_rad, self.source_distance_m, (center_x, center_y), max_rad_px);
-        draw_circle_ring_spat(&mut pixels, width, height, sx, sy, SPATIAL_PUCK_HIT_RADIUS, [255, 215, 0, 160]);
-        draw_circle_filled_spat(&mut pixels, width, height, sx, sy, SPATIAL_PUCK_VISUAL_RADIUS, [255, 215, 0, 255]);
-        draw_circle_filled_spat(&mut pixels, width, height, sx, sy, 4.0, [255, 255, 255, 255]);
+        let (sx, sy) = self.spherical_to_canvas(
+            self.source_azimuth_rad,
+            self.source_distance_m,
+            (center_x, center_y),
+            max_rad_px,
+        );
+        draw_circle_ring_spat(
+            &mut pixels,
+            width,
+            height,
+            sx,
+            sy,
+            SPATIAL_PUCK_HIT_RADIUS,
+            [255, 215, 0, 160],
+        );
+        draw_circle_filled_spat(
+            &mut pixels,
+            width,
+            height,
+            sx,
+            sy,
+            SPATIAL_PUCK_VISUAL_RADIUS,
+            [255, 215, 0, 255],
+        );
+        draw_circle_filled_spat(
+            &mut pixels,
+            width,
+            height,
+            sx,
+            sy,
+            4.0,
+            [255, 255, 255, 255],
+        );
 
         // Right Panel: Granular Cloud Density & Elevation Profile (x: 440..760, y: 56..330)
-        fill_rounded_rect_spat(&mut pixels, width, height, 440, 56, 320, 274, 6, [10, 14, 22, 255]);
-        draw_rect_border_spat(&mut pixels, width, height, 440, 56, 320, 274, [45, 60, 85, 255]);
+        fill_rounded_rect_spat(
+            &mut pixels,
+            width,
+            height,
+            440,
+            56,
+            320,
+            274,
+            6,
+            [10, 14, 22, 255],
+        );
+        draw_rect_border_spat(
+            &mut pixels,
+            width,
+            height,
+            440,
+            56,
+            320,
+            274,
+            [45, 60, 85, 255],
+        );
 
         // Elevation Profile Arc (Dome preview)
         let el_cx = 600.0f32;
         let el_cy = 160.0f32;
         let el_r = 70.0f32;
-        draw_circle_ring_spat(&mut pixels, width, height, el_cx, el_cy, el_r, [40, 55, 80, 200]);
-        draw_horizontal_line_spat(&mut pixels, width, height, (el_cx - el_r) as u32, (el_cx + el_r) as u32, el_cy as u32, [50, 70, 100, 255]);
+        draw_circle_ring_spat(
+            &mut pixels,
+            width,
+            height,
+            el_cx,
+            el_cy,
+            el_r,
+            [40, 55, 80, 200],
+        );
+        draw_horizontal_line_spat(
+            &mut pixels,
+            width,
+            height,
+            (el_cx - el_r) as u32,
+            (el_cx + el_r) as u32,
+            el_cy as u32,
+            [50, 70, 100, 255],
+        );
 
         // Elevation Marker on Dome
         let el_angle = self.source_elevation_rad; // -PI/2 to +PI/2
         let el_px = el_cx + el_r * el_angle.sin();
         let el_py = el_cy - el_r * el_angle.cos();
-        draw_line_segment_spat(&mut pixels, width, height, el_cx, el_cy, el_px, el_py, [255, 215, 0, 220]);
-        draw_circle_filled_spat(&mut pixels, width, height, el_px, el_py, 6.0, [255, 215, 0, 255]);
+        draw_line_segment_spat(
+            &mut pixels,
+            width,
+            height,
+            el_cx,
+            el_cy,
+            el_px,
+            el_py,
+            [255, 215, 0, 220],
+        );
+        draw_circle_filled_spat(
+            &mut pixels,
+            width,
+            height,
+            el_px,
+            el_py,
+            6.0,
+            [255, 215, 0, 255],
+        );
 
         // Particle Density Histogram Bars
         for i in 0..8 {
             let bx = 460 + (i as u32) * 35;
             let by = 310u32;
             let bar_h = (20 + (i * 7) % 35) as u32;
-            fill_rect_spat(&mut pixels, width, height, bx, by.saturating_sub(bar_h), 25, bar_h, [0, 255, 180, 220]);
+            fill_rect_spat(
+                &mut pixels,
+                width,
+                height,
+                bx,
+                by.saturating_sub(bar_h),
+                25,
+                bar_h,
+                [0, 255, 180, 220],
+            );
         }
 
         // Bottom Controls Bar (x: 20..760, y: 345..485)
-        fill_rounded_rect_spat(&mut pixels, width, height, 20, 345, 740, 135, 6, [18, 25, 38, 255]);
+        fill_rounded_rect_spat(
+            &mut pixels,
+            width,
+            height,
+            20,
+            345,
+            740,
+            135,
+            6,
+            [18, 25, 38, 255],
+        );
 
         // Compliance Badge (x: 35..745, y: 440..472)
-        fill_rounded_rect_spat(&mut pixels, width, height, 35, 440, 710, 32, 4, [16, 35, 28, 255]);
-        draw_rect_border_spat(&mut pixels, width, height, 35, 440, 710, 32, [0, 255, 180, 255]);
+        fill_rounded_rect_spat(
+            &mut pixels,
+            width,
+            height,
+            35,
+            440,
+            710,
+            32,
+            4,
+            [16, 35, 28, 255],
+        );
+        draw_rect_border_spat(
+            &mut pixels,
+            width,
+            height,
+            35,
+            440,
+            710,
+            32,
+            [0, 255, 180, 255],
+        );
 
         encode_minimal_png(path, &pixels, width, height)
     }
@@ -442,17 +673,30 @@ impl SpatialTrajectoryView {
         for step in 0..=60 {
             let beat = (step as f64 / 60.0) * 16.0;
             let vec = sim_track.evaluate_at_beat(beat);
-            let (cx, cy) = self.spherical_to_canvas(vec.azimuth_rad, vec.distance_m, (center_x, center_y), max_rad_px);
+            let (cx, cy) = self.spherical_to_canvas(
+                vec.azimuth_rad,
+                vec.distance_m,
+                (center_x, center_y),
+                max_rad_px,
+            );
             let pt = egui::pos2(cx, cy);
             if let Some(prev) = prev_pt {
-                painter.line_segment([prev, pt], Stroke::new(2.0_f32, Color32::from_rgb(0, 229, 255)));
+                painter.line_segment(
+                    [prev, pt],
+                    Stroke::new(2.0_f32, Color32::from_rgb(0, 229, 255)),
+                );
             }
             prev_pt = Some(pt);
         }
 
         // Draw Granular Cloud Particles
         for p in &self.particles {
-            let (gx, gy) = self.spherical_to_canvas(p.azimuth_rad, p.distance_m, (center_x, center_y), max_rad_px);
+            let (gx, gy) = self.spherical_to_canvas(
+                p.azimuth_rad,
+                p.distance_m,
+                (center_x, center_y),
+                max_rad_px,
+            );
             let alpha = (p.alpha * 255.0) as u8;
             let col = if p.is_reverse {
                 Color32::from_rgba_unmultiplied(255, 107, 43, alpha)
@@ -463,7 +707,11 @@ impl SpatialTrajectoryView {
         }
 
         // Center Listener Head
-        painter.circle_filled(egui::pos2(center_x, center_y), 8.0, Color32::from_rgb(255, 255, 255));
+        painter.circle_filled(
+            egui::pos2(center_x, center_y),
+            8.0,
+            Color32::from_rgb(255, 255, 255),
+        );
         painter.circle_stroke(
             egui::pos2(center_x, center_y),
             12.0,
@@ -471,14 +719,23 @@ impl SpatialTrajectoryView {
         );
 
         // 3D Source Puck (Hit target >= 22pt radius -> 44x44pt)
-        let (sx, sy) = self.spherical_to_canvas(self.source_azimuth_rad, self.source_distance_m, (center_x, center_y), max_rad_px);
+        let (sx, sy) = self.spherical_to_canvas(
+            self.source_azimuth_rad,
+            self.source_distance_m,
+            (center_x, center_y),
+            max_rad_px,
+        );
         let puck_center = egui::pos2(sx, sy);
         painter.circle_stroke(
             puck_center,
             SPATIAL_PUCK_HIT_RADIUS,
             Stroke::new(2.0_f32, Color32::from_rgba_unmultiplied(255, 215, 0, 140)),
         );
-        painter.circle_filled(puck_center, SPATIAL_PUCK_VISUAL_RADIUS, Color32::from_rgb(255, 215, 0));
+        painter.circle_filled(
+            puck_center,
+            SPATIAL_PUCK_VISUAL_RADIUS,
+            Color32::from_rgb(255, 215, 0),
+        );
         painter.circle_filled(puck_center, 4.0, Color32::from_rgb(255, 255, 255));
 
         // Right Panel: Granular Cloud HUD (440..760)
@@ -570,7 +827,8 @@ impl SpatialTrajectoryView {
 
         if resp.dragged() {
             if let Some(pos) = resp.interact_pointer_pos() {
-                let (az, dist) = self.canvas_to_spherical((pos.x, pos.y), (center_x, center_y), max_rad_px);
+                let (az, dist) =
+                    self.canvas_to_spherical((pos.x, pos.y), (center_x, center_y), max_rad_px);
                 self.source_azimuth_rad = az;
                 self.source_distance_m = dist;
                 self.refresh_particles();
@@ -590,7 +848,16 @@ impl SpatialTrajectoryView {
 // ----------------------------------------------------------------------------
 
 #[allow(clippy::too_many_arguments)]
-fn fill_rect_spat(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+fn fill_rect_spat(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    col: [u8; 4],
+) {
     for y in ry..(ry + rh).min(h) {
         for x in rx..(rx + rw).min(w) {
             let idx = ((y * w + x) * 4) as usize;
@@ -641,7 +908,16 @@ fn fill_rounded_rect_spat(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_rect_border_spat(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+fn draw_rect_border_spat(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    col: [u8; 4],
+) {
     for x in rx..(rx + rw).min(w) {
         if ry < h {
             let idx = ((ry * w + x) * 4) as usize;
@@ -664,8 +940,18 @@ fn draw_rect_border_spat(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u
     }
 }
 
-fn draw_horizontal_line_spat(buf: &mut [u8], w: u32, h: u32, x0: u32, x1: u32, y: u32, col: [u8; 4]) {
-    if y >= h { return; }
+fn draw_horizontal_line_spat(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: u32,
+    x1: u32,
+    y: u32,
+    col: [u8; 4],
+) {
+    if y >= h {
+        return;
+    }
     for x in x0.min(w)..=x1.min(w - 1) {
         let idx = ((y * w + x) * 4) as usize;
         buf[idx..idx + 4].copy_from_slice(&col);
@@ -673,7 +959,9 @@ fn draw_horizontal_line_spat(buf: &mut [u8], w: u32, h: u32, x0: u32, x1: u32, y
 }
 
 fn draw_vertical_line_spat(buf: &mut [u8], w: u32, h: u32, x: u32, y0: u32, y1: u32, col: [u8; 4]) {
-    if x >= w { return; }
+    if x >= w {
+        return;
+    }
     for y in y0.min(h)..=y1.min(h - 1) {
         let idx = ((y * w + x) * 4) as usize;
         buf[idx..idx + 4].copy_from_slice(&col);
@@ -681,7 +969,16 @@ fn draw_vertical_line_spat(buf: &mut [u8], w: u32, h: u32, x: u32, y0: u32, y1: 
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_line_segment_spat(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+fn draw_line_segment_spat(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    col: [u8; 4],
+) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let steps = (dx.abs().max(dy.abs()) * 2.0).max(1.0) as u32;
@@ -736,7 +1033,12 @@ fn draw_circle_ring_spat(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f3
 }
 
 /// Minimal PNG encoder writing uncompressed raw RGBA stream into compliant PNG container.
-fn encode_minimal_png(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::new();
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 
@@ -830,8 +1132,18 @@ mod tests {
 
     #[test]
     fn test_spatial_trajectory_view_hit_target_dimensions() {
-        const { assert!(MIN_HIT_TARGET_PT >= 44.0, "Hit targets must be >= 44pt for touch accessibility") };
-        const { assert!(SPATIAL_PUCK_HIT_RADIUS * 2.0 >= 44.0, "Puck hit bounds must be >= 44pt") };
+        const {
+            assert!(
+                MIN_HIT_TARGET_PT >= 44.0,
+                "Hit targets must be >= 44pt for touch accessibility"
+            )
+        };
+        const {
+            assert!(
+                SPATIAL_PUCK_HIT_RADIUS * 2.0 >= 44.0,
+                "Puck hit bounds must be >= 44pt"
+            )
+        };
     }
 
     #[test]
@@ -839,10 +1151,16 @@ mod tests {
         let view = SpatialTrajectoryView::new();
         let render_path = "scratch/renders/spatial_trajectory_view.png";
         let res = view.render_snapshot_png(render_path, 800, 520);
-        let _ = view.render_snapshot_png("../../scratch/renders/spatial_trajectory_view.png", 800, 520);
+        let _ = view.render_snapshot_png(
+            "../../scratch/renders/spatial_trajectory_view.png",
+            800,
+            520,
+        );
         assert!(res.is_ok(), "Snapshot render must succeed: {:?}", res);
         assert!(
-            std::path::Path::new(render_path).exists() || std::path::Path::new("../../scratch/renders/spatial_trajectory_view.png").exists(),
+            std::path::Path::new(render_path).exists()
+                || std::path::Path::new("../../scratch/renders/spatial_trajectory_view.png")
+                    .exists(),
             "Rendered snapshot PNG must exist at {}",
             render_path
         );

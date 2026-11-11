@@ -117,12 +117,14 @@ pub mod pure_tests {
         assert!(view.last_tap_time.is_some());
 
         // Simulate second tap 0.5s later (120 BPM)
-        view.last_tap_time = Some(std::time::Instant::now() - std::time::Duration::from_millis(500));
+        view.last_tap_time =
+            Some(std::time::Instant::now() - std::time::Duration::from_millis(500));
         view.tap_tempo();
         assert!((view.top_bar_state.bpm - 120.0).abs() < 1.0);
 
         // Simulate second tap 0.4s later (150 BPM)
-        view.last_tap_time = Some(std::time::Instant::now() - std::time::Duration::from_millis(400));
+        view.last_tap_time =
+            Some(std::time::Instant::now() - std::time::Duration::from_millis(400));
         view.tap_tempo();
         assert!((view.top_bar_state.bpm - 150.0).abs() < 1.0);
 
@@ -160,13 +162,27 @@ pub mod pure_tests {
         }
 
         // 1. Initial sync (idle state)
-        view.sync_with_param_bus(&project, &param_bus, &mut registry, &mut timeline, 0.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut registry,
+            &mut timeline,
+            0.0,
+            false,
+        );
         assert_eq!(param_bus.get(panic_pid), Some(0.0));
         assert_eq!(param_bus.get(scene_pid), Some(-1.0));
 
         // 2. Launch Scene 3 (Outro)
         view.launch_scene(3);
-        view.sync_with_param_bus(&project, &param_bus, &mut registry, &mut timeline, 48.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut registry,
+            &mut timeline,
+            48.0,
+            false,
+        );
         assert_eq!(param_bus.get(scene_pid), Some(3.0));
         for tr in &view.tracks {
             let clip_pid = ParamId(tr.id as u32 * 1000 + 204);
@@ -175,7 +191,14 @@ pub mod pure_tests {
 
         // 3. Trigger Panic
         view.trigger_panic();
-        view.sync_with_param_bus(&project, &param_bus, &mut registry, &mut timeline, 48.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut registry,
+            &mut timeline,
+            48.0,
+            false,
+        );
         assert_eq!(param_bus.get(panic_pid), Some(1.0));
         assert_eq!(param_bus.get(scene_pid), Some(-1.0));
         for tr in &view.tracks {

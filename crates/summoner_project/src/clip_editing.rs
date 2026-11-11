@@ -116,12 +116,7 @@ pub struct ClipClipboard {
 ///
 /// Shifts the underlying audio waveform offset by `delta_beats` while preserving the clip's
 /// `start_beat` and `duration_beats` on the arranger timeline.
-pub fn slip_audio_clip(
-    clip: &mut AudioClipConfig,
-    delta_beats: f64,
-    sample_rate: u32,
-    bpm: f64,
-) {
+pub fn slip_audio_clip(clip: &mut AudioClipConfig, delta_beats: f64, sample_rate: u32, bpm: f64) {
     let frames_per_beat = (60.0 / bpm.max(1.0)) * sample_rate as f64;
     let frames_delta = (delta_beats * frames_per_beat).round() as i64;
 
@@ -351,7 +346,9 @@ pub fn paste_clipboard(
 /// Helper to generate a short pseudo-random suffix for pasted clip IDs.
 fn rand_id() -> u32 {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let d = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let d = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
     (d.as_nanos() & 0xFFFFF) as u32
 }
 
@@ -438,7 +435,8 @@ mod tests {
         track.audio_clips.push(clip2);
 
         // Split c1 at beat 4.0
-        let (id1, id2) = split_track_audio_clip(&mut track, "c1", 4.0, 44100, 120.0).expect("Split");
+        let (id1, id2) =
+            split_track_audio_clip(&mut track, "c1", 4.0, 44100, 120.0).expect("Split");
         assert_eq!(track.audio_clips.len(), 3);
         assert_eq!(id1, "c1_part1");
         assert_eq!(id2, "c1_part2");

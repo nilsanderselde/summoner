@@ -22,17 +22,50 @@ pub enum SurfaceAction {
     TransportToggleLoop,
     TransportFastForward,
     TransportRewind,
-    SetTrackVolume { track_index: usize, volume: f32 },
-    SetTrackPan { track_index: usize, pan: f32 },
-    SetTrackMute { track_index: usize, muted: bool },
-    SetTrackSolo { track_index: usize, soloed: bool },
-    SetTrackArm { track_index: usize, armed: bool },
-    SelectTrack { track_index: usize },
-    PadTrigger { row: u8, col: u8, velocity: u8, pressed: bool },
-    EncoderTweak { encoder_index: usize, delta: f32 },
-    FaderTouch { channel: usize, touching: bool },
-    FaderMove { channel: usize, position: f32 },
-    SceneLaunch { scene_index: usize },
+    SetTrackVolume {
+        track_index: usize,
+        volume: f32,
+    },
+    SetTrackPan {
+        track_index: usize,
+        pan: f32,
+    },
+    SetTrackMute {
+        track_index: usize,
+        muted: bool,
+    },
+    SetTrackSolo {
+        track_index: usize,
+        soloed: bool,
+    },
+    SetTrackArm {
+        track_index: usize,
+        armed: bool,
+    },
+    SelectTrack {
+        track_index: usize,
+    },
+    PadTrigger {
+        row: u8,
+        col: u8,
+        velocity: u8,
+        pressed: bool,
+    },
+    EncoderTweak {
+        encoder_index: usize,
+        delta: f32,
+    },
+    FaderTouch {
+        channel: usize,
+        touching: bool,
+    },
+    FaderMove {
+        channel: usize,
+        position: f32,
+    },
+    SceneLaunch {
+        scene_index: usize,
+    },
 }
 
 /// Outgoing MIDI/SysEx packet to be sent to a physical control surface.
@@ -100,7 +133,14 @@ impl LaunchpadProProfile {
     }
 
     /// Set an individual pad's RGB color via Novation SysEx palette packet.
-    pub fn set_pad_rgb(&mut self, row: usize, col: usize, r: u8, g: u8, b: u8) -> Option<SurfaceOutputPacket> {
+    pub fn set_pad_rgb(
+        &mut self,
+        row: usize,
+        col: usize,
+        r: u8,
+        g: u8,
+        b: u8,
+    ) -> Option<SurfaceOutputPacket> {
         if row >= 8 || col >= 8 {
             return None;
         }
@@ -171,7 +211,9 @@ impl LaunchpadProProfile {
                     if (89..=98).contains(&cc) && val > 0 {
                         // Scene launch right-hand column buttons (89..98)
                         let scene_idx = (98 - cc) as usize;
-                        Some(SurfaceAction::SceneLaunch { scene_index: scene_idx })
+                        Some(SurfaceAction::SceneLaunch {
+                            scene_index: scene_idx,
+                        })
                     } else {
                         None
                     }
@@ -225,7 +267,14 @@ impl AbletonPushProfile {
     }
 
     /// Set RGB LED on a 8x8 Push matrix pad.
-    pub fn set_pad_rgb(&mut self, row: usize, col: usize, r: u8, g: u8, b: u8) -> Option<SurfaceOutputPacket> {
+    pub fn set_pad_rgb(
+        &mut self,
+        row: usize,
+        col: usize,
+        r: u8,
+        g: u8,
+        b: u8,
+    ) -> Option<SurfaceOutputPacket> {
         if row >= 8 || col >= 8 {
             return None;
         }
@@ -313,7 +362,8 @@ impl AbletonPushProfile {
                             } else {
                                 -((128 - val) as f32) * 0.01
                             };
-                            self.encoders[enc_idx] = (self.encoders[enc_idx] + delta).clamp(0.0, 1.0);
+                            self.encoders[enc_idx] =
+                                (self.encoders[enc_idx] + delta).clamp(0.0, 1.0);
                             Some(SurfaceAction::EncoderTweak {
                                 encoder_index: enc_idx,
                                 delta,
@@ -355,7 +405,7 @@ pub struct PresonusFaderPortProfile {
     pub selected_channel: usize,
     pub fader_position: f32, // 0.0 to 1.0
     pub is_fader_touched: bool,
-    pub pan_position: f32,   // -1.0 to 1.0
+    pub pan_position: f32, // -1.0 to 1.0
     pub is_playing: bool,
     pub is_recording: bool,
     pub is_looping: bool,
@@ -634,7 +684,10 @@ mod tests {
 
         // Scene launch CC 98
         let scene_act = lp.handle_midi_in(&[0xB0, 98, 127]);
-        assert_eq!(scene_act, Some(SurfaceAction::SceneLaunch { scene_index: 0 }));
+        assert_eq!(
+            scene_act,
+            Some(SurfaceAction::SceneLaunch { scene_index: 0 })
+        );
     }
 
     #[test]
@@ -653,7 +706,9 @@ mod tests {
 
         // Encoder 0 turn clockwise (val 1)
         let enc_action = push.handle_midi_in(&[0xB0, 71, 1]);
-        assert!(matches!(enc_action, Some(SurfaceAction::EncoderTweak { encoder_index: 0, delta }) if delta > 0.0));
+        assert!(
+            matches!(enc_action, Some(SurfaceAction::EncoderTweak { encoder_index: 0, delta }) if delta > 0.0)
+        );
 
         // Transport Play (CC 85)
         let play_act = push.handle_midi_in(&[0xB0, 85, 127]);
@@ -668,7 +723,9 @@ mod tests {
 
         // Pitch bend input moves fader
         let act = fp.handle_midi_in(&[0xE0, 0x00, 0x40]); // approx 0.5
-        assert!(matches!(act, Some(SurfaceAction::FaderMove { position, .. }) if (position - 0.5).abs() < 0.01));
+        assert!(
+            matches!(act, Some(SurfaceAction::FaderMove { position, .. }) if (position - 0.5).abs() < 0.01)
+        );
 
         // Transport Play button (0x90, 0x5E, 127)
         let play = fp.handle_midi_in(&[0x90, 0x5E, 127]);
@@ -677,7 +734,13 @@ mod tests {
 
         // Mute button toggle (0x90, 0x10, 127)
         let mute = fp.handle_midi_in(&[0x90, 0x10, 127]);
-        assert_eq!(mute, Some(SurfaceAction::SetTrackMute { track_index: 0, muted: true }));
+        assert_eq!(
+            mute,
+            Some(SurfaceAction::SetTrackMute {
+                track_index: 0,
+                muted: true
+            })
+        );
         assert!(fp.is_muted);
     }
 
@@ -692,4 +755,3 @@ mod tests {
         assert_eq!(pkts[0].raw_bytes[0], 0xE0);
     }
 }
-

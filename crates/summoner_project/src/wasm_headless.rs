@@ -106,10 +106,11 @@ impl WasmHeadlessRenderer {
             }
 
             // Deterministic synthesizer test tone generation (440 Hz preview reference)
-            let phase = 2.0 * std::f32::consts::PI * 440.0 * (self.playback_sample_pos as f32) / self.sample_rate;
+            let phase = 2.0 * std::f32::consts::PI * 440.0 * (self.playback_sample_pos as f32)
+                / self.sample_rate;
             let sample = phase.sin() * 0.2;
 
-            self.output_interleaved_buffer[i * 2] = sample;     // Left
+            self.output_interleaved_buffer[i * 2] = sample; // Left
             self.output_interleaved_buffer[i * 2 + 1] = sample; // Right
 
             self.playback_sample_pos += 1;
@@ -168,8 +169,16 @@ impl WasmHeadlessRenderer {
 
 // C-ABI / WebAssembly Export Interfaces
 #[no_mangle]
-pub extern "C" fn summoner_wasm_create_renderer(sr: f32, block: u32, total_samples: u32) -> *mut WasmHeadlessRenderer {
-    let r = Box::new(WasmHeadlessRenderer::new(sr, block as usize, total_samples as usize));
+pub extern "C" fn summoner_wasm_create_renderer(
+    sr: f32,
+    block: u32,
+    total_samples: u32,
+) -> *mut WasmHeadlessRenderer {
+    let r = Box::new(WasmHeadlessRenderer::new(
+        sr,
+        block as usize,
+        total_samples as usize,
+    ));
     Box::into_raw(r)
 }
 
@@ -210,9 +219,7 @@ mod tests {
 
     #[test]
     fn test_webgpu_waveform_mipmap_generation() {
-        let samples: Vec<f32> = (0..1000)
-            .map(|i| (i as f32 * 0.1).sin())
-            .collect();
+        let samples: Vec<f32> = (0..1000).map(|i| (i as f32 * 0.1).sin()).collect();
 
         let mipmap = WasmHeadlessRenderer::generate_webgpu_waveform_mipmap(&samples, 100);
         assert_eq!(mipmap.vertices.len(), 10);
@@ -224,4 +231,3 @@ mod tests {
         assert!(mipmap.vertices[0].rms_energy > 0.0);
     }
 }
-

@@ -12,9 +12,7 @@
 //! Enforces zero heap allocations in real-time execution loops under `AllocGuard`.
 
 use serde::{Deserialize, Serialize};
-use summoner_core::bellows_bus::{
-    BellowsArticulation, BellowsBus, BellowsBusSnapshot,
-};
+use summoner_core::bellows_bus::{BellowsArticulation, BellowsBus, BellowsBusSnapshot};
 use summoner_core::param_bus::{ParamBus, ParamId};
 
 /// Interpolation curve between discrete Bellows keyframe waypoints.
@@ -92,13 +90,9 @@ pub enum BellowsGesturePattern {
         shake_frequency_hz: f32,
     },
     /// Continuous Meditative Harmonium suction drone in deep wood box.
-    HarmoniumMeditativeDrone {
-        phrase_length_beats: f64,
-    },
+    HarmoniumMeditativeDrone { phrase_length_beats: f64 },
     /// English Concertina fast staccato with crisp valve key releases.
-    ConcertinaFastStaccato {
-        phrase_length_beats: f64,
-    },
+    ConcertinaFastStaccato { phrase_length_beats: f64 },
 }
 
 /// Dynamic Bellows articulation timeline and parameter trajectory engine.
@@ -136,7 +130,11 @@ impl BellowsGestureEngine {
     }
 
     pub fn sort_waypoints(&mut self) {
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     pub fn clear(&mut self) {
@@ -147,7 +145,10 @@ impl BellowsGestureEngine {
         self.clear();
 
         match &pattern {
-            BellowsGesturePattern::TangoBandoneonAccented { phrase_length_beats, max_pressure_pa } => {
+            BellowsGesturePattern::TangoBandoneonAccented {
+                phrase_length_beats,
+                max_pressure_pa,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
                 let max_p = *max_pressure_pa;
 
@@ -217,7 +218,10 @@ impl BellowsGestureEngine {
                 });
             }
 
-            BellowsGesturePattern::MusetteWaltzSwell { phrase_length_beats, musette_cents } => {
+            BellowsGesturePattern::MusetteWaltzSwell {
+                phrase_length_beats,
+                musette_cents,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(BellowsWaypoint {
@@ -260,9 +264,14 @@ impl BellowsGestureEngine {
                 });
             }
 
-            BellowsGesturePattern::BayanVirtuosoBellowsShake { phrase_length_beats, shake_frequency_hz } => {
+            BellowsGesturePattern::BayanVirtuosoBellowsShake {
+                phrase_length_beats,
+                shake_frequency_hz,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
-                let num_shakes = ((*phrase_length_beats * (*shake_frequency_hz as f64) * 0.5) as usize).clamp(4, 32);
+                let num_shakes = ((*phrase_length_beats * (*shake_frequency_hz as f64) * 0.5)
+                    as usize)
+                    .clamp(4, 32);
 
                 for i in 0..=num_shakes {
                     let b = (*phrase_length_beats / num_shakes as f64) * (i as f64);
@@ -284,7 +293,9 @@ impl BellowsGestureEngine {
                 }
             }
 
-            BellowsGesturePattern::HarmoniumMeditativeDrone { phrase_length_beats } => {
+            BellowsGesturePattern::HarmoniumMeditativeDrone {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(BellowsWaypoint {
@@ -327,7 +338,9 @@ impl BellowsGestureEngine {
                 });
             }
 
-            BellowsGesturePattern::ConcertinaFastStaccato { phrase_length_beats } => {
+            BellowsGesturePattern::ConcertinaFastStaccato {
+                phrase_length_beats,
+            } => {
                 self.loop_length_beats = *phrase_length_beats;
 
                 self.waypoints.push(BellowsWaypoint {
@@ -395,7 +408,11 @@ impl BellowsGestureEngine {
             return BellowsBusSnapshot {
                 articulation: wp.articulation,
                 bellows_pressure_pa: wp.bellows_pressure_pa,
-                push_direction: if wp.bellows_pressure_pa >= 0.0 { 1.0 } else { -1.0 },
+                push_direction: if wp.bellows_pressure_pa >= 0.0 {
+                    1.0
+                } else {
+                    -1.0
+                },
                 valve_velocity: wp.valve_velocity,
                 cassotto_aperture: wp.cassotto_aperture,
                 musette_detune_cents: wp.musette_detune_cents,
@@ -423,7 +440,11 @@ impl BellowsGestureEngine {
             return BellowsBusSnapshot {
                 articulation: wp.articulation,
                 bellows_pressure_pa: wp.bellows_pressure_pa,
-                push_direction: if wp.bellows_pressure_pa >= 0.0 { 1.0 } else { -1.0 },
+                push_direction: if wp.bellows_pressure_pa >= 0.0 {
+                    1.0
+                } else {
+                    -1.0
+                },
                 valve_velocity: wp.valve_velocity,
                 cassotto_aperture: wp.cassotto_aperture,
                 musette_detune_cents: wp.musette_detune_cents,
@@ -438,7 +459,11 @@ impl BellowsGestureEngine {
             return BellowsBusSnapshot {
                 articulation: wp.articulation,
                 bellows_pressure_pa: wp.bellows_pressure_pa,
-                push_direction: if wp.bellows_pressure_pa >= 0.0 { 1.0 } else { -1.0 },
+                push_direction: if wp.bellows_pressure_pa >= 0.0 {
+                    1.0
+                } else {
+                    -1.0
+                },
                 valve_velocity: wp.valve_velocity,
                 cassotto_aperture: wp.cassotto_aperture,
                 musette_detune_cents: wp.musette_detune_cents,
@@ -461,48 +486,99 @@ impl BellowsGestureEngine {
         let span = (wp2.beat - wp1.beat).max(1e-6);
         let t = ((effective_beat - wp1.beat) / span).clamp(0.0, 1.0) as f32;
 
-        let interp = |v0: f32, v1: f32, v2: f32, v3: f32, curve: BellowsInterpolationCurve| -> f32 {
-            match curve {
-                BellowsInterpolationCurve::Hold => v1,
-                BellowsInterpolationCurve::Linear => v1 + t * (v2 - v1),
-                BellowsInterpolationCurve::Exponential => {
-                    let min_v = v1.min(v2).max(1e-5);
-                    let ratio = (v2.max(1e-5) / min_v).max(1e-5);
-                    v1 * ratio.powf(t)
+        let interp =
+            |v0: f32, v1: f32, v2: f32, v3: f32, curve: BellowsInterpolationCurve| -> f32 {
+                match curve {
+                    BellowsInterpolationCurve::Hold => v1,
+                    BellowsInterpolationCurve::Linear => v1 + t * (v2 - v1),
+                    BellowsInterpolationCurve::Exponential => {
+                        let min_v = v1.min(v2).max(1e-5);
+                        let ratio = (v2.max(1e-5) / min_v).max(1e-5);
+                        v1 * ratio.powf(t)
+                    }
+                    BellowsInterpolationCurve::CubicBezier => {
+                        let t2 = t * t;
+                        let t3 = t2 * t;
+                        let b = 3.0 * t2 - 2.0 * t3;
+                        v1 + b * (v2 - v1)
+                    }
+                    BellowsInterpolationCurve::CubicCatmullRom => {
+                        let t2 = t * t;
+                        let t3 = t2 * t;
+                        0.5 * ((2.0 * v1)
+                            + (-v0 + v2) * t
+                            + (2.0 * v0 - 5.0 * v1 + 4.0 * v2 - v3) * t2
+                            + (-v0 + 3.0 * v1 - 3.0 * v2 + v3) * t3)
+                    }
                 }
-                BellowsInterpolationCurve::CubicBezier => {
-                    let t2 = t * t;
-                    let t3 = t2 * t;
-                    let b = 3.0 * t2 - 2.0 * t3;
-                    v1 + b * (v2 - v1)
-                }
-                BellowsInterpolationCurve::CubicCatmullRom => {
-                    let t2 = t * t;
-                    let t3 = t2 * t;
-                    0.5 * ((2.0 * v1)
-                        + (-v0 + v2) * t
-                        + (2.0 * v0 - 5.0 * v1 + 4.0 * v2 - v3) * t2
-                        + (-v0 + 3.0 * v1 - 3.0 * v2 + v3) * t3)
-                }
-            }
-        };
+            };
 
         let curve = wp2.curve;
-        let pressure = interp(wp0.bellows_pressure_pa, wp1.bellows_pressure_pa, wp2.bellows_pressure_pa, wp3.bellows_pressure_pa, curve).clamp(-1200.0, 1200.0);
-        let vel = interp(wp0.valve_velocity, wp1.valve_velocity, wp2.valve_velocity, wp3.valve_velocity, curve).clamp(0.01, 1.0);
-        let cassotto = interp(wp0.cassotto_aperture, wp1.cassotto_aperture, wp2.cassotto_aperture, wp3.cassotto_aperture, curve).clamp(0.0, 1.0);
-        let musette = interp(wp0.musette_detune_cents, wp1.musette_detune_cents, wp2.musette_detune_cents, wp3.musette_detune_cents, curve).clamp(0.0, 35.0);
-        let stiff = interp(wp0.reed_stiffness, wp1.reed_stiffness, wp2.reed_stiffness, wp3.reed_stiffness, curve).clamp(0.5, 2.0);
-        let mgain = interp(wp0.master_gain, wp1.master_gain, wp2.master_gain, wp3.master_gain, curve).clamp(0.0, 2.0);
+        let pressure = interp(
+            wp0.bellows_pressure_pa,
+            wp1.bellows_pressure_pa,
+            wp2.bellows_pressure_pa,
+            wp3.bellows_pressure_pa,
+            curve,
+        )
+        .clamp(-1200.0, 1200.0);
+        let vel = interp(
+            wp0.valve_velocity,
+            wp1.valve_velocity,
+            wp2.valve_velocity,
+            wp3.valve_velocity,
+            curve,
+        )
+        .clamp(0.01, 1.0);
+        let cassotto = interp(
+            wp0.cassotto_aperture,
+            wp1.cassotto_aperture,
+            wp2.cassotto_aperture,
+            wp3.cassotto_aperture,
+            curve,
+        )
+        .clamp(0.0, 1.0);
+        let musette = interp(
+            wp0.musette_detune_cents,
+            wp1.musette_detune_cents,
+            wp2.musette_detune_cents,
+            wp3.musette_detune_cents,
+            curve,
+        )
+        .clamp(0.0, 35.0);
+        let stiff = interp(
+            wp0.reed_stiffness,
+            wp1.reed_stiffness,
+            wp2.reed_stiffness,
+            wp3.reed_stiffness,
+            curve,
+        )
+        .clamp(0.5, 2.0);
+        let mgain = interp(
+            wp0.master_gain,
+            wp1.master_gain,
+            wp2.master_gain,
+            wp3.master_gain,
+            curve,
+        )
+        .clamp(0.0, 2.0);
 
         BellowsBusSnapshot {
-            articulation: if t > 0.5 { wp2.articulation } else { wp1.articulation },
+            articulation: if t > 0.5 {
+                wp2.articulation
+            } else {
+                wp1.articulation
+            },
             bellows_pressure_pa: pressure,
             push_direction: if pressure >= 0.0 { 1.0 } else { -1.0 },
             valve_velocity: vel,
             cassotto_aperture: cassotto,
             musette_detune_cents: musette,
-            register_mask: if t > 0.5 { wp2.register_mask } else { wp1.register_mask },
+            register_mask: if t > 0.5 {
+                wp2.register_mask
+            } else {
+                wp1.register_mask
+            },
             reed_stiffness: stiff,
             master_gain: mgain,
         }
@@ -547,11 +623,24 @@ mod tests {
     #[test]
     fn test_bellows_gesture_patterns_and_catmull_rom_evaluation() {
         for pattern in [
-            BellowsGesturePattern::TangoBandoneonAccented { phrase_length_beats: 4.0, max_pressure_pa: 800.0 },
-            BellowsGesturePattern::MusetteWaltzSwell { phrase_length_beats: 6.0, musette_cents: 18.0 },
-            BellowsGesturePattern::BayanVirtuosoBellowsShake { phrase_length_beats: 4.0, shake_frequency_hz: 6.0 },
-            BellowsGesturePattern::HarmoniumMeditativeDrone { phrase_length_beats: 8.0 },
-            BellowsGesturePattern::ConcertinaFastStaccato { phrase_length_beats: 4.0 },
+            BellowsGesturePattern::TangoBandoneonAccented {
+                phrase_length_beats: 4.0,
+                max_pressure_pa: 800.0,
+            },
+            BellowsGesturePattern::MusetteWaltzSwell {
+                phrase_length_beats: 6.0,
+                musette_cents: 18.0,
+            },
+            BellowsGesturePattern::BayanVirtuosoBellowsShake {
+                phrase_length_beats: 4.0,
+                shake_frequency_hz: 6.0,
+            },
+            BellowsGesturePattern::HarmoniumMeditativeDrone {
+                phrase_length_beats: 8.0,
+            },
+            BellowsGesturePattern::ConcertinaFastStaccato {
+                phrase_length_beats: 4.0,
+            },
         ] {
             let engine = BellowsGestureEngine::with_pattern(pattern);
             assert!(!engine.waypoints.is_empty());
@@ -570,15 +659,24 @@ mod tests {
 
     #[test]
     fn test_bellows_gesture_dispatch_to_bus() {
-        let engine = BellowsGestureEngine::with_pattern(BellowsGesturePattern::TangoBandoneonAccented {
-            phrase_length_beats: 4.0,
-            max_pressure_pa: 700.0,
-        });
+        let engine =
+            BellowsGestureEngine::with_pattern(BellowsGesturePattern::TangoBandoneonAccented {
+                phrase_length_beats: 4.0,
+                max_pressure_pa: 700.0,
+            });
         let bus = BellowsBus::new();
         let mut param_bus = ParamBus::new();
-        summoner_core::bellows_bus::register_bellows_params(&mut param_bus, summoner_core::bellows_bus::BELLOWS_BASE_PARAM_ID);
+        summoner_core::bellows_bus::register_bellows_params(
+            &mut param_bus,
+            summoner_core::bellows_bus::BELLOWS_BASE_PARAM_ID,
+        );
 
-        engine.dispatch_to_bus(0.0, &bus, Some(&param_bus), summoner_core::bellows_bus::BELLOWS_BASE_PARAM_ID);
+        engine.dispatch_to_bus(
+            0.0,
+            &bus,
+            Some(&param_bus),
+            summoner_core::bellows_bus::BELLOWS_BASE_PARAM_ID,
+        );
 
         let snap = bus.snapshot();
         assert!((snap.bellows_pressure_pa - 595.0).abs() < 1e-3); // 700 * 0.85

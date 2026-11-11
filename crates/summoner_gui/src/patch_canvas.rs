@@ -29,10 +29,10 @@ pub enum CableType {
 impl CableType {
     pub fn default_color(&self) -> [u8; 4] {
         match self {
-            Self::Audio => [230, 40, 40, 255],  // Red
+            Self::Audio => [230, 40, 40, 255], // Red
             Self::Cv => [240, 200, 20, 255],   // Yellow
-            Self::Gate => [50, 220, 80, 255],   // Green
-            Self::Midi => [180, 80, 240, 255],  // Purple
+            Self::Gate => [50, 220, 80, 255],  // Green
+            Self::Midi => [180, 80, 240, 255], // Purple
         }
     }
 }
@@ -595,7 +595,10 @@ mod tests {
         canvas.start_drag(id1, 1, (100.0, 100.0)).unwrap();
         assert!(canvas.active_drag.is_some());
         canvas.update_drag((250.0, 110.0));
-        assert_eq!(canvas.active_drag.as_ref().unwrap().current_pointer_pos, (250.0, 110.0));
+        assert_eq!(
+            canvas.active_drag.as_ref().unwrap().current_pointer_pos,
+            (250.0, 110.0)
+        );
 
         let cable_id = canvas.finish_drag(id2, 1).unwrap();
         assert_eq!(cable_id, canvas.cables[0].id);

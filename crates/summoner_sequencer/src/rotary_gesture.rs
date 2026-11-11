@@ -92,9 +92,7 @@ pub enum RotaryGesturePattern {
         overdrive_db: f32,
     },
     /// Ambient harmonic drawbar swell with slow morphing harmonics and lush C3 chorus.
-    AmbientSwell {
-        swell_length_beats: f64,
-    },
+    AmbientSwell { swell_length_beats: f64 },
     /// Funk rhythm comping with rhythmic 2nd harmonic percussion bursts and fast Leslie toggling.
     PercussiveGroove {
         groove_length_beats: f64,
@@ -246,7 +244,17 @@ impl RotaryGestureEngine {
                     self.waypoints.push(RotaryWaypoint {
                         beat,
                         speed_state: 1, // Chorale
-                        drawbars: [8.0, 8.0, 8.0, db_mid * 0.5, 0.0, 0.0, 0.0, 0.0, db_mid * 0.8],
+                        drawbars: [
+                            8.0,
+                            8.0,
+                            8.0,
+                            db_mid * 0.5,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            db_mid * 0.8,
+                        ],
                         tube_drive_db: 3.5,
                         horn_drum_balance_pct: 55.0,
                         percussion_enabled: true,
@@ -370,8 +378,20 @@ impl RotaryGestureEngine {
             return RotaryBusSnapshot {
                 articulation: wp.articulation,
                 speed_state: wp.speed_state,
-                horn_rpm: if wp.speed_state == 2 { 400.0 } else if wp.speed_state == 1 { 40.0 } else { 0.0 },
-                drum_rpm: if wp.speed_state == 2 { 342.0 } else if wp.speed_state == 1 { 36.0 } else { 0.0 },
+                horn_rpm: if wp.speed_state == 2 {
+                    400.0
+                } else if wp.speed_state == 1 {
+                    40.0
+                } else {
+                    0.0
+                },
+                drum_rpm: if wp.speed_state == 2 {
+                    342.0
+                } else if wp.speed_state == 1 {
+                    36.0
+                } else {
+                    0.0
+                },
                 drawbars: wp.drawbars,
                 percussion_enabled: wp.percussion_enabled,
                 percussion_harmonic: wp.percussion_harmonic,
@@ -394,7 +414,11 @@ impl RotaryGestureEngine {
                 self.loop_length_beats
             } else {
                 let b = beat % self.loop_length_beats;
-                if b < 0.0 { b + self.loop_length_beats } else { b }
+                if b < 0.0 {
+                    b + self.loop_length_beats
+                } else {
+                    b
+                }
             }
         } else {
             beat
@@ -426,33 +450,72 @@ impl RotaryGestureEngine {
             *db_slot = match curve {
                 RotaryInterpolationCurve::Hold => w1.drawbars[d],
                 RotaryInterpolationCurve::Linear => lerp(w1.drawbars[d], w2.drawbars[d], t),
-                RotaryInterpolationCurve::Exponential => lerp(w1.drawbars[d], w2.drawbars[d], t * t),
+                RotaryInterpolationCurve::Exponential => {
+                    lerp(w1.drawbars[d], w2.drawbars[d], t * t)
+                }
                 RotaryInterpolationCurve::CubicBezier => {
                     let tb = 3.0 * t * t - 2.0 * t * t * t;
                     lerp(w1.drawbars[d], w2.drawbars[d], tb)
                 }
-                RotaryInterpolationCurve::CubicCatmullRom => {
-                    catmull_rom_1d(w0.drawbars[d], w1.drawbars[d], w2.drawbars[d], w3.drawbars[d], t)
-                }
-            }.clamp(0.0, 8.0);
+                RotaryInterpolationCurve::CubicCatmullRom => catmull_rom_1d(
+                    w0.drawbars[d],
+                    w1.drawbars[d],
+                    w2.drawbars[d],
+                    w3.drawbars[d],
+                    t,
+                ),
+            }
+            .clamp(0.0, 8.0);
         }
 
         // Interpolate continuous parameters
         let drive = match curve {
             RotaryInterpolationCurve::Hold => w1.tube_drive_db,
             RotaryInterpolationCurve::Linear => lerp(w1.tube_drive_db, w2.tube_drive_db, t),
-            _ => catmull_rom_1d(w0.tube_drive_db, w1.tube_drive_db, w2.tube_drive_db, w3.tube_drive_db, t),
-        }.clamp(0.0, 24.0);
+            _ => catmull_rom_1d(
+                w0.tube_drive_db,
+                w1.tube_drive_db,
+                w2.tube_drive_db,
+                w3.tube_drive_db,
+                t,
+            ),
+        }
+        .clamp(0.0, 24.0);
 
         let balance = match curve {
             RotaryInterpolationCurve::Hold => w1.horn_drum_balance_pct,
-            RotaryInterpolationCurve::Linear => lerp(w1.horn_drum_balance_pct, w2.horn_drum_balance_pct, t),
-            _ => catmull_rom_1d(w0.horn_drum_balance_pct, w1.horn_drum_balance_pct, w2.horn_drum_balance_pct, w3.horn_drum_balance_pct, t),
-        }.clamp(0.0, 100.0);
+            RotaryInterpolationCurve::Linear => {
+                lerp(w1.horn_drum_balance_pct, w2.horn_drum_balance_pct, t)
+            }
+            _ => catmull_rom_1d(
+                w0.horn_drum_balance_pct,
+                w1.horn_drum_balance_pct,
+                w2.horn_drum_balance_pct,
+                w3.horn_drum_balance_pct,
+                t,
+            ),
+        }
+        .clamp(0.0, 100.0);
 
-        let speed = if t < 0.5 { w1.speed_state } else { w2.speed_state };
-        let horn_rpm = if speed == 2 { 400.0 } else if speed == 1 { 40.0 } else { 0.0 };
-        let drum_rpm = if speed == 2 { 342.0 } else if speed == 1 { 36.0 } else { 0.0 };
+        let speed = if t < 0.5 {
+            w1.speed_state
+        } else {
+            w2.speed_state
+        };
+        let horn_rpm = if speed == 2 {
+            400.0
+        } else if speed == 1 {
+            40.0
+        } else {
+            0.0
+        };
+        let drum_rpm = if speed == 2 {
+            342.0
+        } else if speed == 1 {
+            36.0
+        } else {
+            0.0
+        };
 
         let progress = if self.loop_length_beats > 0.0 {
             (effective_beat / self.loop_length_beats).clamp(0.0, 1.0) as f32
@@ -461,17 +524,37 @@ impl RotaryGestureEngine {
         };
 
         RotaryBusSnapshot {
-            articulation: if t < 0.5 { w1.articulation } else { w2.articulation },
+            articulation: if t < 0.5 {
+                w1.articulation
+            } else {
+                w2.articulation
+            },
             speed_state: speed,
             horn_rpm,
             drum_rpm,
             drawbars,
-            percussion_enabled: if t < 0.5 { w1.percussion_enabled } else { w2.percussion_enabled },
-            percussion_harmonic: if t < 0.5 { w1.percussion_harmonic } else { w2.percussion_harmonic },
-            percussion_fast: if t < 0.5 { w1.percussion_fast } else { w2.percussion_fast },
+            percussion_enabled: if t < 0.5 {
+                w1.percussion_enabled
+            } else {
+                w2.percussion_enabled
+            },
+            percussion_harmonic: if t < 0.5 {
+                w1.percussion_harmonic
+            } else {
+                w2.percussion_harmonic
+            },
+            percussion_fast: if t < 0.5 {
+                w1.percussion_fast
+            } else {
+                w2.percussion_fast
+            },
             percussion_soft: false,
             tube_drive_db: drive,
-            vibrato_mode: if t < 0.5 { w1.vibrato_mode } else { w2.vibrato_mode },
+            vibrato_mode: if t < 0.5 {
+                w1.vibrato_mode
+            } else {
+                w2.vibrato_mode
+            },
             key_click_amount: 0.35,
             crosstalk_amount: 0.08,
             horn_drum_balance_pct: balance,
@@ -543,7 +626,9 @@ mod tests {
     #[test]
     fn test_rotary_gesture_toml_roundtrip() {
         let engine = RotaryGestureEngine::new(RotaryGesturePattern::default());
-        let toml_str = engine.to_toml().expect("Failed to serialize rotary gesture TOML");
+        let toml_str = engine
+            .to_toml()
+            .expect("Failed to serialize rotary gesture TOML");
         assert!(toml_str.contains("GospelShout"));
 
         let restored: RotaryGestureEngine = RotaryGestureEngine::from_toml(&toml_str)

@@ -486,11 +486,26 @@ impl DspRackDockView {
                     .unwrap_or_else(|| "+ Select DSP Module to Add...".to_string());
 
                 egui::ComboBox::from_id_source("rack_dock_add_picker")
-                    .selected_text(egui::RichText::new(cur_label).size(12.0).color(Color32::from_rgb(0, 229, 255)))
+                    .selected_text(
+                        egui::RichText::new(cur_label)
+                            .size(12.0)
+                            .color(Color32::from_rgb(0, 229, 255)),
+                    )
                     .show_ui(ui, |ui| {
                         for desc in registry.list_all() {
-                            let label = format!("{} {} ({})", desc.category.icon(), desc.display_name, desc.category.name());
-                            if ui.selectable_label(self.selected_add_kind.as_deref() == Some(&desc.kind_id), label).clicked() {
+                            let label = format!(
+                                "{} {} ({})",
+                                desc.category.icon(),
+                                desc.display_name,
+                                desc.category.name()
+                            );
+                            if ui
+                                .selectable_label(
+                                    self.selected_add_kind.as_deref() == Some(&desc.kind_id),
+                                    label,
+                                )
+                                .clicked()
+                            {
                                 self.selected_add_kind = Some(desc.kind_id.clone());
                             }
                         }

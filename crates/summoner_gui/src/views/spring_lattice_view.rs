@@ -62,12 +62,12 @@ impl SpringLatticeViewProfile {
 #[derive(Debug, Clone)]
 pub struct SpringLatticeView {
     pub profile: SpringLatticeViewProfile,
-    pub drive_force: f32,          // [0.05 ..= 1.00]
-    pub spring_nonlinearity: f32,  // [0.0 ..= 1.0] (Duffing beta)
-    pub boundary_tension: f32,     // [0.0 ..= 1.0]
-    pub linear_stiffness: f32,     // N/m
+    pub drive_force: f32,         // [0.05 ..= 1.00]
+    pub spring_nonlinearity: f32, // [0.0 ..= 1.0] (Duffing beta)
+    pub boundary_tension: f32,    // [0.0 ..= 1.0]
+    pub linear_stiffness: f32,    // N/m
     pub fundamental_hz: f32,
-    pub puck_pos: (f32, f32),      // Normalized (X: spring_nonlinearity, Y: drive_force)
+    pub puck_pos: (f32, f32), // Normalized (X: spring_nonlinearity, Y: drive_force)
     pub is_dragging_puck: bool,
     pub peak_displacement_mm: f32,
     pub color_palette: ContrastColorPalette,
@@ -123,7 +123,8 @@ impl SpringLatticeView {
         let (k, _beta, _gamma, tension) = self.profile.nominal_physics();
         self.linear_stiffness = k;
         self.boundary_tension = tension;
-        self.peak_displacement_mm = (1.5 + self.drive_force * 3.8 * (1.0 - 0.4 * self.spring_nonlinearity)).max(0.1);
+        self.peak_displacement_mm =
+            (1.5 + self.drive_force * 3.8 * (1.0 - 0.4 * self.spring_nonlinearity)).max(0.1);
     }
 
     /// Evaluates 2D spring-mass lattice displacement $z(x, y)$ at grid coordinates $(x, y) \in [0..5] \times [0..5]$.
@@ -140,7 +141,8 @@ impl SpringLatticeView {
         let mode2 = (2.0 * std::f32::consts::PI * x).sin() * (std::f32::consts::PI * y).sin() * 0.5;
         let ripple = (1.0 - dist * 1.8).max(0.0) * (dist * 12.0).cos() * 0.4;
 
-        let total = (mode1 + mode2 + ripple) * self.drive_force * (1.0 + 0.3 * self.spring_nonlinearity);
+        let total =
+            (mode1 + mode2 + ripple) * self.drive_force * (1.0 + 0.3 * self.spring_nonlinearity);
         total.clamp(-1.5, 1.5)
     }
 
@@ -268,10 +270,8 @@ impl SpringLatticeView {
         let pad_w = rect.width() * 0.40;
         let pad_h = rect.height() - 90.0;
 
-        let pad_rect = egui::Rect::from_min_size(
-            egui::pos2(pad_x, pad_y),
-            egui::vec2(pad_w, pad_h),
-        );
+        let pad_rect =
+            egui::Rect::from_min_size(egui::pos2(pad_x, pad_y), egui::vec2(pad_w, pad_h));
 
         painter.rect_stroke(
             pad_rect,
@@ -386,7 +386,16 @@ impl SpringLatticeView {
                     let z_r = self.evaluate_node_displacement(gx + 1, gy);
                     let px_r = grid_orig_x + (gx + 1) as f32 * cell_step;
                     let py_r = grid_orig_y + gy as f32 * cell_step - z_r * 10.0;
-                    draw_line_segment_sp(&mut pixels, width, height, px, py, px_r, py_r, spring_col);
+                    draw_line_segment_sp(
+                        &mut pixels,
+                        width,
+                        height,
+                        px,
+                        py,
+                        px_r,
+                        py_r,
+                        spring_col,
+                    );
                 }
 
                 // Vertical line
@@ -394,7 +403,16 @@ impl SpringLatticeView {
                     let z_b = self.evaluate_node_displacement(gx, gy + 1);
                     let px_b = grid_orig_x + gx as f32 * cell_step;
                     let py_b = grid_orig_y + (gy + 1) as f32 * cell_step - z_b * 10.0;
-                    draw_line_segment_sp(&mut pixels, width, height, px, py, px_b, py_b, spring_col);
+                    draw_line_segment_sp(
+                        &mut pixels,
+                        width,
+                        height,
+                        px,
+                        py,
+                        px_b,
+                        py_b,
+                        spring_col,
+                    );
                 }
 
                 draw_circle_filled_sp(&mut pixels, width, height, px, py, 4.0, node_col);
@@ -455,7 +473,12 @@ fn draw_circle_filled_sp(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f3
     }
 }
 
-fn encode_minimal_png_sp(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_sp(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

@@ -235,7 +235,8 @@ impl ShakuhachiView {
         // 7th partial
         self.modal_amplitudes[6] = (self.chiff_noise_level * 0.6).clamp(0.01, 0.7);
         // 8th partial / Meri-Kari inflection
-        self.modal_amplitudes[7] = (0.25 + meri_shift.abs() * 0.5 + self.chiff_noise_level * 0.25).clamp(0.01, 0.95);
+        self.modal_amplitudes[7] =
+            (0.25 + meri_shift.abs() * 0.5 + self.chiff_noise_level * 0.25).clamp(0.01, 0.95);
     }
 
     pub fn hit_test_shakuhachi_puck(&self, point: (f32, f32), canvas: Rect) -> bool {
@@ -267,7 +268,10 @@ impl ShakuhachiView {
                 ui.label(
                     egui::RichText::new(format!(
                         "Jet: {:.1} m/s | Angle: {:.1}° | Meri/Kari: {:+.0} ct | Chiff: {:.2}",
-                        self.jet_velocity_mps, self.utaguchi_angle_deg, self.meri_kari_cents, self.chiff_noise_level
+                        self.jet_velocity_mps,
+                        self.utaguchi_angle_deg,
+                        self.meri_kari_cents,
+                        self.chiff_noise_level
                     ))
                     .size(12.0)
                     .color(text_dim),
@@ -288,8 +292,16 @@ impl ShakuhachiView {
 
                 for (ltype, label) in lengths {
                     let is_active = self.length_type == ltype;
-                    let btn_bg = if is_active { accent_green } else { Color32::from_rgb(26, 36, 52) };
-                    let btn_fg = if is_active { Color32::BLACK } else { text_white };
+                    let btn_bg = if is_active {
+                        accent_green
+                    } else {
+                        Color32::from_rgb(26, 36, 52)
+                    };
+                    let btn_fg = if is_active {
+                        Color32::BLACK
+                    } else {
+                        text_white
+                    };
 
                     let btn = egui::Button::new(
                         egui::RichText::new(label).size(12.0).color(btn_fg).strong(),
@@ -383,7 +395,11 @@ impl ShakuhachiView {
         let border = format!("+{}+", "-".repeat(w - 2));
         lines.push(border.clone());
 
-        let title = format!(" SHAKUHACHI HUD: {} | {} ", self.length_type.flute_name(), self.fingering_note.note_name());
+        let title = format!(
+            " SHAKUHACHI HUD: {} | {} ",
+            self.length_type.flute_name(),
+            self.fingering_note.note_name()
+        );
         let title_padded = if title.len() < w - 2 {
             format!("|{}{}|", title, " ".repeat(w - 2 - title.len()))
         } else {
@@ -393,7 +409,10 @@ impl ShakuhachiView {
 
         let info = format!(
             "| Jet: {:.1} m/s | Angle: {:.1} deg | Meri/Kari: {:+.0} ct | Chiff: {:.2} |",
-            self.jet_velocity_mps, self.utaguchi_angle_deg, self.meri_kari_cents, self.chiff_noise_level
+            self.jet_velocity_mps,
+            self.utaguchi_angle_deg,
+            self.meri_kari_cents,
+            self.chiff_noise_level
         );
         let info_padded = if info.len() < w - 2 {
             format!("{}{}|", info, " ".repeat(w - 1 - info.len()))
@@ -423,7 +442,8 @@ impl ShakuhachiView {
             lines.push(bar_line);
         }
 
-        let footer = "| M1(Fund)  M2(Oct)   M3(12th)  M4(2Oct)  M5(17th)  M6(19th)  M7(Chiff) M8(Noise)|";
+        let footer =
+            "| M1(Fund)  M2(Oct)   M3(12th)  M4(2Oct)  M5(17th)  M6(19th)  M7(Chiff) M8(Noise)|";
         let footer_padded = if footer.len() < w - 2 {
             format!("{}{}|", footer, " ".repeat(w - 1 - footer.len()))
         } else {
@@ -436,7 +456,12 @@ impl ShakuhachiView {
     }
 
     /// Render headless PNG snapshot representation of the Shakuhachi HUD.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: #0A0E18 (slate navy)
@@ -544,7 +569,12 @@ impl ShakuhachiView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

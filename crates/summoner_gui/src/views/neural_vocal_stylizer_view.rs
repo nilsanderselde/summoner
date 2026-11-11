@@ -580,4 +580,3 @@ impl NeuralVocalStylizerView {
         )
     }
 }
-

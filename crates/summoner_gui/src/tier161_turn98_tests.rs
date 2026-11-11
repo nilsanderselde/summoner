@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::frequency_shifter_view::{
-        SidebandMode, FrequencyShifterView, FREQ_SHIFTER_PUCK_HIT_RADIUS,
+        FrequencyShifterView, SidebandMode, FREQ_SHIFTER_PUCK_HIT_RADIUS,
     };
     use crate::views::optical_compressor_view::{
         CompressorTopology, OpticalCompressorView, COMPRESSOR_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn98_pure_frequency_shifter_initialization_and_kinematics() {
@@ -98,9 +98,18 @@ pub mod pure_tests {
         // Topology switching & names
         let topologies = [
             (CompressorTopology::OptoT4BTeletronix, "OPTO T4B TELETRONIX"),
-            (CompressorTopology::VcaFastFeedForward, "VCA FAST FEED-FORWARD"),
-            (CompressorTopology::VariMuTubeVariableGain, "VARI-MU TUBE VARIABLE-GAIN"),
-            (CompressorTopology::FetPeakLimiter1176, "FET PEAK LIMITER 1176"),
+            (
+                CompressorTopology::VcaFastFeedForward,
+                "VCA FAST FEED-FORWARD",
+            ),
+            (
+                CompressorTopology::VariMuTubeVariableGain,
+                "VARI-MU TUBE VARIABLE-GAIN",
+            ),
+            (
+                CompressorTopology::FetPeakLimiter1176,
+                "FET PEAK LIMITER 1176",
+            ),
         ];
 
         for (topo, expected_name) in topologies {
@@ -169,11 +178,11 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use crate::views::modern_inspector::show_modern_inspector_with_context;
     use eframe::egui;
     use std::sync::Arc;
     use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_inspector::show_modern_inspector_with_context;
 
     #[test]
     fn test_turn98_gui_modal_window_lifecycles() {
@@ -213,7 +222,11 @@ pub mod gui_tests {
     fn test_turn98_gui_lock_free_param_bus_dispatch_frequency_shifter_and_optical_compressor() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -234,11 +247,30 @@ pub mod gui_tests {
 
         view.sync_frequency_shifter_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("shift_hz"), Some(&250.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("fine_shift_hz"), Some(&2.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("quadrature_phase_deg"), Some(&180.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("feedback_pct"), Some(&40.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("dry_wet_pct"), Some(&85.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("shift_hz"),
+            Some(&250.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("fine_shift_hz"),
+            Some(&2.5)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("quadrature_phase_deg"),
+            Some(&180.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("feedback_pct"),
+            Some(&40.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("dry_wet_pct"),
+            Some(&85.0)
+        );
 
         let pid_shift = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_fine = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -262,12 +294,34 @@ pub mod gui_tests {
 
         view.sync_optical_compressor_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("threshold_db"), Some(&-24.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("ratio"), Some(&8.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("knee_width_db"), Some(&10.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("makeup_gain_db"), Some(&6.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("attack_ms"), Some(&15.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("release_ms"), Some(&250.0));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("threshold_db"),
+            Some(&-24.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("ratio"),
+            Some(&8.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("knee_width_db"),
+            Some(&10.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("makeup_gain_db"),
+            Some(&6.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("attack_ms"),
+            Some(&15.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("release_ms"),
+            Some(&250.0)
+        );
 
         let pid_thresh = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_ratio = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);

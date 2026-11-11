@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
+    use crate::views::granular_freeze_view::{
+        GrainEnvelopeWindow, GranularFreezeView, GRANULAR_FREEZE_PUCK_HIT_RADIUS,
+    };
     use crate::views::ladder_filter_view::{
         LadderFilterView, LadderTopology, LADDER_PUCK_HIT_RADIUS,
     };
-    use crate::views::granular_freeze_view::{
-        GranularFreezeView, GrainEnvelopeWindow, GRANULAR_FREEZE_PUCK_HIT_RADIUS,
-    };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn93_pure_ladder_filter_initialization_and_kinematics() {
@@ -104,7 +104,10 @@ pub mod pure_tests {
         // Window envelope types & metadata
         let windows = [
             (GrainEnvelopeWindow::HannSmooth, "HANN BELL (SMOOTH)"),
-            (GrainEnvelopeWindow::BlackmanHarris, "BLACKMAN-HARRIS (4-TERM)"),
+            (
+                GrainEnvelopeWindow::BlackmanHarris,
+                "BLACKMAN-HARRIS (4-TERM)",
+            ),
             (GrainEnvelopeWindow::GaussianBell, "GAUSSIAN BELL (DIFFUSE)"),
             (GrainEnvelopeWindow::TukeyTapered, "TUKEY FLAT (PUNCH)"),
             (GrainEnvelopeWindow::TrapezoidSharp, "TRAPEZOID (CHOP)"),
@@ -208,7 +211,11 @@ pub mod gui_tests {
     fn test_turn93_gui_lock_free_param_bus_dispatch_ladder_filter_and_granular_freeze() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -229,11 +236,34 @@ pub mod gui_tests {
 
         view.sync_ladder_filter_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("cutoff_freq_hz"), Some(&2400.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("resonance_q"), Some(&8.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("drive_saturation"), Some(&55.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("key_tracking_percent"), Some(&75.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("envelope_depth"), Some(&60.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("cutoff_freq_hz"),
+            Some(&2400.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("resonance_q"),
+            Some(&8.5)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("drive_saturation"),
+            Some(&55.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("key_tracking_percent"),
+            Some(&75.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("envelope_depth"),
+            Some(&60.0)
+        );
 
         let pid_cut = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_res = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -250,12 +280,40 @@ pub mod gui_tests {
 
         view.sync_granular_freeze_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("grain_size_ms"), Some(&180.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("grain_density_hz"), Some(&65.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("pitch_spray_st"), Some(&14.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("position_jitter_pct"), Some(&40.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("stereo_spread_pct"), Some(&95.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("is_frozen"), Some(&1.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("grain_size_ms"),
+            Some(&180.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("grain_density_hz"),
+            Some(&65.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("pitch_spray_st"),
+            Some(&14.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("position_jitter_pct"),
+            Some(&40.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("stereo_spread_pct"),
+            Some(&95.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("is_frozen"),
+            Some(&1.0)
+        );
 
         let pid_size = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_dens = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 1);
@@ -294,13 +352,25 @@ pub mod gui_tests {
     #[test]
     fn test_turn93_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let ladder_action = palette.actions.iter().find(|a| a.action_id == "open_ladder_filter_hud");
-        assert!(ladder_action.is_some(), "open_ladder_filter_hud must be registered in command palette");
+        let ladder_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_ladder_filter_hud");
+        assert!(
+            ladder_action.is_some(),
+            "open_ladder_filter_hud must be registered in command palette"
+        );
         let ladder = ladder_action.unwrap();
         assert_eq!(ladder.category, "Filter / EQ");
 
-        let granular_action = palette.actions.iter().find(|a| a.action_id == "open_granular_freeze_hud");
-        assert!(granular_action.is_some(), "open_granular_freeze_hud must be registered in command palette");
+        let granular_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_granular_freeze_hud");
+        assert!(
+            granular_action.is_some(),
+            "open_granular_freeze_hud must be registered in command palette"
+        );
         let granular = granular_action.unwrap();
         assert_eq!(granular.category, "Granular / Time");
     }

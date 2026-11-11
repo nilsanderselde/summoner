@@ -252,10 +252,15 @@ impl SpectralUnmaskerView {
     pub fn render_ascii_snapshot_str(&self) -> String {
         let lines = self.render_ascii(64, 18);
         let mut banner = String::new();
-        banner.push_str("=== MASTER BUS MULTI-POINT SPECTRAL UNMASKER & SIDECHAIN COLLISION HUD ===\n");
+        banner.push_str(
+            "=== MASTER BUS MULTI-POINT SPECTRAL UNMASKER & SIDECHAIN COLLISION HUD ===\n",
+        );
         banner.push_str(&format!(
             "Routing: {} | Collision Freq: {:.1} Hz | Reduction: -{:.1} dB | Clarity: {:.1}%\n",
-            self.routing.name(), self.collision_freq_hz, self.reduction_depth_db, self.clarity_gain_pct
+            self.routing.name(),
+            self.collision_freq_hz,
+            self.reduction_depth_db,
+            self.clarity_gain_pct
         ));
         banner.push_str("Touch Target Compliance: [PASS: >=44pt] Bounding Radius: 22.0pt\n");
         banner.push_str(&lines.join("\n"));

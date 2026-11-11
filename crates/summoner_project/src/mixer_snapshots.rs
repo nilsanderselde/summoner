@@ -292,7 +292,9 @@ mod tests {
         // Modify mix for Snapshot B
         project.tracks[0].gain = 0.5;
         project.tracks[0].pan = 0.4;
-        project.tracks[0].nodes[0].params.insert("cutoff".to_string(), 3500.0);
+        project.tracks[0].nodes[0]
+            .params
+            .insert("cutoff".to_string(), 3500.0);
         let snap_b = mgr.take_snapshot(&project, "Brighter Mix");
 
         assert_eq!(mgr.snapshots.len(), 2);
@@ -347,11 +349,14 @@ mod tests {
 
         project.tracks[0].gain = 0.8;
         project.tracks[0].pan = 0.4;
-        project.tracks[0].nodes[0].params.insert("cutoff".to_string(), 5000.0);
+        project.tracks[0].nodes[0]
+            .params
+            .insert("cutoff".to_string(), 5000.0);
         let snap_b = mgr.take_snapshot(&project, "B");
 
         // Morph 50% between A and B
-        mgr.morph_snapshots(&mut project, snap_a, snap_b, 0.5).unwrap();
+        mgr.morph_snapshots(&mut project, snap_a, snap_b, 0.5)
+            .unwrap();
 
         // Gain midpoint: 0.2 + (0.8 - 0.2) * 0.5 = 0.5
         assert!((project.tracks[0].gain - 0.5).abs() < 1e-4);
@@ -361,4 +366,3 @@ mod tests {
         assert!((project.tracks[0].nodes[0].params["cutoff"] - 3000.0).abs() < 1e-4);
     }
 }
-

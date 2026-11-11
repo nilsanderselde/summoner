@@ -141,12 +141,14 @@ impl TransientDeclickerView {
     /// Convert crackle density [0.0 ..= 100.0 %] to normalized coordinate [0.0 ..= 1.0].
     pub fn density_to_normalized(pct: f32) -> f32 {
         let p = pct.clamp(MIN_CRACKLE_DENSITY_PCT, MAX_CRACKLE_DENSITY_PCT);
-        ((p - MIN_CRACKLE_DENSITY_PCT) / (MAX_CRACKLE_DENSITY_PCT - MIN_CRACKLE_DENSITY_PCT)).clamp(0.0, 1.0)
+        ((p - MIN_CRACKLE_DENSITY_PCT) / (MAX_CRACKLE_DENSITY_PCT - MIN_CRACKLE_DENSITY_PCT))
+            .clamp(0.0, 1.0)
     }
 
     /// Convert normalized coordinate [0.0 ..= 1.0] to crackle density [0.0 ..= 100.0 %].
     pub fn normalized_to_density(norm: f32) -> f32 {
-        MIN_CRACKLE_DENSITY_PCT + norm.clamp(0.0, 1.0) * (MAX_CRACKLE_DENSITY_PCT - MIN_CRACKLE_DENSITY_PCT)
+        MIN_CRACKLE_DENSITY_PCT
+            + norm.clamp(0.0, 1.0) * (MAX_CRACKLE_DENSITY_PCT - MIN_CRACKLE_DENSITY_PCT)
     }
 
     /// Update restoration statistics and SNR improvement.

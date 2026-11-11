@@ -510,7 +510,10 @@ impl FormantFilterView {
     pub fn render_ascii_snapshot_str(&self) -> String {
         let lines = self.render_ascii(80, 20);
         let mut s = lines.join("\n");
-        let vowel_name = STANDARD_VOWELS.get(self.active_vowel_idx).map(|v| v.name).unwrap_or("CUSTOM");
+        let vowel_name = STANDARD_VOWELS
+            .get(self.active_vowel_idx)
+            .map(|v| v.name)
+            .unwrap_or("CUSTOM");
         s.push_str(&format!(
             "\n[PASS] PHONETIC FORMANT FILTER HUD | VOWEL: {} | TRAJECTORY: {}",
             vowel_name,

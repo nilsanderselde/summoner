@@ -227,10 +227,7 @@ pub fn undo(repo: &git2::Repository) -> Result<(), git2::Error> {
     if head.parent_count() > 0 {
         let parent = head.parent(0)?;
         let parent_tree = parent.tree()?;
-        if parent_tree
-            .get_name("summoner_session.toml")
-            .is_none()
-        {
+        if parent_tree.get_name("summoner_session.toml").is_none() {
             return Err(git2::Error::from_str(
                 "Refusing to undo: parent commit is not a Summoner session commit",
             ));
@@ -259,10 +256,7 @@ pub fn redo(repo: &git2::Repository) -> Result<(), git2::Error> {
     if let Some(target_oid) = target_oid_opt {
         let target_commit = repo.find_commit(target_oid)?;
         let target_tree = target_commit.tree()?;
-        if target_tree
-            .get_name("summoner_session.toml")
-            .is_none()
-        {
+        if target_tree.get_name("summoner_session.toml").is_none() {
             return Err(git2::Error::from_str(
                 "Refusing to redo: target commit is not a Summoner session commit",
             ));

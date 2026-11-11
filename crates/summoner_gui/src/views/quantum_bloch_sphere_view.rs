@@ -219,7 +219,8 @@ impl QuantumBlochSphereView {
         self.bloch_y = 2.0 * a_mag * b_mag * phi.sin() * decoherence_factor;
         self.bloch_z = (a_sq - b_sq) * decoherence_factor;
 
-        let r_sq = self.bloch_x * self.bloch_x + self.bloch_y * self.bloch_y + self.bloch_z * self.bloch_z;
+        let r_sq =
+            self.bloch_x * self.bloch_x + self.bloch_y * self.bloch_y + self.bloch_z * self.bloch_z;
         self.state_purity = r_sq.min(1.0);
 
         // Polar angle theta from north pole: cos(theta) = Z
@@ -227,19 +228,24 @@ impl QuantumBlochSphereView {
     }
 
     pub fn alpha_prob_to_normalized(p: f32) -> f32 {
-        ((p - MIN_SUPERPOSITION_ALPHA_SQ) / (MAX_SUPERPOSITION_ALPHA_SQ - MIN_SUPERPOSITION_ALPHA_SQ)).clamp(0.0, 1.0)
+        ((p - MIN_SUPERPOSITION_ALPHA_SQ)
+            / (MAX_SUPERPOSITION_ALPHA_SQ - MIN_SUPERPOSITION_ALPHA_SQ))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_alpha_prob(norm: f32) -> f32 {
-        MIN_SUPERPOSITION_ALPHA_SQ + norm.clamp(0.0, 1.0) * (MAX_SUPERPOSITION_ALPHA_SQ - MIN_SUPERPOSITION_ALPHA_SQ)
+        MIN_SUPERPOSITION_ALPHA_SQ
+            + norm.clamp(0.0, 1.0) * (MAX_SUPERPOSITION_ALPHA_SQ - MIN_SUPERPOSITION_ALPHA_SQ)
     }
 
     pub fn phase_to_normalized(phi: f32) -> f32 {
-        ((phi - MIN_RELATIVE_PHASE_RAD) / (MAX_RELATIVE_PHASE_RAD - MIN_RELATIVE_PHASE_RAD)).clamp(0.0, 1.0)
+        ((phi - MIN_RELATIVE_PHASE_RAD) / (MAX_RELATIVE_PHASE_RAD - MIN_RELATIVE_PHASE_RAD))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_phase(norm: f32) -> f32 {
-        MIN_RELATIVE_PHASE_RAD + norm.clamp(0.0, 1.0) * (MAX_RELATIVE_PHASE_RAD - MIN_RELATIVE_PHASE_RAD)
+        MIN_RELATIVE_PHASE_RAD
+            + norm.clamp(0.0, 1.0) * (MAX_RELATIVE_PHASE_RAD - MIN_RELATIVE_PHASE_RAD)
     }
 
     /// Evaluates 3D trajectory points of Qubit precession orbit around Z axis.
@@ -261,9 +267,13 @@ impl QuantumBlochSphereView {
 
     pub fn render_ascii_snapshot(&self) -> String {
         let mut out = String::new();
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str("   SUMMONER DAW — QUANTUM BLOCH SPHERE & STATE TOMOGRAPHY HUD\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out.push_str(&format!(" Preset: {}\n", self.preset.name()));
         out.push_str(" Touch Target: [PASS: >=44pt]\n");
         out.push_str(&format!(
@@ -279,7 +289,11 @@ impl QuantumBlochSphereView {
         ));
         out.push_str(&format!(
             " Bloch Coordinates: X={:+.3}, Y={:+.3}, Z={:+.3} | Purity P={:.3} ({:.1}%)\n",
-            self.bloch_x, self.bloch_y, self.bloch_z, self.state_purity, self.state_purity * 100.0
+            self.bloch_x,
+            self.bloch_y,
+            self.bloch_z,
+            self.state_purity,
+            self.state_purity * 100.0
         ));
         out.push_str(&format!(
             " Polar Angle θ: {:.2} rad ({:.1}°) | Decoherence Rate: {:.3}\n",
@@ -287,7 +301,9 @@ impl QuantumBlochSphereView {
             self.polar_angle_theta * 180.0 / PI,
             self.decoherence_rate
         ));
-        out.push_str("--------------------------------------------------------------------------------\n");
+        out.push_str(
+            "--------------------------------------------------------------------------------\n",
+        );
         out.push_str(" Orthographic Bloch Sphere Projection (X vs Z):\n");
 
         // 7 rows by 32 cols projection grid
@@ -298,7 +314,8 @@ impl QuantumBlochSphereView {
                 let x_target = (col as f32 / 15.5) - 1.0;
                 let dist_from_center = (x_target * x_target + z_target * z_target).sqrt();
 
-                if (self.bloch_x - x_target).abs() < 0.08 && (self.bloch_z - z_target).abs() < 0.16 {
+                if (self.bloch_x - x_target).abs() < 0.08 && (self.bloch_z - z_target).abs() < 0.16
+                {
                     out.push('●'); // State vector marker
                 } else if (dist_from_center - 1.0).abs() < 0.07 {
                     out.push('○'); // Sphere equator/boundary
@@ -312,7 +329,9 @@ impl QuantumBlochSphereView {
         }
         out.push_str("       --------------------------------\n");
         out.push_str("      -1.0            0.0            +1.0 (X Axis)\n");
-        out.push_str("================================================================================\n");
+        out.push_str(
+            "================================================================================\n",
+        );
         out
     }
 

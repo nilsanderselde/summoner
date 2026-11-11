@@ -6,12 +6,12 @@
 pub mod pure_tests {
     use crate::layout_math::Rect;
     use crate::views::embouchure_angle_view::{
-        EmbouchureAngleView, EmbouchurePreset, EMBOUCHURE_PUCK_HIT_RADIUS,
-        MIN_ANGLE_DEG, MAX_ANGLE_DEG, MIN_PRESSURE_PA, MAX_PRESSURE_PA,
+        EmbouchureAngleView, EmbouchurePreset, EMBOUCHURE_PUCK_HIT_RADIUS, MAX_ANGLE_DEG,
+        MAX_PRESSURE_PA, MIN_ANGLE_DEG, MIN_PRESSURE_PA,
     };
     use crate::views::friction_orbit_view::{
-        FrictionOrbitView, RosinProfile, FRICTION_ORBIT_PUCK_HIT_RADIUS,
-        MIN_ORBIT_VELOCITY_MPS, MAX_ORBIT_VELOCITY_MPS, MIN_ORBIT_FORCE_N, MAX_ORBIT_FORCE_N,
+        FrictionOrbitView, RosinProfile, FRICTION_ORBIT_PUCK_HIT_RADIUS, MAX_ORBIT_FORCE_N,
+        MAX_ORBIT_VELOCITY_MPS, MIN_ORBIT_FORCE_N, MIN_ORBIT_VELOCITY_MPS,
     };
     use summoner_core::param_bus::ParamId;
 
@@ -86,7 +86,10 @@ pub mod pure_tests {
         let norm_f = FrictionOrbitView::force_to_normalized(view.bow_force_n);
         let back_f = FrictionOrbitView::normalized_to_force(norm_f);
         assert!((back_f - view.bow_force_n).abs() < 1e-3);
-        assert!(view.bow_velocity_mps >= MIN_ORBIT_VELOCITY_MPS && view.bow_velocity_mps <= MAX_ORBIT_VELOCITY_MPS);
+        assert!(
+            view.bow_velocity_mps >= MIN_ORBIT_VELOCITY_MPS
+                && view.bow_velocity_mps <= MAX_ORBIT_VELOCITY_MPS
+        );
         assert!(view.bow_force_n >= MIN_ORBIT_FORCE_N && view.bow_force_n <= MAX_ORBIT_FORCE_N);
 
         // Friction characteristic evaluation
@@ -103,7 +106,12 @@ pub mod pure_tests {
         assert!(f0.is_finite());
 
         // Hit testing
-        let canvas = Rect { x: 30.0, y: 50.0, width: 220.0, height: 160.0 };
+        let canvas = Rect {
+            x: 30.0,
+            y: 50.0,
+            width: 220.0,
+            height: 160.0,
+        };
         let puck_x = canvas.x + view.orbit_puck_pos.0 * canvas.width;
         let puck_y = canvas.y + (1.0 - view.orbit_puck_pos.1) * canvas.height;
         assert!(view.hit_test_orbit_puck((puck_x, puck_y), canvas));
@@ -124,10 +132,10 @@ pub mod pure_tests {
         let slot_idx = 2u32;
         let base_id = track_id * 1000 + slot_idx * 20;
 
-        let pid_ang  = ParamId(base_id);
-        let pid_prs  = ParamId(base_id + 1);
-        let pid_vel  = ParamId(base_id + 2);
-        let pid_mer  = ParamId(base_id + 3);
+        let pid_ang = ParamId(base_id);
+        let pid_prs = ParamId(base_id + 1);
+        let pid_vel = ParamId(base_id + 2);
+        let pid_mer = ParamId(base_id + 3);
 
         assert_eq!(pid_ang.0, 3040);
         assert_eq!(pid_prs.0, 3041);
@@ -146,8 +154,8 @@ pub mod gui_tests {
     use crate::command_palette::CommandPalette;
     use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
     use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn69_gui_award_winning_embouchure_and_friction_orbit_hud_lifecycles() {
@@ -188,7 +196,11 @@ pub mod gui_tests {
     fn test_turn69_gui_live_parambus_atomic_sync_embouchure_and_friction() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -210,9 +222,24 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(44.6));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(-50.0));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("embouchure_angle_deg"), Some(&42.5));
-        assert_eq!(view.device_rack_state.node_param_values.get("blowing_pressure_pa"), Some(&1200.0));
-        assert_eq!(view.inspector_state.node_param_values.get("embouchure_angle_deg"), Some(&42.5));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("embouchure_angle_deg"),
+            Some(&42.5)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("blowing_pressure_pa"),
+            Some(&1200.0)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("embouchure_angle_deg"),
+            Some(&42.5)
+        );
 
         // 2. Sync Bowed String Friction Orbit HUD
         view.friction_orbit_view.bow_velocity_mps = 0.85;
@@ -226,9 +253,22 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 2)), Some(76.5));
         assert_eq!(arc_bus.get(ParamId(base + 3)), Some(0.91));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("bow_velocity_mps"), Some(&0.85));
-        assert_eq!(view.device_rack_state.node_param_values.get("bow_force_n"), Some(&2.40));
-        assert_eq!(view.inspector_state.node_param_values.get("bow_velocity_mps"), Some(&0.85));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("bow_velocity_mps"),
+            Some(&0.85)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("bow_force_n"),
+            Some(&2.40)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("bow_velocity_mps"),
+            Some(&0.85)
+        );
     }
 
     #[test]
@@ -261,13 +301,19 @@ pub mod gui_tests {
     #[test]
     fn test_turn69_gui_command_palette_action_registration() {
         let palette = CommandPalette::new();
-        let emb_action = palette.actions.iter().find(|a| a.action_id == "open_embouchure_angle_hud");
+        let emb_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_embouchure_angle_hud");
         assert!(emb_action.is_some());
         let emb = emb_action.unwrap();
         assert_eq!(emb.category, "Physical Modeling");
         assert!(emb.label.contains("Embouchure"));
 
-        let fric_action = palette.actions.iter().find(|a| a.action_id == "open_friction_orbit_hud");
+        let fric_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_friction_orbit_hud");
         assert!(fric_action.is_some());
         let fric = fric_action.unwrap();
         assert_eq!(fric.category, "Physical Modeling");

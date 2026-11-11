@@ -87,12 +87,49 @@ impl SpectrogramArtPreset {
     }
 
     /// Returns nominal (min_freq, max_freq, density, mapping, color_mode, loop_sec).
-    pub fn nominal_parameters(&self) -> (f32, f32, usize, SpectroFrequencyMapping, SpectroColorMode, f32) {
+    pub fn nominal_parameters(
+        &self,
+    ) -> (
+        f32,
+        f32,
+        usize,
+        SpectroFrequencyMapping,
+        SpectroColorMode,
+        f32,
+    ) {
         match self {
-            Self::AphexTwinFace => (50.0, 15000.0, 128, SpectroFrequencyMapping::Logarithmic, SpectroColorMode::GrayscaleLuma, 4.0),
-            Self::GeometricFractal => (80.0, 12000.0, 96, SpectroFrequencyMapping::Logarithmic, SpectroColorMode::RGBHarmonicNote, 6.0),
-            Self::CyberpunkMatrix => (100.0, 18000.0, 192, SpectroFrequencyMapping::Linear, SpectroColorMode::RGBHarmonicNote, 3.0),
-            Self::CosmicWaterfall => (30.0, 20000.0, 64, SpectroFrequencyMapping::Logarithmic, SpectroColorMode::GrayscaleLuma, 8.0),
+            Self::AphexTwinFace => (
+                50.0,
+                15000.0,
+                128,
+                SpectroFrequencyMapping::Logarithmic,
+                SpectroColorMode::GrayscaleLuma,
+                4.0,
+            ),
+            Self::GeometricFractal => (
+                80.0,
+                12000.0,
+                96,
+                SpectroFrequencyMapping::Logarithmic,
+                SpectroColorMode::RGBHarmonicNote,
+                6.0,
+            ),
+            Self::CyberpunkMatrix => (
+                100.0,
+                18000.0,
+                192,
+                SpectroFrequencyMapping::Linear,
+                SpectroColorMode::RGBHarmonicNote,
+                3.0,
+            ),
+            Self::CosmicWaterfall => (
+                30.0,
+                20000.0,
+                64,
+                SpectroFrequencyMapping::Logarithmic,
+                SpectroColorMode::GrayscaleLuma,
+                8.0,
+            ),
         }
     }
 }
@@ -188,14 +225,16 @@ impl SpectrogramArtView {
 
     /// Convert oscillator density [16 ..= 256] to normalized [0.0 ..= 1.0].
     pub fn density_to_normalized(density: usize) -> f32 {
-        ((density.clamp(MIN_OSCILLATOR_DENSITY, MAX_OSCILLATOR_DENSITY) - MIN_OSCILLATOR_DENSITY) as f32
+        ((density.clamp(MIN_OSCILLATOR_DENSITY, MAX_OSCILLATOR_DENSITY) - MIN_OSCILLATOR_DENSITY)
+            as f32
             / (MAX_OSCILLATOR_DENSITY - MIN_OSCILLATOR_DENSITY) as f32)
             .clamp(0.0, 1.0)
     }
 
     /// Convert normalized [0.0 ..= 1.0] to oscillator density [16 ..= 256].
     pub fn normalized_to_density(norm: f32) -> usize {
-        (MIN_OSCILLATOR_DENSITY as f32 + norm.clamp(0.0, 1.0) * (MAX_OSCILLATOR_DENSITY - MIN_OSCILLATOR_DENSITY) as f32)
+        (MIN_OSCILLATOR_DENSITY as f32
+            + norm.clamp(0.0, 1.0) * (MAX_OSCILLATOR_DENSITY - MIN_OSCILLATOR_DENSITY) as f32)
             .round() as usize
     }
 
@@ -240,7 +279,9 @@ impl SpectrogramArtView {
     /// Hit test for 2D dynamics puck with minimum 44x44pt bounding target (22.0pt radius).
     pub fn hit_test_spectrogram_puck(&self, pointer_pos: (f32, f32), canvas_bounds: Rect) -> bool {
         let puck_screen_x = canvas_bounds.x + 15.0 + self.puck_pos.0 * (canvas_bounds.width - 30.0);
-        let puck_screen_y = canvas_bounds.y + canvas_bounds.height - 15.0 - self.puck_pos.1 * (canvas_bounds.height - 30.0);
+        let puck_screen_y = canvas_bounds.y + canvas_bounds.height
+            - 15.0
+            - self.puck_pos.1 * (canvas_bounds.height - 30.0);
         let dx = pointer_pos.0 - puck_screen_x;
         let dy = pointer_pos.1 - puck_screen_y;
         (dx * dx + dy * dy).sqrt() <= SPECTROGRAM_ART_PUCK_HIT_RADIUS
@@ -277,7 +318,8 @@ impl SpectrogramArtView {
                 // Recursive harmonic fractal arcs
                 let freq_u = u_clamped * 16.0;
                 let freq_v = v_clamped * 12.0;
-                let pattern = (freq_u.sin() * freq_v.cos() + (freq_u * 0.5 + freq_v).sin()).abs() * 0.5;
+                let pattern =
+                    (freq_u.sin() * freq_v.cos() + (freq_u * 0.5 + freq_v).sin()).abs() * 0.5;
                 pattern.clamp(0.0, 1.0)
             }
             SpectrogramArtPreset::CyberpunkMatrix => {
@@ -318,7 +360,9 @@ impl SpectrogramArtView {
         ));
         buf.push_str(&format!(
             "Color Mode: {} | Triggers: {} | Gain: {:.1} dB\n",
-            self.color_mode.name(), self.trigger_count, self.gain_db
+            self.color_mode.name(),
+            self.trigger_count,
+            self.gain_db
         ));
         buf.push_str(&format!(
             "2D Puck: ({:.2}, {:.2}) [PASS: >=44pt hit target]\n",

@@ -237,7 +237,9 @@ impl LinearPhaseCrossoverView {
             out.push('\n');
         }
         out.push_str("└──────────────────────────────────────────────────────────┘\n");
-        out.push_str("[PASS: >=44pt] Linear-Phase Crossover & Multiband Limiter Touch Target Verified\n");
+        out.push_str(
+            "[PASS: >=44pt] Linear-Phase Crossover & Multiband Limiter Touch Target Verified\n",
+        );
         out
     }
 

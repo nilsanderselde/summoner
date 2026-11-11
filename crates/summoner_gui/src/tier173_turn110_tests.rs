@@ -6,13 +6,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::dialog_gating_view::{
         DialogGatingView, DialogLoudnessStandard, DIALOG_GATING_PUCK_HIT_RADIUS,
     };
     use crate::views::transient_reconstructor_view::{
-        TransientReconstructorView, ReconstructProfileType, RECONSTRUCT_PUCK_HIT_RADIUS,
+        ReconstructProfileType, TransientReconstructorView, RECONSTRUCT_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn110_pure_dialog_gating_initialization_and_kinematics() {
@@ -22,11 +22,36 @@ pub mod pure_tests {
 
         // Standards and expected values
         let standards = [
-            (DialogLoudnessStandard::EbuR128, "EBU R128 (-23 LUFS)", -23.0, -1.0),
-            (DialogLoudnessStandard::AtscA85, "ATSC A/85 (-24 LKFS)", -24.0, -2.0),
-            (DialogLoudnessStandard::NetflixOtt, "Netflix OTT (-27 LUFS)", -27.0, -2.0),
-            (DialogLoudnessStandard::StreamingMusic, "Streaming Music (-14 LUFS)", -14.0, -1.0),
-            (DialogLoudnessStandard::PodcastSpeech, "Podcast Speech (-16 LUFS)", -16.0, -1.0),
+            (
+                DialogLoudnessStandard::EbuR128,
+                "EBU R128 (-23 LUFS)",
+                -23.0,
+                -1.0,
+            ),
+            (
+                DialogLoudnessStandard::AtscA85,
+                "ATSC A/85 (-24 LKFS)",
+                -24.0,
+                -2.0,
+            ),
+            (
+                DialogLoudnessStandard::NetflixOtt,
+                "Netflix OTT (-27 LUFS)",
+                -27.0,
+                -2.0,
+            ),
+            (
+                DialogLoudnessStandard::StreamingMusic,
+                "Streaming Music (-14 LUFS)",
+                -14.0,
+                -1.0,
+            ),
+            (
+                DialogLoudnessStandard::PodcastSpeech,
+                "Podcast Speech (-16 LUFS)",
+                -16.0,
+                -1.0,
+            ),
         ];
 
         for (std, expected_name, exp_target, exp_tp) in standards {
@@ -85,11 +110,46 @@ pub mod pure_tests {
 
         // Profiles and expected names
         let profiles = [
-            (ReconstructProfileType::PunchyMaster, "PUNCHY MASTER RESTORATION", 4.0, 3.5, 0.65, 512),
-            (ReconstructProfileType::MicroTransientRestorer, "MICRO-TRANSIENT RESTORER", 2.5, 2.0, 0.85, 256),
-            (ReconstructProfileType::DrumStemExpander, "DRUM STEM CREST EXPANDER", 6.0, 5.5, 0.50, 512),
-            (ReconstructProfileType::AcousticGuitarExciter, "ACOUSTIC GUITAR PLUCK EXCITER", 3.0, 2.5, 0.75, 256),
-            (ReconstructProfileType::TransparentAirCeiling, "TRANSPARENT AIR CEILING", 5.0, 1.8, 0.60, 1024),
+            (
+                ReconstructProfileType::PunchyMaster,
+                "PUNCHY MASTER RESTORATION",
+                4.0,
+                3.5,
+                0.65,
+                512,
+            ),
+            (
+                ReconstructProfileType::MicroTransientRestorer,
+                "MICRO-TRANSIENT RESTORER",
+                2.5,
+                2.0,
+                0.85,
+                256,
+            ),
+            (
+                ReconstructProfileType::DrumStemExpander,
+                "DRUM STEM CREST EXPANDER",
+                6.0,
+                5.5,
+                0.50,
+                512,
+            ),
+            (
+                ReconstructProfileType::AcousticGuitarExciter,
+                "ACOUSTIC GUITAR PLUCK EXCITER",
+                3.0,
+                2.5,
+                0.75,
+                256,
+            ),
+            (
+                ReconstructProfileType::TransparentAirCeiling,
+                "TRANSPARENT AIR CEILING",
+                5.0,
+                1.8,
+                0.60,
+                1024,
+            ),
         ];
 
         for (p, expected_name, def_la, def_crest, def_sens, def_taps) in profiles {
@@ -153,8 +213,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -184,23 +244,38 @@ pub mod gui_tests {
         view.sync_dialog_gating_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("gated_integrated_lkfs").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("gated_integrated_lkfs")
+                .copied(),
             Some(-23.4)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("vad_speech_activity_pct").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("vad_speech_activity_pct")
+                .copied(),
             Some(72.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("dialog_anchored_lkfs").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("dialog_anchored_lkfs")
+                .copied(),
             Some(-23.2)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("gated_integrated_lkfs").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("gated_integrated_lkfs")
+                .copied(),
             Some(-23.4)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("vad_speech_activity_pct").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("vad_speech_activity_pct")
+                .copied(),
             Some(72.0)
         );
 
@@ -213,27 +288,45 @@ pub mod gui_tests {
         view.sync_transient_reconstructor_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("lookahead_ms").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("lookahead_ms")
+                .copied(),
             Some(4.2)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("crest_factor_boost_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("crest_factor_boost_db")
+                .copied(),
             Some(4.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("transient_sensitivity").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("transient_sensitivity")
+                .copied(),
             Some(0.72)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("fir_taps").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("fir_taps")
+                .copied(),
             Some(512.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("lookahead_ms").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("lookahead_ms")
+                .copied(),
             Some(4.2)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("crest_factor_boost_db").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("crest_factor_boost_db")
+                .copied(),
             Some(4.5)
         );
 
@@ -248,12 +341,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let dg_action = palette.actions.iter().find(|a| a.action_id == "open_dialog_gating_hud");
-        assert!(dg_action.is_some(), "open_dialog_gating_hud should be registered");
+        let dg_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_dialog_gating_hud");
+        assert!(
+            dg_action.is_some(),
+            "open_dialog_gating_hud should be registered"
+        );
         assert_eq!(dg_action.unwrap().category, "Mastering & Dynamics");
 
-        let tr_action = palette.actions.iter().find(|a| a.action_id == "open_transient_reconstructor_hud");
-        assert!(tr_action.is_some(), "open_transient_reconstructor_hud should be registered");
+        let tr_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_transient_reconstructor_hud");
+        assert!(
+            tr_action.is_some(),
+            "open_transient_reconstructor_hud should be registered"
+        );
         assert_eq!(tr_action.unwrap().category, "Dynamics & Saturation");
     }
 }

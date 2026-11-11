@@ -46,13 +46,13 @@ impl FactoryPresetCategory {
 
     pub fn color_rgb(&self) -> (u8, u8, u8) {
         match self {
-            Self::PhysicalModeling => (234, 179, 8),    // Amber / Gold
-            Self::GeneralMidi => (56, 189, 248),        // Sky Blue
-            Self::ChiptuneTracker => (239, 68, 68),     // Bright Red
-            Self::MicrotonalHarmony => (168, 85, 247),  // Purple / Violet
-            Self::ModernSynth => (236, 72, 153),        // Pink / Magenta
-            Self::StudioFx => (16, 185, 129),           // Emerald Green
-            Self::DrumsPercussion => (249, 115, 22),    // Orange
+            Self::PhysicalModeling => (234, 179, 8),   // Amber / Gold
+            Self::GeneralMidi => (56, 189, 248),       // Sky Blue
+            Self::ChiptuneTracker => (239, 68, 68),    // Bright Red
+            Self::MicrotonalHarmony => (168, 85, 247), // Purple / Violet
+            Self::ModernSynth => (236, 72, 153),       // Pink / Magenta
+            Self::StudioFx => (16, 185, 129),          // Emerald Green
+            Self::DrumsPercussion => (249, 115, 22),   // Orange
         }
     }
 }
@@ -1318,10 +1318,7 @@ pub static DEMO_BOHLEN_PIERCE_TRACKS: &[DemoTrackData] = &[
         preset_id: "baroque_pipe_organ",
         clip_start_beat: 0.0,
         clip_length_beats: 12.0,
-        notes: &[
-            (0, 0.0, 6.0, 0.80),
-            (6, 6.0, 6.0, 0.85),
-        ],
+        notes: &[(0, 0.0, 6.0, 0.80), (6, 6.0, 6.0, 0.85)],
     },
     DemoTrackData {
         id: 3,
@@ -1493,10 +1490,7 @@ pub static DEMO_GM_QUINTET_TRACKS: &[DemoTrackData] = &[
         preset_id: "gm_drawbar_organ",
         clip_start_beat: 0.0,
         clip_length_beats: 16.0,
-        notes: &[
-            (7, 0.0, 8.0, 0.75),
-            (12, 8.0, 8.0, 0.80),
-        ],
+        notes: &[(7, 0.0, 8.0, 0.75), (12, 8.0, 8.0, 0.80)],
     },
     DemoTrackData {
         id: 5,
@@ -1582,14 +1576,17 @@ pub fn all_factory_presets() -> &'static [FactoryPreset] {
 /// Finds a factory preset by case-insensitive name or ID.
 pub fn find_preset(name_or_id: &str) -> Option<&'static FactoryPreset> {
     let query = name_or_id.trim();
-    FACTORY_PRESETS.iter().find(|p| {
-        p.id.eq_ignore_ascii_case(query) || p.name.eq_ignore_ascii_case(query)
-    })
+    FACTORY_PRESETS
+        .iter()
+        .find(|p| p.id.eq_ignore_ascii_case(query) || p.name.eq_ignore_ascii_case(query))
 }
 
 /// Returns presets belonging to a specific category.
 pub fn presets_by_category(cat: FactoryPresetCategory) -> Vec<&'static FactoryPreset> {
-    FACTORY_PRESETS.iter().filter(|p| p.category == cat).collect()
+    FACTORY_PRESETS
+        .iter()
+        .filter(|p| p.category == cat)
+        .collect()
 }
 
 /// Returns all demo project templates.

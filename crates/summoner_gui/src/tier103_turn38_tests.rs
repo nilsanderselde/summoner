@@ -205,7 +205,11 @@ pub mod gui_tests {
 
         // Request cutoff automation from device rack
         view.device_rack_state.requested_automation_param = Some("cutoff".to_string());
-        let cur_track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let cur_track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         if let Some(param) = view.device_rack_state.requested_automation_param.take() {
             assert!(view.open_track_automation_editor(cur_track_id, &param));
         }

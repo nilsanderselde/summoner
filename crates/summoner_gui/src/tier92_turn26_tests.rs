@@ -165,7 +165,14 @@ pub mod pure_tests {
         param_bus.register(master_pid, 1.0);
 
         // 1. Initial sync to register parameters into registry and bus
-        view.sync_with_param_bus(&project, &param_bus, &mut registry, &mut timeline, 0.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut registry,
+            &mut timeline,
+            0.0,
+            false,
+        );
         assert_eq!(param_bus.get(pan_pid), Some(0.0));
         assert_eq!(param_bus.get(gain_pid), Some(1.0));
         assert_eq!(param_bus.get(master_pid), Some(1.0));
@@ -175,24 +182,56 @@ pub mod pure_tests {
         view.apply_automation_quick_shape(AutomationQuickShape::RampUp);
 
         // Sync with param bus to flush editor curve into timeline
-        view.sync_with_param_bus(&project, &param_bus, &mut registry, &mut timeline, 0.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut registry,
+            &mut timeline,
+            0.0,
+            false,
+        );
 
         let pan_lane_key = format!("track_{}_pan", track_id);
-        let lane = timeline.lanes.get(&pan_lane_key).expect("Pan lane must exist");
+        let lane = timeline
+            .lanes
+            .get(&pan_lane_key)
+            .expect("Pan lane must exist");
         assert_eq!(lane.curve.points.len(), 2);
         assert_eq!(lane.curve.points[0].value, -1.0);
         assert_eq!(lane.curve.points[1].value, 1.0);
 
         // 3. Playback simulation: evaluate at beat 8.0 (midway -> 0.0) and beat 16.0 (end -> 1.0)
         view.top_bar_state.is_playing = true;
-        view.sync_with_param_bus(&project, &param_bus, &mut registry, &mut timeline, 8.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut registry,
+            &mut timeline,
+            8.0,
+            false,
+        );
         let pan_at_8 = view.tracks[0].pan;
-        assert!(pan_at_8.abs() < 1e-3, "Pan at midway should be 0.0, got {}", pan_at_8);
+        assert!(
+            pan_at_8.abs() < 1e-3,
+            "Pan at midway should be 0.0, got {}",
+            pan_at_8
+        );
         assert!((param_bus.get(pan_pid).unwrap() - 0.0).abs() < 1e-3);
 
-        view.sync_with_param_bus(&project, &param_bus, &mut registry, &mut timeline, 16.0, false);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut registry,
+            &mut timeline,
+            16.0,
+            false,
+        );
         let pan_at_16 = view.tracks[0].pan;
-        assert!((pan_at_16 - 1.0).abs() < 1e-3, "Pan at end should be 1.0, got {}", pan_at_16);
+        assert!(
+            (pan_at_16 - 1.0).abs() < 1e-3,
+            "Pan at end should be 1.0, got {}",
+            pan_at_16
+        );
         assert!((param_bus.get(pan_pid).unwrap() - 1.0).abs() < 1e-3);
     }
 

@@ -660,7 +660,8 @@ impl ResonanceSuppressorView {
                     }
                     if let Some(node) = self.nodes.get_mut(self.selected_node_idx) {
                         let norm_x = ((pos.x - curve_rect.x) / curve_rect.width).clamp(0.0, 1.0);
-                        let norm_y = (1.0 - (pos.y - curve_rect.y) / curve_rect.height).clamp(0.0, 1.0);
+                        let norm_y =
+                            (1.0 - (pos.y - curve_rect.y) / curve_rect.height).clamp(0.0, 1.0);
                         node.freq_hz = Self::normalized_to_freq(norm_x);
                         node.depth_db = Self::normalized_to_depth(norm_y);
                     }
@@ -672,7 +673,8 @@ impl ResonanceSuppressorView {
                 for (i, (m, _label)) in modes.iter().enumerate() {
                     let bx = mode_rect.x + 12.0 + (i as f32 * (tab_w + 8.0));
                     let by = mode_rect.y + 40.0;
-                    let tab_rect = egui::Rect::from_min_size(egui::pos2(bx, by), egui::vec2(tab_w, tab_h));
+                    let tab_rect =
+                        egui::Rect::from_min_size(egui::pos2(bx, by), egui::vec2(tab_w, tab_h));
                     if tab_rect.contains(pos) {
                         self.mode = *m;
                     }

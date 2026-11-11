@@ -84,12 +84,30 @@ pub mod pure_tests {
         registry.register_param("track_1_phase", 0.0);
         registry.register_param("track_1_trim", 0.0);
 
-        assert_eq!(registry.get_param("master_gain").map(|p| p.get()), Some(1.0));
-        assert_eq!(registry.get_param("master_mono").map(|p| p.get()), Some(0.0));
-        assert_eq!(registry.get_param("master_mute").map(|p| p.get()), Some(0.0));
-        assert_eq!(registry.get_param("master_trim").map(|p| p.get()), Some(0.0));
-        assert_eq!(registry.get_param("track_1_phase").map(|p| p.get()), Some(0.0));
-        assert_eq!(registry.get_param("track_1_trim").map(|p| p.get()), Some(0.0));
+        assert_eq!(
+            registry.get_param("master_gain").map(|p| p.get()),
+            Some(1.0)
+        );
+        assert_eq!(
+            registry.get_param("master_mono").map(|p| p.get()),
+            Some(0.0)
+        );
+        assert_eq!(
+            registry.get_param("master_mute").map(|p| p.get()),
+            Some(0.0)
+        );
+        assert_eq!(
+            registry.get_param("master_trim").map(|p| p.get()),
+            Some(0.0)
+        );
+        assert_eq!(
+            registry.get_param("track_1_phase").map(|p| p.get()),
+            Some(0.0)
+        );
+        assert_eq!(
+            registry.get_param("track_1_trim").map(|p| p.get()),
+            Some(0.0)
+        );
 
         registry.set("master_mute", 1.0);
         registry.set("master_mono", 1.0);
@@ -97,11 +115,26 @@ pub mod pure_tests {
         registry.set("track_1_phase", 1.0);
         registry.set("track_1_trim", -6.0);
 
-        assert_eq!(registry.get_param("master_mute").map(|p| p.get()), Some(1.0));
-        assert_eq!(registry.get_param("master_mono").map(|p| p.get()), Some(1.0));
-        assert_eq!(registry.get_param("master_trim").map(|p| p.get()), Some(2.5));
-        assert_eq!(registry.get_param("track_1_phase").map(|p| p.get()), Some(1.0));
-        assert_eq!(registry.get_param("track_1_trim").map(|p| p.get()), Some(-6.0));
+        assert_eq!(
+            registry.get_param("master_mute").map(|p| p.get()),
+            Some(1.0)
+        );
+        assert_eq!(
+            registry.get_param("master_mono").map(|p| p.get()),
+            Some(1.0)
+        );
+        assert_eq!(
+            registry.get_param("master_trim").map(|p| p.get()),
+            Some(2.5)
+        );
+        assert_eq!(
+            registry.get_param("track_1_phase").map(|p| p.get()),
+            Some(1.0)
+        );
+        assert_eq!(
+            registry.get_param("track_1_trim").map(|p| p.get()),
+            Some(-6.0)
+        );
     }
 
     #[test]
@@ -125,7 +158,9 @@ pub mod pure_tests {
             "master_mute".to_string(),
             AutomationLane {
                 param_id: "master_mute".to_string(),
-                curve: AutomationCurve { points: mute_points },
+                curve: AutomationCurve {
+                    points: mute_points,
+                },
             },
         );
 
@@ -146,7 +181,9 @@ pub mod pure_tests {
             "master_trim".to_string(),
             AutomationLane {
                 param_id: "master_trim".to_string(),
-                curve: AutomationCurve { points: trim_points },
+                curve: AutomationCurve {
+                    points: trim_points,
+                },
             },
         );
 
@@ -181,16 +218,28 @@ pub mod gui_tests {
         let mut top_bar = ModernTopBarState::default();
 
         top_bar.request_master_automation();
-        assert_eq!(top_bar.requested_automation_param.as_deref(), Some("master_gain"));
+        assert_eq!(
+            top_bar.requested_automation_param.as_deref(),
+            Some("master_gain")
+        );
 
         top_bar.request_master_trim_automation();
-        assert_eq!(top_bar.requested_automation_param.as_deref(), Some("master_trim"));
+        assert_eq!(
+            top_bar.requested_automation_param.as_deref(),
+            Some("master_trim")
+        );
 
         top_bar.request_master_mono_automation();
-        assert_eq!(top_bar.requested_automation_param.as_deref(), Some("master_mono"));
+        assert_eq!(
+            top_bar.requested_automation_param.as_deref(),
+            Some("master_mono")
+        );
 
         top_bar.request_master_mute_automation();
-        assert_eq!(top_bar.requested_automation_param.as_deref(), Some("master_mute"));
+        assert_eq!(
+            top_bar.requested_automation_param.as_deref(),
+            Some("master_mute")
+        );
     }
 
     #[test]
@@ -217,7 +266,10 @@ pub mod gui_tests {
         let opened_mono = view.open_master_mono_automation_editor();
         assert!(opened_mono);
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some("master_mono"));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some("master_mono")
+        );
         let ed_mono = view.automation_editor.as_ref().unwrap();
         assert_eq!(ed_mono.min_display, 0.0);
         assert_eq!(ed_mono.max_display, 1.0);
@@ -226,7 +278,10 @@ pub mod gui_tests {
         let opened_mute = view.open_master_mute_automation_editor();
         assert!(opened_mute);
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some("master_mute"));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some("master_mute")
+        );
         let ed_mute = view.automation_editor.as_ref().unwrap();
         assert_eq!(ed_mute.min_display, 0.0);
         assert_eq!(ed_mute.max_display, 1.0);
@@ -240,13 +295,19 @@ pub mod gui_tests {
 
         // Track phase
         assert!(view.open_track_automation_editor(track_id, "phase"));
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some(format!("track_{}_phase", track_id).as_str()));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some(format!("track_{}_phase", track_id).as_str())
+        );
         let ed_phase = view.automation_editor.as_ref().unwrap();
         assert_eq!(ed_phase.unit_name, "bool");
 
         // Track trim
         assert!(view.open_track_automation_editor(track_id, "trim"));
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some(format!("track_{}_trim", track_id).as_str()));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some(format!("track_{}_trim", track_id).as_str())
+        );
         let ed_trim = view.automation_editor.as_ref().unwrap();
         assert_eq!(ed_trim.unit_name, "dB");
         assert_eq!(ed_trim.min_display, -18.0);
@@ -254,16 +315,28 @@ pub mod gui_tests {
 
         // Master routes
         assert!(view.open_track_automation_editor(track_id, "master_gain"));
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some("master_gain"));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some("master_gain")
+        );
 
         assert!(view.open_track_automation_editor(track_id, "master_trim"));
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some("master_trim"));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some("master_trim")
+        );
 
         assert!(view.open_track_automation_editor(track_id, "master_mono"));
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some("master_mono"));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some("master_mono")
+        );
 
         assert!(view.open_track_automation_editor(track_id, "master_mute"));
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some("master_mute"));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some("master_mute")
+        );
     }
 
     #[test]
@@ -298,7 +371,14 @@ pub mod gui_tests {
         view.set_track_input_trim(track_id, 3.5);
 
         // 1. Sync with recording = true
-        view.sync_with_param_bus(&project, &param_bus, &mut registry, &mut timeline, 2.0, true);
+        view.sync_with_param_bus(
+            &project,
+            &param_bus,
+            &mut registry,
+            &mut timeline,
+            2.0,
+            true,
+        );
 
         // Verify ParamBus live dispatch
         assert_eq!(param_bus.get(master_mono_pid), Some(1.0));
@@ -308,17 +388,42 @@ pub mod gui_tests {
         assert_eq!(param_bus.get(track_trim_pid), Some(3.5));
 
         // Verify AutomationRegistry
-        assert_eq!(registry.get_param("master_mono").map(|p| p.get()), Some(1.0));
-        assert_eq!(registry.get_param("master_mute").map(|p| p.get()), Some(1.0));
-        assert_eq!(registry.get_param("master_trim").map(|p| p.get()), Some(-2.0));
-        assert_eq!(registry.get_param(&format!("track_{}_phase", track_id)).map(|p| p.get()), Some(1.0));
-        assert_eq!(registry.get_param(&format!("track_{}_trim", track_id)).map(|p| p.get()), Some(3.5));
+        assert_eq!(
+            registry.get_param("master_mono").map(|p| p.get()),
+            Some(1.0)
+        );
+        assert_eq!(
+            registry.get_param("master_mute").map(|p| p.get()),
+            Some(1.0)
+        );
+        assert_eq!(
+            registry.get_param("master_trim").map(|p| p.get()),
+            Some(-2.0)
+        );
+        assert_eq!(
+            registry
+                .get_param(&format!("track_{}_phase", track_id))
+                .map(|p| p.get()),
+            Some(1.0)
+        );
+        assert_eq!(
+            registry
+                .get_param(&format!("track_{}_trim", track_id))
+                .map(|p| p.get()),
+            Some(3.5)
+        );
 
         // Verify AutomationTimeline has recorded points at beat 2.0
         assert_eq!(timeline.evaluate("master_mono", 2.0), Some(1.0));
         assert_eq!(timeline.evaluate("master_mute", 2.0), Some(1.0));
         assert_eq!(timeline.evaluate("master_trim", 2.0), Some(-2.0));
-        assert_eq!(timeline.evaluate(&format!("track_{}_phase", track_id), 2.0), Some(1.0));
-        assert_eq!(timeline.evaluate(&format!("track_{}_trim", track_id), 2.0), Some(3.5));
+        assert_eq!(
+            timeline.evaluate(&format!("track_{}_phase", track_id), 2.0),
+            Some(1.0)
+        );
+        assert_eq!(
+            timeline.evaluate(&format!("track_{}_trim", track_id), 2.0),
+            Some(3.5)
+        );
     }
 }

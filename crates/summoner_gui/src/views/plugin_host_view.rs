@@ -72,10 +72,33 @@ impl PluginHostPreset {
     /// Returns nominal (plugin_gain, cutoff_hz, wet_mix, mpe_timbre, format, latency_samples).
     pub fn nominal_parameters(&self) -> (f32, f32, f32, f32, HostedPluginFormat, u32) {
         match self {
-            Self::ClapPolyMpeSynth => (1.00, 2400.0, 1.00, 0.72, HostedPluginFormat::ClapMpeHost, 0),
-            Self::Vst3MasteringChain => (1.05, 8500.0, 1.00, 0.50, HostedPluginFormat::Vst3BundleHost, 64),
-            Self::WasmSandboxedGranular => (0.95, 1600.0, 0.80, 0.85, HostedPluginFormat::WasmSandboxHost, 32),
-            Self::ParallelInsertBlend => (1.15, 1200.0, 0.50, 0.45, HostedPluginFormat::ClapMpeHost, 16),
+            Self::ClapPolyMpeSynth => {
+                (1.00, 2400.0, 1.00, 0.72, HostedPluginFormat::ClapMpeHost, 0)
+            }
+            Self::Vst3MasteringChain => (
+                1.05,
+                8500.0,
+                1.00,
+                0.50,
+                HostedPluginFormat::Vst3BundleHost,
+                64,
+            ),
+            Self::WasmSandboxedGranular => (
+                0.95,
+                1600.0,
+                0.80,
+                0.85,
+                HostedPluginFormat::WasmSandboxHost,
+                32,
+            ),
+            Self::ParallelInsertBlend => (
+                1.15,
+                1200.0,
+                0.50,
+                0.45,
+                HostedPluginFormat::ClapMpeHost,
+                16,
+            ),
         }
     }
 }
@@ -237,7 +260,11 @@ impl PluginHostView {
         out.push_str(&format!(
             " Format:           {} | Sandbox: {}\n",
             self.format.label(),
-            if self.sandbox_active { "ISOLATED [SAFE]" } else { "DIRECT" }
+            if self.sandbox_active {
+                "ISOLATED [SAFE]"
+            } else {
+                "DIRECT"
+            }
         ));
         out.push_str(&format!(
             " Gain (Param 0):   {:.2}x | Cutoff (Param 1): {:.1} Hz | Mix (Param 2): {:.0}%\n",

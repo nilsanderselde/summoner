@@ -153,7 +153,11 @@ impl PluckGestureEngine {
     /// Adds a keyframe waypoint to the custom trajectory.
     pub fn add_waypoint(&mut self, waypoint: PluckWaypoint) {
         self.waypoints.push(waypoint);
-        self.waypoints.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+        self.waypoints.sort_by(|a, b| {
+            a.beat
+                .partial_cmp(&b.beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     /// Evaluates continuous pluck articulation parameters at timeline beat position.
@@ -161,7 +165,11 @@ impl PluckGestureEngine {
         let eff_beat = if let Some(loop_len) = self.loop_length_beats {
             if loop_len > 0.0 {
                 let rem = beat % loop_len;
-                if rem < 0.0 { rem + loop_len } else { rem }
+                if rem < 0.0 {
+                    rem + loop_len
+                } else {
+                    rem
+                }
             } else {
                 beat
             }
@@ -184,13 +192,22 @@ impl PluckGestureEngine {
                 let is_downbeat = note_sub == 0;
 
                 let (art, vel, pos_offset) = if is_downbeat {
-                    (PluckArticulation::FingerRestStroke, *accent_velocity, -pluck_position_sweep * 0.5)
+                    (
+                        PluckArticulation::FingerRestStroke,
+                        *accent_velocity,
+                        -pluck_position_sweep * 0.5,
+                    )
                 } else {
-                    (PluckArticulation::FingerFreeStroke, *base_velocity, pluck_position_sweep * 0.5)
+                    (
+                        PluckArticulation::FingerFreeStroke,
+                        *base_velocity,
+                        pluck_position_sweep * 0.5,
+                    )
                 };
 
                 // Continuous breathing sweep across the phrase
-                let pos = (0.16 + pos_offset + (progress * 2.0 * PI).sin() * 0.04).clamp(0.08, 0.40);
+                let pos =
+                    (0.16 + pos_offset + (progress * 2.0 * PI).sin() * 0.04).clamp(0.08, 0.40);
                 let hardness = 0.35 + 0.20 * vel;
 
                 PlectrumBusSnapshot {
@@ -217,8 +234,16 @@ impl PluckGestureEngine {
                 let progress = ((eff_beat * rate as f64) % 1.0) as f32;
 
                 let is_accent = step_idx.is_multiple_of(4);
-                let vel = if is_accent { *accent_velocity } else { *accent_velocity * 0.70 };
-                let mute = if is_accent { *mute_amount * 0.60 } else { *mute_amount };
+                let vel = if is_accent {
+                    *accent_velocity
+                } else {
+                    *accent_velocity * 0.70
+                };
+                let mute = if is_accent {
+                    *mute_amount * 0.60
+                } else {
+                    *mute_amount
+                };
 
                 PlectrumBusSnapshot {
                     articulation: PluckArticulation::PalmMute,
@@ -337,9 +362,7 @@ impl PluckGestureEngine {
                 }
             }
 
-            PluckGesturePattern::CustomSpline => {
-                self.evaluate_custom_spline(eff_beat)
-            }
+            PluckGesturePattern::CustomSpline => self.evaluate_custom_spline(eff_beat),
         }
     }
 
@@ -365,10 +388,17 @@ impl PluckGestureEngine {
         }
 
         let n = self.waypoints.len();
-        let idx = match self.waypoints.binary_search_by(|wp| wp.beat.partial_cmp(&beat).unwrap()) {
+        let idx = match self
+            .waypoints
+            .binary_search_by(|wp| wp.beat.partial_cmp(&beat).unwrap())
+        {
             Ok(i) => i,
             Err(i) => {
-                if i == 0 { 0 } else { i - 1 }
+                if i == 0 {
+                    0
+                } else {
+                    i - 1
+                }
             }
         };
 
@@ -388,10 +418,18 @@ impl PluckGestureEngine {
             };
         }
 
-        let wp0 = if idx == 0 { &self.waypoints[0] } else { &self.waypoints[idx - 1] };
+        let wp0 = if idx == 0 {
+            &self.waypoints[0]
+        } else {
+            &self.waypoints[idx - 1]
+        };
         let wp1 = &self.waypoints[idx];
         let wp2 = &self.waypoints[idx + 1];
-        let wp3 = if idx + 2 < n { &self.waypoints[idx + 2] } else { &self.waypoints[idx + 1] };
+        let wp3 = if idx + 2 < n {
+            &self.waypoints[idx + 2]
+        } else {
+            &self.waypoints[idx + 1]
+        };
 
         let span = (wp2.beat - wp1.beat).max(1e-6);
         let t = ((beat - wp1.beat) / span).clamp(0.0, 1.0) as f32;
@@ -416,19 +454,62 @@ impl PluckGestureEngine {
                 wp1.string_stiffness + t * (wp2.string_stiffness - wp1.string_stiffness),
             ),
             PluckInterpolationCurve::CubicCatmullRom => {
-                let b = Self::catmull_rom_1d(wp0.pluck_position_beta, wp1.pluck_position_beta, wp2.pluck_position_beta, wp3.pluck_position_beta, t);
-                let v = Self::catmull_rom_1d(wp0.strike_velocity, wp1.strike_velocity, wp2.strike_velocity, wp3.strike_velocity, t);
-                let h = Self::catmull_rom_1d(wp0.hammer_hardness, wp1.hammer_hardness, wp2.hammer_hardness, wp3.hammer_hardness, t);
-                let a = Self::catmull_rom_1d(wp0.plectrum_angle_rad, wp1.plectrum_angle_rad, wp2.plectrum_angle_rad, wp3.plectrum_angle_rad, t);
-                let m = Self::catmull_rom_1d(wp0.palm_mute_damping, wp1.palm_mute_damping, wp2.palm_mute_damping, wp3.palm_mute_damping, t);
-                let bl = Self::catmull_rom_1d(wp0.sympathetic_bleed, wp1.sympathetic_bleed, wp2.sympathetic_bleed, wp3.sympathetic_bleed, t);
-                let st = Self::catmull_rom_1d(wp0.string_stiffness, wp1.string_stiffness, wp2.string_stiffness, wp3.string_stiffness, t);
+                let b = Self::catmull_rom_1d(
+                    wp0.pluck_position_beta,
+                    wp1.pluck_position_beta,
+                    wp2.pluck_position_beta,
+                    wp3.pluck_position_beta,
+                    t,
+                );
+                let v = Self::catmull_rom_1d(
+                    wp0.strike_velocity,
+                    wp1.strike_velocity,
+                    wp2.strike_velocity,
+                    wp3.strike_velocity,
+                    t,
+                );
+                let h = Self::catmull_rom_1d(
+                    wp0.hammer_hardness,
+                    wp1.hammer_hardness,
+                    wp2.hammer_hardness,
+                    wp3.hammer_hardness,
+                    t,
+                );
+                let a = Self::catmull_rom_1d(
+                    wp0.plectrum_angle_rad,
+                    wp1.plectrum_angle_rad,
+                    wp2.plectrum_angle_rad,
+                    wp3.plectrum_angle_rad,
+                    t,
+                );
+                let m = Self::catmull_rom_1d(
+                    wp0.palm_mute_damping,
+                    wp1.palm_mute_damping,
+                    wp2.palm_mute_damping,
+                    wp3.palm_mute_damping,
+                    t,
+                );
+                let bl = Self::catmull_rom_1d(
+                    wp0.sympathetic_bleed,
+                    wp1.sympathetic_bleed,
+                    wp2.sympathetic_bleed,
+                    wp3.sympathetic_bleed,
+                    t,
+                );
+                let st = Self::catmull_rom_1d(
+                    wp0.string_stiffness,
+                    wp1.string_stiffness,
+                    wp2.string_stiffness,
+                    wp3.string_stiffness,
+                    t,
+                );
                 (b, v, h, a, m, bl, st)
             }
             PluckInterpolationCurve::CubicBezier => {
                 let b = t * t * (3.0 - 2.0 * t); // Smoothstep S-curve
                 (
-                    wp1.pluck_position_beta + b * (wp2.pluck_position_beta - wp1.pluck_position_beta),
+                    wp1.pluck_position_beta
+                        + b * (wp2.pluck_position_beta - wp1.pluck_position_beta),
                     wp1.strike_velocity + b * (wp2.strike_velocity - wp1.strike_velocity),
                     wp1.hammer_hardness + b * (wp2.hammer_hardness - wp1.hammer_hardness),
                     wp1.plectrum_angle_rad + b * (wp2.plectrum_angle_rad - wp1.plectrum_angle_rad),
@@ -439,7 +520,11 @@ impl PluckGestureEngine {
             }
         };
 
-        let art = if t < 0.5 { wp1.articulation } else { wp2.articulation };
+        let art = if t < 0.5 {
+            wp1.articulation
+        } else {
+            wp2.articulation
+        };
 
         PlectrumBusSnapshot {
             articulation: art,
@@ -570,8 +655,10 @@ mod tests {
         };
         engine.add_waypoint(PluckWaypoint::default());
 
-        let toml_str = toml::to_string_pretty(&engine).expect("Failed to serialize pluck gesture engine");
-        let decoded: PluckGestureEngine = toml::from_str(&toml_str).expect("Failed to deserialize pluck gesture engine");
+        let toml_str =
+            toml::to_string_pretty(&engine).expect("Failed to serialize pluck gesture engine");
+        let decoded: PluckGestureEngine =
+            toml::from_str(&toml_str).expect("Failed to deserialize pluck gesture engine");
 
         assert_eq!(engine.waypoints.len(), decoded.waypoints.len());
         assert_eq!(engine.interpolation, decoded.interpolation);

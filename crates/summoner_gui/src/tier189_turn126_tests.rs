@@ -72,8 +72,18 @@ pub mod pure_tests {
             ),
         ];
 
-        for (p, exp_name, exp_mix, exp_cut, exp_res, exp_lfo, exp_env, exp_gate, exp_drv, exp_mode) in
-            presets
+        for (
+            p,
+            exp_name,
+            exp_mix,
+            exp_cut,
+            exp_res,
+            exp_lfo,
+            exp_env,
+            exp_gate,
+            exp_drv,
+            exp_mode,
+        ) in presets
         {
             view.set_preset(p);
             assert_eq!(p.name(), exp_name);

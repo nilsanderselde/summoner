@@ -98,9 +98,7 @@ pub enum PipeOrganGesturePattern {
         peak_pressure_mmh2o: f32,
     },
     /// French Romantic symphonic crescendo (Flutes -> Principals -> Reeds Tutti).
-    RomanticSymphonicCrescendo {
-        total_length_beats: f64,
-    },
+    RomanticSymphonicCrescendo { total_length_beats: f64 },
     /// Pneumatic tremulant pulsing swell on Vox Humana and Bourdon.
     TremulantSwell {
         phrase_length_beats: f64,
@@ -339,20 +337,18 @@ impl PipeOrganGestureEngine {
                 });
             }
 
-            PipeOrganGesturePattern::RomanticSymphonicCrescendo {
-                total_length_beats,
-            } => {
+            PipeOrganGesturePattern::RomanticSymphonicCrescendo { total_length_beats } => {
                 self.loop_length_beats = *total_length_beats;
                 let steps = 4;
                 for i in 0..=steps {
                     let frac = i as f64 / steps as f64;
                     let beat = frac * total_length_beats;
                     let mask = match i {
-                        0 => 8,       // Flute 4'
-                        1 => 11,      // Flute 4' + Bourdon 16' + Principal 8'
-                        2 => 27,      // + Super Octave 2'
-                        3 => 91,      // + Trompette 8'
-                        _ => 255,     // Full Tutti
+                        0 => 8,   // Flute 4'
+                        1 => 11,  // Flute 4' + Bourdon 16' + Principal 8'
+                        2 => 27,  // + Super Octave 2'
+                        3 => 91,  // + Trompette 8'
+                        _ => 255, // Full Tutti
                     };
                     self.waypoints.push(PipeOrganWaypoint {
                         beat,
@@ -468,7 +464,11 @@ impl PipeOrganGestureEngine {
                 self.loop_length_beats
             } else {
                 let b = beat % self.loop_length_beats;
-                if b < 0.0 { b + self.loop_length_beats } else { b }
+                if b < 0.0 {
+                    b + self.loop_length_beats
+                } else {
+                    b
+                }
             }
         } else {
             beat
@@ -496,50 +496,119 @@ impl PipeOrganGestureEngine {
 
         let pressure = match curve {
             PipeOrganInterpolationCurve::Hold => w1.wind_pressure_mmh2o,
-            PipeOrganInterpolationCurve::Linear => lerp(w1.wind_pressure_mmh2o, w2.wind_pressure_mmh2o, t),
-            _ => catmull_rom_1d(w0.wind_pressure_mmh2o, w1.wind_pressure_mmh2o, w2.wind_pressure_mmh2o, w3.wind_pressure_mmh2o, t),
-        }.clamp(40.0, 160.0);
+            PipeOrganInterpolationCurve::Linear => {
+                lerp(w1.wind_pressure_mmh2o, w2.wind_pressure_mmh2o, t)
+            }
+            _ => catmull_rom_1d(
+                w0.wind_pressure_mmh2o,
+                w1.wind_pressure_mmh2o,
+                w2.wind_pressure_mmh2o,
+                w3.wind_pressure_mmh2o,
+                t,
+            ),
+        }
+        .clamp(40.0, 160.0);
 
         let cutup = match curve {
             PipeOrganInterpolationCurve::Hold => w1.cutup_ratio,
             PipeOrganInterpolationCurve::Linear => lerp(w1.cutup_ratio, w2.cutup_ratio, t),
-            _ => catmull_rom_1d(w0.cutup_ratio, w1.cutup_ratio, w2.cutup_ratio, w3.cutup_ratio, t),
-        }.clamp(0.15, 0.50);
+            _ => catmull_rom_1d(
+                w0.cutup_ratio,
+                w1.cutup_ratio,
+                w2.cutup_ratio,
+                w3.cutup_ratio,
+                t,
+            ),
+        }
+        .clamp(0.15, 0.50);
 
         let chiff = match curve {
             PipeOrganInterpolationCurve::Hold => w1.chiff_duration_ms,
-            PipeOrganInterpolationCurve::Linear => lerp(w1.chiff_duration_ms, w2.chiff_duration_ms, t),
-            _ => catmull_rom_1d(w0.chiff_duration_ms, w1.chiff_duration_ms, w2.chiff_duration_ms, w3.chiff_duration_ms, t),
-        }.clamp(5.0, 80.0);
+            PipeOrganInterpolationCurve::Linear => {
+                lerp(w1.chiff_duration_ms, w2.chiff_duration_ms, t)
+            }
+            _ => catmull_rom_1d(
+                w0.chiff_duration_ms,
+                w1.chiff_duration_ms,
+                w2.chiff_duration_ms,
+                w3.chiff_duration_ms,
+                t,
+            ),
+        }
+        .clamp(5.0, 80.0);
 
         let tracker = match curve {
             PipeOrganInterpolationCurve::Hold => w1.tracker_velocity,
-            PipeOrganInterpolationCurve::Linear => lerp(w1.tracker_velocity, w2.tracker_velocity, t),
-            _ => catmull_rom_1d(w0.tracker_velocity, w1.tracker_velocity, w2.tracker_velocity, w3.tracker_velocity, t),
-        }.clamp(0.0, 1.0);
+            PipeOrganInterpolationCurve::Linear => {
+                lerp(w1.tracker_velocity, w2.tracker_velocity, t)
+            }
+            _ => catmull_rom_1d(
+                w0.tracker_velocity,
+                w1.tracker_velocity,
+                w2.tracker_velocity,
+                w3.tracker_velocity,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let trem_rate = match curve {
             PipeOrganInterpolationCurve::Hold => w1.tremulant_rate_hz,
-            PipeOrganInterpolationCurve::Linear => lerp(w1.tremulant_rate_hz, w2.tremulant_rate_hz, t),
-            _ => catmull_rom_1d(w0.tremulant_rate_hz, w1.tremulant_rate_hz, w2.tremulant_rate_hz, w3.tremulant_rate_hz, t),
-        }.clamp(1.0, 15.0);
+            PipeOrganInterpolationCurve::Linear => {
+                lerp(w1.tremulant_rate_hz, w2.tremulant_rate_hz, t)
+            }
+            _ => catmull_rom_1d(
+                w0.tremulant_rate_hz,
+                w1.tremulant_rate_hz,
+                w2.tremulant_rate_hz,
+                w3.tremulant_rate_hz,
+                t,
+            ),
+        }
+        .clamp(1.0, 15.0);
 
         let trem_depth = match curve {
             PipeOrganInterpolationCurve::Hold => w1.tremulant_depth,
             PipeOrganInterpolationCurve::Linear => lerp(w1.tremulant_depth, w2.tremulant_depth, t),
-            _ => catmull_rom_1d(w0.tremulant_depth, w1.tremulant_depth, w2.tremulant_depth, w3.tremulant_depth, t),
-        }.clamp(0.0, 0.5);
+            _ => catmull_rom_1d(
+                w0.tremulant_depth,
+                w1.tremulant_depth,
+                w2.tremulant_depth,
+                w3.tremulant_depth,
+                t,
+            ),
+        }
+        .clamp(0.0, 0.5);
 
         let gain = match curve {
             PipeOrganInterpolationCurve::Hold => w1.master_gain,
             PipeOrganInterpolationCurve::Linear => lerp(w1.master_gain, w2.master_gain, t),
-            _ => catmull_rom_1d(w0.master_gain, w1.master_gain, w2.master_gain, w3.master_gain, t),
-        }.clamp(0.0, 2.0);
+            _ => catmull_rom_1d(
+                w0.master_gain,
+                w1.master_gain,
+                w2.master_gain,
+                w3.master_gain,
+                t,
+            ),
+        }
+        .clamp(0.0, 2.0);
 
         // Discrete stop switches switch at midpoint or hold from w1
-        let stops = if t < 0.5 { w1.stops_mask } else { w2.stops_mask };
-        let trem_en = if t < 0.5 { w1.tremulant_enabled } else { w2.tremulant_enabled };
-        let art = if t < 0.5 { w1.articulation } else { w2.articulation };
+        let stops = if t < 0.5 {
+            w1.stops_mask
+        } else {
+            w2.stops_mask
+        };
+        let trem_en = if t < 0.5 {
+            w1.tremulant_enabled
+        } else {
+            w2.tremulant_enabled
+        };
+        let art = if t < 0.5 {
+            w1.articulation
+        } else {
+            w2.articulation
+        };
 
         PipeOrganBusSnapshot {
             stops_mask: stops,
@@ -626,13 +695,15 @@ mod tests {
 
     #[test]
     fn test_pipe_organ_gesture_toml_round_trip() {
-        let engine = PipeOrganGestureEngine::new(PipeOrganGesturePattern::RomanticSymphonicCrescendo {
-            total_length_beats: 16.0,
-        });
+        let engine =
+            PipeOrganGestureEngine::new(PipeOrganGesturePattern::RomanticSymphonicCrescendo {
+                total_length_beats: 16.0,
+            });
 
-        let toml_str = toml::to_string_pretty(&engine).expect("Failed to serialize PipeOrganGestureEngine to TOML");
-        let deserialized: PipeOrganGestureEngine =
-            toml::from_str(&toml_str).expect("Failed to deserialize PipeOrganGestureEngine from TOML");
+        let toml_str = toml::to_string_pretty(&engine)
+            .expect("Failed to serialize PipeOrganGestureEngine to TOML");
+        let deserialized: PipeOrganGestureEngine = toml::from_str(&toml_str)
+            .expect("Failed to deserialize PipeOrganGestureEngine from TOML");
 
         assert_eq!(engine.waypoints.len(), deserialized.waypoints.len());
         assert_eq!(engine.loop_length_beats, deserialized.loop_length_beats);

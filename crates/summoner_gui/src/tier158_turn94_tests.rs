@@ -5,13 +5,11 @@
 
 #[cfg(test)]
 pub mod pure_tests {
-    use crate::views::auto_wah_view::{
-        AutoWahView, WAH_PUCK_HIT_RADIUS,
-    };
-    use crate::views::formant_filter_view::{
-        FormantFilterView, FormantTrajectoryMode, STANDARD_VOWELS, FORMANT_PUCK_HIT_RADIUS,
-    };
     use crate::layout_math::Rect;
+    use crate::views::auto_wah_view::{AutoWahView, WAH_PUCK_HIT_RADIUS};
+    use crate::views::formant_filter_view::{
+        FormantFilterView, FormantTrajectoryMode, FORMANT_PUCK_HIT_RADIUS, STANDARD_VOWELS,
+    };
 
     #[test]
     fn test_turn94_pure_auto_wah_initialization_and_kinematics() {
@@ -190,7 +188,11 @@ pub mod gui_tests {
     fn test_turn94_gui_lock_free_param_bus_dispatch_auto_wah_and_formant_filter() {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id as u32).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id as u32)
+            .unwrap_or(1);
         let slot_idx = 0usize;
         view.device_rack_state.selected_chain_idx = slot_idx;
 
@@ -213,13 +215,36 @@ pub mod gui_tests {
 
         view.sync_auto_wah_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("sensitivity"), Some(&0.90));
-        assert_eq!(view.device_rack_state.node_param_values.get("base_freq_hz"), Some(&450.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("sweep_range_octaves"), Some(&4.2));
-        assert_eq!(view.device_rack_state.node_param_values.get("resonance_q"), Some(&9.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("attack_ms"), Some(&8.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("release_ms"), Some(&90.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("mix"), Some(&0.85));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("sensitivity"),
+            Some(&0.90)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("base_freq_hz"),
+            Some(&450.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("sweep_range_octaves"),
+            Some(&4.2)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("resonance_q"),
+            Some(&9.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("attack_ms"),
+            Some(&8.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("release_ms"),
+            Some(&90.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("mix"),
+            Some(&0.85)
+        );
 
         let pid_sens = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_res = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 3);
@@ -236,13 +261,40 @@ pub mod gui_tests {
 
         view.sync_formant_filter_hud_state();
 
-        assert_eq!(view.device_rack_state.node_param_values.get("resonance_q"), Some(&15.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("peak_boost_db"), Some(&12.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("vocal_tract_scale"), Some(&1.15));
-        assert_eq!(view.device_rack_state.node_param_values.get("drive_warmth_db"), Some(&5.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("dry_wet_pct"), Some(&80.0));
-        assert_eq!(view.device_rack_state.node_param_values.get("morph_pos_x"), Some(&0.70));
-        assert_eq!(view.device_rack_state.node_param_values.get("morph_pos_y"), Some(&0.50));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("resonance_q"),
+            Some(&15.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("peak_boost_db"),
+            Some(&12.0)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("vocal_tract_scale"),
+            Some(&1.15)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("drive_warmth_db"),
+            Some(&5.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("dry_wet_pct"),
+            Some(&80.0)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("morph_pos_x"),
+            Some(&0.70)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("morph_pos_y"),
+            Some(&0.50)
+        );
 
         let pid_q = ParamId(track_id * 1000 + slot_idx as u32 * 20);
         let pid_mx = ParamId(track_id * 1000 + slot_idx as u32 * 20 + 5);
@@ -283,13 +335,25 @@ pub mod gui_tests {
     #[test]
     fn test_turn94_gui_command_palette_actions() {
         let palette = CommandPalette::new();
-        let wah_action = palette.actions.iter().find(|a| a.action_id == "open_auto_wah_hud");
-        assert!(wah_action.is_some(), "open_auto_wah_hud must be registered in command palette");
+        let wah_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_auto_wah_hud");
+        assert!(
+            wah_action.is_some(),
+            "open_auto_wah_hud must be registered in command palette"
+        );
         let wah = wah_action.unwrap();
         assert_eq!(wah.category, "Filter / EQ");
 
-        let formant_action = palette.actions.iter().find(|a| a.action_id == "open_formant_filter_hud");
-        assert!(formant_action.is_some(), "open_formant_filter_hud must be registered in command palette");
+        let formant_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_formant_filter_hud");
+        assert!(
+            formant_action.is_some(),
+            "open_formant_filter_hud must be registered in command palette"
+        );
         let formant = formant_action.unwrap();
         assert_eq!(formant.category, "Filter / EQ");
     }

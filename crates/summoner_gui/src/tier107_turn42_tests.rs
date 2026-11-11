@@ -152,7 +152,9 @@ pub mod pure_tests {
             fallback_pan_key.clone(),
             AutomationLane {
                 param_id: fallback_pan_key.clone(),
-                curve: AutomationCurve { points: fallback_points },
+                curve: AutomationCurve {
+                    points: fallback_points,
+                },
             },
         );
 
@@ -249,7 +251,10 @@ mod gui_tests {
 
         // Mutate with multi-device chain
         track.device_names = vec!["SuperSaw".to_string(), "Overdrive".to_string()];
-        track.device_kinds = vec!["WavetableSynthNode".to_string(), "OverdriveNode".to_string()];
+        track.device_kinds = vec![
+            "WavetableSynthNode".to_string(),
+            "OverdriveNode".to_string(),
+        ];
         assert_eq!(track.primary_device_name(), "SuperSaw");
         assert_eq!(track.primary_device_kind(), "WavetableSynthNode");
     }
@@ -266,12 +271,18 @@ mod gui_tests {
         let res_gain = view.open_track_automation_editor(view.tracks[0].id, "gain");
         assert!(res_gain);
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some(&format!("track_{}_gain", view.tracks[0].id)[..]));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some(&format!("track_{}_gain", view.tracks[0].id)[..])
+        );
 
         // Open automation editor for multi-node slot parameter (e.g. node_0_cutoff)
         let res_slot = view.open_track_automation_editor(view.tracks[0].id, "node_0_cutoff");
         assert!(res_slot);
         assert!(view.show_automation_editor_window);
-        assert_eq!(view.requested_modular_automation_param.as_deref(), Some(&format!("track_{}_node_0_cutoff", view.tracks[0].id)[..]));
+        assert_eq!(
+            view.requested_modular_automation_param.as_deref(),
+            Some(&format!("track_{}_node_0_cutoff", view.tracks[0].id)[..])
+        );
     }
 }

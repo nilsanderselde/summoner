@@ -16,11 +16,11 @@
 //! - Large-project stress and soak verification suite.
 
 use crate::backup::ProjectAutoSaveManager;
+use crate::parse_project_toml;
 use crate::schema::{
     AssetConfig, AutomationEventConfig, AutomationLaneConfig, MarkerConfig, MidiMappingConfig,
     NodeConfig, ProjectConfig, TrackConfig, TransportConfig,
 };
-use crate::parse_project_toml;
 #[cfg(test)]
 use crate::serialize_project_toml;
 use serde::{Deserialize, Serialize};

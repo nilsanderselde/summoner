@@ -1,5 +1,4 @@
 #![cfg(feature = "gui")]
-
 // Summoner - Deterministic, Headless-First DAW
 // Copyright (C) 2026 nilsanderselde - AGPLv3 License
 
@@ -9,8 +8,8 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::views::stems_export_view::{
-        LoudnessStandard, StemPresetQuickPick, StemsExportView,
-        STEM_EXPORT_MIN_HIT_HEIGHT, STEM_EXPORT_TOUCH_TARGET_SIZE,
+        LoudnessStandard, StemPresetQuickPick, StemsExportView, STEM_EXPORT_MIN_HIT_HEIGHT,
+        STEM_EXPORT_TOUCH_TARGET_SIZE,
     };
     use summoner_project::export::{BitDepth, StemExportFormat};
 
@@ -102,8 +101,16 @@ pub mod pure_tests {
         ];
 
         for (std, exp_lufs, exp_tp) in standards {
-            assert!((std.target_lufs() - exp_lufs).abs() < 1e-4, "LUFS mismatch for {:?}", std);
-            assert!((std.max_true_peak_dbtp() - exp_tp).abs() < 1e-4, "True Peak mismatch for {:?}", std);
+            assert!(
+                (std.target_lufs() - exp_lufs).abs() < 1e-4,
+                "LUFS mismatch for {:?}",
+                std
+            );
+            assert!(
+                (std.max_true_peak_dbtp() - exp_tp).abs() < 1e-4,
+                "True Peak mismatch for {:?}",
+                std
+            );
             assert!(!std.name().is_empty());
             assert!(!std.description().is_empty());
         }
@@ -113,7 +120,7 @@ pub mod pure_tests {
     fn test_turn53_true_peak_margin_and_warning_detection() {
         let mut view = StemsExportView::new();
         view.loudness_standard = LoudnessStandard::SpotifyYouTube; // Max TP: -1.0 dBTP
-        
+
         // Track 1 has true peak -0.2 dBTP, which exceeds -1.0 dBTP ceiling
         assert!(view.has_true_peak_warning());
         assert!(view.true_peak_margin_dbtp() < 0.0);
@@ -166,12 +173,24 @@ pub mod pure_tests {
         view.format = StemExportFormat::Wav;
 
         let wav_size = view.estimated_size_mb(180.0);
-        assert!(wav_size > 50.0 && wav_size < 500.0, "WAV size realistic: {}", wav_size);
+        assert!(
+            wav_size > 50.0 && wav_size < 500.0,
+            "WAV size realistic: {}",
+            wav_size
+        );
 
         view.format = StemExportFormat::Flac;
         let flac_size = view.estimated_size_mb(180.0);
-        assert!(flac_size < wav_size, "FLAC must be smaller than WAV: {} vs {}", flac_size, wav_size);
-        assert!((flac_size / wav_size - 0.60).abs() < 0.05, "FLAC compression ratio ~0.60");
+        assert!(
+            flac_size < wav_size,
+            "FLAC must be smaller than WAV: {} vs {}",
+            flac_size,
+            wav_size
+        );
+        assert!(
+            (flac_size / wav_size - 0.60).abs() < 0.05,
+            "FLAC compression ratio ~0.60"
+        );
     }
 
     #[test]
@@ -319,7 +338,10 @@ pub mod gui_tests {
     #[test]
     fn test_turn53_command_palette_action_registration() {
         let palette = CommandPalette::new();
-        let action = palette.actions.iter().find(|a| a.action_id == "open_stems_export_modal");
+        let action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_stems_export_modal");
 
         assert!(
             action.is_some(),

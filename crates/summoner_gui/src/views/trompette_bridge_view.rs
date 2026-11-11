@@ -103,15 +103,21 @@ impl TrompetteBridgeView {
     }
 
     pub fn update_puck_from_physics(&mut self) {
-        let norm_x = ((self.clearance_gap_mm - MIN_CHIEN_GAP_MM) / (MAX_CHIEN_GAP_MM - MIN_CHIEN_GAP_MM)).clamp(0.0, 1.0);
-        let norm_y = ((self.strike_force - MIN_STRIKE_FORCE) / (MAX_STRIKE_FORCE - MIN_STRIKE_FORCE)).clamp(0.0, 1.0);
+        let norm_x = ((self.clearance_gap_mm - MIN_CHIEN_GAP_MM)
+            / (MAX_CHIEN_GAP_MM - MIN_CHIEN_GAP_MM))
+            .clamp(0.0, 1.0);
+        let norm_y = ((self.strike_force - MIN_STRIKE_FORCE)
+            / (MAX_STRIKE_FORCE - MIN_STRIKE_FORCE))
+            .clamp(0.0, 1.0);
         self.puck_pos = (norm_x, norm_y);
     }
 
     pub fn update_physics_from_puck(&mut self, norm_x: f32, norm_y: f32) {
         self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
-        self.clearance_gap_mm = MIN_CHIEN_GAP_MM + self.puck_pos.0 * (MAX_CHIEN_GAP_MM - MIN_CHIEN_GAP_MM);
-        self.strike_force = MIN_STRIKE_FORCE + self.puck_pos.1 * (MAX_STRIKE_FORCE - MIN_STRIKE_FORCE);
+        self.clearance_gap_mm =
+            MIN_CHIEN_GAP_MM + self.puck_pos.0 * (MAX_CHIEN_GAP_MM - MIN_CHIEN_GAP_MM);
+        self.strike_force =
+            MIN_STRIKE_FORCE + self.puck_pos.1 * (MAX_STRIKE_FORCE - MIN_STRIKE_FORCE);
     }
 
     pub fn set_profile(&mut self, profile: ChienViewProfile) {
@@ -136,7 +142,11 @@ impl TrompetteBridgeView {
             "| Strike Force: {:.1} N | Restitution: {:.2} | Buzz Status: {} |",
             self.strike_force,
             self.profile.physics_params().2,
-            if self.strike_force > 1.5 { "ACTIVE BUZZING" } else { "IDLE DRONE" }
+            if self.strike_force > 1.5 {
+                "ACTIVE BUZZING"
+            } else {
+                "IDLE DRONE"
+            }
         );
         let dyn_padded = format!("{:<width$}|", dynamics_info, width = width - 1);
         lines.push(dyn_padded);
@@ -161,7 +171,10 @@ impl TrompetteBridgeView {
 
                 // Phase trajectory orbit
                 let orbit_radius = (self.strike_force / MAX_STRIKE_FORCE).clamp(0.1, 0.9);
-                let in_orbit = (disp_norm * disp_norm + vel_norm * vel_norm - orbit_radius * orbit_radius).abs() < 0.08;
+                let in_orbit = (disp_norm * disp_norm + vel_norm * vel_norm
+                    - orbit_radius * orbit_radius)
+                    .abs()
+                    < 0.08;
 
                 if is_obstacle_wall {
                     line_buf.push('|'); // Striking plate obstacle wall
@@ -182,7 +195,12 @@ impl TrompetteBridgeView {
     }
 
     /// Render headless PNG snapshot visualizer for layout alignment, touch target verification, and WCAG contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep Slate (#0A0E18)
@@ -243,7 +261,8 @@ impl TrompetteBridgeView {
         // Render Chien Collision Phase Portrait ($y$ vs $\dot{y}$) and obstacle wall
         let canvas_w = (c_right - c_left) as f32;
         let canvas_h_f = (c_bottom - c_top) as f32;
-        let obstacle_x = c_left + ((self.clearance_gap_mm / MAX_CHIEN_GAP_MM) * canvas_w * 0.4) as usize;
+        let obstacle_x =
+            c_left + ((self.clearance_gap_mm / MAX_CHIEN_GAP_MM) * canvas_w * 0.4) as usize;
 
         // Obstacle bone striking plate (White/Ivory column)
         for y in c_top + 1..c_bottom - 1 {
@@ -347,19 +366,46 @@ impl TrompetteBridgeView {
 
             ui.horizontal(|ui| {
                 ui.label("Chien Striking Material:");
-                if ui.selectable_label(self.profile == ChienViewProfile::MapleOnBone, "Maple on Bone").clicked() {
+                if ui
+                    .selectable_label(
+                        self.profile == ChienViewProfile::MapleOnBone,
+                        "Maple on Bone",
+                    )
+                    .clicked()
+                {
                     self.set_profile(ChienViewProfile::MapleOnBone);
                 }
-                if ui.selectable_label(self.profile == ChienViewProfile::IvoryPlate, "Ivory Plate").clicked() {
+                if ui
+                    .selectable_label(self.profile == ChienViewProfile::IvoryPlate, "Ivory Plate")
+                    .clicked()
+                {
                     self.set_profile(ChienViewProfile::IvoryPlate);
                 }
-                if ui.selectable_label(self.profile == ChienViewProfile::EbonyHardwood, "Ebony Wood").clicked() {
+                if ui
+                    .selectable_label(
+                        self.profile == ChienViewProfile::EbonyHardwood,
+                        "Ebony Wood",
+                    )
+                    .clicked()
+                {
                     self.set_profile(ChienViewProfile::EbonyHardwood);
                 }
-                if ui.selectable_label(self.profile == ChienViewProfile::SyntheticDelrin, "Synthetic Delrin").clicked() {
+                if ui
+                    .selectable_label(
+                        self.profile == ChienViewProfile::SyntheticDelrin,
+                        "Synthetic Delrin",
+                    )
+                    .clicked()
+                {
                     self.set_profile(ChienViewProfile::SyntheticDelrin);
                 }
-                if ui.selectable_label(self.profile == ChienViewProfile::VintageFruitwood, "Fruitwood").clicked() {
+                if ui
+                    .selectable_label(
+                        self.profile == ChienViewProfile::VintageFruitwood,
+                        "Fruitwood",
+                    )
+                    .clicked()
+                {
                     self.set_profile(ChienViewProfile::VintageFruitwood);
                 }
             });
@@ -368,14 +414,28 @@ impl TrompetteBridgeView {
 
             ui.horizontal(|ui| {
                 ui.label("Clearance Gap & Strike Dynamics:");
-                ui.add(egui::Slider::new(&mut self.clearance_gap_mm, MIN_CHIEN_GAP_MM..=MAX_CHIEN_GAP_MM).text("Clearance Gap (mm)"));
-                ui.add(egui::Slider::new(&mut self.strike_force, MIN_STRIKE_FORCE..=MAX_STRIKE_FORCE).text("Coup de Poignet Force"));
+                ui.add(
+                    egui::Slider::new(
+                        &mut self.clearance_gap_mm,
+                        MIN_CHIEN_GAP_MM..=MAX_CHIEN_GAP_MM,
+                    )
+                    .text("Clearance Gap (mm)"),
+                );
+                ui.add(
+                    egui::Slider::new(&mut self.strike_force, MIN_STRIKE_FORCE..=MAX_STRIKE_FORCE)
+                        .text("Coup de Poignet Force"),
+                );
             });
         });
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 

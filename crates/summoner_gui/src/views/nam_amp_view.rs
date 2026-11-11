@@ -18,11 +18,11 @@ pub const MAX_GATE_DB: f32 = 0.0;
 /// Neural Amp Modeler profiles and cabinet acoustic configurations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NamAmpProfile {
-    CleanTube1965,          // Vintage 6V6 blackface American clean chime with gentle cathode bias sag
-    BritishCrunchPlexi,     // 1959 EL34 cascaded preamp tube crunch and mid-forward bite
-    ModernHighGainLead,     // 12AX7 multi-stage rectified high-gain lead with tight low end
-    BassSlapAmpegSVT,       // 300W all-tube bass stack with growling punch and subsonic body
-    BoutiqueClassAOverdrive,// EL84 Class-A cathode-biased touch-sensitive harmonic saturation
+    CleanTube1965, // Vintage 6V6 blackface American clean chime with gentle cathode bias sag
+    BritishCrunchPlexi, // 1959 EL34 cascaded preamp tube crunch and mid-forward bite
+    ModernHighGainLead, // 12AX7 multi-stage rectified high-gain lead with tight low end
+    BassSlapAmpegSVT, // 300W all-tube bass stack with growling punch and subsonic body
+    BoutiqueClassAOverdrive, // EL84 Class-A cathode-biased touch-sensitive harmonic saturation
 }
 
 impl NamAmpProfile {
@@ -176,9 +176,12 @@ impl NamAmpView {
         // Compute WaveNet dilation stage activity meters based on drive and sag
         let base_act = (self.drive / MAX_DRIVE).clamp(0.1, 1.0);
         self.wavenet_dilation_activity[0] = base_act;
-        self.wavenet_dilation_activity[1] = (base_act * 0.85 + self.tube_sag * 0.15).clamp(0.05, 1.0);
-        self.wavenet_dilation_activity[2] = (base_act * 0.70 + self.cabinet_air * 0.20).clamp(0.05, 1.0);
-        self.wavenet_dilation_activity[3] = (base_act * 0.55 + self.tube_sag * 0.35).clamp(0.05, 1.0);
+        self.wavenet_dilation_activity[1] =
+            (base_act * 0.85 + self.tube_sag * 0.15).clamp(0.05, 1.0);
+        self.wavenet_dilation_activity[2] =
+            (base_act * 0.70 + self.cabinet_air * 0.20).clamp(0.05, 1.0);
+        self.wavenet_dilation_activity[3] =
+            (base_act * 0.55 + self.tube_sag * 0.35).clamp(0.05, 1.0);
     }
 
     pub fn hit_test_amp_puck(&self, point: (f32, f32), canvas: Rect) -> bool {
@@ -194,20 +197,40 @@ impl NamAmpView {
         out.push_str("========================================================================\n");
         out.push_str("  NEURAL AMP MODELER (NAM) WAVENET GUITAR & BASS AMPLIFIER HUD\n");
         out.push_str("========================================================================\n");
-        out.push_str(&format!("  Profile:             {}\n", self.profile.profile_name()));
+        out.push_str(&format!(
+            "  Profile:             {}\n",
+            self.profile.profile_name()
+        ));
         out.push_str(&format!("  Pre-Amp Drive:       {:.2} x\n", self.drive));
-        out.push_str(&format!("  Master Volume:       {:.2} x\n", self.output_gain));
-        out.push_str(&format!("  Noise Gate Thresh:   {:.1} dB\n", self.gate_threshold_db));
-        out.push_str(&format!("  Cabinet Air IR:      {:.2} %\n", self.cabinet_air * 100.0));
-        out.push_str(&format!("  Cathode Tube Sag:    {:.2} %\n", self.tube_sag * 100.0));
-        out.push_str(&format!("  Presence Boost:      {:.1} dB\n", self.presence_boost_db));
+        out.push_str(&format!(
+            "  Master Volume:       {:.2} x\n",
+            self.output_gain
+        ));
+        out.push_str(&format!(
+            "  Noise Gate Thresh:   {:.1} dB\n",
+            self.gate_threshold_db
+        ));
+        out.push_str(&format!(
+            "  Cabinet Air IR:      {:.2} %\n",
+            self.cabinet_air * 100.0
+        ));
+        out.push_str(&format!(
+            "  Cathode Tube Sag:    {:.2} %\n",
+            self.tube_sag * 100.0
+        ));
+        out.push_str(&format!(
+            "  Presence Boost:      {:.1} dB\n",
+            self.presence_boost_db
+        ));
         out.push_str("------------------------------------------------------------------------\n");
         out.push_str("  WaveNet Dilation Stages (d=1, 2, 4, 8):\n  ");
         for (idx, act) in self.wavenet_dilation_activity.iter().enumerate() {
             let pct = (*act * 100.0).round() as u32;
             out.push_str(&format!("[D{}: {}%] ", 1 << idx, pct));
         }
-        out.push_str("\n------------------------------------------------------------------------\n");
+        out.push_str(
+            "\n------------------------------------------------------------------------\n",
+        );
         out.push_str("  Non-Linear Saturation Transfer Curve:\n  ");
         for val in self.saturation_curve.iter() {
             let norm = ((*val + 1.0) * 0.5 * 8.0).round() as usize;
@@ -224,7 +247,9 @@ impl NamAmpView {
             };
             out.push_str(bar_str);
         }
-        out.push_str("\n========================================================================\n");
+        out.push_str(
+            "\n========================================================================\n",
+        );
         out.push_str("  [PASS] Neural Amp Modeler WaveNet Simulation Verified\n");
         out.push_str("========================================================================\n");
         out
@@ -261,7 +286,10 @@ impl NamAmpView {
                     } else {
                         egui::RichText::new(label).color(Color32::from_rgb(203, 213, 225))
                     };
-                    if ui.add_sized([115.0, 26.0], egui::Button::new(text)).clicked() {
+                    if ui
+                        .add_sized([115.0, 26.0], egui::Button::new(text))
+                        .clicked()
+                    {
                         self.set_profile(p);
                     }
                 }
@@ -284,7 +312,8 @@ impl NamAmpView {
                         egui::Sense::click_and_drag(),
                     );
 
-                    let canvas_rect = Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height());
+                    let canvas_rect =
+                        Rect::new(rect.min.x, rect.min.y, rect.width(), rect.height());
 
                     // Handle dragging
                     if response.drag_started() {
@@ -298,7 +327,8 @@ impl NamAmpView {
                     if self.is_dragging_puck {
                         if let Some(pos) = response.interact_pointer_pos() {
                             let norm_x = ((pos.x - rect.min.x) / rect.width()).clamp(0.0, 1.0);
-                            let norm_y = (1.0 - (pos.y - rect.min.y) / rect.height()).clamp(0.0, 1.0);
+                            let norm_y =
+                                (1.0 - (pos.y - rect.min.y) / rect.height()).clamp(0.0, 1.0);
                             self.puck_pos = (norm_x, norm_y);
                             self.gate_threshold_db = Self::normalized_to_gate(norm_x);
                             self.drive = Self::normalized_to_drive(norm_y);
@@ -313,19 +343,29 @@ impl NamAmpView {
                     // Background grid & frame
                     let painter = ui.painter_at(rect);
                     painter.rect_filled(rect, 4.0, Color32::from_rgb(15, 23, 42));
-                    painter.rect_stroke(rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                    painter.rect_stroke(
+                        rect,
+                        4.0,
+                        Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+                    );
 
                     // Grid lines
                     for i in 1..4 {
                         let gx = rect.min.x + (i as f32 / 4.0) * rect.width();
                         painter.line_segment(
                             [egui::pos2(gx, rect.min.y), egui::pos2(gx, rect.max.y)],
-                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(100, 116, 139, 40)),
+                            Stroke::new(
+                                1.0_f32,
+                                Color32::from_rgba_unmultiplied(100, 116, 139, 40),
+                            ),
                         );
                         let gy = rect.min.y + (i as f32 / 4.0) * rect.height();
                         painter.line_segment(
                             [egui::pos2(rect.min.x, gy), egui::pos2(rect.max.x, gy)],
-                            Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(100, 116, 139, 40)),
+                            Stroke::new(
+                                1.0_f32,
+                                Color32::from_rgba_unmultiplied(100, 116, 139, 40),
+                            ),
                         );
                     }
 
@@ -358,8 +398,7 @@ impl NamAmpView {
                         ui.label(
                             egui::RichText::new(format!(
                                 "Gate: {:.1} dB  |  Drive: {:.2} x",
-                                self.gate_threshold_db,
-                                self.drive
+                                self.gate_threshold_db, self.drive
                             ))
                             .font(egui::FontId::proportional(11.0))
                             .color(Color32::from_rgb(148, 163, 184)),
@@ -375,24 +414,32 @@ impl NamAmpView {
                             .color(Color32::from_rgb(226, 232, 240)),
                     );
 
-                    let (curve_rect, _) = ui.allocate_exact_size(
-                        egui::vec2(340.0, 240.0),
-                        egui::Sense::hover(),
-                    );
+                    let (curve_rect, _) =
+                        ui.allocate_exact_size(egui::vec2(340.0, 240.0), egui::Sense::hover());
 
                     let painter = ui.painter_at(curve_rect);
                     painter.rect_filled(curve_rect, 4.0, Color32::from_rgb(15, 23, 42));
-                    painter.rect_stroke(curve_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+                    painter.rect_stroke(
+                        curve_rect,
+                        4.0,
+                        Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+                    );
 
                     // Center crosshair (0,0)
                     let center_y = curve_rect.min.y + 0.5 * curve_rect.height();
                     let center_x = curve_rect.min.x + 0.5 * curve_rect.width();
                     painter.line_segment(
-                        [egui::pos2(curve_rect.min.x, center_y), egui::pos2(curve_rect.max.x, center_y)],
+                        [
+                            egui::pos2(curve_rect.min.x, center_y),
+                            egui::pos2(curve_rect.max.x, center_y),
+                        ],
                         Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(100, 116, 139, 60)),
                     );
                     painter.line_segment(
-                        [egui::pos2(center_x, curve_rect.min.y), egui::pos2(center_x, curve_rect.max.y)],
+                        [
+                            egui::pos2(center_x, curve_rect.min.y),
+                            egui::pos2(center_x, curve_rect.max.y),
+                        ],
                         Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(100, 116, 139, 60)),
                     );
 
@@ -403,7 +450,10 @@ impl NamAmpView {
                         let py = center_y - (*val * 0.45) * curve_rect.height();
                         let pt = egui::pos2(px, py);
                         if let Some(last) = prev_pt {
-                            painter.line_segment([last, pt], Stroke::new(2.0_f32, Color32::from_rgb(245, 158, 11)));
+                            painter.line_segment(
+                                [last, pt],
+                                Stroke::new(2.0_f32, Color32::from_rgb(245, 158, 11)),
+                            );
                         }
                         prev_pt = Some(pt);
                     }
@@ -428,9 +478,11 @@ impl NamAmpView {
 
                     ui.horizontal(|ui| {
                         ui.label(
-                            egui::RichText::new("D1: 1x  |  D2: 2x  |  D4: 4x  |  D8: 8x Dilations")
-                                .font(egui::FontId::proportional(11.0))
-                                .color(Color32::from_rgb(148, 163, 184)),
+                            egui::RichText::new(
+                                "D1: 1x  |  D2: 2x  |  D4: 4x  |  D8: 8x Dilations",
+                            )
+                            .font(egui::FontId::proportional(11.0))
+                            .color(Color32::from_rgb(148, 163, 184)),
                         );
                     });
                 });
@@ -442,25 +494,37 @@ impl NamAmpView {
             // Tactile control sliders
             ui.horizontal(|ui| {
                 ui.label("Master Volume:");
-                if ui.add(egui::Slider::new(&mut self.output_gain, 0.0..=2.0).suffix(" x")).changed() {
+                if ui
+                    .add(egui::Slider::new(&mut self.output_gain, 0.0..=2.0).suffix(" x"))
+                    .changed()
+                {
                     self.recompute_transfer_simulation();
                 }
 
                 ui.add_space(16.0);
                 ui.label("Tube Sag:");
-                if ui.add(egui::Slider::new(&mut self.tube_sag, 0.0..=1.0).suffix(" %")).changed() {
+                if ui
+                    .add(egui::Slider::new(&mut self.tube_sag, 0.0..=1.0).suffix(" %"))
+                    .changed()
+                {
                     self.recompute_transfer_simulation();
                 }
 
                 ui.add_space(16.0);
                 ui.label("Cabinet Air:");
-                if ui.add(egui::Slider::new(&mut self.cabinet_air, 0.0..=1.0).suffix(" %")).changed() {
+                if ui
+                    .add(egui::Slider::new(&mut self.cabinet_air, 0.0..=1.0).suffix(" %"))
+                    .changed()
+                {
                     self.recompute_transfer_simulation();
                 }
 
                 ui.add_space(16.0);
                 ui.label("Presence:");
-                if ui.add(egui::Slider::new(&mut self.presence_boost_db, -6.0..=6.0).suffix(" dB")).changed() {
+                if ui
+                    .add(egui::Slider::new(&mut self.presence_boost_db, -6.0..=6.0).suffix(" dB"))
+                    .changed()
+                {
                     self.recompute_transfer_simulation();
                 }
             });

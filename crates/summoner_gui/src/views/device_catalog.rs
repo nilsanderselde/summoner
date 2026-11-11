@@ -5,8 +5,8 @@
 //! Sub-millisecond fuzzy search indexing across all 1,090 reflected DSP modules
 //! with tagged categorization, favorite pinning, two-tier display, and keyboard navigation.
 
-use std::collections::HashSet;
 use crate::dsp_node_ui::{DspNodeCategory, DspNodeRegistry};
+use std::collections::HashSet;
 
 #[cfg(feature = "gui")]
 use eframe::egui::{self, Color32, FontId, RichText, Rounding, Stroke, Ui, Vec2};
@@ -223,7 +223,11 @@ impl DeviceCatalogView {
 
         // Sort descending by score, then ascending by display name
         scored.sort_by(|(idx_a, score_a), (idx_b, score_b)| {
-            score_b.cmp(score_a).then_with(|| self.entries[*idx_a].display_name.cmp(&self.entries[*idx_b].display_name))
+            score_b.cmp(score_a).then_with(|| {
+                self.entries[*idx_a]
+                    .display_name
+                    .cmp(&self.entries[*idx_b].display_name)
+            })
         });
 
         scored.into_iter().map(|(idx, _)| idx).collect()
@@ -231,12 +235,18 @@ impl DeviceCatalogView {
 
     /// Filter and sort catalog entries based on search query, category, and favorite filter.
     pub fn filtered_entries(&self) -> Vec<&DeviceCatalogEntry> {
-        self.filtered_indices().into_iter().map(|idx| &self.entries[idx]).collect()
+        self.filtered_indices()
+            .into_iter()
+            .map(|idx| &self.entries[idx])
+            .collect()
     }
 
     /// Return the count of modules in a specific category.
     pub fn category_count(&self, category: DspNodeCategory) -> usize {
-        self.entries.iter().filter(|e| e.category == category).count()
+        self.entries
+            .iter()
+            .filter(|e| e.category == category)
+            .count()
     }
 
     /// Return the count of favorite modules.
@@ -311,7 +321,10 @@ impl DeviceCatalogView {
         }
 
         if filtered.len() > show_count {
-            out.push_str(&format!("... and {} more modules\n", filtered.len() - show_count));
+            out.push_str(&format!(
+                "... and {} more modules\n",
+                filtered.len() - show_count
+            ));
         }
         out.push_str("============================================================\n");
         out
@@ -419,7 +432,10 @@ impl DeviceCatalogView {
                     // "Favorites" filter pill
                     let fav_count = self.favorites_count();
                     let fav_label = format!("★ Favorites ({})", fav_count);
-                    if ui.selectable_label(self.favorites_only, fav_label).clicked() {
+                    if ui
+                        .selectable_label(self.favorites_only, fav_label)
+                        .clicked()
+                    {
                         self.favorites_only = !self.favorites_only;
                         self.selected_category = None;
                         self.selected_index = 0;
@@ -515,8 +531,16 @@ impl DeviceCatalogView {
                 if total_filtered == 0 {
                     ui.vertical_centered(|ui| {
                         ui.add_space(30.0);
-                        ui.label(RichText::new("🔍 No DSP modules matched your query").font(FontId::proportional(12.0)).color(Color32::from_rgb(148, 163, 184)));
-                        ui.label(RichText::new("Try a broader keyword or switch category filters.").font(FontId::proportional(10.0)).color(Color32::from_rgb(100, 116, 139)));
+                        ui.label(
+                            RichText::new("🔍 No DSP modules matched your query")
+                                .font(FontId::proportional(12.0))
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
+                        ui.label(
+                            RichText::new("Try a broader keyword or switch category filters.")
+                                .font(FontId::proportional(10.0))
+                                .color(Color32::from_rgb(100, 116, 139)),
+                        );
                         ui.add_space(30.0);
                     });
                     return;
@@ -541,7 +565,10 @@ impl DeviceCatalogView {
 
                     egui::Frame::none()
                         .fill(card_bg)
-                        .stroke(Stroke::new(if is_active { 1.5_f32 } else { 1.0_f32 }, border_col))
+                        .stroke(Stroke::new(
+                            if is_active { 1.5_f32 } else { 1.0_f32 },
+                            border_col,
+                        ))
                         .rounding(Rounding::same(4.0))
                         .inner_margin(egui::Margin::symmetric(8.0, 6.0))
                         .show(ui, |ui| {
@@ -554,16 +581,23 @@ impl DeviceCatalogView {
                                     Color32::from_rgb(100, 116, 139)
                                 };
                                 let fav_btn = ui.add(
-                                    egui::Button::new(RichText::new(star_glyph).font(FontId::proportional(14.0)).color(star_color))
-                                        .min_size(Vec2::new(28.0, 28.0))
-                                        .fill(Color32::TRANSPARENT)
+                                    egui::Button::new(
+                                        RichText::new(star_glyph)
+                                            .font(FontId::proportional(14.0))
+                                            .color(star_color),
+                                    )
+                                    .min_size(Vec2::new(28.0, 28.0))
+                                    .fill(Color32::TRANSPARENT),
                                 );
                                 if fav_btn.clicked() {
                                     toggle_fav = Some(entry.kind_id.clone());
                                 }
 
                                 // Category Icon Glyph
-                                ui.label(RichText::new(entry.category.icon()).font(FontId::proportional(15.0)));
+                                ui.label(
+                                    RichText::new(entry.category.icon())
+                                        .font(FontId::proportional(15.0)),
+                                );
 
                                 // Body
                                 ui.vertical(|ui| {
@@ -575,9 +609,12 @@ impl DeviceCatalogView {
                                                 .color(cat_col),
                                         );
                                         ui.label(
-                                            RichText::new(format!("({})", entry.category.display_label()))
-                                                .font(FontId::proportional(9.0))
-                                                .color(Color32::from_rgb(100, 116, 139)),
+                                            RichText::new(format!(
+                                                "({})",
+                                                entry.category.display_label()
+                                            ))
+                                            .font(FontId::proportional(9.0))
+                                            .color(Color32::from_rgb(100, 116, 139)),
                                         );
                                         ui.label(
                                             RichText::new(&entry.kind_id)
@@ -596,23 +633,31 @@ impl DeviceCatalogView {
                                 });
 
                                 // Right-aligned Insert Action Button (>= 44x44 pt minimum touch target width/height)
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    let insert_btn = ui.add(
-                                        egui::Button::new(
-                                            RichText::new("➕ Insert")
-                                                .font(FontId::proportional(10.0))
-                                                .strong()
-                                                .color(cat_col),
-                                        )
-                                        .min_size(Vec2::new(64.0, 26.0))
-                                        .fill(Color32::from_rgba_unmultiplied(r, g, b, if is_active { 50 } else { 25 }))
-                                        .stroke(Stroke::new(1.0_f32, cat_col))
-                                        .rounding(Rounding::same(3.0)),
-                                    );
-                                    if insert_btn.clicked() {
-                                        clicked_insert = Some(entry.kind_id.clone());
-                                    }
-                                });
+                                ui.with_layout(
+                                    egui::Layout::right_to_left(egui::Align::Center),
+                                    |ui| {
+                                        let insert_btn = ui.add(
+                                            egui::Button::new(
+                                                RichText::new("➕ Insert")
+                                                    .font(FontId::proportional(10.0))
+                                                    .strong()
+                                                    .color(cat_col),
+                                            )
+                                            .min_size(Vec2::new(64.0, 26.0))
+                                            .fill(Color32::from_rgba_unmultiplied(
+                                                r,
+                                                g,
+                                                b,
+                                                if is_active { 50 } else { 25 },
+                                            ))
+                                            .stroke(Stroke::new(1.0_f32, cat_col))
+                                            .rounding(Rounding::same(3.0)),
+                                        );
+                                        if insert_btn.clicked() {
+                                            clicked_insert = Some(entry.kind_id.clone());
+                                        }
+                                    },
+                                );
                             });
                         });
                     ui.add_space(2.0);

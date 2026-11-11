@@ -151,7 +151,8 @@ impl SpectralMatchingEqView {
                 MatchingProfile::LoudnessBalancedTarget => {
                     let bass_boost = if f < 120.0 { 3.5 } else { 0.0 };
                     let air_boost = if f > 6000.0 { 2.5 } else { 0.0 };
-                    self.target_spectrum_db[i] = -15.0 - (f / 1000.0).log10() * 5.0 + bass_boost + air_boost;
+                    self.target_spectrum_db[i] =
+                        -15.0 - (f / 1000.0).log10() * 5.0 + bass_boost + air_boost;
                 }
                 MatchingProfile::WarmAnalogMasterTilt => {
                     self.target_spectrum_db[i] = -13.0 - (f / 1000.0).log10() * 7.5;
@@ -291,7 +292,10 @@ impl SpectralMatchingEqView {
                     ];
                     for (idx, &prof) in profiles.iter().enumerate() {
                         let bx = rect.x + 20.0 + idx as f32 * (btn_w + 10.0);
-                        let btn_box = egui::Rect::from_min_size(egui::pos2(bx, btn_y), egui::vec2(btn_w, 36.0));
+                        let btn_box = egui::Rect::from_min_size(
+                            egui::pos2(bx, btn_y),
+                            egui::vec2(btn_w, 36.0),
+                        );
                         if btn_box.contains(pos) {
                             self.set_profile(prof);
                         }
@@ -299,7 +303,10 @@ impl SpectralMatchingEqView {
 
                     // Phase mode toggle click in dock
                     let phase_box = egui::Rect::from_min_size(
-                        egui::pos2(dock_rect.x + 20.0 + 3.0 * ((dock_rect.width - 40.0) / 4.0), dock_rect.y + 16.0),
+                        egui::pos2(
+                            dock_rect.x + 20.0 + 3.0 * ((dock_rect.width - 40.0) / 4.0),
+                            dock_rect.y + 16.0,
+                        ),
                         egui::vec2((dock_rect.width - 40.0) / 4.0, 48.0),
                     );
                     if phase_box.contains(pos) {

@@ -244,10 +244,16 @@ impl ScoreEditorState {
     }
 
     /// Add a note to the score.
-    pub fn add_note(&mut self, midi_pitch: u8, start_beat: f64, duration: ScoreNoteDuration) -> u64 {
+    pub fn add_note(
+        &mut self,
+        midi_pitch: u8,
+        start_beat: f64,
+        duration: ScoreNoteDuration,
+    ) -> u64 {
         let id = self.next_note_id;
         self.next_note_id += 1;
-        self.notes.push(ScoreNote::new(id, midi_pitch, start_beat, duration));
+        self.notes
+            .push(ScoreNote::new(id, midi_pitch, start_beat, duration));
         self.sort_notes();
         id
     }
@@ -288,20 +294,52 @@ impl ScoreEditorState {
                 egui::ComboBox::from_id_source("score_clef_select")
                     .selected_text(self.clef.name())
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.clef, ScoreClef::Treble, ScoreClef::Treble.name());
-                        ui.selectable_value(&mut self.clef, ScoreClef::Bass, ScoreClef::Bass.name());
-                        ui.selectable_value(&mut self.clef, ScoreClef::Alto, ScoreClef::Alto.name());
-                        ui.selectable_value(&mut self.clef, ScoreClef::Tenor, ScoreClef::Tenor.name());
-                        ui.selectable_value(&mut self.clef, ScoreClef::GrandStaff, ScoreClef::GrandStaff.name());
+                        ui.selectable_value(
+                            &mut self.clef,
+                            ScoreClef::Treble,
+                            ScoreClef::Treble.name(),
+                        );
+                        ui.selectable_value(
+                            &mut self.clef,
+                            ScoreClef::Bass,
+                            ScoreClef::Bass.name(),
+                        );
+                        ui.selectable_value(
+                            &mut self.clef,
+                            ScoreClef::Alto,
+                            ScoreClef::Alto.name(),
+                        );
+                        ui.selectable_value(
+                            &mut self.clef,
+                            ScoreClef::Tenor,
+                            ScoreClef::Tenor.name(),
+                        );
+                        ui.selectable_value(
+                            &mut self.clef,
+                            ScoreClef::GrandStaff,
+                            ScoreClef::GrandStaff.name(),
+                        );
                     });
 
                 ui.separator();
                 ui.label("Duration:");
-                ui.selectable_value(&mut self.input_duration, ScoreNoteDuration::Whole, "𝅝 Whole");
+                ui.selectable_value(
+                    &mut self.input_duration,
+                    ScoreNoteDuration::Whole,
+                    "𝅝 Whole",
+                );
                 ui.selectable_value(&mut self.input_duration, ScoreNoteDuration::Half, "𝅗𝅥 Half");
-                ui.selectable_value(&mut self.input_duration, ScoreNoteDuration::Quarter, "𝅘𝅥 Quarter");
+                ui.selectable_value(
+                    &mut self.input_duration,
+                    ScoreNoteDuration::Quarter,
+                    "𝅘𝅥 Quarter",
+                );
                 ui.selectable_value(&mut self.input_duration, ScoreNoteDuration::Eighth, "𝅘𝅥𝅮 8th");
-                ui.selectable_value(&mut self.input_duration, ScoreNoteDuration::Sixteenth, "𝅘𝅥𝅯 16th");
+                ui.selectable_value(
+                    &mut self.input_duration,
+                    ScoreNoteDuration::Sixteenth,
+                    "𝅘𝅥𝅯 16th",
+                );
 
                 ui.separator();
                 if ui.button("⏶ Pitch +1").clicked() {
@@ -338,7 +376,13 @@ impl ScoreEditorState {
                 // Draw 5 horizontal staff lines
                 for line_idx in 0..5 {
                     let y = staff_top_y + (line_idx as f32) * spacing;
-                    painter.line_segment([Pos2::new(rect.min.x + 40.0, y), Pos2::new(rect.max.x - 20.0, y)], line_stroke);
+                    painter.line_segment(
+                        [
+                            Pos2::new(rect.min.x + 40.0, y),
+                            Pos2::new(rect.max.x - 20.0, y),
+                        ],
+                        line_stroke,
+                    );
                 }
 
                 // Draw Measure bar lines (every 4 beats)
@@ -349,7 +393,10 @@ impl ScoreEditorState {
                         let bar_x = rect.min.x + 60.0 + (b as f32) * self.pixels_per_beat;
                         if bar_x < rect.max.x - 20.0 {
                             painter.line_segment(
-                                [Pos2::new(bar_x, staff_top_y), Pos2::new(bar_x, staff_top_y + 4.0 * spacing)],
+                                [
+                                    Pos2::new(bar_x, staff_top_y),
+                                    Pos2::new(bar_x, staff_top_y + 4.0 * spacing),
+                                ],
                                 bar_stroke,
                             );
                         }
@@ -377,8 +424,10 @@ impl ScoreEditorState {
 
                 for note in &self.notes {
                     let staff_pos = midi_to_staff_pos(note.midi_pitch, self.clef);
-                    let note_x = rect.min.x + 75.0 + (note.start_beat as f32) * self.pixels_per_beat;
-                    let note_y = bottom_line_y - (staff_pos.step_from_bottom_line as f32) * half_space;
+                    let note_x =
+                        rect.min.x + 75.0 + (note.start_beat as f32) * self.pixels_per_beat;
+                    let note_y =
+                        bottom_line_y - (staff_pos.step_from_bottom_line as f32) * half_space;
 
                     let note_color = if Some(note.id) == self.selected_note_id {
                         Color32::from_rgb(33, 150, 243) // Selected blue
@@ -404,7 +453,8 @@ impl ScoreEditorState {
                     }
 
                     // Draw Notehead
-                    let head_rect = Rect::from_center_size(Pos2::new(note_x, note_y), Vec2::new(11.0, 8.0));
+                    let head_rect =
+                        Rect::from_center_size(Pos2::new(note_x, note_y), Vec2::new(11.0, 8.0));
                     if note.duration.is_hollow_head() {
                         painter.rect_stroke(head_rect, 4.0, Stroke::new(2.0_f32, note_color));
                     } else {
@@ -415,7 +465,11 @@ impl ScoreEditorState {
                     if note.duration.has_stem() {
                         let stem_up = staff_pos.step_from_bottom_line < 4;
                         let stem_x = if stem_up { note_x + 5.0 } else { note_x - 5.0 };
-                        let stem_end_y = if stem_up { note_y - 28.0 } else { note_y + 28.0 };
+                        let stem_end_y = if stem_up {
+                            note_y - 28.0
+                        } else {
+                            note_y + 28.0
+                        };
                         painter.line_segment(
                             [Pos2::new(stem_x, note_y), Pos2::new(stem_x, stem_end_y)],
                             Stroke::new(1.4_f32, note_color),
@@ -430,7 +484,13 @@ impl ScoreEditorState {
                                 stem_end_y - (b as f32) * 5.0
                             };
                             painter.line_segment(
-                                [Pos2::new(stem_x, flag_y), Pos2::new(stem_x + 6.0, flag_y + if stem_up { 4.0 } else { -4.0 })],
+                                [
+                                    Pos2::new(stem_x, flag_y),
+                                    Pos2::new(
+                                        stem_x + 6.0,
+                                        flag_y + if stem_up { 4.0 } else { -4.0 },
+                                    ),
+                                ],
                                 Stroke::new(1.6_f32, note_color),
                             );
                         }
@@ -438,7 +498,11 @@ impl ScoreEditorState {
 
                     // Draw Accidental
                     if staff_pos.accidental != 0 {
-                        let symbol = if staff_pos.accidental == 1 { "♯" } else { "♭" };
+                        let symbol = if staff_pos.accidental == 1 {
+                            "♯"
+                        } else {
+                            "♭"
+                        };
                         painter.text(
                             Pos2::new(note_x - 12.0, note_y),
                             egui::Align2::CENTER_CENTER,
@@ -455,9 +519,11 @@ impl ScoreEditorState {
                         // Check if existing note was clicked
                         let mut clicked_note_id = None;
                         for note in &self.notes {
-                            let note_x = rect.min.x + 75.0 + (note.start_beat as f32) * self.pixels_per_beat;
+                            let note_x =
+                                rect.min.x + 75.0 + (note.start_beat as f32) * self.pixels_per_beat;
                             let staff_pos = midi_to_staff_pos(note.midi_pitch, self.clef);
-                            let note_y = bottom_line_y - (staff_pos.step_from_bottom_line as f32) * half_space;
+                            let note_y = bottom_line_y
+                                - (staff_pos.step_from_bottom_line as f32) * half_space;
                             if (pos.x - note_x).abs() < 12.0 && (pos.y - note_y).abs() < 12.0 {
                                 clicked_note_id = Some(note.id);
                                 break;
@@ -476,7 +542,9 @@ impl ScoreEditorState {
 
                                 // Base pitch for step relative to clef
                                 let pitch = match self.clef {
-                                    ScoreClef::Treble | ScoreClef::GrandStaff => (64 + step * 2).clamp(0, 127) as u8,
+                                    ScoreClef::Treble | ScoreClef::GrandStaff => {
+                                        (64 + step * 2).clamp(0, 127) as u8
+                                    }
                                     ScoreClef::Bass => (43 + step * 2).clamp(0, 127) as u8,
                                     ScoreClef::Alto => (53 + step * 2).clamp(0, 127) as u8,
                                     ScoreClef::Tenor => (50 + step * 2).clamp(0, 127) as u8,
@@ -491,7 +559,8 @@ impl ScoreEditorState {
             }
 
             response
-        }).inner
+        })
+        .inner
     }
 }
 
@@ -505,8 +574,14 @@ mod tests {
         assert_eq!(ScoreNoteDuration::quantize(2.0), ScoreNoteDuration::Half);
         assert_eq!(ScoreNoteDuration::quantize(1.0), ScoreNoteDuration::Quarter);
         assert_eq!(ScoreNoteDuration::quantize(0.5), ScoreNoteDuration::Eighth);
-        assert_eq!(ScoreNoteDuration::quantize(0.25), ScoreNoteDuration::Sixteenth);
-        assert_eq!(ScoreNoteDuration::quantize(0.125), ScoreNoteDuration::ThirtySecond);
+        assert_eq!(
+            ScoreNoteDuration::quantize(0.25),
+            ScoreNoteDuration::Sixteenth
+        );
+        assert_eq!(
+            ScoreNoteDuration::quantize(0.125),
+            ScoreNoteDuration::ThirtySecond
+        );
     }
 
     #[test]

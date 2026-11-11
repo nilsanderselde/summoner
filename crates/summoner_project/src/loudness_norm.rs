@@ -36,7 +36,10 @@ impl BroadcastLoudnessStandard {
             Self::AtscA85 => -24.0,
             Self::StreamingSpotify | Self::YouTube => -14.0,
             Self::AppleMusic => -16.0,
-            Self::Custom { target_integrated_lufs, .. } => target_integrated_lufs,
+            Self::Custom {
+                target_integrated_lufs,
+                ..
+            } => target_integrated_lufs,
         }
     }
 
@@ -44,7 +47,9 @@ impl BroadcastLoudnessStandard {
         match self {
             Self::EbuR128 | Self::StreamingSpotify | Self::AppleMusic | Self::YouTube => -1.0,
             Self::AtscA85 => -2.0,
-            Self::Custom { max_true_peak_db, .. } => max_true_peak_db,
+            Self::Custom {
+                max_true_peak_db, ..
+            } => max_true_peak_db,
         }
     }
 
@@ -52,7 +57,10 @@ impl BroadcastLoudnessStandard {
         match self {
             Self::EbuR128 => Some(-18.0), // EBU R128 short-term maximum guideline
             Self::AtscA85 => Some(-19.0),
-            Self::Custom { target_short_term_lufs, .. } => target_short_term_lufs,
+            Self::Custom {
+                target_short_term_lufs,
+                ..
+            } => target_short_term_lufs,
             _ => None,
         }
     }
@@ -225,8 +233,10 @@ impl BroadcastLoudnessNormalizer {
         // Loudness Range (LRA) per EBU Tech 3342: difference between 95th and 10th percentile of short-term
         let mut sorted_short_term = momentary_lufs.clone();
         sorted_short_term.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        let p10_idx = ((sorted_short_term.len() as f32 * 0.10) as usize).min(sorted_short_term.len().saturating_sub(1));
-        let p95_idx = ((sorted_short_term.len() as f32 * 0.95) as usize).min(sorted_short_term.len().saturating_sub(1));
+        let p10_idx = ((sorted_short_term.len() as f32 * 0.10) as usize)
+            .min(sorted_short_term.len().saturating_sub(1));
+        let p95_idx = ((sorted_short_term.len() as f32 * 0.95) as usize)
+            .min(sorted_short_term.len().saturating_sub(1));
         let lra = (sorted_short_term[p95_idx] - sorted_short_term[p10_idx]).max(0.0);
 
         let true_peak_db = Self::calculate_true_peak(buffer);
@@ -309,7 +319,13 @@ impl BroadcastLoudnessNormalizer {
     #[allow(clippy::excessive_precision)]
     fn k_stage1_coeffs(sample_rate: u32) -> (f32, f32, f32, f32, f32) {
         if sample_rate == 48000 {
-            (1.53512485958697, -2.69169618940638, 1.19839281085285, -1.69065929318241, 0.73248077421585)
+            (
+                1.53512485958697,
+                -2.69169618940638,
+                1.19839281085285,
+                -1.69065929318241,
+                0.73248077421585,
+            )
         } else {
             // Normalized approximations for other rates
             (1.535, -2.691, 1.198, -1.690, 0.732)
@@ -333,14 +349,26 @@ mod tests {
 
     #[test]
     fn test_broadcast_loudness_standards() {
-        assert_eq!(BroadcastLoudnessStandard::EbuR128.target_integrated_lufs(), -23.0);
+        assert_eq!(
+            BroadcastLoudnessStandard::EbuR128.target_integrated_lufs(),
+            -23.0
+        );
         assert_eq!(BroadcastLoudnessStandard::EbuR128.max_true_peak_db(), -1.0);
 
-        assert_eq!(BroadcastLoudnessStandard::AtscA85.target_integrated_lufs(), -24.0);
+        assert_eq!(
+            BroadcastLoudnessStandard::AtscA85.target_integrated_lufs(),
+            -24.0
+        );
         assert_eq!(BroadcastLoudnessStandard::AtscA85.max_true_peak_db(), -2.0);
 
-        assert_eq!(BroadcastLoudnessStandard::StreamingSpotify.target_integrated_lufs(), -14.0);
-        assert_eq!(BroadcastLoudnessStandard::AppleMusic.target_integrated_lufs(), -16.0);
+        assert_eq!(
+            BroadcastLoudnessStandard::StreamingSpotify.target_integrated_lufs(),
+            -14.0
+        );
+        assert_eq!(
+            BroadcastLoudnessStandard::AppleMusic.target_integrated_lufs(),
+            -16.0
+        );
     }
 
     #[test]

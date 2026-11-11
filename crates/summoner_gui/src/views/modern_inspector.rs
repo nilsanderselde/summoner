@@ -545,13 +545,17 @@ impl ModernInspectorState {
     /// Ensure the chain has at least one device matching the currently selected node kind.
     pub fn ensure_chain(&mut self) {
         if self.chain_devices.is_empty() {
-            let kind = self.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
+            let kind = self
+                .selected_node_kind
+                .clone()
+                .unwrap_or_else(|| "AetherSynth".to_string());
             let name = self.target_name.clone();
-            self.chain_devices.push(crate::views::modern_device_rack::RackChainDeviceVisual {
-                kind,
-                display_name: name,
-                is_bypassed: false,
-            });
+            self.chain_devices
+                .push(crate::views::modern_device_rack::RackChainDeviceVisual {
+                    kind,
+                    display_name: name,
+                    is_bypassed: false,
+                });
             self.selected_chain_idx = 0;
         }
     }
@@ -573,11 +577,12 @@ impl ModernInspectorState {
     /// Add a new DSP device module to the end of the track chain and select it.
     pub fn add_device(&mut self, kind: &str, display_name: &str) -> usize {
         self.ensure_chain();
-        self.chain_devices.push(crate::views::modern_device_rack::RackChainDeviceVisual {
-            kind: kind.to_string(),
-            display_name: display_name.to_string(),
-            is_bypassed: false,
-        });
+        self.chain_devices
+            .push(crate::views::modern_device_rack::RackChainDeviceVisual {
+                kind: kind.to_string(),
+                display_name: display_name.to_string(),
+                is_bypassed: false,
+            });
         let new_idx = self.chain_devices.len() - 1;
         self.select_device(new_idx);
         new_idx
@@ -625,25 +630,36 @@ impl ModernInspectorState {
 
     /// Get kind of active device.
     pub fn selected_device_kind(&self) -> Option<&str> {
-        self.chain_devices.get(self.selected_chain_idx).map(|d| d.kind.as_str())
+        self.chain_devices
+            .get(self.selected_chain_idx)
+            .map(|d| d.kind.as_str())
             .or(self.selected_node_kind.as_deref())
     }
 
     /// Get name of active device.
     pub fn selected_device_name(&self) -> Option<&str> {
-        self.chain_devices.get(self.selected_chain_idx).map(|d| d.display_name.as_str())
+        self.chain_devices
+            .get(self.selected_chain_idx)
+            .map(|d| d.display_name.as_str())
             .or(Some(&self.target_name))
     }
 
     /// Check if active device is bypassed.
     pub fn is_selected_bypassed(&self) -> bool {
-        self.chain_devices.get(self.selected_chain_idx).map(|d| d.is_bypassed).unwrap_or(false)
+        self.chain_devices
+            .get(self.selected_chain_idx)
+            .map(|d| d.is_bypassed)
+            .unwrap_or(false)
     }
 
     /// Request live parameter automation for a given parameter ID.
     pub fn request_automation(&mut self, param_id: &str) {
-        if self.selected_chain_idx > 0 && !param_id.starts_with("node_") && !param_id.starts_with("master_node_") {
-            self.requested_automation_param = Some(format!("node_{}_{}", self.selected_chain_idx, param_id));
+        if self.selected_chain_idx > 0
+            && !param_id.starts_with("node_")
+            && !param_id.starts_with("master_node_")
+        {
+            self.requested_automation_param =
+                Some(format!("node_{}_{}", self.selected_chain_idx, param_id));
         } else {
             self.requested_automation_param = Some(param_id.to_string());
         }

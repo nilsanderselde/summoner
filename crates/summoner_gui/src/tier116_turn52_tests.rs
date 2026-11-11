@@ -1,5 +1,4 @@
 #![cfg(feature = "gui")]
-
 // Summoner - Deterministic, Headless-First DAW
 // Copyright (C) 2026 nilsanderselde - AGPLv3 License
 
@@ -9,8 +8,8 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::views::neural_morph_orb_view::{
-        NeuralMorphOrbView, NeuralOrbitMode, NeuralTimbrePreset, MAX_MORPH_COORD,
-        MIN_MORPH_COORD, NEURAL_ORB_PUCK_HIT_RADIUS, NUM_TIMBRE_ANCHORS,
+        NeuralMorphOrbView, NeuralOrbitMode, NeuralTimbrePreset, MAX_MORPH_COORD, MIN_MORPH_COORD,
+        NEURAL_ORB_PUCK_HIT_RADIUS, NUM_TIMBRE_ANCHORS,
     };
 
     #[test]
@@ -24,7 +23,11 @@ pub mod pure_tests {
         assert_eq!(view.anchor_weights.len(), NUM_TIMBRE_ANCHORS);
 
         let sum: f32 = view.anchor_weights.iter().sum();
-        assert!((sum - 1.0).abs() < 1e-4, "Weights must sum to 1.0, got {}", sum);
+        assert!(
+            (sum - 1.0).abs() < 1e-4,
+            "Weights must sum to 1.0, got {}",
+            sum
+        );
 
         assert!(view.spectral_centroid_hz > 100.0 && view.spectral_centroid_hz < 12000.0);
         assert!(view.harmonic_warmth >= 0.0 && view.harmonic_warmth <= 1.0);
@@ -47,11 +50,23 @@ pub mod pure_tests {
         for (p, exp_x, exp_y) in presets {
             view.set_preset(p);
             assert_eq!(view.preset, p);
-            assert!((view.morph_x - exp_x).abs() < 1e-3, "Preset {:?} X mismatch", p);
-            assert!((view.morph_y - exp_y).abs() < 1e-3, "Preset {:?} Y mismatch", p);
+            assert!(
+                (view.morph_x - exp_x).abs() < 1e-3,
+                "Preset {:?} X mismatch",
+                p
+            );
+            assert!(
+                (view.morph_y - exp_y).abs() < 1e-3,
+                "Preset {:?} Y mismatch",
+                p
+            );
 
             let sum: f32 = view.anchor_weights.iter().sum();
-            assert!((sum - 1.0).abs() < 1e-4, "Preset {:?} weights sum mismatch", p);
+            assert!(
+                (sum - 1.0).abs() < 1e-4,
+                "Preset {:?} weights sum mismatch",
+                p
+            );
         }
     }
 
@@ -79,7 +94,12 @@ pub mod pure_tests {
                 sum
             );
             for (i, &w) in view.anchor_weights.iter().enumerate() {
-                assert!((0.0..=1.0).contains(&w), "Weight {} out of bounds: {}", i, w);
+                assert!(
+                    (0.0..=1.0).contains(&w),
+                    "Weight {} out of bounds: {}",
+                    i,
+                    w
+                );
             }
         }
     }
@@ -233,7 +253,10 @@ pub mod gui_tests {
     #[test]
     fn test_turn52_command_palette_action_registration() {
         let palette = CommandPalette::new();
-        let action = palette.actions.iter().find(|a| a.action_id == "open_neural_morph_hud");
+        let action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_neural_morph_hud");
 
         assert!(
             action.is_some(),

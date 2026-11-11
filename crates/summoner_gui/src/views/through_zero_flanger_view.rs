@@ -126,7 +126,12 @@ impl ThroughZeroFlangerView {
         let w = avail.x.max(760.0);
         let h = avail.y.max(500.0);
         let (rect_allocated, _) = ui.allocate_exact_size(egui::vec2(w, h), egui::Sense::hover());
-        let r = Rect::new(rect_allocated.min.x, rect_allocated.min.y, rect_allocated.width(), rect_allocated.height());
+        let r = Rect::new(
+            rect_allocated.min.x,
+            rect_allocated.min.y,
+            rect_allocated.width(),
+            rect_allocated.height(),
+        );
         self.show(ui, r);
     }
 

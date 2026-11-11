@@ -63,7 +63,9 @@ pub mod pure_tests {
         // Select cord at index 1: filter_1:lp -> vca_1:audio
         view.selected_patch_cord_idx = Some(1);
         {
-            let sel_cord = view.selected_patch_cord().expect("Selected cord must exist");
+            let sel_cord = view
+                .selected_patch_cord()
+                .expect("Selected cord must exist");
             assert_eq!(sel_cord.from_node_id, "filter_1");
             assert_eq!(sel_cord.to_node_id, "vca_1");
         }
@@ -76,7 +78,9 @@ pub mod pure_tests {
         // Verify selected_patch_cord_idx automatically shifted from 1 to 0
         assert_eq!(view.selected_patch_cord_idx, Some(0));
         {
-            let sel_cord = view.selected_patch_cord().expect("Selected cord must still exist");
+            let sel_cord = view
+                .selected_patch_cord()
+                .expect("Selected cord must still exist");
             assert_eq!(sel_cord.from_node_id, "filter_1");
             assert_eq!(sel_cord.to_node_id, "vca_1");
         }
@@ -95,7 +99,11 @@ pub mod pure_tests {
     fn test_turn20_m33_patch_cord_intensity_param_bus_and_automation_bridge() {
         let mut view = AwardWinningGuiView::new();
         let project = ProjectConfig::default();
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1) as u32;
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1) as u32;
         let mut bus = ParamBus::new();
         let mut reg = AutomationRegistry::new();
         let mut timeline = AutomationTimeline::new();
@@ -115,9 +123,15 @@ pub mod pure_tests {
         view.sync_with_param_bus(&project, &bus, &mut reg, &mut timeline, playhead, true);
 
         // Verify ParamBus receives exact values without audio-thread allocation
-        let val0 = bus.get(ParamId(track_id * 1000 + 700)).expect("Cord 0 ParamId must exist");
-        let val1 = bus.get(ParamId(track_id * 1000 + 700 + 1)).expect("Cord 1 ParamId must exist");
-        let val2 = bus.get(ParamId(track_id * 1000 + 700 + 2)).expect("Cord 2 ParamId must exist");
+        let val0 = bus
+            .get(ParamId(track_id * 1000 + 700))
+            .expect("Cord 0 ParamId must exist");
+        let val1 = bus
+            .get(ParamId(track_id * 1000 + 700 + 1))
+            .expect("Cord 1 ParamId must exist");
+        let val2 = bus
+            .get(ParamId(track_id * 1000 + 700 + 2))
+            .expect("Cord 2 ParamId must exist");
 
         assert_eq!(val0, 0.80);
         assert_eq!(val1, -0.60);
@@ -135,7 +149,10 @@ pub mod pure_tests {
         assert_eq!(reg_val1, Some(-0.60));
 
         // Verify AutomationTimeline has recorded the automation curve point
-        let lane1 = timeline.lanes.get(&key1).expect("Automation lane for cord 1 must exist");
+        let lane1 = timeline
+            .lanes
+            .get(&key1)
+            .expect("Automation lane for cord 1 must exist");
         assert_eq!(lane1.curve.points.len(), 1);
         assert_eq!(lane1.curve.points[0].beat, 12.0);
         assert_eq!(lane1.curve.points[0].value, -0.60);

@@ -86,8 +86,16 @@ pub mod pure_tests {
                 param_id: lane_water.clone(),
                 curve: AutomationCurve {
                     points: vec![
-                        AutomationPoint { beat: 0.0, value: 0.10, interp: Interpolation::Linear },
-                        AutomationPoint { beat: 4.0, value: 0.90, interp: Interpolation::Linear },
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 0.10,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 4.0,
+                            value: 0.90,
+                            interp: Interpolation::Linear,
+                        },
                     ],
                 },
             },
@@ -99,19 +107,37 @@ pub mod pure_tests {
                 param_id: lane_speed.clone(),
                 curve: AutomationCurve {
                     points: vec![
-                        AutomationPoint { beat: 0.0, value: 1.0, interp: Interpolation::Linear },
-                        AutomationPoint { beat: 2.0, value: 6.0, interp: Interpolation::Linear },
+                        AutomationPoint {
+                            beat: 0.0,
+                            value: 1.0,
+                            interp: Interpolation::Linear,
+                        },
+                        AutomationPoint {
+                            beat: 2.0,
+                            value: 6.0,
+                            interp: Interpolation::Linear,
+                        },
                     ],
                 },
             },
         );
 
         // Evaluate at beat 2.0
-        let val_water = timeline.lanes.get(&lane_water).unwrap().curve.evaluate_at_beat(2.0);
+        let val_water = timeline
+            .lanes
+            .get(&lane_water)
+            .unwrap()
+            .curve
+            .evaluate_at_beat(2.0);
         assert!((val_water - 0.50).abs() < 1e-4);
 
         // Evaluate at beat 1.0
-        let val_speed = timeline.lanes.get(&lane_speed).unwrap().curve.evaluate_at_beat(1.0);
+        let val_speed = timeline
+            .lanes
+            .get(&lane_speed)
+            .unwrap()
+            .curve
+            .evaluate_at_beat(1.0);
         assert!((val_speed - 3.50).abs() < 1e-4);
     }
 }
@@ -119,12 +145,16 @@ pub mod pure_tests {
 #[cfg(test)]
 #[cfg(feature = "gui")]
 pub mod gui_tests {
+    use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use crate::views::modern_device_rack::{
+        show_modern_device_rack_with_context, ModernDeviceRackState,
+    };
+    use crate::views::modern_inspector::{
+        show_modern_inspector_with_context, ModernInspectorState,
+    };
     use eframe::egui;
     use summoner_core::param_bus::ParamBus;
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
-    use crate::views::modern_device_rack::{show_modern_device_rack_with_context, ModernDeviceRackState};
-    use crate::views::modern_inspector::{show_modern_inspector_with_context, ModernInspectorState};
-    use crate::command_palette::CommandPalette;
 
     #[test]
     fn test_turn47_gui_award_winning_view_hud_modal_lifecycle() {
@@ -254,8 +284,16 @@ pub mod gui_tests {
         view.sync_crystal_resonator_hud_state();
 
         // Verify live synchronization to node_param_values and ParamBus
-        assert_eq!(view.device_rack_state.node_param_values.get("water_fill_level"), Some(&0.45));
-        assert_eq!(view.inspector_state.node_param_values.get("root_freq_hz"), Some(&528.0));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("water_fill_level"),
+            Some(&0.45)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("root_freq_hz"),
+            Some(&528.0)
+        );
 
         assert_eq!(bus.get(t1_s0_root), Some(528.0));
         assert_eq!(bus.get(t1_s0_water), Some(0.45));
@@ -269,10 +307,14 @@ pub mod gui_tests {
         palette.open();
         palette.search_query = "Crystal".into();
         let filtered = palette.get_filtered_actions();
-        assert!(filtered.iter().any(|a| a.action_id == "open_crystal_resonator_hud"));
+        assert!(filtered
+            .iter()
+            .any(|a| a.action_id == "open_crystal_resonator_hud"));
 
         palette.search_query = "Armonica".into();
         let filtered2 = palette.get_filtered_actions();
-        assert!(filtered2.iter().any(|a| a.action_id == "open_glass_armonica_hud"));
+        assert!(filtered2
+            .iter()
+            .any(|a| a.action_id == "open_glass_armonica_hud"));
     }
 }

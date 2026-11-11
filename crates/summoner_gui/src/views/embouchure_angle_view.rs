@@ -105,34 +105,45 @@ impl EmbouchureAngleView {
     }
 
     pub fn update_puck_from_physics(&mut self) {
-        let norm_x = ((self.embouchure_angle_deg - MIN_ANGLE_DEG) / (MAX_ANGLE_DEG - MIN_ANGLE_DEG)).clamp(0.0, 1.0);
-        let norm_y = ((self.blowing_pressure_pa - MIN_PRESSURE_PA) / (MAX_PRESSURE_PA - MIN_PRESSURE_PA)).clamp(0.0, 1.0);
+        let norm_x = ((self.embouchure_angle_deg - MIN_ANGLE_DEG)
+            / (MAX_ANGLE_DEG - MIN_ANGLE_DEG))
+            .clamp(0.0, 1.0);
+        let norm_y = ((self.blowing_pressure_pa - MIN_PRESSURE_PA)
+            / (MAX_PRESSURE_PA - MIN_PRESSURE_PA))
+            .clamp(0.0, 1.0);
         self.puck_pos = (norm_x, norm_y);
     }
 
     pub fn update_physics_from_puck(&mut self, norm_x: f32, norm_y: f32) {
         self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
-        self.embouchure_angle_deg = MIN_ANGLE_DEG + self.puck_pos.0 * (MAX_ANGLE_DEG - MIN_ANGLE_DEG);
-        self.blowing_pressure_pa = MIN_PRESSURE_PA + self.puck_pos.1 * (MAX_PRESSURE_PA - MIN_PRESSURE_PA);
+        self.embouchure_angle_deg =
+            MIN_ANGLE_DEG + self.puck_pos.0 * (MAX_ANGLE_DEG - MIN_ANGLE_DEG);
+        self.blowing_pressure_pa =
+            MIN_PRESSURE_PA + self.puck_pos.1 * (MAX_PRESSURE_PA - MIN_PRESSURE_PA);
         self.update_embouchure_acoustics();
     }
 
     /// Calculate Bernoulli jet velocity, vortex shedding frequency, and overtone distribution.
     pub fn update_embouchure_acoustics(&mut self) {
         let air_density = 1.204; // kg/m^3
-        self.jet_velocity_mps = (2.0 * self.blowing_pressure_pa / air_density).sqrt().clamp(10.0, 80.0);
+        self.jet_velocity_mps = (2.0 * self.blowing_pressure_pa / air_density)
+            .sqrt()
+            .clamp(10.0, 80.0);
 
         // Vortex shedding frequency Strouhal relation: f_vortex = St * v_jet / d_jet
         let strouhal = 0.22;
         let d_m = (self.jet_distance_mm * 0.001).max(0.002);
         self.vortex_frequency_hz = (strouhal * self.jet_velocity_mps / d_m).clamp(200.0, 5000.0);
 
-        let angle_norm = ((self.embouchure_angle_deg - MIN_ANGLE_DEG) / (MAX_ANGLE_DEG - MIN_ANGLE_DEG)).clamp(0.0, 1.0);
+        let angle_norm = ((self.embouchure_angle_deg - MIN_ANGLE_DEG)
+            / (MAX_ANGLE_DEG - MIN_ANGLE_DEG))
+            .clamp(0.0, 1.0);
         let meri_shift = (self.meri_kari_cents / 300.0).clamp(-1.0, 1.0);
 
         // 8 harmonic radiation weights
         self.harmonic_weights[0] = (1.0 + meri_shift * 0.15).clamp(0.5, 1.0);
-        self.harmonic_weights[1] = (0.50 + angle_norm * 0.40 + self.murai_iki_intensity * 0.3).clamp(0.1, 0.95);
+        self.harmonic_weights[1] =
+            (0.50 + angle_norm * 0.40 + self.murai_iki_intensity * 0.3).clamp(0.1, 0.95);
         self.harmonic_weights[2] = (0.35 + (1.0 - angle_norm) * 0.25).clamp(0.05, 0.80);
         self.harmonic_weights[3] = (0.20 + (self.jet_velocity_mps / 50.0) * 0.35).clamp(0.05, 0.70);
         self.harmonic_weights[4] = (0.15 + self.murai_iki_intensity * 0.40).clamp(0.02, 0.65);
@@ -160,7 +171,10 @@ impl EmbouchureAngleView {
 
         let info = format!(
             "| Angle: {:.1} deg | Pressure: {:.0} Pa | Jet: {:.1} m/s | Meri/Kari: {:+.0} ct |",
-            self.embouchure_angle_deg, self.blowing_pressure_pa, self.jet_velocity_mps, self.meri_kari_cents
+            self.embouchure_angle_deg,
+            self.blowing_pressure_pa,
+            self.jet_velocity_mps,
+            self.meri_kari_cents
         );
         let info_padded = if info.len() < w - 2 {
             format!("{}{}|", info, " ".repeat(w - 1 - info.len()))
@@ -190,7 +204,8 @@ impl EmbouchureAngleView {
             lines.push(bar_line);
         }
 
-        let footer = "| H1(Fund)  H2(Oct)   H3(12th)  H4(2Oct)  H5(17th)  H6(19th)  H7(Chiff) H8(Noise)|";
+        let footer =
+            "| H1(Fund)  H2(Oct)   H3(12th)  H4(2Oct)  H5(17th)  H6(19th)  H7(Chiff) H8(Noise)|";
         let footer_padded = if footer.len() < w - 2 {
             format!("{}{}|", footer, " ".repeat(w - 1 - footer.len()))
         } else {
@@ -203,7 +218,12 @@ impl EmbouchureAngleView {
     }
 
     /// Render headless PNG snapshot representation of the Embouchure Angle HUD.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: #0A0E18 (slate navy)
@@ -579,7 +599,12 @@ impl EmbouchureAngleView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

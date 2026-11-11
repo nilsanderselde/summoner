@@ -5,12 +5,12 @@
 #[cfg(test)]
 pub mod pure_tests {
     use crate::layout_math::Rect;
+    use crate::views::plucked_string_view::{
+        PluckedInstrumentViewProfile, PluckedStringView, MAX_PLUCK_POSITION_BETA,
+        MAX_STRIKE_VELOCITY, MIN_PLUCK_POSITION_BETA, MIN_STRIKE_VELOCITY, PLUCK_PUCK_HIT_RADIUS,
+    };
     use crate::views::waveguide_mesh_view::{
         WaveguideMeshView, WAVEGUIDE_PUCK_HIT_RADIUS, WAVEGUIDE_PUCK_VISUAL_RADIUS,
-    };
-    use crate::views::plucked_string_view::{
-        PluckedStringView, PluckedInstrumentViewProfile, PLUCK_PUCK_HIT_RADIUS,
-        MIN_PLUCK_POSITION_BETA, MAX_PLUCK_POSITION_BETA, MIN_STRIKE_VELOCITY, MAX_STRIKE_VELOCITY,
     };
     use summoner_dsp::waveguide_mesh::{MeshBoundaryType, MeshMaterialProfile, MESH_DIM};
 
@@ -110,22 +110,70 @@ pub mod pure_tests {
         // Clamp boundaries
         assert_eq!(PluckedStringView::beta_to_normalized(0.0), 0.0);
         assert_eq!(PluckedStringView::beta_to_normalized(1.0), 1.0);
-        assert_eq!(PluckedStringView::normalized_to_beta(0.0), MIN_PLUCK_POSITION_BETA);
-        assert_eq!(PluckedStringView::normalized_to_beta(1.0), MAX_PLUCK_POSITION_BETA);
+        assert_eq!(
+            PluckedStringView::normalized_to_beta(0.0),
+            MIN_PLUCK_POSITION_BETA
+        );
+        assert_eq!(
+            PluckedStringView::normalized_to_beta(1.0),
+            MAX_PLUCK_POSITION_BETA
+        );
 
         assert_eq!(PluckedStringView::velocity_to_normalized(0.0), 0.0);
         assert_eq!(PluckedStringView::velocity_to_normalized(2.0), 1.0);
-        assert_eq!(PluckedStringView::normalized_to_velocity(0.0), MIN_STRIKE_VELOCITY);
-        assert_eq!(PluckedStringView::normalized_to_velocity(1.0), MAX_STRIKE_VELOCITY);
+        assert_eq!(
+            PluckedStringView::normalized_to_velocity(0.0),
+            MIN_STRIKE_VELOCITY
+        );
+        assert_eq!(
+            PluckedStringView::normalized_to_velocity(1.0),
+            MAX_STRIKE_VELOCITY
+        );
 
         // Test all instrument profiles and nominal physics
         let profiles = [
-            (PluckedInstrumentViewProfile::AcousticSteel, "ACOUSTIC GUITAR", 0.25, 4.5, 3.5),
-            (PluckedInstrumentViewProfile::ClassicalNylon, "CLASSICAL NYLON", 0.08, 3.2, 2.0),
-            (PluckedInstrumentViewProfile::GrandPiano, "GRAND PIANO", 0.45, 8.0, 1.8),
-            (PluckedInstrumentViewProfile::Harpsichord, "HARPSICHORD", 0.18, 2.5, 4.0),
-            (PluckedInstrumentViewProfile::Harp, "CONCERT HARP", 0.05, 9.5, 1.5),
-            (PluckedInstrumentViewProfile::SitarKoto, "SITAR / KOTO", 0.30, 3.8, 6.0),
+            (
+                PluckedInstrumentViewProfile::AcousticSteel,
+                "ACOUSTIC GUITAR",
+                0.25,
+                4.5,
+                3.5,
+            ),
+            (
+                PluckedInstrumentViewProfile::ClassicalNylon,
+                "CLASSICAL NYLON",
+                0.08,
+                3.2,
+                2.0,
+            ),
+            (
+                PluckedInstrumentViewProfile::GrandPiano,
+                "GRAND PIANO",
+                0.45,
+                8.0,
+                1.8,
+            ),
+            (
+                PluckedInstrumentViewProfile::Harpsichord,
+                "HARPSICHORD",
+                0.18,
+                2.5,
+                4.0,
+            ),
+            (
+                PluckedInstrumentViewProfile::Harp,
+                "CONCERT HARP",
+                0.05,
+                9.5,
+                1.5,
+            ),
+            (
+                PluckedInstrumentViewProfile::SitarKoto,
+                "SITAR / KOTO",
+                0.30,
+                3.8,
+                6.0,
+            ),
         ];
 
         for (prof, expected_name, exp_stiff, exp_t60, exp_detune) in profiles {
@@ -212,11 +260,11 @@ pub mod pure_tests {
 #[cfg(feature = "gui")]
 #[cfg(test)]
 pub mod gui_tests {
-    use std::sync::Arc;
-    use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use eframe::egui;
+    use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn64_gui_waveguide_and_plucked_string_modal_lifecycles() {
@@ -259,7 +307,11 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
 
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -285,10 +337,22 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 4)), Some(24.0));
         assert_eq!(arc_bus.get(ParamId(base + 5)), Some(expected_energy));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("strike_pos_x"), Some(&0.72));
-        assert_eq!(view.device_rack_state.node_param_values.get("strike_pos_y"), Some(&0.44));
-        assert_eq!(view.inspector_state.node_param_values.get("strike_pos_x"), Some(&0.72));
-        assert_eq!(view.inspector_state.node_param_values.get("strike_pos_y"), Some(&0.44));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("strike_pos_x"),
+            Some(&0.72)
+        );
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("strike_pos_y"),
+            Some(&0.44)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("strike_pos_x"),
+            Some(&0.72)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("strike_pos_y"),
+            Some(&0.44)
+        );
 
         // Test Plucked String HUD sync
         view.plucked_string_view.pluck_position_beta = 0.32;
@@ -310,10 +374,30 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 6)), Some(22.4));
         assert_eq!(arc_bus.get(ParamId(base + 7)), Some(1.25));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("pluck_position_beta"), Some(&0.32));
-        assert_eq!(view.device_rack_state.node_param_values.get("strike_velocity"), Some(&0.88));
-        assert_eq!(view.inspector_state.node_param_values.get("pluck_position_beta"), Some(&0.32));
-        assert_eq!(view.inspector_state.node_param_values.get("strike_velocity"), Some(&0.88));
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("pluck_position_beta"),
+            Some(&0.32)
+        );
+        assert_eq!(
+            view.device_rack_state
+                .node_param_values
+                .get("strike_velocity"),
+            Some(&0.88)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("pluck_position_beta"),
+            Some(&0.32)
+        );
+        assert_eq!(
+            view.inspector_state
+                .node_param_values
+                .get("strike_velocity"),
+            Some(&0.88)
+        );
     }
 
     #[test]
@@ -368,10 +452,22 @@ pub mod gui_tests {
     #[test]
     fn test_turn64_gui_command_palette_actions_registered() {
         let palette = CommandPalette::new();
-        let has_waveguide = palette.actions.iter().any(|a| a.action_id == "open_waveguide_mesh_hud");
-        let has_plucked_string = palette.actions.iter().any(|a| a.action_id == "open_plucked_string_hud");
+        let has_waveguide = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_waveguide_mesh_hud");
+        let has_plucked_string = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_plucked_string_hud");
 
-        assert!(has_waveguide, "Expected open_waveguide_mesh_hud in command palette");
-        assert!(has_plucked_string, "Expected open_plucked_string_hud in command palette");
+        assert!(
+            has_waveguide,
+            "Expected open_waveguide_mesh_hud in command palette"
+        );
+        assert!(
+            has_plucked_string,
+            "Expected open_plucked_string_hud in command palette"
+        );
     }
 }

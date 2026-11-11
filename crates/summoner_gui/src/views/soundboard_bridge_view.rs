@@ -97,15 +97,21 @@ impl SoundboardBridgeView {
     }
 
     pub fn update_puck_from_physics(&mut self) {
-        let norm_x = ((self.bridge_bleed - MIN_BRIDGE_BLEED) / (MAX_BRIDGE_BLEED - MIN_BRIDGE_BLEED)).clamp(0.0, 1.0);
-        let norm_y = ((self.soundboard_decay_scale - MIN_DECAY_SCALE) / (MAX_DECAY_SCALE - MIN_DECAY_SCALE)).clamp(0.0, 1.0);
+        let norm_x = ((self.bridge_bleed - MIN_BRIDGE_BLEED)
+            / (MAX_BRIDGE_BLEED - MIN_BRIDGE_BLEED))
+            .clamp(0.0, 1.0);
+        let norm_y = ((self.soundboard_decay_scale - MIN_DECAY_SCALE)
+            / (MAX_DECAY_SCALE - MIN_DECAY_SCALE))
+            .clamp(0.0, 1.0);
         self.puck_pos = (norm_x, norm_y);
     }
 
     pub fn update_physics_from_puck(&mut self, norm_x: f32, norm_y: f32) {
         self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
-        self.bridge_bleed = MIN_BRIDGE_BLEED + self.puck_pos.0 * (MAX_BRIDGE_BLEED - MIN_BRIDGE_BLEED);
-        self.soundboard_decay_scale = MIN_DECAY_SCALE + self.puck_pos.1 * (MAX_DECAY_SCALE - MIN_DECAY_SCALE);
+        self.bridge_bleed =
+            MIN_BRIDGE_BLEED + self.puck_pos.0 * (MAX_BRIDGE_BLEED - MIN_BRIDGE_BLEED);
+        self.soundboard_decay_scale =
+            MIN_DECAY_SCALE + self.puck_pos.1 * (MAX_DECAY_SCALE - MIN_DECAY_SCALE);
         self.update_soundboard_acoustics();
     }
 
@@ -115,37 +121,91 @@ impl SoundboardBridgeView {
                 self.bridge_impedance = 420.0;
                 self.inharmonicity_b = 0.00018;
                 self.modal_frequencies = [62.0, 125.0, 240.0, 380.0, 680.0, 1200.0, 2100.0, 3300.0];
-                self.modal_qs = [15.0 * self.soundboard_decay_scale, 22.0 * self.soundboard_decay_scale, 28.0 * self.soundboard_decay_scale, 32.0 * self.soundboard_decay_scale, 38.0 * self.soundboard_decay_scale, 45.0 * self.soundboard_decay_scale, 50.0 * self.soundboard_decay_scale, 55.0 * self.soundboard_decay_scale];
+                self.modal_qs = [
+                    15.0 * self.soundboard_decay_scale,
+                    22.0 * self.soundboard_decay_scale,
+                    28.0 * self.soundboard_decay_scale,
+                    32.0 * self.soundboard_decay_scale,
+                    38.0 * self.soundboard_decay_scale,
+                    45.0 * self.soundboard_decay_scale,
+                    50.0 * self.soundboard_decay_scale,
+                    55.0 * self.soundboard_decay_scale,
+                ];
             }
             SoundboardHudPreset::BösendorferImperial => {
                 self.bridge_impedance = 380.0;
                 self.inharmonicity_b = 0.00012;
                 self.modal_frequencies = [52.0, 108.0, 210.0, 340.0, 610.0, 1080.0, 1950.0, 3050.0];
-                self.modal_qs = [18.0 * self.soundboard_decay_scale, 26.0 * self.soundboard_decay_scale, 34.0 * self.soundboard_decay_scale, 40.0 * self.soundboard_decay_scale, 48.0 * self.soundboard_decay_scale, 55.0 * self.soundboard_decay_scale, 60.0 * self.soundboard_decay_scale, 65.0 * self.soundboard_decay_scale];
+                self.modal_qs = [
+                    18.0 * self.soundboard_decay_scale,
+                    26.0 * self.soundboard_decay_scale,
+                    34.0 * self.soundboard_decay_scale,
+                    40.0 * self.soundboard_decay_scale,
+                    48.0 * self.soundboard_decay_scale,
+                    55.0 * self.soundboard_decay_scale,
+                    60.0 * self.soundboard_decay_scale,
+                    65.0 * self.soundboard_decay_scale,
+                ];
             }
             SoundboardHudPreset::YamahaCFX => {
                 self.bridge_impedance = 480.0;
                 self.inharmonicity_b = 0.00025;
                 self.modal_frequencies = [68.0, 138.0, 265.0, 420.0, 740.0, 1320.0, 2350.0, 3600.0];
-                self.modal_qs = [12.0 * self.soundboard_decay_scale, 18.0 * self.soundboard_decay_scale, 24.0 * self.soundboard_decay_scale, 28.0 * self.soundboard_decay_scale, 34.0 * self.soundboard_decay_scale, 40.0 * self.soundboard_decay_scale, 46.0 * self.soundboard_decay_scale, 50.0 * self.soundboard_decay_scale];
+                self.modal_qs = [
+                    12.0 * self.soundboard_decay_scale,
+                    18.0 * self.soundboard_decay_scale,
+                    24.0 * self.soundboard_decay_scale,
+                    28.0 * self.soundboard_decay_scale,
+                    34.0 * self.soundboard_decay_scale,
+                    40.0 * self.soundboard_decay_scale,
+                    46.0 * self.soundboard_decay_scale,
+                    50.0 * self.soundboard_decay_scale,
+                ];
             }
             SoundboardHudPreset::IntimateStudio => {
                 self.bridge_impedance = 520.0;
                 self.inharmonicity_b = 0.00010;
                 self.modal_frequencies = [58.0, 118.0, 225.0, 360.0, 640.0, 1150.0, 1980.0, 2900.0];
-                self.modal_qs = [10.0 * self.soundboard_decay_scale, 15.0 * self.soundboard_decay_scale, 20.0 * self.soundboard_decay_scale, 24.0 * self.soundboard_decay_scale, 28.0 * self.soundboard_decay_scale, 32.0 * self.soundboard_decay_scale, 36.0 * self.soundboard_decay_scale, 40.0 * self.soundboard_decay_scale];
+                self.modal_qs = [
+                    10.0 * self.soundboard_decay_scale,
+                    15.0 * self.soundboard_decay_scale,
+                    20.0 * self.soundboard_decay_scale,
+                    24.0 * self.soundboard_decay_scale,
+                    28.0 * self.soundboard_decay_scale,
+                    32.0 * self.soundboard_decay_scale,
+                    36.0 * self.soundboard_decay_scale,
+                    40.0 * self.soundboard_decay_scale,
+                ];
             }
             SoundboardHudPreset::ImpressionistUnaCorda => {
                 self.bridge_impedance = 360.0;
                 self.inharmonicity_b = 0.00015;
                 self.modal_frequencies = [60.0, 120.0, 235.0, 370.0, 660.0, 1180.0, 2050.0, 3200.0];
-                self.modal_qs = [20.0 * self.soundboard_decay_scale, 30.0 * self.soundboard_decay_scale, 38.0 * self.soundboard_decay_scale, 44.0 * self.soundboard_decay_scale, 52.0 * self.soundboard_decay_scale, 60.0 * self.soundboard_decay_scale, 68.0 * self.soundboard_decay_scale, 75.0 * self.soundboard_decay_scale];
+                self.modal_qs = [
+                    20.0 * self.soundboard_decay_scale,
+                    30.0 * self.soundboard_decay_scale,
+                    38.0 * self.soundboard_decay_scale,
+                    44.0 * self.soundboard_decay_scale,
+                    52.0 * self.soundboard_decay_scale,
+                    60.0 * self.soundboard_decay_scale,
+                    68.0 * self.soundboard_decay_scale,
+                    75.0 * self.soundboard_decay_scale,
+                ];
             }
             SoundboardHudPreset::PreparedAvantGarde => {
                 self.bridge_impedance = 600.0;
                 self.inharmonicity_b = 0.00060;
                 self.modal_frequencies = [75.0, 155.0, 290.0, 480.0, 820.0, 1480.0, 2600.0, 4100.0];
-                self.modal_qs = [6.0 * self.soundboard_decay_scale, 8.0 * self.soundboard_decay_scale, 12.0 * self.soundboard_decay_scale, 14.0 * self.soundboard_decay_scale, 16.0 * self.soundboard_decay_scale, 18.0 * self.soundboard_decay_scale, 22.0 * self.soundboard_decay_scale, 25.0 * self.soundboard_decay_scale];
+                self.modal_qs = [
+                    6.0 * self.soundboard_decay_scale,
+                    8.0 * self.soundboard_decay_scale,
+                    12.0 * self.soundboard_decay_scale,
+                    14.0 * self.soundboard_decay_scale,
+                    16.0 * self.soundboard_decay_scale,
+                    18.0 * self.soundboard_decay_scale,
+                    22.0 * self.soundboard_decay_scale,
+                    25.0 * self.soundboard_decay_scale,
+                ];
             }
         }
     }
@@ -183,7 +243,14 @@ impl SoundboardBridgeView {
     }
 
     /// Hit-tests touch coordinate on the soundboard bridge puck.
-    pub fn hit_test_soundboard_puck(&self, point: (f32, f32), canvas_x: f32, canvas_y: f32, canvas_w: f32, canvas_h: f32) -> bool {
+    pub fn hit_test_soundboard_puck(
+        &self,
+        point: (f32, f32),
+        canvas_x: f32,
+        canvas_y: f32,
+        canvas_w: f32,
+        canvas_h: f32,
+    ) -> bool {
         let puck_x = canvas_x + self.puck_pos.0 * canvas_w;
         let puck_y = canvas_y + (1.0 - self.puck_pos.1) * canvas_h;
         let dx = point.0 - puck_x;
@@ -218,8 +285,12 @@ impl SoundboardBridgeView {
 
         let modes_info = format!(
             "| Modes: {:.0}Hz, {:.0}Hz, {:.0}Hz, {:.0}Hz, {:.0}Hz, {:.0}Hz |",
-            self.modal_frequencies[0], self.modal_frequencies[1], self.modal_frequencies[2],
-            self.modal_frequencies[3], self.modal_frequencies[4], self.modal_frequencies[5]
+            self.modal_frequencies[0],
+            self.modal_frequencies[1],
+            self.modal_frequencies[2],
+            self.modal_frequencies[3],
+            self.modal_frequencies[4],
+            self.modal_frequencies[5]
         );
         let mod_padded = format!("{:<width$}|", modes_info, width = width - 1);
         lines.push(mod_padded);
@@ -237,9 +308,12 @@ impl SoundboardBridgeView {
                 let x_norm = col as f32 / (width - 2).max(1) as f32;
 
                 // Anisotropic standing wave pattern (1,1) + (1,2) + (2,1) + (2,2)
-                let mode11 = (x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
-                let mode12 = (x_norm * std::f32::consts::PI).sin() * (2.0 * y_norm * std::f32::consts::PI).sin();
-                let mode21 = (2.0 * x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
+                let mode11 =
+                    (x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
+                let mode12 = (x_norm * std::f32::consts::PI).sin()
+                    * (2.0 * y_norm * std::f32::consts::PI).sin();
+                let mode21 = (2.0 * x_norm * std::f32::consts::PI).sin()
+                    * (y_norm * std::f32::consts::PI).sin();
                 let pattern = (mode11 * 0.5 + mode12 * 0.3 + mode21 * 0.2).abs();
 
                 if pattern > 0.65 {
@@ -261,7 +335,12 @@ impl SoundboardBridgeView {
     }
 
     /// Render headless PNG snapshot to verify layout alignment, hit targets, and WCAG AAA contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background color: Deep midnight slate `#0A0E18`
@@ -345,9 +424,12 @@ impl SoundboardBridgeView {
                 let x_norm = hx as f32 / heat_w as f32;
 
                 // Anisotropic Sitka spruce standing wave formula
-                let mode11 = (x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
-                let mode12 = (x_norm * std::f32::consts::PI).sin() * (2.0 * y_norm * std::f32::consts::PI).sin();
-                let mode21 = (2.0 * x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
+                let mode11 =
+                    (x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
+                let mode12 = (x_norm * std::f32::consts::PI).sin()
+                    * (2.0 * y_norm * std::f32::consts::PI).sin();
+                let mode21 = (2.0 * x_norm * std::f32::consts::PI).sin()
+                    * (y_norm * std::f32::consts::PI).sin();
                 let disp = (mode11 * 0.55 + mode12 * 0.30 + mode21 * 0.15).abs();
 
                 let idx = (y * width + x) * 4;
@@ -412,10 +494,8 @@ impl SoundboardBridgeView {
         let tab_w = (rect.width() - 40.0 - 5.0 * 8.0) / 6.0;
         for (i, p) in presets.iter().enumerate() {
             let bx = rect.min.x + 20.0 + i as f32 * (tab_w + 8.0);
-            let tab_rect = Rect::from_min_size(
-                egui::pos2(bx, rect.min.y + 48.0),
-                egui::vec2(tab_w, 44.0),
-            );
+            let tab_rect =
+                Rect::from_min_size(egui::pos2(bx, rect.min.y + 48.0), egui::vec2(tab_w, 44.0));
             let is_selected = self.preset == *p;
             let bg_color = if is_selected {
                 Color32::from_rgb(16, 185, 129)
@@ -494,14 +574,30 @@ impl SoundboardBridgeView {
         let grid_origin = egui::pos2(left_rect.min.x + 20.0, left_rect.min.y + 35.0);
         let grid_rect = Rect::from_min_size(grid_origin, egui::vec2(grid_w, grid_h));
         painter.rect_filled(grid_rect, 2.0, Color32::from_rgb(8, 12, 20));
-        painter.rect_stroke(grid_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(25, 38, 55)));
+        painter.rect_stroke(
+            grid_rect,
+            2.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(25, 38, 55)),
+        );
 
         // Grid lines
         for step in 1..4 {
             let gx = grid_rect.min.x + (step as f32 / 4.0) * grid_w;
             let gy = grid_rect.min.y + (step as f32 / 4.0) * grid_h;
-            painter.line_segment([egui::pos2(gx, grid_rect.min.y), egui::pos2(gx, grid_rect.max.y)], Stroke::new(0.8_f32, Color32::from_rgb(20, 30, 45)));
-            painter.line_segment([egui::pos2(grid_rect.min.x, gy), egui::pos2(grid_rect.max.x, gy)], Stroke::new(0.8_f32, Color32::from_rgb(20, 30, 45)));
+            painter.line_segment(
+                [
+                    egui::pos2(gx, grid_rect.min.y),
+                    egui::pos2(gx, grid_rect.max.y),
+                ],
+                Stroke::new(0.8_f32, Color32::from_rgb(20, 30, 45)),
+            );
+            painter.line_segment(
+                [
+                    egui::pos2(grid_rect.min.x, gy),
+                    egui::pos2(grid_rect.max.x, gy),
+                ],
+                Stroke::new(0.8_f32, Color32::from_rgb(20, 30, 45)),
+            );
         }
 
         // Left Drag Interaction
@@ -554,7 +650,11 @@ impl SoundboardBridgeView {
         let heat_h = right_rect.height() - 60.0;
         let heat_rect = Rect::from_min_size(heat_origin, egui::vec2(heat_w, heat_h));
         painter.rect_filled(heat_rect, 2.0, Color32::from_rgb(8, 14, 24));
-        painter.rect_stroke(heat_rect, 2.0, Stroke::new(1.0_f32, Color32::from_rgb(25, 40, 60)));
+        painter.rect_stroke(
+            heat_rect,
+            2.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(25, 40, 60)),
+        );
 
         // Anisotropic Sitka Spruce standing wave cell grid (16 cols x 8 rows)
         let cols = 16;
@@ -567,13 +667,20 @@ impl SoundboardBridgeView {
             for cx in 0..cols {
                 let x_norm = (cx as f32 + 0.5) / cols as f32;
 
-                let m11 = (x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
-                let m12 = (x_norm * std::f32::consts::PI).sin() * (2.0 * y_norm * std::f32::consts::PI).sin();
-                let m21 = (2.0 * x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
-                let disp = (m11 * 0.55 + m12 * 0.30 + m21 * 0.15).abs() * (self.soundboard_decay_scale / 1.5).clamp(0.4, 2.0);
+                let m11 =
+                    (x_norm * std::f32::consts::PI).sin() * (y_norm * std::f32::consts::PI).sin();
+                let m12 = (x_norm * std::f32::consts::PI).sin()
+                    * (2.0 * y_norm * std::f32::consts::PI).sin();
+                let m21 = (2.0 * x_norm * std::f32::consts::PI).sin()
+                    * (y_norm * std::f32::consts::PI).sin();
+                let disp = (m11 * 0.55 + m12 * 0.30 + m21 * 0.15).abs()
+                    * (self.soundboard_decay_scale / 1.5).clamp(0.4, 2.0);
 
                 let cell_rect = Rect::from_min_size(
-                    egui::pos2(heat_rect.min.x + cx as f32 * cw, heat_rect.min.y + ry as f32 * ch),
+                    egui::pos2(
+                        heat_rect.min.x + cx as f32 * cw,
+                        heat_rect.min.y + ry as f32 * ch,
+                    ),
                     egui::vec2(cw - 1.0, ch - 1.0),
                 );
 
@@ -587,7 +694,11 @@ impl SoundboardBridgeView {
                     (12, 20, 36, 60)
                 };
 
-                painter.rect_filled(cell_rect, 1.0, Color32::from_rgba_premultiplied(r, g, b, alpha));
+                painter.rect_filled(
+                    cell_rect,
+                    1.0,
+                    Color32::from_rgba_premultiplied(r, g, b, alpha),
+                );
             }
         }
 
@@ -595,13 +706,18 @@ impl SoundboardBridgeView {
         for g_idx in 1..8 {
             let gx = heat_rect.min.x + (g_idx as f32 / 8.0) * heat_w;
             painter.line_segment(
-                [egui::pos2(gx, heat_rect.min.y + 2.0), egui::pos2(gx, heat_rect.max.y - 2.0)],
+                [
+                    egui::pos2(gx, heat_rect.min.y + 2.0),
+                    egui::pos2(gx, heat_rect.max.y - 2.0),
+                ],
                 Stroke::new(0.6_f32, Color32::from_rgba_premultiplied(200, 220, 240, 25)),
             );
         }
 
         // Curved Maple Bridge Line traversing soundboard
-        let bridge_y_offset = (1.0 - (self.bridge_bleed - MIN_BRIDGE_BLEED) / (MAX_BRIDGE_BLEED - MIN_BRIDGE_BLEED)) * (heat_h - 20.0);
+        let bridge_y_offset = (1.0
+            - (self.bridge_bleed - MIN_BRIDGE_BLEED) / (MAX_BRIDGE_BLEED - MIN_BRIDGE_BLEED))
+            * (heat_h - 20.0);
         let by_base = heat_rect.min.y + 10.0 + bridge_y_offset;
         let mut prev_bp: Option<Pos2> = None;
         for bi in 0..=20 {
@@ -611,7 +727,10 @@ impl SoundboardBridgeView {
             let by = (by_base + curve).clamp(heat_rect.min.y + 4.0, heat_rect.max.y - 4.0);
             let bp = egui::pos2(bx, by);
             if let Some(prev) = prev_bp {
-                painter.line_segment([prev, bp], Stroke::new(2.5_f32, Color32::from_rgb(245, 158, 11)));
+                painter.line_segment(
+                    [prev, bp],
+                    Stroke::new(2.5_f32, Color32::from_rgb(245, 158, 11)),
+                );
             }
             prev_bp = Some(bp);
 
@@ -691,7 +810,12 @@ impl SoundboardBridgeView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

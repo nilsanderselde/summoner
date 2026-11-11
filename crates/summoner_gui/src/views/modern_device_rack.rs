@@ -551,12 +551,7 @@ impl Default for ModernDeviceRackState {
             osc_mix: 0.75,
             shape: 0.50,
             volume: 0.85,
-            filter_nodes: [
-                (0.15, 0.70),
-                (0.40, 0.65),
-                (0.65, 0.55),
-                (0.90, 0.20),
-            ],
+            filter_nodes: [(0.15, 0.70), (0.40, 0.65), (0.65, 0.55), (0.90, 0.20)],
             lfo_speed: 0.40,
             lfo_depth: 0.60,
         }
@@ -567,7 +562,10 @@ impl ModernDeviceRackState {
     /// Ensure the chain has at least one device matching the currently selected node kind.
     pub fn ensure_chain(&mut self) {
         if self.chain_devices.is_empty() {
-            let kind = self.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
+            let kind = self
+                .selected_node_kind
+                .clone()
+                .unwrap_or_else(|| "AetherSynth".to_string());
             let name = self.device_name.clone();
             self.chain_devices.push(RackChainDeviceVisual {
                 kind,
@@ -651,8 +649,12 @@ impl ModernDeviceRackState {
 
     /// Request live parameter automation for a given parameter ID (e.g. from right-click or auto button).
     pub fn request_automation(&mut self, param_id: &str) {
-        if self.selected_chain_idx > 0 && !param_id.starts_with("node_") && !param_id.starts_with("master_node_") {
-            self.requested_automation_param = Some(format!("node_{}_{}", self.selected_chain_idx, param_id));
+        if self.selected_chain_idx > 0
+            && !param_id.starts_with("node_")
+            && !param_id.starts_with("master_node_")
+        {
+            self.requested_automation_param =
+                Some(format!("node_{}_{}", self.selected_chain_idx, param_id));
         } else {
             self.requested_automation_param = Some(param_id.to_string());
         }
@@ -692,15 +694,32 @@ pub fn show_modern_device_rack_with_context(
     track_id: u64,
 ) {
     state.ensure_chain();
-    state.node_param_values.entry("cutoff".to_string()).or_insert(state.cutoff);
-    state.node_param_values.entry("resonance".to_string()).or_insert(state.resonance);
-    state.node_param_values.entry("decay".to_string()).or_insert(state.decay);
-    state.node_param_values.entry("drive".to_string()).or_insert(state.drive);
+    state
+        .node_param_values
+        .entry("cutoff".to_string())
+        .or_insert(state.cutoff);
+    state
+        .node_param_values
+        .entry("resonance".to_string())
+        .or_insert(state.resonance);
+    state
+        .node_param_values
+        .entry("decay".to_string())
+        .or_insert(state.decay);
+    state
+        .node_param_values
+        .entry("drive".to_string())
+        .or_insert(state.drive);
 
     let registry = crate::dsp_node_ui::DspNodeRegistry::new();
-    let cur_selection = state.selected_node_kind.clone().unwrap_or_else(|| "AetherSynth".to_string());
+    let cur_selection = state
+        .selected_node_kind
+        .clone()
+        .unwrap_or_else(|| "AetherSynth".to_string());
     let opt_desc = registry.get(&cur_selection);
-    let (r, g, b) = opt_desc.map(|d| d.category.color_rgb()).unwrap_or((56, 189, 248));
+    let (r, g, b) = opt_desc
+        .map(|d| d.category.color_rgb())
+        .unwrap_or((56, 189, 248));
     let cat_accent = Color32::from_rgb(r, g, b);
 
     // Collapsed Drawer Mode (Click-to-Expand Pro Rack Drawer)
@@ -714,296 +733,1078 @@ pub fn show_modern_device_rack_with_context(
             .show(ui, |ui| {
                 ui.set_height(collapsed_h);
                 ui.horizontal(|ui| {
-                    if ui.button(RichText::new("▲ EXPAND RACK").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).clicked() {
+                    if ui
+                        .button(
+                            RichText::new("▲ EXPAND RACK")
+                                .font(FontId::proportional(10.0))
+                                .strong()
+                                .color(Color32::from_rgb(56, 189, 248)),
+                        )
+                        .clicked()
+                    {
                         state.is_minimized = false;
                     }
-                    if ui.button(RichText::new("⊞ PRO").font(FontId::proportional(10.0)).color(Color32::from_rgb(200, 215, 235))).clicked() {
+                    if ui
+                        .button(
+                            RichText::new("⊞ PRO")
+                                .font(FontId::proportional(10.0))
+                                .color(Color32::from_rgb(200, 215, 235)),
+                        )
+                        .clicked()
+                    {
                         state.is_minimized = false;
                         state.is_expanded_params = true;
                     }
-                    if ui.button(RichText::new("📈 AUTO").font(FontId::proportional(10.0)).color(Color32::from_rgb(234, 179, 8))).on_hover_text("Open Live Bézier Automation Lane for primary parameter").clicked() {
-                        let primary = opt_desc.and_then(|d| d.params.first()).map(|p| p.id.clone()).unwrap_or_else(|| "cutoff".to_string());
+                    if ui
+                        .button(
+                            RichText::new("📈 AUTO")
+                                .font(FontId::proportional(10.0))
+                                .color(Color32::from_rgb(234, 179, 8)),
+                        )
+                        .on_hover_text("Open Live Bézier Automation Lane for primary parameter")
+                        .clicked()
+                    {
+                        let primary = opt_desc
+                            .and_then(|d| d.params.first())
+                            .map(|p| p.id.clone())
+                            .unwrap_or_else(|| "cutoff".to_string());
                         state.requested_automation_param = Some(primary);
                     }
-                    let is_crystal = cur_selection == "CrystalResonator" || cur_selection.contains("Crystal") || cur_selection.contains("Bowl");
-                    let is_armonica = cur_selection == "GlassArmonica" || cur_selection == "FranklinGlassArmonica" || cur_selection == "ArmonicaChassisResonator" || cur_selection.contains("Armonica");
-                    let is_hurdy = cur_selection == "FrenchHurdyGurdy" || cur_selection.contains("HurdyGurdy") || cur_selection.contains("Vielle");
-                    let is_trompette = cur_selection == "TrompetteChienBridge" || cur_selection == "TrompetteBridge" || cur_selection.contains("Trompette") || cur_selection.contains("Chien");
-                    let is_hoa = cur_selection == "AmbisonicRadarSpatializer" || cur_selection == "HoaSpatializer" || cur_selection == "Hoa5BinauralSpatializer" || cur_selection == "Hoa5RadarView" || cur_selection.contains("Ambisonic") || cur_selection.contains("Hoa");
-                    let is_bowed = cur_selection.contains("Bowed") || cur_selection.contains("Violin") || cur_selection.contains("Cello") || cur_selection == "BowedStringNode" || cur_selection == "BowedString";
-                    let is_shakuhachi = cur_selection.contains("Shakuhachi") || cur_selection.contains("BambooFlute") || cur_selection == "ShakuhachiNode" || cur_selection == "Shakuhachi";
-                    let is_sitar = cur_selection.contains("Sitar") || cur_selection == "SitarNode" || cur_selection == "SitarModel" || cur_selection.contains("Jawari");
-                    let is_turkish_ney = cur_selection.contains("TurkishNey") || cur_selection.contains("Ney") || cur_selection == "TurkishNeyNode";
-                    let is_steelpan = cur_selection.contains("Steelpan") || cur_selection.contains("SteelDrum") || cur_selection == "SteelpanNode" || cur_selection == "SteelpanModel";
-                    let is_mbira = cur_selection.contains("Mbira") || cur_selection.contains("Kalimba") || cur_selection == "MbiraNode" || cur_selection == "KalimbaNode" || cur_selection == "MbiraKalimbaModel" || cur_selection == "MbiraModel";
-                    let is_koto = cur_selection.contains("Koto") || cur_selection.contains("Guzheng") || cur_selection == "KotoNode" || cur_selection == "KotoSynthesizer" || cur_selection == "KotoStringVoice" || cur_selection == "KotoSoundboard";
-                    let is_gamelan = cur_selection.contains("Gamelan") || cur_selection.contains("Gender") || cur_selection.contains("Jegogan") || cur_selection.contains("Metallophone") || cur_selection == "GamelanGender" || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
-                    let is_dulcimer = cur_selection.contains("Dulcimer") || cur_selection.contains("Cimbalom") || cur_selection.contains("Santur") || cur_selection.contains("Yangqin") || cur_selection.contains("Psaltery") || cur_selection == "DulcimerCimbalomModel";
-                    let is_clavinet = cur_selection.contains("Clavinet") || cur_selection.contains("Clav") || cur_selection == "ClavinetNode" || cur_selection == "ClavinetD6";
-                    let is_electric_piano = cur_selection.contains("ElectricPiano") || cur_selection == "ElectricPianoModel" || cur_selection == "ElectricPianoProfile" || cur_selection.contains("Rhodes") || cur_selection.contains("Wurlitzer");
-                    let is_tonewheel_organ = cur_selection.contains("Tonewheel") || cur_selection == "TonewheelOrgan" || cur_selection == "TonewheelOrganModel" || cur_selection == "TonewheelOrganNode" || cur_selection == "TonewheelOrganProfile" || cur_selection.contains("Hammond") || cur_selection.contains("Drawbar");
-                    let is_piano = !is_electric_piano && (cur_selection.contains("Piano") || cur_selection.contains("GrandPiano") || cur_selection == "GrandPianoModel" || cur_selection == "ConcertGrandPianoNode");
-                    let is_pipe_organ = !is_tonewheel_organ && (cur_selection.contains("PipeOrgan") || cur_selection.contains("Organ") || cur_selection.contains("Windchest") || cur_selection == "PipeOrganModel");
-                    let is_waveguide_brass = cur_selection.contains("WaveguideBrass") || cur_selection.contains("BrassInstrument") || cur_selection.contains("AcousticBrass") || cur_selection == "WaveguideBrassModel" || cur_selection == "WaveguideBrassNode" || cur_selection == "BrassInstrumentProfile";
-                    let is_vocal_tract = cur_selection.contains("VocalTract") || cur_selection.contains("VocalTractModel") || cur_selection.contains("VowelSpace") || cur_selection.contains("VocalFormant") || cur_selection == "VocalTractNode" || cur_selection == "VocalTractProfile";
-                    let is_rotary_speaker = cur_selection.contains("Rotary") || cur_selection.contains("Leslie") || cur_selection.contains("DopplerSpeaker") || cur_selection == "RotarySpeakerNode" || cur_selection == "DualRotorLeslieDopplerSpeaker" || cur_selection == "RotaryCabinetModel";
-                    let is_free_reed = cur_selection.contains("FreeReed") || cur_selection.contains("Harmonium") || cur_selection.contains("Accordion") || cur_selection.contains("Bandoneon") || cur_selection.contains("Bayan") || cur_selection.contains("Cassotto") || cur_selection == "FreeReedNode" || cur_selection == "FreeReedVoice" || cur_selection == "FreeReedOscillator";
-                    let is_granular = cur_selection.contains("Granular") || cur_selection.contains("Grain") || cur_selection == "GranularSynthNode" || cur_selection == "GranularFreezeNode" || cur_selection == "GranularPitchShifter";
-                    let is_spring_lattice = cur_selection.contains("Spring") || cur_selection.contains("Lattice") || cur_selection == "SpringLatticeNode" || cur_selection == "SpringReverb" || cur_selection == "SpringTankModel" || cur_selection == "SpringMassLattice";
-                    let is_waveguide_mesh = cur_selection.contains("WaveguideMesh") || cur_selection.contains("MeshPlate") || cur_selection.contains("MeshMembrane") || cur_selection == "WaveguideMeshNode" || cur_selection == "WaveguideMesh2D" || cur_selection == "RectilinearWaveguideMesh" || cur_selection == "WaveguideMeshBoundary" || cur_selection == "WaveguideMesh";
-                    let is_plucked_string = cur_selection.contains("PluckedString") || cur_selection.contains("CommutedPlucked") || cur_selection == "PluckedStringNode" || cur_selection == "CommutedPluckedStringNode" || cur_selection == "CommutedPluckedString" || cur_selection == "PluckedStringWaveguide" || cur_selection == "KarplusStrong";
-                    let is_bellows = cur_selection.contains("Bellows") || cur_selection.contains("Cassotto") || cur_selection == "PneumaticBellows" || cur_selection == "CassottoChamber" || cur_selection == "AccordionBellows" || cur_selection == "BellowsDynamics";
-                    let is_jawari_bridge = cur_selection.contains("Jawari") || cur_selection.contains("Tarab") || cur_selection == "JawariBridge" || cur_selection == "TarabResonatorBank" || cur_selection == "TarabStringResonator" || cur_selection == "SitarGourdBody" || cur_selection == "SitarBridge";
-                    let is_soundboard = cur_selection.contains("Soundboard") || cur_selection.contains("SoundboardBridge") || cur_selection == "SoundboardBridgeModel" || cur_selection == "PianoSoundboard" || cur_selection == "SpruceSoundboard";
-                    let is_sympathetic = cur_selection.contains("Sympathetic") || cur_selection.contains("SympatheticCoupling") || cur_selection == "SympatheticCouplingModel" || cur_selection == "SympatheticStringMatrix" || cur_selection == "DroneStrings";
-                    let is_woodwind_jet = cur_selection.contains("WoodwindJet") || cur_selection.contains("FluteJet") || cur_selection.contains("AirJet") || cur_selection.contains("WoodwindModel") || cur_selection == "WoodwindJetView" || cur_selection == "AeroacousticFluteJetExciter" || cur_selection == "AcousticConcertFluteAirJetModel" || cur_selection == "WoodwindJetNode";
-                    let is_tonehole_matrix = cur_selection.contains("Tonehole") || cur_selection.contains("BoreModel") || cur_selection == "ToneholeMatrixView" || cur_selection == "ToneholeMatrix" || cur_selection == "ToneholeGrid" || cur_selection == "WoodwindToneholeGrid" || cur_selection == "ToneholeLattice";
-                    let is_plate_dispersion = cur_selection.contains("PlateTank") || cur_selection.contains("PlateReverb") || cur_selection.contains("PlateDispersion") || cur_selection == "PlateTankNode" || cur_selection == "PlateDispersionView" || cur_selection == "PlateReverbNode" || cur_selection.contains("EMT140");
-                    let is_membrane_resonator = cur_selection.contains("MembraneResonator") || cur_selection == "MembraneResonatorView" || cur_selection == "MembraneResonatorNode";
-                    let is_membrane_plate = cur_selection.contains("MembranePlate") || cur_selection == "MembranePlateView" || cur_selection == "MembranePlateModel";
-                    let is_membrane_cavity = (cur_selection.contains("PercussionMembrane") || cur_selection.contains("MembranePercussion") || cur_selection.contains("MembraneCavity") || cur_selection == "PercussionMembrane" || cur_selection == "MembraneCavityView" || cur_selection == "MembranePercussionModel") && !is_membrane_resonator && !is_membrane_plate;
-                    let is_embouchure_angle = cur_selection.contains("EmbouchureAngle") || cur_selection.contains("ShakuhachiEmbouchure") || cur_selection.contains("FluteEmbouchure") || cur_selection == "EmbouchureAngleView" || cur_selection == "EmbouchureAngle" || cur_selection.contains("MeriKari") || cur_selection.contains("Utaguchi");
-                    let is_friction_orbit = cur_selection.contains("FrictionOrbit") || cur_selection.contains("StickSlip") || cur_selection.contains("BowedFriction") || cur_selection == "FrictionOrbitView" || cur_selection == "FrictionOrbit" || cur_selection.contains("RosinHysteresis") || cur_selection.contains("HelmholtzOrbit");
-                    let is_rank_voicing = cur_selection.contains("RankVoicing") || cur_selection.contains("PipeOrganFlute") || cur_selection.contains("OrganRank") || cur_selection == "RankVoicingView" || cur_selection == "RankVoicing" || cur_selection.contains("FlueCutup") || cur_selection.contains("PneumaticPipeOrganFluteRank");
-                    let is_tine_resonator = cur_selection.contains("TineResonator") || cur_selection.contains("TinePickup") || cur_selection.contains("TineResonatorPickup") || cur_selection == "TineResonatorView" || cur_selection == "TineResonator" || cur_selection.contains("EpArticulation") || cur_selection.contains("ElectricPiano");
-                    let is_spring_reverb = cur_selection.contains("SpringReverb") || cur_selection.contains("SpringTank") || cur_selection.contains("AnalogSpring") || cur_selection.contains("SpringMass") || cur_selection == "SpringReverbView" || cur_selection == "AnalogSpringReverbTank" || cur_selection == "NonlinearSpringReverbTank";
-                    let is_comb_resonator = cur_selection.contains("CombResonator") || cur_selection.contains("CombFilter") || cur_selection.contains("ResonantComb") || cur_selection == "CombResonatorView" || cur_selection == "CombResonatorNode" || cur_selection == "ResonantPhasedCombArray";
-                    let is_wavefront_reflection = cur_selection.contains("WavefrontReflection") || cur_selection.contains("Wavefront") || cur_selection.contains("RaytracedEarlyReflection") || cur_selection == "WavefrontReflectionView" || cur_selection == "WavefrontReflectionNode";
-                    let is_diffractive_propagation = cur_selection.contains("DiffractivePropagation") || cur_selection.contains("Diffraction") || cur_selection == "DiffractivePropagationView" || cur_selection == "DiffractivePropagationNode";
-                    let is_idiophone = cur_selection.contains("Idiophone") || cur_selection.contains("Marimba") || cur_selection.contains("Xylophone") || cur_selection.contains("Vibraphone") || cur_selection == "IdiophoneSpectrum" || cur_selection == "StruckIdiophoneResonatorNode" || cur_selection == "IdiophoneResonator" || cur_selection == "ModalIdiophoneResonator" || cur_selection == "ModalIdiophoneChimeBank";
-                    let is_sonar_hydrophone = cur_selection.contains("Sonar") || cur_selection.contains("Hydrophone") || cur_selection == "SonarHydrophoneNode" || cur_selection == "SonarHydrophoneView";
-                    let is_hoa5_binaural = cur_selection.contains("Hoa5") || cur_selection.contains("Ambisonic5") || cur_selection.contains("HOA5") || cur_selection == "Hoa5BinauralView" || cur_selection == "Hoa5BinauralNode" || cur_selection == "Ambisonics5thOrderDecoder" || cur_selection.contains("HigherOrderAmbisonics") || cur_selection.contains("Hoa5thOrder");
-                    let is_mpegh_3d = cur_selection.contains("Mpegh") || cur_selection.contains("MPEG-H") || cur_selection.contains("MpegH") || cur_selection == "Mpegh3DSpatializerView" || cur_selection == "Mpegh3DSpatializerNode" || cur_selection == "Mpegh3DObjectSpatializer" || cur_selection.contains("MpeghSpatializer");
-                    let is_atmos_916 = cur_selection.contains("Atmos916") || cur_selection.contains("DolbyAtmos") || cur_selection == "Atmos916Spatializer" || cur_selection == "Atmos916SpatializerView" || cur_selection.contains("AtmosBed") || cur_selection.contains("AtmosSpatializer");
-                    let is_auro3d = cur_selection.contains("Auro3d") || cur_selection.contains("Auro-3D") || cur_selection.contains("Auro131") || cur_selection == "Auro3dSpatializer" || cur_selection == "Auro3dSpatializerView" || cur_selection.contains("AuroSpatializer");
-                    let is_nhk222 = cur_selection.contains("Nhk222") || cur_selection.contains("NHK222") || cur_selection == "Nhk222Spatializer" || cur_selection == "Nhk222SpatializerView" || cur_selection.contains("NhkSpatializer");
-                    let is_wfs_array = cur_selection.contains("WfsArray") || cur_selection.contains("WfsAcoustic") || cur_selection.contains("WfsPlanar") || cur_selection == "WfsArraySpatializerNode" || cur_selection == "WfsArraySpatializerView" || cur_selection.contains("WaveFieldSynthesis");
-                    let is_binaural_panner = cur_selection.contains("BinauralSpatialPanner") || cur_selection.contains("BinauralPanner") || cur_selection == "BinauralPannerView" || cur_selection == "BinauralSpatialPannerNode" || cur_selection.contains("BinauralHrtf") || cur_selection.contains("HrtfPanner");
-                    let is_binaural_brir = cur_selection.contains("BinauralBrir") || cur_selection.contains("PartitionedBinauralHrtfConvolver") || cur_selection == "BinauralBrirView" || cur_selection.contains("BrirSpatializer") || cur_selection.contains("RoomImpulseResponse") || cur_selection.contains("BinauralRoom");
+                    let is_crystal = cur_selection == "CrystalResonator"
+                        || cur_selection.contains("Crystal")
+                        || cur_selection.contains("Bowl");
+                    let is_armonica = cur_selection == "GlassArmonica"
+                        || cur_selection == "FranklinGlassArmonica"
+                        || cur_selection == "ArmonicaChassisResonator"
+                        || cur_selection.contains("Armonica");
+                    let is_hurdy = cur_selection == "FrenchHurdyGurdy"
+                        || cur_selection.contains("HurdyGurdy")
+                        || cur_selection.contains("Vielle");
+                    let is_trompette = cur_selection == "TrompetteChienBridge"
+                        || cur_selection == "TrompetteBridge"
+                        || cur_selection.contains("Trompette")
+                        || cur_selection.contains("Chien");
+                    let is_hoa = cur_selection == "AmbisonicRadarSpatializer"
+                        || cur_selection == "HoaSpatializer"
+                        || cur_selection == "Hoa5BinauralSpatializer"
+                        || cur_selection == "Hoa5RadarView"
+                        || cur_selection.contains("Ambisonic")
+                        || cur_selection.contains("Hoa");
+                    let is_bowed = cur_selection.contains("Bowed")
+                        || cur_selection.contains("Violin")
+                        || cur_selection.contains("Cello")
+                        || cur_selection == "BowedStringNode"
+                        || cur_selection == "BowedString";
+                    let is_shakuhachi = cur_selection.contains("Shakuhachi")
+                        || cur_selection.contains("BambooFlute")
+                        || cur_selection == "ShakuhachiNode"
+                        || cur_selection == "Shakuhachi";
+                    let is_sitar = cur_selection.contains("Sitar")
+                        || cur_selection == "SitarNode"
+                        || cur_selection == "SitarModel"
+                        || cur_selection.contains("Jawari");
+                    let is_turkish_ney = cur_selection.contains("TurkishNey")
+                        || cur_selection.contains("Ney")
+                        || cur_selection == "TurkishNeyNode";
+                    let is_steelpan = cur_selection.contains("Steelpan")
+                        || cur_selection.contains("SteelDrum")
+                        || cur_selection == "SteelpanNode"
+                        || cur_selection == "SteelpanModel";
+                    let is_mbira = cur_selection.contains("Mbira")
+                        || cur_selection.contains("Kalimba")
+                        || cur_selection == "MbiraNode"
+                        || cur_selection == "KalimbaNode"
+                        || cur_selection == "MbiraKalimbaModel"
+                        || cur_selection == "MbiraModel";
+                    let is_koto = cur_selection.contains("Koto")
+                        || cur_selection.contains("Guzheng")
+                        || cur_selection == "KotoNode"
+                        || cur_selection == "KotoSynthesizer"
+                        || cur_selection == "KotoStringVoice"
+                        || cur_selection == "KotoSoundboard";
+                    let is_gamelan = cur_selection.contains("Gamelan")
+                        || cur_selection.contains("Gender")
+                        || cur_selection.contains("Jegogan")
+                        || cur_selection.contains("Metallophone")
+                        || cur_selection == "GamelanGender"
+                        || cur_selection == "AcousticBalineseGamelanJegoganBronzeBar";
+                    let is_dulcimer = cur_selection.contains("Dulcimer")
+                        || cur_selection.contains("Cimbalom")
+                        || cur_selection.contains("Santur")
+                        || cur_selection.contains("Yangqin")
+                        || cur_selection.contains("Psaltery")
+                        || cur_selection == "DulcimerCimbalomModel";
+                    let is_clavinet = cur_selection.contains("Clavinet")
+                        || cur_selection.contains("Clav")
+                        || cur_selection == "ClavinetNode"
+                        || cur_selection == "ClavinetD6";
+                    let is_electric_piano = cur_selection.contains("ElectricPiano")
+                        || cur_selection == "ElectricPianoModel"
+                        || cur_selection == "ElectricPianoProfile"
+                        || cur_selection.contains("Rhodes")
+                        || cur_selection.contains("Wurlitzer");
+                    let is_tonewheel_organ = cur_selection.contains("Tonewheel")
+                        || cur_selection == "TonewheelOrgan"
+                        || cur_selection == "TonewheelOrganModel"
+                        || cur_selection == "TonewheelOrganNode"
+                        || cur_selection == "TonewheelOrganProfile"
+                        || cur_selection.contains("Hammond")
+                        || cur_selection.contains("Drawbar");
+                    let is_piano = !is_electric_piano
+                        && (cur_selection.contains("Piano")
+                            || cur_selection.contains("GrandPiano")
+                            || cur_selection == "GrandPianoModel"
+                            || cur_selection == "ConcertGrandPianoNode");
+                    let is_pipe_organ = !is_tonewheel_organ
+                        && (cur_selection.contains("PipeOrgan")
+                            || cur_selection.contains("Organ")
+                            || cur_selection.contains("Windchest")
+                            || cur_selection == "PipeOrganModel");
+                    let is_waveguide_brass = cur_selection.contains("WaveguideBrass")
+                        || cur_selection.contains("BrassInstrument")
+                        || cur_selection.contains("AcousticBrass")
+                        || cur_selection == "WaveguideBrassModel"
+                        || cur_selection == "WaveguideBrassNode"
+                        || cur_selection == "BrassInstrumentProfile";
+                    let is_vocal_tract = cur_selection.contains("VocalTract")
+                        || cur_selection.contains("VocalTractModel")
+                        || cur_selection.contains("VowelSpace")
+                        || cur_selection.contains("VocalFormant")
+                        || cur_selection == "VocalTractNode"
+                        || cur_selection == "VocalTractProfile";
+                    let is_rotary_speaker = cur_selection.contains("Rotary")
+                        || cur_selection.contains("Leslie")
+                        || cur_selection.contains("DopplerSpeaker")
+                        || cur_selection == "RotarySpeakerNode"
+                        || cur_selection == "DualRotorLeslieDopplerSpeaker"
+                        || cur_selection == "RotaryCabinetModel";
+                    let is_free_reed = cur_selection.contains("FreeReed")
+                        || cur_selection.contains("Harmonium")
+                        || cur_selection.contains("Accordion")
+                        || cur_selection.contains("Bandoneon")
+                        || cur_selection.contains("Bayan")
+                        || cur_selection.contains("Cassotto")
+                        || cur_selection == "FreeReedNode"
+                        || cur_selection == "FreeReedVoice"
+                        || cur_selection == "FreeReedOscillator";
+                    let is_granular = cur_selection.contains("Granular")
+                        || cur_selection.contains("Grain")
+                        || cur_selection == "GranularSynthNode"
+                        || cur_selection == "GranularFreezeNode"
+                        || cur_selection == "GranularPitchShifter";
+                    let is_spring_lattice = cur_selection.contains("Spring")
+                        || cur_selection.contains("Lattice")
+                        || cur_selection == "SpringLatticeNode"
+                        || cur_selection == "SpringReverb"
+                        || cur_selection == "SpringTankModel"
+                        || cur_selection == "SpringMassLattice";
+                    let is_waveguide_mesh = cur_selection.contains("WaveguideMesh")
+                        || cur_selection.contains("MeshPlate")
+                        || cur_selection.contains("MeshMembrane")
+                        || cur_selection == "WaveguideMeshNode"
+                        || cur_selection == "WaveguideMesh2D"
+                        || cur_selection == "RectilinearWaveguideMesh"
+                        || cur_selection == "WaveguideMeshBoundary"
+                        || cur_selection == "WaveguideMesh";
+                    let is_plucked_string = cur_selection.contains("PluckedString")
+                        || cur_selection.contains("CommutedPlucked")
+                        || cur_selection == "PluckedStringNode"
+                        || cur_selection == "CommutedPluckedStringNode"
+                        || cur_selection == "CommutedPluckedString"
+                        || cur_selection == "PluckedStringWaveguide"
+                        || cur_selection == "KarplusStrong";
+                    let is_bellows = cur_selection.contains("Bellows")
+                        || cur_selection.contains("Cassotto")
+                        || cur_selection == "PneumaticBellows"
+                        || cur_selection == "CassottoChamber"
+                        || cur_selection == "AccordionBellows"
+                        || cur_selection == "BellowsDynamics";
+                    let is_jawari_bridge = cur_selection.contains("Jawari")
+                        || cur_selection.contains("Tarab")
+                        || cur_selection == "JawariBridge"
+                        || cur_selection == "TarabResonatorBank"
+                        || cur_selection == "TarabStringResonator"
+                        || cur_selection == "SitarGourdBody"
+                        || cur_selection == "SitarBridge";
+                    let is_soundboard = cur_selection.contains("Soundboard")
+                        || cur_selection.contains("SoundboardBridge")
+                        || cur_selection == "SoundboardBridgeModel"
+                        || cur_selection == "PianoSoundboard"
+                        || cur_selection == "SpruceSoundboard";
+                    let is_sympathetic = cur_selection.contains("Sympathetic")
+                        || cur_selection.contains("SympatheticCoupling")
+                        || cur_selection == "SympatheticCouplingModel"
+                        || cur_selection == "SympatheticStringMatrix"
+                        || cur_selection == "DroneStrings";
+                    let is_woodwind_jet = cur_selection.contains("WoodwindJet")
+                        || cur_selection.contains("FluteJet")
+                        || cur_selection.contains("AirJet")
+                        || cur_selection.contains("WoodwindModel")
+                        || cur_selection == "WoodwindJetView"
+                        || cur_selection == "AeroacousticFluteJetExciter"
+                        || cur_selection == "AcousticConcertFluteAirJetModel"
+                        || cur_selection == "WoodwindJetNode";
+                    let is_tonehole_matrix = cur_selection.contains("Tonehole")
+                        || cur_selection.contains("BoreModel")
+                        || cur_selection == "ToneholeMatrixView"
+                        || cur_selection == "ToneholeMatrix"
+                        || cur_selection == "ToneholeGrid"
+                        || cur_selection == "WoodwindToneholeGrid"
+                        || cur_selection == "ToneholeLattice";
+                    let is_plate_dispersion = cur_selection.contains("PlateTank")
+                        || cur_selection.contains("PlateReverb")
+                        || cur_selection.contains("PlateDispersion")
+                        || cur_selection == "PlateTankNode"
+                        || cur_selection == "PlateDispersionView"
+                        || cur_selection == "PlateReverbNode"
+                        || cur_selection.contains("EMT140");
+                    let is_membrane_resonator = cur_selection.contains("MembraneResonator")
+                        || cur_selection == "MembraneResonatorView"
+                        || cur_selection == "MembraneResonatorNode";
+                    let is_membrane_plate = cur_selection.contains("MembranePlate")
+                        || cur_selection == "MembranePlateView"
+                        || cur_selection == "MembranePlateModel";
+                    let is_membrane_cavity = (cur_selection.contains("PercussionMembrane")
+                        || cur_selection.contains("MembranePercussion")
+                        || cur_selection.contains("MembraneCavity")
+                        || cur_selection == "PercussionMembrane"
+                        || cur_selection == "MembraneCavityView"
+                        || cur_selection == "MembranePercussionModel")
+                        && !is_membrane_resonator
+                        && !is_membrane_plate;
+                    let is_embouchure_angle = cur_selection.contains("EmbouchureAngle")
+                        || cur_selection.contains("ShakuhachiEmbouchure")
+                        || cur_selection.contains("FluteEmbouchure")
+                        || cur_selection == "EmbouchureAngleView"
+                        || cur_selection == "EmbouchureAngle"
+                        || cur_selection.contains("MeriKari")
+                        || cur_selection.contains("Utaguchi");
+                    let is_friction_orbit = cur_selection.contains("FrictionOrbit")
+                        || cur_selection.contains("StickSlip")
+                        || cur_selection.contains("BowedFriction")
+                        || cur_selection == "FrictionOrbitView"
+                        || cur_selection == "FrictionOrbit"
+                        || cur_selection.contains("RosinHysteresis")
+                        || cur_selection.contains("HelmholtzOrbit");
+                    let is_rank_voicing = cur_selection.contains("RankVoicing")
+                        || cur_selection.contains("PipeOrganFlute")
+                        || cur_selection.contains("OrganRank")
+                        || cur_selection == "RankVoicingView"
+                        || cur_selection == "RankVoicing"
+                        || cur_selection.contains("FlueCutup")
+                        || cur_selection.contains("PneumaticPipeOrganFluteRank");
+                    let is_tine_resonator = cur_selection.contains("TineResonator")
+                        || cur_selection.contains("TinePickup")
+                        || cur_selection.contains("TineResonatorPickup")
+                        || cur_selection == "TineResonatorView"
+                        || cur_selection == "TineResonator"
+                        || cur_selection.contains("EpArticulation")
+                        || cur_selection.contains("ElectricPiano");
+                    let is_spring_reverb = cur_selection.contains("SpringReverb")
+                        || cur_selection.contains("SpringTank")
+                        || cur_selection.contains("AnalogSpring")
+                        || cur_selection.contains("SpringMass")
+                        || cur_selection == "SpringReverbView"
+                        || cur_selection == "AnalogSpringReverbTank"
+                        || cur_selection == "NonlinearSpringReverbTank";
+                    let is_comb_resonator = cur_selection.contains("CombResonator")
+                        || cur_selection.contains("CombFilter")
+                        || cur_selection.contains("ResonantComb")
+                        || cur_selection == "CombResonatorView"
+                        || cur_selection == "CombResonatorNode"
+                        || cur_selection == "ResonantPhasedCombArray";
+                    let is_wavefront_reflection = cur_selection.contains("WavefrontReflection")
+                        || cur_selection.contains("Wavefront")
+                        || cur_selection.contains("RaytracedEarlyReflection")
+                        || cur_selection == "WavefrontReflectionView"
+                        || cur_selection == "WavefrontReflectionNode";
+                    let is_diffractive_propagation = cur_selection
+                        .contains("DiffractivePropagation")
+                        || cur_selection.contains("Diffraction")
+                        || cur_selection == "DiffractivePropagationView"
+                        || cur_selection == "DiffractivePropagationNode";
+                    let is_idiophone = cur_selection.contains("Idiophone")
+                        || cur_selection.contains("Marimba")
+                        || cur_selection.contains("Xylophone")
+                        || cur_selection.contains("Vibraphone")
+                        || cur_selection == "IdiophoneSpectrum"
+                        || cur_selection == "StruckIdiophoneResonatorNode"
+                        || cur_selection == "IdiophoneResonator"
+                        || cur_selection == "ModalIdiophoneResonator"
+                        || cur_selection == "ModalIdiophoneChimeBank";
+                    let is_sonar_hydrophone = cur_selection.contains("Sonar")
+                        || cur_selection.contains("Hydrophone")
+                        || cur_selection == "SonarHydrophoneNode"
+                        || cur_selection == "SonarHydrophoneView";
+                    let is_hoa5_binaural = cur_selection.contains("Hoa5")
+                        || cur_selection.contains("Ambisonic5")
+                        || cur_selection.contains("HOA5")
+                        || cur_selection == "Hoa5BinauralView"
+                        || cur_selection == "Hoa5BinauralNode"
+                        || cur_selection == "Ambisonics5thOrderDecoder"
+                        || cur_selection.contains("HigherOrderAmbisonics")
+                        || cur_selection.contains("Hoa5thOrder");
+                    let is_mpegh_3d = cur_selection.contains("Mpegh")
+                        || cur_selection.contains("MPEG-H")
+                        || cur_selection.contains("MpegH")
+                        || cur_selection == "Mpegh3DSpatializerView"
+                        || cur_selection == "Mpegh3DSpatializerNode"
+                        || cur_selection == "Mpegh3DObjectSpatializer"
+                        || cur_selection.contains("MpeghSpatializer");
+                    let is_atmos_916 = cur_selection.contains("Atmos916")
+                        || cur_selection.contains("DolbyAtmos")
+                        || cur_selection == "Atmos916Spatializer"
+                        || cur_selection == "Atmos916SpatializerView"
+                        || cur_selection.contains("AtmosBed")
+                        || cur_selection.contains("AtmosSpatializer");
+                    let is_auro3d = cur_selection.contains("Auro3d")
+                        || cur_selection.contains("Auro-3D")
+                        || cur_selection.contains("Auro131")
+                        || cur_selection == "Auro3dSpatializer"
+                        || cur_selection == "Auro3dSpatializerView"
+                        || cur_selection.contains("AuroSpatializer");
+                    let is_nhk222 = cur_selection.contains("Nhk222")
+                        || cur_selection.contains("NHK222")
+                        || cur_selection == "Nhk222Spatializer"
+                        || cur_selection == "Nhk222SpatializerView"
+                        || cur_selection.contains("NhkSpatializer");
+                    let is_wfs_array = cur_selection.contains("WfsArray")
+                        || cur_selection.contains("WfsAcoustic")
+                        || cur_selection.contains("WfsPlanar")
+                        || cur_selection == "WfsArraySpatializerNode"
+                        || cur_selection == "WfsArraySpatializerView"
+                        || cur_selection.contains("WaveFieldSynthesis");
+                    let is_binaural_panner = cur_selection.contains("BinauralSpatialPanner")
+                        || cur_selection.contains("BinauralPanner")
+                        || cur_selection == "BinauralPannerView"
+                        || cur_selection == "BinauralSpatialPannerNode"
+                        || cur_selection.contains("BinauralHrtf")
+                        || cur_selection.contains("HrtfPanner");
+                    let is_binaural_brir = cur_selection.contains("BinauralBrir")
+                        || cur_selection.contains("PartitionedBinauralHrtfConvolver")
+                        || cur_selection == "BinauralBrirView"
+                        || cur_selection.contains("BrirSpatializer")
+                        || cur_selection.contains("RoomImpulseResponse")
+                        || cur_selection.contains("BinauralRoom");
                     if is_crystal {
-                        if ui.button(RichText::new("🔮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Physical Modeling Crystal Resonator HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🔮 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(56, 189, 248)),
+                            )
+                            .on_hover_text("Open Physical Modeling Crystal Resonator HUD")
+                            .clicked()
+                        {
                             state.requested_open_crystal_hud = true;
                         }
                     } else if is_armonica {
-                        if ui.button(RichText::new("🍷 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Physical Modeling Glass Armonica HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🍷 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(245, 158, 11)),
+                            )
+                            .on_hover_text("Open Physical Modeling Glass Armonica HUD")
+                            .clicked()
+                        {
                             state.requested_open_armonica_hud = true;
                         }
                     } else if is_hurdy {
-                        if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Physical Modeling Hurdy-Gurdy HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎻 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(16, 185, 129)),
+                            )
+                            .on_hover_text("Open Physical Modeling Hurdy-Gurdy HUD")
+                            .clicked()
+                        {
                             state.requested_open_hurdy_gurdy_hud = true;
                         }
                     } else if is_trompette {
-                        if ui.button(RichText::new("🐕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(239, 68, 68))).on_hover_text("Open Trompette Chien Buzzing Bridge HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🐕 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(239, 68, 68)),
+                            )
+                            .on_hover_text("Open Trompette Chien Buzzing Bridge HUD")
+                            .clicked()
+                        {
                             state.requested_open_trompette_hud = true;
                         }
                     } else if is_hoa {
-                        if ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open 5th-Order Ambisonics (HOA5) 3D Radar HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🌐 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(56, 189, 248)),
+                            )
+                            .on_hover_text("Open 5th-Order Ambisonics (HOA5) 3D Radar HUD")
+                            .clicked()
+                        {
                             state.requested_open_hoa5_radar_hud = true;
                         }
                     } else if is_bowed {
-                        if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(56, 189, 248))).on_hover_text("Open Bowed String Acoustic Friction HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎻 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(56, 189, 248)),
+                            )
+                            .on_hover_text("Open Bowed String Acoustic Friction HUD")
+                            .clicked()
+                        {
                             state.requested_open_bowed_string_hud = true;
                         }
                     } else if is_shakuhachi {
-                        if ui.button(RichText::new("🎍 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Shakuhachi Bamboo Flute HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎍 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(52, 211, 153)),
+                            )
+                            .on_hover_text("Open Shakuhachi Bamboo Flute HUD")
+                            .clicked()
+                        {
                             state.requested_open_shakuhachi_hud = true;
                         }
                     } else if is_sitar {
-                        if ui.button(RichText::new("🪕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🪕 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(245, 158, 11)),
+                            )
+                            .on_hover_text("Open Sitar Curved Jawari Bridge HUD")
+                            .clicked()
+                        {
                             state.requested_open_sitar_hud = true;
                         }
                     } else if is_turkish_ney {
-                        if ui.button(RichText::new("🪈 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(45, 212, 191))).on_hover_text("Open Turkish Ney Flute Embouchure HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🪈 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(45, 212, 191)),
+                            )
+                            .on_hover_text("Open Turkish Ney Flute Embouchure HUD")
+                            .clicked()
+                        {
                             state.requested_open_turkish_ney_hud = true;
                         }
                     } else if is_steelpan {
-                        if ui.button(RichText::new("🛢 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Caribbean Steelpan Annular Resonance HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🛢 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Caribbean Steelpan Annular Resonance HUD")
+                            .clicked()
+                        {
                             state.requested_open_steelpan_hud = true;
                         }
                     } else if is_mbira {
-                        if ui.button(RichText::new("🎵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Lamellophone Mbira & Kalimba Tine HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎵 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 107, 43)),
+                            )
+                            .on_hover_text("Open Lamellophone Mbira & Kalimba Tine HUD")
+                            .clicked()
+                        {
                             state.requested_open_mbira_hud = true;
                         }
                     } else if is_koto {
-                        if ui.button(RichText::new("箏 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Japanese 13-String Koto Zither HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("箏 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(245, 158, 11)),
+                            )
+                            .on_hover_text("Open Japanese 13-String Koto Zither HUD")
+                            .clicked()
+                        {
                             state.requested_open_koto_hud = true;
                         }
                     } else if is_gamelan {
-                        if ui.button(RichText::new("🔔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Balinese Gamelan Gender Metallophone HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🔔 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(52, 211, 153)),
+                            )
+                            .on_hover_text("Open Balinese Gamelan Gender Metallophone HUD")
+                            .clicked()
+                        {
                             state.requested_open_gamelan_hud = true;
                         }
                     } else if is_dulcimer {
-                        if ui.button(RichText::new("🎼 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Hammered Dulcimer & Cimbalom HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎼 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 107, 43)),
+                            )
+                            .on_hover_text("Open Hammered Dulcimer & Cimbalom HUD")
+                            .clicked()
+                        {
                             state.requested_open_dulcimer_hud = true;
                         }
                     } else if is_clavinet {
-                        if ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(249, 115, 22))).on_hover_text("Open Electromechanical Clavinet D6 HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("⚡ HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(249, 115, 22)),
+                            )
+                            .on_hover_text("Open Electromechanical Clavinet D6 HUD")
+                            .clicked()
+                        {
                             state.requested_open_clavinet_hud = true;
                         }
                     } else if is_electric_piano {
-                        if ui.button(RichText::new("⚡ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(251, 191, 36))).on_hover_text("Open Electromechanical Tine & Reed Electric Piano HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("⚡ HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(251, 191, 36)),
+                            )
+                            .on_hover_text("Open Electromechanical Tine & Reed Electric Piano HUD")
+                            .clicked()
+                        {
                             state.requested_open_electric_piano_hud = true;
                         }
                     } else if is_tonewheel_organ {
-                        if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 9-Drawbar Tonewheel Organ HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎹 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open 9-Drawbar Tonewheel Organ HUD")
+                            .clicked()
+                        {
                             state.requested_open_tonewheel_organ_hud = true;
                         }
                     } else if is_piano {
-                        if ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(229, 169, 60))).on_hover_text("Open Concert Grand Piano HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎹 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(229, 169, 60)),
+                            )
+                            .on_hover_text("Open Concert Grand Piano HUD")
+                            .clicked()
+                        {
                             state.requested_open_grand_piano_hud = true;
                         }
                     } else if is_pipe_organ {
-                        if ui.button(RichText::new("⛪ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Windchest HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("⛪ HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 180, 50)),
+                            )
+                            .on_hover_text("Open Pipe Organ Windchest HUD")
+                            .clicked()
+                        {
                             state.requested_open_pipe_organ_hud = true;
                         }
                     } else if is_waveguide_brass {
-                        if ui.button(RichText::new("🎺 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Waveguide Brass Acoustic Lip-Reed HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎺 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 215, 0)),
+                            )
+                            .on_hover_text("Open Waveguide Brass Acoustic Lip-Reed HUD")
+                            .clicked()
+                        {
                             state.requested_open_waveguide_brass_hud = true;
                         }
                     } else if is_vocal_tract {
-                        if ui.button(RichText::new("🗣 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(52, 211, 153))).on_hover_text("Open Vocal Tract 44-Cylinder Area Function HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🗣 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(52, 211, 153)),
+                            )
+                            .on_hover_text("Open Vocal Tract 44-Cylinder Area Function HUD")
+                            .clicked()
+                        {
                             state.requested_open_vocal_tract_hud = true;
                         }
                     } else if is_rotary_speaker {
-                        if ui.button(RichText::new("🌪 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Vintage Rotary Speaker Cabinet & Doppler HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🌪 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Vintage Rotary Speaker Cabinet & Doppler HUD")
+                            .clicked()
+                        {
                             state.requested_open_rotary_speaker_hud = true;
                         }
                     } else if is_free_reed {
-                        if ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Free-Reed Aeroelastic Phase Portrait HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🪗 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(16, 185, 129)),
+                            )
+                            .on_hover_text("Open Free-Reed Aeroelastic Phase Portrait HUD")
+                            .clicked()
+                        {
                             state.requested_open_free_reed_hud = true;
                         }
                     } else if is_granular {
-                        if ui.button(RichText::new("☁ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Granular Cloud Synthesis HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("☁ HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Granular Cloud Synthesis HUD")
+                            .clicked()
+                        {
                             state.requested_open_granular_cloud_hud = true;
                         }
                     } else if is_spring_lattice {
-                        if ui.button(RichText::new("🌀 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Spring-Mass Lattice Deformation HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🌀 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 170, 0)),
+                            )
+                            .on_hover_text("Open Spring-Mass Lattice Deformation HUD")
+                            .clicked()
+                        {
                             state.requested_open_spring_lattice_hud = true;
                         }
                     } else if is_waveguide_mesh {
-                        if ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open 2D Physical Waveguide Resonator Mesh HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🌐 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open 2D Physical Waveguide Resonator Mesh HUD")
+                            .clicked()
+                        {
                             state.requested_open_waveguide_mesh_hud = true;
                         }
                     } else if is_plucked_string {
-                        if ui.button(RichText::new("🎸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Plucked & Struck Waveguide String HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎸 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 215, 0)),
+                            )
+                            .on_hover_text("Open Plucked & Struck Waveguide String HUD")
+                            .clicked()
+                        {
                             state.requested_open_plucked_string_hud = true;
                         }
                     } else if is_bellows {
-                        if ui.button(RichText::new("🪗 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(217, 119, 6))).on_hover_text("Open Pneumatic Bellows Dynamics HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🪗 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(217, 119, 6)),
+                            )
+                            .on_hover_text("Open Pneumatic Bellows Dynamics HUD")
+                            .clicked()
+                        {
                             state.requested_open_bellows_hud = true;
                         }
                     } else if is_jawari_bridge {
-                        if ui.button(RichText::new("🪕 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(245, 158, 11))).on_hover_text("Open Sitar Curved Jawari Bridge HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🪕 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(245, 158, 11)),
+                            )
+                            .on_hover_text("Open Sitar Curved Jawari Bridge HUD")
+                            .clicked()
+                        {
                             state.requested_open_jawari_bridge_hud = true;
                         }
                     } else if is_soundboard {
-                        if ui.button(RichText::new("🪵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(16, 185, 129))).on_hover_text("Open Spruce Soundboard & Bridge HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🪵 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(16, 185, 129)),
+                            )
+                            .on_hover_text("Open Spruce Soundboard & Bridge HUD")
+                            .clicked()
+                        {
                             state.requested_open_soundboard_hud = true;
                         }
                     } else if is_sympathetic {
-                        if ui.button(RichText::new("✨ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Sympathetic Resonance Coupling HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("✨ HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Sympathetic Resonance Coupling HUD")
+                            .clicked()
+                        {
                             state.requested_open_sympathetic_hud = true;
                         }
                     } else if is_woodwind_jet {
-                        if ui.button(RichText::new("🌬 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Woodwind Air-Jet Embouchure HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🌬 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Woodwind Air-Jet Embouchure HUD")
+                            .clicked()
+                        {
                             state.requested_open_woodwind_jet_hud = true;
                         }
                     } else if is_tonehole_matrix {
-                        if ui.button(RichText::new("🕳 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Woodwind 6-Tonehole Radiation HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🕳 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 107, 43)),
+                            )
+                            .on_hover_text("Open Woodwind 6-Tonehole Radiation HUD")
+                            .clicked()
+                        {
                             state.requested_open_tonehole_matrix_hud = true;
                         }
                     } else if is_plate_dispersion {
-                        if ui.button(RichText::new("🛸 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Plate Dispersion & APDN Reverb HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🛸 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Plate Dispersion & APDN Reverb HUD")
+                            .clicked()
+                        {
                             state.requested_open_plate_dispersion_hud = true;
                         }
                     } else if is_membrane_cavity {
-                        if ui.button(RichText::new("🥁 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Membrane Cavity & Drum Displacement HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🥁 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 170, 0)),
+                            )
+                            .on_hover_text("Open Membrane Cavity & Drum Displacement HUD")
+                            .clicked()
+                        {
                             state.requested_open_membrane_cavity_hud = true;
                         }
                     } else if is_embouchure_angle {
-                        if ui.button(RichText::new("🎋 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Shakuhachi Embouchure & Meri/Kari HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎋 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Shakuhachi Embouchure & Meri/Kari HUD")
+                            .clicked()
+                        {
                             state.requested_open_embouchure_angle_hud = true;
                         }
                     } else if is_friction_orbit {
-                        if ui.button(RichText::new("🎻 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 107, 43))).on_hover_text("Open Bowed String Stick-Slip Friction & Orbit HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("🎻 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 107, 43)),
+                            )
+                            .on_hover_text("Open Bowed String Stick-Slip Friction & Orbit HUD")
+                            .clicked()
+                        {
                             state.requested_open_friction_orbit_hud = true;
                         }
                     } else if is_rank_voicing {
-                        if ui.button(RichText::new("⛪ HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 50))).on_hover_text("Open Pipe Organ Rank Voicing HUD").clicked() {
+                        if ui
+                            .button(
+                                RichText::new("⛪ HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 180, 50)),
+                            )
+                            .on_hover_text("Open Pipe Organ Rank Voicing HUD")
+                            .clicked()
+                        {
                             state.requested_open_rank_voicing_hud = true;
                         }
                     } else if is_tine_resonator
-                        && ui.button(RichText::new("🎹 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 183, 3))).on_hover_text("Open Electric Piano Tine Resonator HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🎹 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 183, 3)),
+                            )
+                            .on_hover_text("Open Electric Piano Tine Resonator HUD")
+                            .clicked()
                     {
                         state.requested_open_tine_resonator_hud = true;
                     } else if is_spring_reverb
-                        && ui.button(RichText::new("🌀 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Spring Reverb Tank Simulator & Dispersion HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🌀 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Spring Reverb Tank Simulator & Dispersion HUD")
+                            .clicked()
                     {
                         state.requested_open_spring_reverb_hud = true;
                     } else if is_comb_resonator
-                        && ui.button(RichText::new("🪮 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 215, 0))).on_hover_text("Open Spectral Comb Resonator & Matrix HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🪮 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 215, 0)),
+                            )
+                            .on_hover_text("Open Spectral Comb Resonator & Matrix HUD")
+                            .clicked()
                     {
                         state.requested_open_comb_resonator_hud = true;
                     } else if is_wavefront_reflection
-                        && ui.button(RichText::new("🌊 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Wavefront Reflection Raytracing HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🌊 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Wavefront Reflection Raytracing HUD")
+                            .clicked()
                     {
                         state.requested_open_wavefront_reflection_hud = true;
                     } else if is_diffractive_propagation
-                        && ui.button(RichText::new("📐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 180, 0))).on_hover_text("Open Diffractive Wave Propagation HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("📐 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 180, 0)),
+                            )
+                            .on_hover_text("Open Diffractive Wave Propagation HUD")
+                            .clicked()
                     {
                         state.requested_open_diffractive_propagation_hud = true;
                     } else if is_membrane_resonator
-                        && ui.button(RichText::new("🥁 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 170, 0))).on_hover_text("Open Elastic Drumhead Membrane Resonator HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🥁 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 170, 0)),
+                            )
+                            .on_hover_text("Open Elastic Drumhead Membrane Resonator HUD")
+                            .clicked()
                     {
                         state.requested_open_membrane_resonator_hud = true;
                     } else if is_membrane_plate
-                        && ui.button(RichText::new("🍽 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Coupled 2D Membrane & Plate Resonator HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🍽 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Coupled 2D Membrane & Plate Resonator HUD")
+                            .clicked()
                     {
                         state.requested_open_membrane_plate_hud = true;
                     } else if is_idiophone
-                        && ui.button(RichText::new("🎵 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 190, 40))).on_hover_text("Open Struck Idiophone Modal Resonator HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🎵 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 190, 40)),
+                            )
+                            .on_hover_text("Open Struck Idiophone Modal Resonator HUD")
+                            .clicked()
                     {
                         state.requested_open_idiophone_spectrum_hud = true;
                     } else if is_sonar_hydrophone
-                        && ui.button(RichText::new("🌊 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 210, 255))).on_hover_text("Open Underwater Sonar & Hydrophone Cavitation HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🌊 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 210, 255)),
+                            )
+                            .on_hover_text("Open Underwater Sonar & Hydrophone Cavitation HUD")
+                            .clicked()
                     {
                         state.requested_open_sonar_hydrophone_hud = true;
                     } else if is_hoa5_binaural
-                        && ui.button(RichText::new("🌐 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(157, 78, 221))).on_hover_text("Open 5th-Order Ambisonics HOA5 Binaural HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🌐 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(157, 78, 221)),
+                            )
+                            .on_hover_text("Open 5th-Order Ambisonics HOA5 Binaural HUD")
+                            .clicked()
                     {
                         state.requested_open_hoa5_binaural_hud = true;
                     } else if is_mpegh_3d
-                        && ui.button(RichText::new("🎧 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open MPEG-H 3D Immersive Spatializer HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🎧 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 255, 180)),
+                            )
+                            .on_hover_text("Open MPEG-H 3D Immersive Spatializer HUD")
+                            .clicked()
                     {
                         state.requested_open_mpegh_3d_hud = true;
                     } else if is_atmos_916
-                        && ui.button(RichText::new("🎬 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Dolby Atmos 9.1.6 3D Room Raytracer HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🎬 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 255, 180)),
+                            )
+                            .on_hover_text("Open Dolby Atmos 9.1.6 3D Room Raytracer HUD")
+                            .clicked()
                     {
                         state.requested_open_atmos_916_hud = true;
                     } else if is_auro3d
-                        && ui.button(RichText::new("🏔 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(255, 171, 0))).on_hover_text("Open Auro-3D 13.1 Tri-Level Spatializer HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🏔 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(255, 171, 0)),
+                            )
+                            .on_hover_text("Open Auro-3D 13.1 Tri-Level Spatializer HUD")
+                            .clicked()
                     {
                         state.requested_open_auro3d_hud = true;
                     } else if is_nhk222
-                        && ui.button(RichText::new("🛰 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open NHK 22.2 Super Hi-Vision Hemispherical Spatializer HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🛰 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text(
+                                "Open NHK 22.2 Super Hi-Vision Hemispherical Spatializer HUD",
+                            )
+                            .clicked()
                     {
                         state.requested_open_nhk222_hud = true;
                     } else if is_wfs_array
-                        && ui.button(RichText::new("🌊 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Wave Field Synthesis (WFS) Holographic Linear Array HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🌊 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 255, 180)),
+                            )
+                            .on_hover_text(
+                                "Open Wave Field Synthesis (WFS) Holographic Linear Array HUD",
+                            )
+                            .clicked()
                     {
                         state.requested_open_wfs_array_hud = true;
                     } else if is_binaural_panner
-                        && ui.button(RichText::new("🎧 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 229, 255))).on_hover_text("Open Spatial Binaural HRTF 3D Orbit Spatializer HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🎧 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 229, 255)),
+                            )
+                            .on_hover_text("Open Spatial Binaural HRTF 3D Orbit Spatializer HUD")
+                            .clicked()
                     {
                         state.requested_open_binaural_panner_hud = true;
                     } else if is_binaural_brir
-                        && ui.button(RichText::new("🏛 HUD").font(FontId::proportional(10.0)).strong().color(Color32::from_rgb(0, 255, 180))).on_hover_text("Open Multi-Source Binaural BRIR Room Impulse Response HUD").clicked()
+                        && ui
+                            .button(
+                                RichText::new("🏛 HUD")
+                                    .font(FontId::proportional(10.0))
+                                    .strong()
+                                    .color(Color32::from_rgb(0, 255, 180)),
+                            )
+                            .on_hover_text(
+                                "Open Multi-Source Binaural BRIR Room Impulse Response HUD",
+                            )
+                            .clicked()
                     {
                         state.requested_open_binaural_brir_hud = true;
                     }
                     ui.add_space(4.0);
-                    let pwr_col = if state.is_enabled { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(100, 116, 139) };
-                    if ui.button(RichText::new("⏻").font(FontId::proportional(12.0)).color(pwr_col)).clicked() {
+                    let pwr_col = if state.is_enabled {
+                        Color32::from_rgb(56, 189, 248)
+                    } else {
+                        Color32::from_rgb(100, 116, 139)
+                    };
+                    if ui
+                        .button(
+                            RichText::new("⏻")
+                                .font(FontId::proportional(12.0))
+                                .color(pwr_col),
+                        )
+                        .clicked()
+                    {
                         state.toggle_device_bypass(state.selected_chain_idx);
                     }
                     ui.add_space(4.0);
@@ -1012,15 +1813,38 @@ pub fn show_modern_device_rack_with_context(
                     let mut pill_to_select = None;
                     for (d_i, dev) in state.chain_devices.iter().enumerate() {
                         let is_d_sel = d_i == state.selected_chain_idx;
-                        let card_col = if is_d_sel { Color32::from_rgb(56, 189, 248) } else { Color32::from_rgb(148, 163, 184) };
-                        let bg_col = if is_d_sel { Color32::from_rgb(24, 38, 58) } else { Color32::from_rgb(18, 24, 36) };
+                        let card_col = if is_d_sel {
+                            Color32::from_rgb(56, 189, 248)
+                        } else {
+                            Color32::from_rgb(148, 163, 184)
+                        };
+                        let bg_col = if is_d_sel {
+                            Color32::from_rgb(24, 38, 58)
+                        } else {
+                            Color32::from_rgb(18, 24, 36)
+                        };
                         egui::Frame::none()
                             .fill(bg_col)
-                            .stroke(Stroke::new(1.0_f32, if is_d_sel { card_col } else { Color32::from_rgb(36, 50, 74) }))
+                            .stroke(Stroke::new(
+                                1.0_f32,
+                                if is_d_sel {
+                                    card_col
+                                } else {
+                                    Color32::from_rgb(36, 50, 74)
+                                },
+                            ))
                             .rounding(Rounding::same(3.0))
                             .inner_margin(egui::Margin::symmetric(4.0, 2.0))
                             .show(ui, |ui| {
-                                if ui.selectable_label(is_d_sel, RichText::new(format!("{}. {}", d_i + 1, dev.display_name)).font(FontId::proportional(9.0)).color(card_col)).clicked() {
+                                if ui
+                                    .selectable_label(
+                                        is_d_sel,
+                                        RichText::new(format!("{}. {}", d_i + 1, dev.display_name))
+                                            .font(FontId::proportional(9.0))
+                                            .color(card_col),
+                                    )
+                                    .clicked()
+                                {
                                     pill_to_select = Some(d_i);
                                 }
                             });
@@ -1032,30 +1856,52 @@ pub fn show_modern_device_rack_with_context(
 
                     ui.add_space(4.0);
 
-                    let cur_display = opt_desc.map(|d| format!("{} {}", d.category.icon(), d.display_name)).unwrap_or_else(|| state.device_name.clone());
+                    let cur_display = opt_desc
+                        .map(|d| format!("{} {}", d.category.icon(), d.display_name))
+                        .unwrap_or_else(|| state.device_name.clone());
                     egui::ComboBox::from_id_source("minimized_device_rack_module_selector")
-                        .selected_text(RichText::new(cur_display).font(FontId::proportional(11.0)).color(cat_accent))
+                        .selected_text(
+                            RichText::new(cur_display)
+                                .font(FontId::proportional(11.0))
+                                .color(cat_accent),
+                        )
                         .show_ui(ui, |ui| {
                             for desc in registry.list_all() {
-                                let is_sel = state.selected_node_kind.as_deref() == Some(&desc.kind_id);
-                                let label = format!("{} {} ({})", desc.category.icon(), desc.display_name, desc.category.name());
+                                let is_sel =
+                                    state.selected_node_kind.as_deref() == Some(&desc.kind_id);
+                                let label = format!(
+                                    "{} {} ({})",
+                                    desc.category.icon(),
+                                    desc.display_name,
+                                    desc.category.name()
+                                );
                                 if ui.selectable_label(is_sel, label).clicked() {
                                     state.selected_node_kind = Some(desc.kind_id.clone());
                                     state.device_name = desc.display_name.clone();
-                                    if let Some(dev) = state.chain_devices.get_mut(state.selected_chain_idx) {
+                                    if let Some(dev) =
+                                        state.chain_devices.get_mut(state.selected_chain_idx)
+                                    {
                                         dev.kind = desc.kind_id.clone();
                                         dev.display_name = desc.display_name.clone();
                                     }
                                     state.node_param_values.clear();
                                     for (p_i, schema) in desc.params.iter().enumerate() {
                                         let def = match &schema.widget {
-                                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob { default, .. }
-                                            | crate::dsp_node_ui::DspWidgetKind::VerticalFader { default, .. } => *default,
+                                            crate::dsp_node_ui::DspWidgetKind::RotaryKnob {
+                                                default,
+                                                ..
+                                            }
+                                            | crate::dsp_node_ui::DspWidgetKind::VerticalFader {
+                                                default,
+                                                ..
+                                            } => *default,
                                             _ => 0.5,
                                         };
                                         state.node_param_values.insert(schema.id.clone(), def);
                                         if let Some(bus) = param_bus {
-                                            let pid = summoner_core::param_bus::ParamId(track_id as u32 * 1000 + 500 + p_i as u32);
+                                            let pid = summoner_core::param_bus::ParamId(
+                                                track_id as u32 * 1000 + 500 + p_i as u32,
+                                            );
                                             if bus.get(pid).is_some() {
                                                 bus.set(pid, def);
                                             }
@@ -1068,11 +1914,18 @@ pub fn show_modern_device_rack_with_context(
                     if let Some(desc) = opt_desc {
                         egui::Frame::none()
                             .fill(Color32::from_rgba_unmultiplied(r, g, b, 25))
-                            .stroke(Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(r, g, b, 80)))
+                            .stroke(Stroke::new(
+                                1.0_f32,
+                                Color32::from_rgba_unmultiplied(r, g, b, 80),
+                            ))
                             .rounding(Rounding::same(3.0))
                             .inner_margin(egui::Margin::symmetric(5.0, 2.0))
                             .show(ui, |ui| {
-                                ui.label(RichText::new(desc.category.name()).font(FontId::proportional(9.0)).color(cat_accent));
+                                ui.label(
+                                    RichText::new(desc.category.name())
+                                        .font(FontId::proportional(9.0))
+                                        .color(cat_accent),
+                                );
                             });
                     }
 
@@ -1089,20 +1942,32 @@ pub fn show_modern_device_rack_with_context(
                             .rounding(Rounding::same(3.0))
                             .inner_margin(egui::Margin::symmetric(5.0, 2.0))
                             .show(ui, |ui| {
-                                ui.label(RichText::new(format!("{}: {:.0}%", name, val * 100.0)).font(FontId::proportional(9.0)).color(Color32::from_rgb(200, 215, 235)));
+                                ui.label(
+                                    RichText::new(format!("{}: {:.0}%", name, val * 100.0))
+                                        .font(FontId::proportional(9.0))
+                                        .color(Color32::from_rgb(200, 215, 235)),
+                                );
                             });
                         ui.add_space(2.0);
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(RichText::new("Modular Rack Drawer (Collapsed)").font(FontId::proportional(9.0)).color(Color32::from_rgb(100, 116, 139)));
+                        ui.label(
+                            RichText::new("Modular Rack Drawer (Collapsed)")
+                                .font(FontId::proportional(9.0))
+                                .color(Color32::from_rgb(100, 116, 139)),
+                        );
                     });
                 });
             });
         return;
     }
 
-    let rack_height = if state.is_expanded_params { 260.0 } else { 210.0 };
+    let rack_height = if state.is_expanded_params {
+        260.0
+    } else {
+        210.0
+    };
     egui::Frame::none()
         .fill(Color32::from_rgb(14, 20, 32))
         .stroke(Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)))
@@ -14800,7 +15665,11 @@ fn draw_rotary_dial(
 
     // Background circle
     painter.circle_filled(center, radius, Color32::from_rgb(12, 16, 26));
-    painter.circle_stroke(center, radius, Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)));
+    painter.circle_stroke(
+        center,
+        radius,
+        Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)),
+    );
 
     // Active arc ring (from -135 deg to +135 deg)
     let start_angle = -std::f32::consts::PI * 0.75;
@@ -14810,7 +15679,10 @@ fn draw_rotary_dial(
     let mut prev_arc = None;
     for i in 0..=arc_steps {
         let a = start_angle + (i as f32 / arc_steps as f32) * (end_angle - start_angle);
-        let pt = egui::pos2(center.x + a.cos() * (radius - 1.5), center.y + a.sin() * (radius - 1.5));
+        let pt = egui::pos2(
+            center.x + a.cos() * (radius - 1.5),
+            center.y + a.sin() * (radius - 1.5),
+        );
         if let Some(last) = prev_arc {
             painter.line_segment([last, pt], Stroke::new(2.5_f32, ring_color));
         }
@@ -14818,7 +15690,10 @@ fn draw_rotary_dial(
     }
 
     // Pointer notch indicator
-    let notch_pt = egui::pos2(center.x + end_angle.cos() * (radius - 3.0), center.y + end_angle.sin() * (radius - 3.0));
+    let notch_pt = egui::pos2(
+        center.x + end_angle.cos() * (radius - 3.0),
+        center.y + end_angle.sin() * (radius - 3.0),
+    );
     painter.line_segment([center, notch_pt], Stroke::new(1.5_f32, Color32::WHITE));
 
     // Label
@@ -14865,7 +15740,10 @@ fn draw_vertical_fader(
 
     // Fader slot track
     painter.line_segment(
-        [egui::pos2(track_x, track_top), egui::pos2(track_x, track_bottom)],
+        [
+            egui::pos2(track_x, track_top),
+            egui::pos2(track_x, track_bottom),
+        ],
         Stroke::new(2.0_f32, Color32::from_rgb(10, 14, 22)),
     );
 

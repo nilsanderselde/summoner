@@ -7,11 +7,11 @@
 //! - [`import_aaf_xml`]: Parses AAF session XML and reconstructs [`ProjectConfig`].
 //! - Seamless bidirectional round-trip conversion between AAF interchange and native Summoner project models.
 
+use crate::audio_clip::AudioClipConfig;
+use crate::schema::{ProjectConfig, TrackConfig, TransportConfig};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use summoner_core::timecode::TimecodeRate;
-use crate::audio_clip::AudioClipConfig;
-use crate::schema::{ProjectConfig, TrackConfig, TransportConfig};
 
 /// Individual clip/event entry within an AAF or OMF track.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -141,7 +141,10 @@ impl AafSession {
                 let aaf_clip = AafClip {
                     id: clip.id.clone(),
                     name: clip.name.clone(),
-                    file_path: clip.file_path.clone().unwrap_or_else(|| format!("{}.wav", clip.asset_id)),
+                    file_path: clip
+                        .file_path
+                        .clone()
+                        .unwrap_or_else(|| format!("{}.wav", clip.asset_id)),
                     asset_id: clip.asset_id.clone(),
                     start_sample,
                     duration_samples,
@@ -256,8 +259,14 @@ pub fn export_aaf_xml(session: &AafSession) -> String {
     xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     xml.push_str("<AAFComposition xmlns=\"http://www.amwa.tv/aaf/edit-protocol/1.0\">\n");
     xml.push_str(&format!("  <Name>{}</Name>\n", xml_escape(&session.name)));
-    xml.push_str(&format!("  <SampleRate>{}</SampleRate>\n", session.sample_rate));
-    xml.push_str(&format!("  <EditRate>{}</EditRate>\n", session.timecode_rate.nominal_fps()));
+    xml.push_str(&format!(
+        "  <SampleRate>{}</SampleRate>\n",
+        session.sample_rate
+    ));
+    xml.push_str(&format!(
+        "  <EditRate>{}</EditRate>\n",
+        session.timecode_rate.nominal_fps()
+    ));
     xml.push_str(&format!("  <TempoBpm>{:.2}</TempoBpm>\n", session.bpm));
     xml.push_str("  <Tracks>\n");
 
@@ -273,16 +282,40 @@ pub fn export_aaf_xml(session: &AafSession) -> String {
 
         for clip in &track.clips {
             xml.push_str(&format!("        <Clip id=\"{}\">\n", xml_escape(&clip.id)));
-            xml.push_str(&format!("          <Name>{}</Name>\n", xml_escape(&clip.name)));
-            xml.push_str(&format!("          <FilePath>{}</FilePath>\n", xml_escape(&clip.file_path)));
-            xml.push_str(&format!("          <AssetId>{}</AssetId>\n", xml_escape(&clip.asset_id)));
-            xml.push_str(&format!("          <StartSample>{}</StartSample>\n", clip.start_sample));
-            xml.push_str(&format!("          <DurationSamples>{}</DurationSamples>\n", clip.duration_samples));
-            xml.push_str(&format!("          <SourceOffsetSamples>{}</SourceOffsetSamples>\n", clip.source_offset_samples));
+            xml.push_str(&format!(
+                "          <Name>{}</Name>\n",
+                xml_escape(&clip.name)
+            ));
+            xml.push_str(&format!(
+                "          <FilePath>{}</FilePath>\n",
+                xml_escape(&clip.file_path)
+            ));
+            xml.push_str(&format!(
+                "          <AssetId>{}</AssetId>\n",
+                xml_escape(&clip.asset_id)
+            ));
+            xml.push_str(&format!(
+                "          <StartSample>{}</StartSample>\n",
+                clip.start_sample
+            ));
+            xml.push_str(&format!(
+                "          <DurationSamples>{}</DurationSamples>\n",
+                clip.duration_samples
+            ));
+            xml.push_str(&format!(
+                "          <SourceOffsetSamples>{}</SourceOffsetSamples>\n",
+                clip.source_offset_samples
+            ));
             xml.push_str(&format!("          <Gain>{:.4}</Gain>\n", clip.gain));
             xml.push_str(&format!("          <Pan>{:.4}</Pan>\n", clip.pan));
-            xml.push_str(&format!("          <FadeInSamples>{}</FadeInSamples>\n", clip.fade_in_samples));
-            xml.push_str(&format!("          <FadeOutSamples>{}</FadeOutSamples>\n", clip.fade_out_samples));
+            xml.push_str(&format!(
+                "          <FadeInSamples>{}</FadeInSamples>\n",
+                clip.fade_in_samples
+            ));
+            xml.push_str(&format!(
+                "          <FadeOutSamples>{}</FadeOutSamples>\n",
+                clip.fade_out_samples
+            ));
             xml.push_str(&format!("          <Muted>{}</Muted>\n", clip.is_muted));
             xml.push_str("        </Clip>\n");
         }
@@ -321,7 +354,8 @@ pub fn import_aaf_xml(xml: &str) -> Result<AafSession, AafError> {
     // Split track elements
     let track_blocks = split_xml_blocks(xml, "<Track", "</Track>");
     for (idx, block) in track_blocks.iter().enumerate() {
-        let track_name = extract_xml_tag(block, "Name").unwrap_or_else(|| format!("Track {}", idx + 1));
+        let track_name =
+            extract_xml_tag(block, "Name").unwrap_or_else(|| format!("Track {}", idx + 1));
         let channels = extract_xml_tag(block, "Channels")
             .and_then(|s| s.parse::<usize>().ok())
             .unwrap_or(2);
@@ -346,8 +380,10 @@ pub fn import_aaf_xml(xml: &str) -> Result<AafSession, AafError> {
 
         let clip_blocks = split_xml_blocks(block, "<Clip", "</Clip>");
         for (c_idx, c_block) in clip_blocks.iter().enumerate() {
-            let clip_id = extract_attr(c_block, "id").unwrap_or_else(|| format!("clip_{}_{}", idx, c_idx));
-            let clip_name = extract_xml_tag(c_block, "Name").unwrap_or_else(|| format!("Clip {}", c_idx + 1));
+            let clip_id =
+                extract_attr(c_block, "id").unwrap_or_else(|| format!("clip_{}_{}", idx, c_idx));
+            let clip_name =
+                extract_xml_tag(c_block, "Name").unwrap_or_else(|| format!("Clip {}", c_idx + 1));
             let file_path = extract_xml_tag(c_block, "FilePath").unwrap_or_default();
             let asset_id = extract_xml_tag(c_block, "AssetId").unwrap_or_else(|| clip_id.clone());
             let start_sample = extract_xml_tag(c_block, "StartSample")
@@ -375,7 +411,14 @@ pub fn import_aaf_xml(xml: &str) -> Result<AafSession, AafError> {
                 .map(|s| s.eq_ignore_ascii_case("true"))
                 .unwrap_or(false);
 
-            let mut clip = AafClip::new(&clip_id, &clip_name, &file_path, &asset_id, start_sample, duration_samples);
+            let mut clip = AafClip::new(
+                &clip_id,
+                &clip_name,
+                &file_path,
+                &asset_id,
+                start_sample,
+                duration_samples,
+            );
             clip.source_offset_samples = source_offset;
             clip.gain = clip_gain;
             clip.pan = clip_pan;
@@ -452,7 +495,14 @@ mod tests {
         track1.gain = 0.85;
         track1.pan = -0.3;
 
-        let mut clip1 = AafClip::new("c1", "Staccato Run", "audio/violins.wav", "asset_v1", 48000, 96000);
+        let mut clip1 = AafClip::new(
+            "c1",
+            "Staccato Run",
+            "audio/violins.wav",
+            "asset_v1",
+            48000,
+            96000,
+        );
         clip1.source_offset_samples = 24000;
         clip1.fade_in_samples = 480;
         clip1.fade_out_samples = 960;
@@ -486,7 +536,14 @@ mod tests {
         let mut track = AafTrack::new(1, "Dialogue", 1);
         track.gain = 0.9;
         // 48000 samples at 48kHz = 1 second = 2 beats at 120 BPM
-        let clip = AafClip::new("c_dia", "Actor Line 1", "audio/dialogue.wav", "asset_dia", 48000, 96000);
+        let clip = AafClip::new(
+            "c_dia",
+            "Actor Line 1",
+            "audio/dialogue.wav",
+            "asset_dia",
+            48000,
+            96000,
+        );
         track.clips.push(clip);
         session.tracks.push(track);
 

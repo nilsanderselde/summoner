@@ -803,7 +803,11 @@ pub fn draw_top_bar_macro_dial(
 
     // Background circle
     painter.circle_filled(center, radius, Color32::from_rgb(12, 16, 26));
-    painter.circle_stroke(center, radius, Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)));
+    painter.circle_stroke(
+        center,
+        radius,
+        Stroke::new(1.0_f32, Color32::from_rgb(28, 40, 60)),
+    );
 
     // Active arc ring (-135 deg to +135 deg)
     let start_angle = -std::f32::consts::PI * 0.75;
@@ -813,7 +817,10 @@ pub fn draw_top_bar_macro_dial(
     let mut prev_arc = None;
     for i in 0..=arc_steps {
         let a = start_angle + (i as f32 / arc_steps as f32) * (end_angle - start_angle);
-        let pt = egui::pos2(center.x + a.cos() * (radius - 1.5), center.y + a.sin() * (radius - 1.5));
+        let pt = egui::pos2(
+            center.x + a.cos() * (radius - 1.5),
+            center.y + a.sin() * (radius - 1.5),
+        );
         if let Some(last) = prev_arc {
             painter.line_segment([last, pt], Stroke::new(2.0_f32, accent));
         }
@@ -821,7 +828,10 @@ pub fn draw_top_bar_macro_dial(
     }
 
     // Pointer notch
-    let notch_pt = egui::pos2(center.x + end_angle.cos() * (radius - 2.5), center.y + end_angle.sin() * (radius - 2.5));
+    let notch_pt = egui::pos2(
+        center.x + end_angle.cos() * (radius - 2.5),
+        center.y + end_angle.sin() * (radius - 2.5),
+    );
     painter.line_segment([center, notch_pt], Stroke::new(1.5_f32, Color32::WHITE));
 
     // Label below

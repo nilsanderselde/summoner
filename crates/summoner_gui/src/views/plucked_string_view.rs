@@ -61,13 +61,13 @@ impl PluckedInstrumentViewProfile {
 #[derive(Debug, Clone)]
 pub struct PluckedStringView {
     pub instrument: PluckedInstrumentViewProfile,
-    pub pluck_position_beta: f32, // [0.05 ..= 0.95]
-    pub strike_velocity: f32,     // [0.05 ..= 1.00]
-    pub hammer_hardness: f32,     // [0.0 ..= 1.0]
-    pub palm_mute_damping: f32,   // [0.0 ..= 1.0]
-    pub string_stiffness: f32,    // [0.0 ..= 1.0]
+    pub pluck_position_beta: f32,   // [0.05 ..= 0.95]
+    pub strike_velocity: f32,       // [0.05 ..= 1.00]
+    pub hammer_hardness: f32,       // [0.0 ..= 1.0]
+    pub palm_mute_damping: f32,     // [0.0 ..= 1.0]
+    pub string_stiffness: f32,      // [0.0 ..= 1.0]
     pub polarization_coupling: f32, // [0.0 ..= 1.0]
-    pub puck_pos: (f32, f32),     // Normalized (X: pluck_position, Y: strike_velocity)
+    pub puck_pos: (f32, f32),       // Normalized (X: pluck_position, Y: strike_velocity)
     pub is_dragging_puck: bool,
     pub peak_contact_force_n: f32,
     pub contact_duration_ms: f32,
@@ -113,7 +113,8 @@ impl PluckedStringView {
     }
 
     pub fn normalized_to_beta(norm: f32) -> f32 {
-        MIN_PLUCK_POSITION_BETA + norm.clamp(0.0, 1.0) * (MAX_PLUCK_POSITION_BETA - MIN_PLUCK_POSITION_BETA)
+        MIN_PLUCK_POSITION_BETA
+            + norm.clamp(0.0, 1.0) * (MAX_PLUCK_POSITION_BETA - MIN_PLUCK_POSITION_BETA)
     }
 
     pub fn velocity_to_normalized(v: f32) -> f32 {
@@ -219,7 +220,9 @@ impl PluckedStringView {
             }
         }
 
-        grid.into_iter().map(|row| row.into_iter().collect()).collect()
+        grid.into_iter()
+            .map(|row| row.into_iter().collect())
+            .collect()
     }
 
     pub fn set_instrument(&mut self, inst: PluckedInstrumentViewProfile) {
@@ -368,7 +371,9 @@ impl PluckedStringView {
         if response.dragged() || response.clicked() {
             if let Some(mouse_pos) = response.interact_pointer_pos() {
                 if left_rect.contains(mouse_pos) {
-                    let nx = ((mouse_pos.x - (left_rect.min.x + 15.0)) / (left_rect.width() - 30.0)).clamp(0.0, 1.0);
+                    let nx = ((mouse_pos.x - (left_rect.min.x + 15.0))
+                        / (left_rect.width() - 30.0))
+                        .clamp(0.0, 1.0);
                     let ny = ((base_y - mouse_pos.y) / (left_rect.height() - 60.0)).clamp(0.0, 1.0);
                     self.puck_pos = (nx, ny);
                     self.pluck_position_beta = Self::normalized_to_beta(nx);
@@ -417,7 +422,10 @@ impl PluckedStringView {
             let py = r_mid.y - yv * (right_rect.height() * 0.35);
             let pt = egui::pos2(px, py);
             if let Some(prev) = prev_orb {
-                painter.line_segment([prev, pt], Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)));
+                painter.line_segment(
+                    [prev, pt],
+                    Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)),
+                );
             }
             prev_orb = Some(pt);
         }
@@ -437,22 +445,37 @@ impl PluckedStringView {
         let params = [
             (
                 "PLUCK POSITION (β)",
-                format!("{:.2} ({:.0}%)", self.pluck_position_beta, self.pluck_position_beta * 100.0),
+                format!(
+                    "{:.2} ({:.0}%)",
+                    self.pluck_position_beta,
+                    self.pluck_position_beta * 100.0
+                ),
                 Color32::from_rgb(0, 229, 255),
             ),
             (
                 "PEAK CONTACT FORCE",
-                format!("{:.1} N ({:.2} ms)", self.peak_contact_force_n, self.contact_duration_ms),
+                format!(
+                    "{:.1} N ({:.2} ms)",
+                    self.peak_contact_force_n, self.contact_duration_ms
+                ),
                 Color32::from_rgb(255, 215, 0),
             ),
             (
                 "STRING STIFFNESS (B)",
-                format!("{:.5} ({:.1}%)", self.inharmonicity_factor_b, self.string_stiffness * 100.0),
+                format!(
+                    "{:.5} ({:.1}%)",
+                    self.inharmonicity_factor_b,
+                    self.string_stiffness * 100.0
+                ),
                 Color32::from_rgb(255, 107, 43),
             ),
             (
                 "POLARIZATION COUPLING",
-                format!("{:.0}% (Detune: {:.1}¢)", self.polarization_coupling * 100.0, 3.5),
+                format!(
+                    "{:.0}% (Detune: {:.1}¢)",
+                    self.polarization_coupling * 100.0,
+                    3.5
+                ),
                 Color32::from_rgb(0, 255, 180),
             ),
         ];
@@ -531,18 +554,53 @@ impl PluckedStringView {
 
         // Baseline string
         let base_y = (canvas_y1 - 25) as f32;
-        draw_line_ps(&mut pixels, w, h, (left_x0 + 15) as f32, base_y, (left_x1 - 15) as f32, base_y, [60, 85, 120, 255]);
+        draw_line_ps(
+            &mut pixels,
+            w,
+            h,
+            (left_x0 + 15) as f32,
+            base_y,
+            (left_x1 - 15) as f32,
+            base_y,
+            [60, 85, 120, 255],
+        );
 
         // Puck position
         let puck_x = (left_x0 + 15) as f32 + self.puck_pos.0 * (left_x1 - left_x0 - 30) as f32;
         let puck_y = base_y - self.puck_pos.1 * (canvas_y1 - canvas_y0 - 60) as f32;
 
         // Spatial pluck triangle
-        draw_line_ps(&mut pixels, w, h, (left_x0 + 15) as f32, base_y, puck_x, puck_y, [0, 229, 255, 255]);
-        draw_line_ps(&mut pixels, w, h, puck_x, puck_y, (left_x1 - 15) as f32, base_y, [0, 229, 255, 255]);
+        draw_line_ps(
+            &mut pixels,
+            w,
+            h,
+            (left_x0 + 15) as f32,
+            base_y,
+            puck_x,
+            puck_y,
+            [0, 229, 255, 255],
+        );
+        draw_line_ps(
+            &mut pixels,
+            w,
+            h,
+            puck_x,
+            puck_y,
+            (left_x1 - 15) as f32,
+            base_y,
+            [0, 229, 255, 255],
+        );
 
         // Touch hit target (>= 44x44pt)
-        draw_circle_ring_ps(&mut pixels, w, h, puck_x, puck_y, PLUCK_PUCK_HIT_RADIUS, [0, 229, 255, 180]);
+        draw_circle_ring_ps(
+            &mut pixels,
+            w,
+            h,
+            puck_x,
+            puck_y,
+            PLUCK_PUCK_HIT_RADIUS,
+            [0, 229, 255, 180],
+        );
         draw_circle_filled_ps(&mut pixels, w, h, puck_x, puck_y, 12.0, [0, 229, 255, 255]);
         draw_circle_filled_ps(&mut pixels, w, h, puck_x, puck_y, 4.0, [255, 255, 255, 255]);
 
@@ -656,7 +714,12 @@ fn draw_circle_ring_ps(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32,
     }
 }
 
-fn encode_minimal_png_ps(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_ps(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

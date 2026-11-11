@@ -102,15 +102,21 @@ impl SitarView {
     }
 
     pub fn update_puck_from_physics(&mut self) {
-        let norm_x = ((self.meend_pull_semitones - MIN_MEEND_SEMITONES) / (MAX_MEEND_SEMITONES - MIN_MEEND_SEMITONES)).clamp(0.0, 1.0);
-        let norm_y = ((self.strike_velocity - MIN_SITAR_STRIKE_VELOCITY) / (MAX_SITAR_STRIKE_VELOCITY - MIN_SITAR_STRIKE_VELOCITY)).clamp(0.0, 1.0);
+        let norm_x = ((self.meend_pull_semitones - MIN_MEEND_SEMITONES)
+            / (MAX_MEEND_SEMITONES - MIN_MEEND_SEMITONES))
+            .clamp(0.0, 1.0);
+        let norm_y = ((self.strike_velocity - MIN_SITAR_STRIKE_VELOCITY)
+            / (MAX_SITAR_STRIKE_VELOCITY - MIN_SITAR_STRIKE_VELOCITY))
+            .clamp(0.0, 1.0);
         self.puck_pos = (norm_x, norm_y);
     }
 
     pub fn update_physics_from_puck(&mut self, norm_x: f32, norm_y: f32) {
         self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
-        self.meend_pull_semitones = MIN_MEEND_SEMITONES + self.puck_pos.0 * (MAX_MEEND_SEMITONES - MIN_MEEND_SEMITONES);
-        self.strike_velocity = MIN_SITAR_STRIKE_VELOCITY + self.puck_pos.1 * (MAX_SITAR_STRIKE_VELOCITY - MIN_SITAR_STRIKE_VELOCITY);
+        self.meend_pull_semitones =
+            MIN_MEEND_SEMITONES + self.puck_pos.0 * (MAX_MEEND_SEMITONES - MIN_MEEND_SEMITONES);
+        self.strike_velocity = MIN_SITAR_STRIKE_VELOCITY
+            + self.puck_pos.1 * (MAX_SITAR_STRIKE_VELOCITY - MIN_SITAR_STRIKE_VELOCITY);
         self.update_sitar_acoustics();
     }
 
@@ -219,7 +225,11 @@ impl SitarView {
         let drone_info = format!(
             "| Tarab Bleed: {:.0}% | Chikari Strum: {} |",
             self.tarab_bleed * 100.0,
-            if self.chikari_active { "ACTIVE" } else { "READY" }
+            if self.chikari_active {
+                "ACTIVE"
+            } else {
+                "READY"
+            }
         );
         let dro_padded = format!("{:<width$}|", drone_info, width = width - 1);
         lines.push(dro_padded);
@@ -237,7 +247,9 @@ impl SitarView {
                 let col_t = col as f32 / (width - 2).max(1) as f32; // time/position [0.0 .. 1.0]
 
                 // Sitar string wave with curved Jawari unilateral contact clipping
-                let fundamental = (col_t * 6.0 * std::f32::consts::PI * (1.0 + self.meend_pull_semitones * 0.15)).sin();
+                let fundamental =
+                    (col_t * 6.0 * std::f32::consts::PI * (1.0 + self.meend_pull_semitones * 0.15))
+                        .sin();
                 let harmonic2 = 0.5 * (col_t * 12.0 * std::f32::consts::PI).sin();
                 let raw_wave = (fundamental * 0.7 + harmonic2 * 0.3) * self.strike_velocity;
 
@@ -263,7 +275,12 @@ impl SitarView {
     }
 
     /// Render headless PNG snapshot to verify layout alignment, hit targets, and WCAG AAA contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background color: Deep midnight slate `#0A0E18`
@@ -340,7 +357,9 @@ impl SitarView {
             let x = plot_x_start + px;
             let col_t = px as f32 / plot_w as f32;
 
-            let fundamental = (col_t * 6.0 * std::f32::consts::PI * (1.0 + self.meend_pull_semitones * 0.15)).sin();
+            let fundamental =
+                (col_t * 6.0 * std::f32::consts::PI * (1.0 + self.meend_pull_semitones * 0.15))
+                    .sin();
             let harmonic2 = 0.5 * (col_t * 12.0 * std::f32::consts::PI).sin();
             let raw_wave = (fundamental * 0.7 + harmonic2 * 0.3) * self.strike_velocity;
 
@@ -463,11 +482,10 @@ impl SitarView {
                         text_white
                     };
 
-                    let btn = egui::Button::new(
-                        RichText::new(label).size(12.0).color(btn_fg).strong(),
-                    )
-                    .fill(btn_bg)
-                    .min_size(egui::vec2(130.0, 44.0));
+                    let btn =
+                        egui::Button::new(RichText::new(label).size(12.0).color(btn_fg).strong())
+                            .fill(btn_bg)
+                            .min_size(egui::vec2(130.0, 44.0));
 
                     if ui.add(btn).clicked() {
                         self.set_preset(pst);
@@ -479,10 +497,8 @@ impl SitarView {
             ui.add_space(8.0);
 
             // Main interactive 2D Canvas split: Left XY Pad (Meend vs Strike), Right Jawari Waveform
-            let (canvas_rect, response) = ui.allocate_exact_size(
-                egui::vec2(740.0, 230.0),
-                egui::Sense::click_and_drag(),
-            );
+            let (canvas_rect, response) =
+                ui.allocate_exact_size(egui::vec2(740.0, 230.0), egui::Sense::click_and_drag());
 
             let painter = ui.painter_at(canvas_rect);
             painter.rect_filled(canvas_rect, 6.0, card_bg);
@@ -545,7 +561,8 @@ impl SitarView {
             if self.is_dragging_puck {
                 if let Some(pos) = response.interact_pointer_pos() {
                     let norm_x = ((pos.x - layout_rect.x) / layout_rect.width).clamp(0.0, 1.0);
-                    let norm_y = (1.0 - ((pos.y - layout_rect.y) / layout_rect.height)).clamp(0.0, 1.0);
+                    let norm_y =
+                        (1.0 - ((pos.y - layout_rect.y) / layout_rect.height)).clamp(0.0, 1.0);
                     self.update_physics_from_puck(norm_x, norm_y);
                 }
             }
@@ -590,7 +607,10 @@ impl SitarView {
             let obstacle_bound = -0.3 + (self.jawari_gap_mm - 0.18) * 0.5;
             let obst_y = plot_y0 + (1.0 - (obstacle_bound + 1.0) * 0.5) * plot_h;
             painter.line_segment(
-                [egui::pos2(plot_x0, obst_y), egui::pos2(plot_x0 + plot_w, obst_y)],
+                [
+                    egui::pos2(plot_x0, obst_y),
+                    egui::pos2(plot_x0 + plot_w, obst_y),
+                ],
                 Stroke::new(1.5_f32, Color32::from_rgb(239, 68, 68)),
             );
             painter.text(
@@ -605,7 +625,9 @@ impl SitarView {
             let mut prev_pt = None;
             for s in 0..=steps {
                 let col_t = s as f32 / steps as f32;
-                let fundamental = (col_t * 6.0 * std::f32::consts::PI * (1.0 + self.meend_pull_semitones * 0.15)).sin();
+                let fundamental =
+                    (col_t * 6.0 * std::f32::consts::PI * (1.0 + self.meend_pull_semitones * 0.15))
+                        .sin();
                 let harmonic2 = 0.5 * (col_t * 12.0 * std::f32::consts::PI).sin();
                 let raw_wave = (fundamental * 0.7 + harmonic2 * 0.3) * self.strike_velocity;
                 let clipped_wave = raw_wave.max(obstacle_bound);
@@ -628,8 +650,14 @@ impl SitarView {
                 ui.add_space(12.0);
                 ui.vertical(|ui| {
                     ui.label(RichText::new("Acoustic Bridge Parameters:").strong());
-                    ui.add(egui::Slider::new(&mut self.jawari_gap_mm, 0.01..=1.5).text("Jawari Gap (mm)"));
-                    ui.add(egui::Slider::new(&mut self.jiva_thread_pos, 0.0..=1.0).text("Jiva Cotton Pos"));
+                    ui.add(
+                        egui::Slider::new(&mut self.jawari_gap_mm, 0.01..=1.5)
+                            .text("Jawari Gap (mm)"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.jiva_thread_pos, 0.0..=1.0)
+                            .text("Jiva Cotton Pos"),
+                    );
                 });
 
                 ui.separator();
@@ -644,7 +672,10 @@ impl SitarView {
 
                 ui.vertical(|ui| {
                     ui.label(RichText::new("Live Readouts:").strong());
-                    ui.label(format!("Meend Pull: +{:.2} semitones", self.meend_pull_semitones));
+                    ui.label(format!(
+                        "Meend Pull: +{:.2} semitones",
+                        self.meend_pull_semitones
+                    ));
                     ui.label(format!("Strike Velocity: {:.2}", self.strike_velocity));
                 });
             });
@@ -652,7 +683,12 @@ impl SitarView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

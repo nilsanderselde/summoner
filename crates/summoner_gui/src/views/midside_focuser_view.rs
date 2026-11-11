@@ -146,7 +146,8 @@ impl MidSideFocuserView {
 
     pub fn width_to_normalized(width: f32) -> f32 {
         let val = width.clamp(MIN_SIDE_WIDTH_RATIO, MAX_SIDE_WIDTH_RATIO);
-        ((val - MIN_SIDE_WIDTH_RATIO) / (MAX_SIDE_WIDTH_RATIO - MIN_SIDE_WIDTH_RATIO)).clamp(0.0, 1.0)
+        ((val - MIN_SIDE_WIDTH_RATIO) / (MAX_SIDE_WIDTH_RATIO - MIN_SIDE_WIDTH_RATIO))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_width(norm: f32) -> f32 {

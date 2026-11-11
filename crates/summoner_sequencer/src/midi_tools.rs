@@ -100,7 +100,12 @@ impl SoftTakeoverState {
     ///
     /// If not yet picked up, checks if hardware value is within threshold or crossed over
     /// `current_project_val`. Once picked up, updates pass through freely.
-    pub fn update(&mut self, incoming_val: f32, current_project_val: f32, threshold: f32) -> Option<f32> {
+    pub fn update(
+        &mut self,
+        incoming_val: f32,
+        current_project_val: f32,
+        threshold: f32,
+    ) -> Option<f32> {
         if self.is_picked_up {
             self.last_hardware_val = Some(incoming_val);
             return Some(incoming_val);

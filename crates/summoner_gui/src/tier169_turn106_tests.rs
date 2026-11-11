@@ -5,13 +5,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::dynamic_crest_shaper_view::{
-        DynamicCrestShaperView, CrestTopology, CREST_PUCK_HIT_RADIUS,
+        CrestTopology, DynamicCrestShaperView, CREST_PUCK_HIT_RADIUS,
     };
     use crate::views::linear_phase_crossover_view::{
-        LinearPhaseCrossoverView, CrossoverSlope, CROSSOVER_PUCK_HIT_RADIUS,
+        CrossoverSlope, LinearPhaseCrossoverView, CROSSOVER_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn106_pure_dynamic_crest_shaper_initialization_and_kinematics() {
@@ -23,9 +23,18 @@ pub mod pure_tests {
         let topos = [
             (CrestTopology::PunchMaximizer, "PUNCH MAXIMIZER"),
             (CrestTopology::DensityCompactor, "DENSITY COMPACTOR"),
-            (CrestTopology::MultibandTransientLeveler, "MULTIBAND LEVELER"),
-            (CrestTopology::AcousticDynamicPreserver, "ACOUSTIC PRESERVER"),
-            (CrestTopology::BroadcastLoudnessSculptor, "BROADCAST SCULPTOR"),
+            (
+                CrestTopology::MultibandTransientLeveler,
+                "MULTIBAND LEVELER",
+            ),
+            (
+                CrestTopology::AcousticDynamicPreserver,
+                "ACOUSTIC PRESERVER",
+            ),
+            (
+                CrestTopology::BroadcastLoudnessSculptor,
+                "BROADCAST SCULPTOR",
+            ),
         ];
 
         for (t, expected_name) in topos {
@@ -93,11 +102,36 @@ pub mod pure_tests {
 
         // Slopes and nominal values
         let slopes = [
-            (CrossoverSlope::LR24dBMinimumLatency, "24 dB/OCT FIR", 24.0, 128),
-            (CrossoverSlope::LinPhase48dBSymmetric, "48 dB/OCT LIN-PHASE", 48.0, 512),
-            (CrossoverSlope::LinPhase96dBUltraSharp, "96 dB/OCT BRICKWALL", 96.0, 2048),
-            (CrossoverSlope::DynamicAdaptiveFFT, "DYNAMIC ADAPTIVE FFT", 60.0, 1024),
-            (CrossoverSlope::MultiRateTransientFIR, "MULTI-RATE TRANSIENT", 36.0, 256),
+            (
+                CrossoverSlope::LR24dBMinimumLatency,
+                "24 dB/OCT FIR",
+                24.0,
+                128,
+            ),
+            (
+                CrossoverSlope::LinPhase48dBSymmetric,
+                "48 dB/OCT LIN-PHASE",
+                48.0,
+                512,
+            ),
+            (
+                CrossoverSlope::LinPhase96dBUltraSharp,
+                "96 dB/OCT BRICKWALL",
+                96.0,
+                2048,
+            ),
+            (
+                CrossoverSlope::DynamicAdaptiveFFT,
+                "DYNAMIC ADAPTIVE FFT",
+                60.0,
+                1024,
+            ),
+            (
+                CrossoverSlope::MultiRateTransientFIR,
+                "MULTI-RATE TRANSIENT",
+                36.0,
+                256,
+            ),
         ];
 
         for (s, expected_name, db_oct, lat) in slopes {
@@ -150,8 +184,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -181,15 +215,24 @@ pub mod gui_tests {
         view.sync_dynamic_crest_shaper_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("target_crest_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("target_crest_db")
+                .copied(),
             Some(17.5)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("expansion_ratio").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("expansion_ratio")
+                .copied(),
             Some(2.9)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("downward_comp_ratio").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("downward_comp_ratio")
+                .copied(),
             Some(1.4)
         );
         assert_eq!(
@@ -209,19 +252,31 @@ pub mod gui_tests {
         view.sync_linear_phase_crossover_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("split_mid_hz").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("split_mid_hz")
+                .copied(),
             Some(2500.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("ceiling_db").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("ceiling_db")
+                .copied(),
             Some(-0.8)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("split_low_hz").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("split_low_hz")
+                .copied(),
             Some(140.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("ceiling").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("ceiling")
+                .copied(),
             Some(-0.8)
         );
 
@@ -236,12 +291,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let crest_action = palette.actions.iter().find(|a| a.action_id == "open_dynamic_crest_shaper_hud");
-        assert!(crest_action.is_some(), "open_dynamic_crest_shaper_hud should be registered");
+        let crest_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_dynamic_crest_shaper_hud");
+        assert!(
+            crest_action.is_some(),
+            "open_dynamic_crest_shaper_hud should be registered"
+        );
         assert_eq!(crest_action.unwrap().category, "Mastering & Dynamics");
 
-        let xover_action = palette.actions.iter().find(|a| a.action_id == "open_linear_phase_crossover_hud");
-        assert!(xover_action.is_some(), "open_linear_phase_crossover_hud should be registered");
+        let xover_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_linear_phase_crossover_hud");
+        assert!(
+            xover_action.is_some(),
+            "open_linear_phase_crossover_hud should be registered"
+        );
         assert_eq!(xover_action.unwrap().category, "Mastering & Dynamics");
     }
 }

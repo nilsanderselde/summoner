@@ -6,11 +6,11 @@
 pub mod pure_tests {
     use crate::layout_math::Rect;
     use crate::views::granular_cloud_view::{
-        GranularCloudView, GrainWindowShape, EMITTER_PUCK_HIT_RADIUS,
+        GrainWindowShape, GranularCloudView, EMITTER_PUCK_HIT_RADIUS,
     };
     use crate::views::spring_lattice_view::{
-        SpringLatticeView, SpringLatticeViewProfile, SPRING_PUCK_HIT_RADIUS,
-        LATTICE_VIEW_GRID_DIM, MIN_DRIVE_FORCE, MAX_DRIVE_FORCE,
+        SpringLatticeView, SpringLatticeViewProfile, LATTICE_VIEW_GRID_DIM, MAX_DRIVE_FORCE,
+        MIN_DRIVE_FORCE, SPRING_PUCK_HIT_RADIUS,
     };
     use summoner_core::param_bus::ParamId;
 
@@ -70,8 +70,19 @@ pub mod pure_tests {
             for p_step in 0..=10 {
                 let phase = p_step as f32 / 10.0;
                 let val = w.evaluate(phase);
-                assert!(val.is_finite(), "Window {:?} produced non-finite value at phase {}", w, phase);
-                assert!(val >= -0.05 && val <= 1.05, "Window {:?} out of bounds: {} at phase {}", w, val, phase);
+                assert!(
+                    val.is_finite(),
+                    "Window {:?} produced non-finite value at phase {}",
+                    w,
+                    phase
+                );
+                assert!(
+                    val >= -0.05 && val <= 1.05,
+                    "Window {:?} out of bounds: {} at phase {}",
+                    w,
+                    val,
+                    phase
+                );
             }
         }
 
@@ -87,19 +98,46 @@ pub mod pure_tests {
     #[test]
     fn test_turn63_pure_spring_lattice_view_profiles_and_duffing_physics() {
         let mut view = SpringLatticeView::new();
-        assert_eq!(view.profile, SpringLatticeViewProfile::VintageAccutronicsSpring);
+        assert_eq!(
+            view.profile,
+            SpringLatticeViewProfile::VintageAccutronicsSpring
+        );
         assert!((view.drive_force - 0.80).abs() < 1e-2);
         assert!((view.spring_nonlinearity - 0.45).abs() < 1e-2);
         assert!((view.linear_stiffness - 2800.0).abs() < 1e-1);
 
         // Test profiles nominal physics
         let profiles = [
-            (SpringLatticeViewProfile::VintageAccutronicsSpring, "ACCUTRONICS SPRING TANK", 2800.0),
-            (SpringLatticeViewProfile::StudioPlateSuspension, "STUDIO SUSPENSION PLATE", 5500.0),
-            (SpringLatticeViewProfile::DualHelicalSpringTank, "DUAL HELICAL SPRING TANK", 3200.0),
-            (SpringLatticeViewProfile::ResonantHelicalCoil, "RESONANT HELICAL COIL", 4200.0),
-            (SpringLatticeViewProfile::NonlinearShakerTable, "NONLINEAR SHAKER TABLE", 1800.0),
-            (SpringLatticeViewProfile::MultiAxisSpringLattice, "MULTI-AXIS SPRING LATTICE", 3800.0),
+            (
+                SpringLatticeViewProfile::VintageAccutronicsSpring,
+                "ACCUTRONICS SPRING TANK",
+                2800.0,
+            ),
+            (
+                SpringLatticeViewProfile::StudioPlateSuspension,
+                "STUDIO SUSPENSION PLATE",
+                5500.0,
+            ),
+            (
+                SpringLatticeViewProfile::DualHelicalSpringTank,
+                "DUAL HELICAL SPRING TANK",
+                3200.0,
+            ),
+            (
+                SpringLatticeViewProfile::ResonantHelicalCoil,
+                "RESONANT HELICAL COIL",
+                4200.0,
+            ),
+            (
+                SpringLatticeViewProfile::NonlinearShakerTable,
+                "NONLINEAR SHAKER TABLE",
+                1800.0,
+            ),
+            (
+                SpringLatticeViewProfile::MultiAxisSpringLattice,
+                "MULTI-AXIS SPRING LATTICE",
+                3800.0,
+            ),
         ];
 
         for (prof, name, expected_k) in profiles {
@@ -137,8 +175,19 @@ pub mod pure_tests {
         for gy in 0..LATTICE_VIEW_GRID_DIM {
             for gx in 0..LATTICE_VIEW_GRID_DIM {
                 let disp = view.evaluate_node_displacement(gx, gy);
-                assert!(disp.is_finite(), "Displacement at ({}, {}) was non-finite", gx, gy);
-                assert!(disp >= -1.5 && disp <= 1.5, "Displacement at ({}, {}) out of bounds: {}", gx, gy, disp);
+                assert!(
+                    disp.is_finite(),
+                    "Displacement at ({}, {}) was non-finite",
+                    gx,
+                    gy
+                );
+                assert!(
+                    disp >= -1.5 && disp <= 1.5,
+                    "Displacement at ({}, {}) out of bounds: {}",
+                    gx,
+                    gy,
+                    disp
+                );
             }
         }
 
@@ -181,8 +230,14 @@ pub mod pure_tests {
         assert_eq!(g_snap.len(), 16);
         let g_str = g_view.render_ascii_snapshot_str();
         assert!(!g_str.is_empty());
-        assert!(g_str.contains('E'), "Expected emitter marker 'E' in granular ascii snapshot");
-        assert!(g_str.contains('*'), "Expected grain markers '*' in granular ascii snapshot");
+        assert!(
+            g_str.contains('E'),
+            "Expected emitter marker 'E' in granular ascii snapshot"
+        );
+        assert!(
+            g_str.contains('*'),
+            "Expected grain markers '*' in granular ascii snapshot"
+        );
 
         // Spring Lattice View ASCII snapshot
         let s_view = SpringLatticeView::new();
@@ -190,18 +245,21 @@ pub mod pure_tests {
         assert_eq!(s_snap.len(), 16);
         let s_str = s_view.render_ascii_snapshot_str();
         assert!(!s_str.is_empty());
-        assert!(s_str.contains('+') || s_str.contains('#') || s_str.contains('.'), "Expected wireframe grid points in spring lattice snapshot");
+        assert!(
+            s_str.contains('+') || s_str.contains('#') || s_str.contains('.'),
+            "Expected wireframe grid points in spring lattice snapshot"
+        );
     }
 }
 
 #[cfg(feature = "gui")]
 #[cfg(test)]
 pub mod gui_tests {
-    use std::sync::Arc;
-    use eframe::egui;
-    use summoner_core::param_bus::{ParamBus, ParamId};
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
+    use eframe::egui;
+    use std::sync::Arc;
+    use summoner_core::param_bus::{ParamBus, ParamId};
 
     #[test]
     fn test_turn63_gui_granular_cloud_and_spring_lattice_modal_lifecycles() {
@@ -244,7 +302,11 @@ pub mod gui_tests {
         let mut view = AwardWinningGuiView::new();
         let mut bus = ParamBus::new();
 
-        let track_id = view.tracks.get(view.selected_track_idx).map(|t| t.id).unwrap_or(1);
+        let track_id = view
+            .tracks
+            .get(view.selected_track_idx)
+            .map(|t| t.id)
+            .unwrap_or(1);
         let slot = view.device_rack_state.selected_chain_idx;
         let base = track_id as u32 * 1000 + slot as u32 * 20;
 
@@ -273,8 +335,14 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 5)), Some(120.0));
         assert_eq!(arc_bus.get(ParamId(base + 6)), Some(24.0));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("emitter_pos"), Some(&0.62));
-        assert_eq!(view.inspector_state.node_param_values.get("emitter_pos"), Some(&0.62));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("emitter_pos"),
+            Some(&0.62)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("emitter_pos"),
+            Some(&0.62)
+        );
 
         // Test Spring-Mass Lattice HUD sync
         view.spring_lattice_view.drive_force = 0.92;
@@ -292,8 +360,14 @@ pub mod gui_tests {
         assert_eq!(arc_bus.get(ParamId(base + 4)), Some(112.5));
         assert_eq!(arc_bus.get(ParamId(base + 5)), Some(4.2));
 
-        assert_eq!(view.device_rack_state.node_param_values.get("drive_force"), Some(&0.92));
-        assert_eq!(view.inspector_state.node_param_values.get("drive_force"), Some(&0.92));
+        assert_eq!(
+            view.device_rack_state.node_param_values.get("drive_force"),
+            Some(&0.92)
+        );
+        assert_eq!(
+            view.inspector_state.node_param_values.get("drive_force"),
+            Some(&0.92)
+        );
     }
 
     #[test]
@@ -348,10 +422,22 @@ pub mod gui_tests {
     #[test]
     fn test_turn63_gui_command_palette_actions_registered() {
         let palette = CommandPalette::new();
-        let has_granular = palette.actions.iter().any(|a| a.action_id == "open_granular_cloud_hud");
-        let has_spring_lattice = palette.actions.iter().any(|a| a.action_id == "open_spring_lattice_hud");
+        let has_granular = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_granular_cloud_hud");
+        let has_spring_lattice = palette
+            .actions
+            .iter()
+            .any(|a| a.action_id == "open_spring_lattice_hud");
 
-        assert!(has_granular, "Expected open_granular_cloud_hud in command palette");
-        assert!(has_spring_lattice, "Expected open_spring_lattice_hud in command palette");
+        assert!(
+            has_granular,
+            "Expected open_granular_cloud_hud in command palette"
+        );
+        assert!(
+            has_spring_lattice,
+            "Expected open_spring_lattice_hud in command palette"
+        );
     }
 }

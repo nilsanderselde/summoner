@@ -6,13 +6,13 @@
 
 #[cfg(test)]
 pub mod pure_tests {
+    use crate::layout_math::Rect;
     use crate::views::glottal_pulse_view::{
         GlottalPulseView, GlottalVoicingMode, GLOTTAL_PUCK_HIT_RADIUS,
     };
     use crate::views::horn_reflection_view::{
-        HornReflectionView, HornFlarePreset, HornMuteType, HORN_PUCK_HIT_RADIUS,
+        HornFlarePreset, HornMuteType, HornReflectionView, HORN_PUCK_HIT_RADIUS,
     };
-    use crate::layout_math::Rect;
 
     #[test]
     fn test_turn114_pure_glottal_pulse_initialization_and_kinematics() {
@@ -22,11 +22,51 @@ pub mod pure_tests {
 
         // Voicing modes and expected values
         let modes = [
-            (GlottalVoicingMode::Modal, "Modal Phonation (Chest / Standard Voice)", 0.60, 2.0, 0.04, 0.015, 0.03),
-            (GlottalVoicingMode::Falsetto, "Falsetto Phonation (Head / Thin Closure)", 0.75, 1.5, 0.08, 0.010, 0.02),
-            (GlottalVoicingMode::Creaky, "Creaky Phonation (Vocal Fry / Explosive Pulses)", 0.35, 3.5, 0.02, 0.050, 0.10),
-            (GlottalVoicingMode::Breathy, "Breathy Phonation (Incomplete Closure)", 0.85, 1.2, 0.35, 0.025, 0.06),
-            (GlottalVoicingMode::Whisper, "Whispered Phonation (Unvoiced Pure Aspiration)", 0.95, 1.0, 0.85, 0.060, 0.12),
+            (
+                GlottalVoicingMode::Modal,
+                "Modal Phonation (Chest / Standard Voice)",
+                0.60,
+                2.0,
+                0.04,
+                0.015,
+                0.03,
+            ),
+            (
+                GlottalVoicingMode::Falsetto,
+                "Falsetto Phonation (Head / Thin Closure)",
+                0.75,
+                1.5,
+                0.08,
+                0.010,
+                0.02,
+            ),
+            (
+                GlottalVoicingMode::Creaky,
+                "Creaky Phonation (Vocal Fry / Explosive Pulses)",
+                0.35,
+                3.5,
+                0.02,
+                0.050,
+                0.10,
+            ),
+            (
+                GlottalVoicingMode::Breathy,
+                "Breathy Phonation (Incomplete Closure)",
+                0.85,
+                1.2,
+                0.35,
+                0.025,
+                0.06,
+            ),
+            (
+                GlottalVoicingMode::Whisper,
+                "Whispered Phonation (Unvoiced Pure Aspiration)",
+                0.95,
+                1.0,
+                0.85,
+                0.060,
+                0.12,
+            ),
         ];
 
         for (m, expected_name, exp_oq, exp_sq, exp_asp, exp_jit, exp_shim) in modes {
@@ -91,11 +131,46 @@ pub mod pure_tests {
 
         // Preset profiles and expected values
         let presets = [
-            (HornFlarePreset::Trumpet, "Bb Trumpet Bell Flare (~1200 Hz Cutoff)", 1200.0, 0.72, 0.065, 0.985),
-            (HornFlarePreset::FrenchHorn, "F French Horn Hyperbolic Bell (~700 Hz Cutoff)", 700.0, 0.50, 0.155, 0.975),
-            (HornFlarePreset::Trombone, "Bb Tenor Trombone Bessel Flare (~850 Hz Cutoff)", 850.0, 0.62, 0.110, 0.980),
-            (HornFlarePreset::Tuba, "Eb Concert Tuba Massive Bell (~400 Hz Cutoff)", 400.0, 0.45, 0.250, 0.965),
-            (HornFlarePreset::Custom, "Custom User Flared Bell Geometry", 1000.0, 0.60, 0.100, 0.980),
+            (
+                HornFlarePreset::Trumpet,
+                "Bb Trumpet Bell Flare (~1200 Hz Cutoff)",
+                1200.0,
+                0.72,
+                0.065,
+                0.985,
+            ),
+            (
+                HornFlarePreset::FrenchHorn,
+                "F French Horn Hyperbolic Bell (~700 Hz Cutoff)",
+                700.0,
+                0.50,
+                0.155,
+                0.975,
+            ),
+            (
+                HornFlarePreset::Trombone,
+                "Bb Tenor Trombone Bessel Flare (~850 Hz Cutoff)",
+                850.0,
+                0.62,
+                0.110,
+                0.980,
+            ),
+            (
+                HornFlarePreset::Tuba,
+                "Eb Concert Tuba Massive Bell (~400 Hz Cutoff)",
+                400.0,
+                0.45,
+                0.250,
+                0.965,
+            ),
+            (
+                HornFlarePreset::Custom,
+                "Custom User Flared Bell Geometry",
+                1000.0,
+                0.60,
+                0.100,
+                0.980,
+            ),
         ];
 
         for (p, expected_name, exp_fc, exp_flare, exp_rbell, exp_damp) in presets {
@@ -115,9 +190,18 @@ pub mod pure_tests {
         // Mute types
         let mutes = [
             (HornMuteType::Open, "Open Bell (Unmuted Free Radiation)"),
-            (HornMuteType::Straight, "Straight Mute (Nasal Resonance & Low Cut)"),
-            (HornMuteType::Harmon, "Harmon Mute (Stem-Out Metallic Buzz & Notch)"),
-            (HornMuteType::Cup, "Cup Mute (Mellow Rolloff & Acoustic Damping)"),
+            (
+                HornMuteType::Straight,
+                "Straight Mute (Nasal Resonance & Low Cut)",
+            ),
+            (
+                HornMuteType::Harmon,
+                "Harmon Mute (Stem-Out Metallic Buzz & Notch)",
+            ),
+            (
+                HornMuteType::Cup,
+                "Cup Mute (Mellow Rolloff & Acoustic Damping)",
+            ),
         ];
 
         for (m, expected_name) in mutes {
@@ -166,8 +250,8 @@ pub mod pure_tests {
 
 #[cfg(all(test, feature = "gui"))]
 pub mod gui_tests {
-    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use crate::command_palette::CommandPalette;
+    use crate::views::award_winning_gui_view::AwardWinningGuiView;
     use eframe::egui;
 
     #[test]
@@ -195,19 +279,31 @@ pub mod gui_tests {
         view.sync_horn_reflection_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("cutoff_hz").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("cutoff_hz")
+                .copied(),
             Some(950.0)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("flare_coefficient").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("flare_coefficient")
+                .copied(),
             Some(1.15)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("cutoff_hz").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("cutoff_hz")
+                .copied(),
             Some(950.0)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("flare_coefficient").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("flare_coefficient")
+                .copied(),
             Some(1.15)
         );
 
@@ -218,19 +314,31 @@ pub mod gui_tests {
         view.sync_glottal_pulse_hud_state();
 
         assert_eq!(
-            view.device_rack_state.node_param_values.get("open_quotient").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("open_quotient")
+                .copied(),
             Some(0.55)
         );
         assert_eq!(
-            view.device_rack_state.node_param_values.get("speed_quotient").copied(),
+            view.device_rack_state
+                .node_param_values
+                .get("speed_quotient")
+                .copied(),
             Some(2.80)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("open_quotient").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("open_quotient")
+                .copied(),
             Some(0.55)
         );
         assert_eq!(
-            view.inspector_state.node_param_values.get("speed_quotient").copied(),
+            view.inspector_state
+                .node_param_values
+                .get("speed_quotient")
+                .copied(),
             Some(2.80)
         );
 
@@ -245,12 +353,24 @@ pub mod gui_tests {
 
         // 6. Command Palette Registration & Action Verification
         let palette = CommandPalette::new();
-        let horn_action = palette.actions.iter().find(|a| a.action_id == "open_horn_reflection_hud");
-        assert!(horn_action.is_some(), "open_horn_reflection_hud should be registered");
+        let horn_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_horn_reflection_hud");
+        assert!(
+            horn_action.is_some(),
+            "open_horn_reflection_hud should be registered"
+        );
         assert_eq!(horn_action.unwrap().category, "Physical Modeling");
 
-        let glottal_action = palette.actions.iter().find(|a| a.action_id == "open_glottal_pulse_hud");
-        assert!(glottal_action.is_some(), "open_glottal_pulse_hud should be registered");
+        let glottal_action = palette
+            .actions
+            .iter()
+            .find(|a| a.action_id == "open_glottal_pulse_hud");
+        assert!(
+            glottal_action.is_some(),
+            "open_glottal_pulse_hud should be registered"
+        );
         assert_eq!(glottal_action.unwrap().category, "Physical Modeling");
     }
 }

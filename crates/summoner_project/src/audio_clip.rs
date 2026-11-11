@@ -325,4 +325,3 @@ mod tests {
         assert_eq!(clip_b.crossfade_with_clip_id.as_deref(), Some("clipA"));
     }
 }
-

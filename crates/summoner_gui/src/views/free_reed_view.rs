@@ -90,15 +90,21 @@ impl FreeReedView {
     }
 
     pub fn update_puck_from_physics(&mut self) {
-        let norm_x = ((self.cassotto_aperture - MIN_CASSOTTO_APERTURE) / (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE)).clamp(0.0, 1.0);
-        let norm_y = ((self.reed_stiffness - MIN_REED_STIFFNESS) / (MAX_REED_STIFFNESS - MIN_REED_STIFFNESS)).clamp(0.0, 1.0);
+        let norm_x = ((self.cassotto_aperture - MIN_CASSOTTO_APERTURE)
+            / (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE))
+            .clamp(0.0, 1.0);
+        let norm_y = ((self.reed_stiffness - MIN_REED_STIFFNESS)
+            / (MAX_REED_STIFFNESS - MIN_REED_STIFFNESS))
+            .clamp(0.0, 1.0);
         self.puck_pos = (norm_x, norm_y);
     }
 
     pub fn update_physics_from_puck(&mut self, norm_x: f32, norm_y: f32) {
         self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
-        self.cassotto_aperture = MIN_CASSOTTO_APERTURE + self.puck_pos.0 * (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE);
-        self.reed_stiffness = MIN_REED_STIFFNESS + self.puck_pos.1 * (MAX_REED_STIFFNESS - MIN_REED_STIFFNESS);
+        self.cassotto_aperture = MIN_CASSOTTO_APERTURE
+            + self.puck_pos.0 * (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE);
+        self.reed_stiffness =
+            MIN_REED_STIFFNESS + self.puck_pos.1 * (MAX_REED_STIFFNESS - MIN_REED_STIFFNESS);
     }
 
     pub fn set_preset(&mut self, preset: FreeReedHudPreset) {
@@ -139,7 +145,8 @@ impl FreeReedView {
     }
 
     pub fn stiffness_to_normalized(stiffness: f32) -> f32 {
-        ((stiffness - MIN_REED_STIFFNESS) / (MAX_REED_STIFFNESS - MIN_REED_STIFFNESS)).clamp(0.0, 1.0)
+        ((stiffness - MIN_REED_STIFFNESS) / (MAX_REED_STIFFNESS - MIN_REED_STIFFNESS))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_stiffness(norm: f32) -> f32 {
@@ -147,11 +154,13 @@ impl FreeReedView {
     }
 
     pub fn aperture_to_normalized(aperture: f32) -> f32 {
-        ((aperture - MIN_CASSOTTO_APERTURE) / (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE)).clamp(0.0, 1.0)
+        ((aperture - MIN_CASSOTTO_APERTURE) / (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_aperture(norm: f32) -> f32 {
-        MIN_CASSOTTO_APERTURE + norm.clamp(0.0, 1.0) * (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE)
+        MIN_CASSOTTO_APERTURE
+            + norm.clamp(0.0, 1.0) * (MAX_CASSOTTO_APERTURE - MIN_CASSOTTO_APERTURE)
     }
 
     pub fn hit_test_free_reed_puck(&self, screen_pos: (f32, f32), canvas_rect: Rect) -> bool {
@@ -191,13 +200,18 @@ impl FreeReedView {
         let border = format!("+{}+", "-".repeat(width.saturating_sub(2)));
         lines.push(border.clone());
 
-        let title = format!("| FREE-REED AEROELASTIC PHASE CANVAS [k={:.2}, Aperture={:.2}] |", self.reed_stiffness, self.cassotto_aperture);
+        let title = format!(
+            "| FREE-REED AEROELASTIC PHASE CANVAS [k={:.2}, Aperture={:.2}] |",
+            self.reed_stiffness, self.cassotto_aperture
+        );
         let padding = width.saturating_sub(title.len() + 2);
         lines.push(format!("|{}{}|", title, " ".repeat(padding)));
 
         let inner_height = height.saturating_sub(4);
-        let puck_x = ((self.puck_pos.0 * (width.saturating_sub(4) as f32)) as usize).min(width.saturating_sub(4));
-        let puck_y = (((1.0 - self.puck_pos.1) * (inner_height.saturating_sub(1) as f32)) as usize).min(inner_height.saturating_sub(1));
+        let puck_x = ((self.puck_pos.0 * (width.saturating_sub(4) as f32)) as usize)
+            .min(width.saturating_sub(4));
+        let puck_y = (((1.0 - self.puck_pos.1) * (inner_height.saturating_sub(1) as f32)) as usize)
+            .min(inner_height.saturating_sub(1));
 
         for y in 0..inner_height {
             let mut row = vec![' '; width.saturating_sub(2)];
@@ -217,8 +231,14 @@ impl FreeReedView {
             lines.push(format!("|{}|", s));
         }
 
-        let footer = format!("| 16': {:.2} | 8': {:.2} | 8'+: {:.2} | 8'-: {:.2} | 4': {:.2} |",
-            self.rank_energies[0], self.rank_energies[1], self.rank_energies[2], self.rank_energies[3], self.rank_energies[4]);
+        let footer = format!(
+            "| 16': {:.2} | 8': {:.2} | 8'+: {:.2} | 8'-: {:.2} | 4': {:.2} |",
+            self.rank_energies[0],
+            self.rank_energies[1],
+            self.rank_energies[2],
+            self.rank_energies[3],
+            self.rank_energies[4]
+        );
         let foot_pad = width.saturating_sub(footer.len() + 2);
         lines.push(format!("|{}{}|", footer, " ".repeat(foot_pad)));
         lines.push(border);
@@ -227,7 +247,12 @@ impl FreeReedView {
     }
 
     /// Render headless PNG snapshot with WCAG AAA contrast for layout and touch target verification.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background dark charcoal #0F172A
@@ -284,7 +309,8 @@ impl FreeReedView {
         }
 
         // Draw Interactive Puck (radius 22pt -> 44x44pt hit target)
-        let puck_px_x = left_c_left + ((self.puck_pos.0 * (left_c_right - left_c_left) as f32) as usize);
+        let puck_px_x =
+            left_c_left + ((self.puck_pos.0 * (left_c_right - left_c_left) as f32) as usize);
         let puck_px_y = c_bottom - ((self.puck_pos.1 * (c_bottom - c_top) as f32) as usize);
 
         let radius = FREE_REED_PUCK_HIT_RADIUS as i32;
@@ -386,8 +412,14 @@ impl FreeReedView {
             (FreeReedHudPreset::TangoBandoneonZinc, "BANDONEON (ZINC)"),
             (FreeReedHudPreset::FrenchMusetteMaple, "MUSETTE (MAPLE)"),
             (FreeReedHudPreset::RussianBayanDuralumin, "BAYAN (DURAL)"),
-            (FreeReedHudPreset::VintageHarmoniumBrass, "HARMONIUM (BRASS)"),
-            (FreeReedHudPreset::EnglishConcertinaSteel, "CONCERTINA (STEEL)"),
+            (
+                FreeReedHudPreset::VintageHarmoniumBrass,
+                "HARMONIUM (BRASS)",
+            ),
+            (
+                FreeReedHudPreset::EnglishConcertinaSteel,
+                "CONCERTINA (STEEL)",
+            ),
         ];
 
         let tab_w = (rect.width() - 40.0 - 4.0 * 8.0) / 5.0;
@@ -455,11 +487,17 @@ impl FreeReedView {
         // Grid lines on Left Pad
         let center_pad = pad_rect.center();
         painter.line_segment(
-            [egui::pos2(pad_rect.min.x, center_pad.y), egui::pos2(pad_rect.max.x, center_pad.y)],
+            [
+                egui::pos2(pad_rect.min.x, center_pad.y),
+                egui::pos2(pad_rect.max.x, center_pad.y),
+            ],
             Stroke::new(0.8_f32, Color32::from_rgb(45, 60, 85)),
         );
         painter.line_segment(
-            [egui::pos2(center_pad.x, pad_rect.min.y), egui::pos2(center_pad.x, pad_rect.max.y)],
+            [
+                egui::pos2(center_pad.x, pad_rect.min.y),
+                egui::pos2(center_pad.x, pad_rect.max.y),
+            ],
             Stroke::new(0.8_f32, Color32::from_rgb(45, 60, 85)),
         );
 
@@ -475,7 +513,10 @@ impl FreeReedView {
             loop_points.push(egui::pos2(px, py));
         }
         for w in loop_points.windows(2) {
-            painter.line_segment([w[0], w[1]], Stroke::new(1.8_f32, Color32::from_rgb(56, 189, 248)));
+            painter.line_segment(
+                [w[0], w[1]],
+                Stroke::new(1.8_f32, Color32::from_rgb(56, 189, 248)),
+            );
         }
 
         // Zone labels inside pad
@@ -506,7 +547,11 @@ impl FreeReedView {
         }
 
         // Draw Interactive Puck
-        painter.circle_filled(puck_center, FREE_REED_PUCK_HIT_RADIUS, Color32::from_rgb(236, 72, 153)); // Pink #EC4899
+        painter.circle_filled(
+            puck_center,
+            FREE_REED_PUCK_HIT_RADIUS,
+            Color32::from_rgb(236, 72, 153),
+        ); // Pink #EC4899
         painter.circle_stroke(
             puck_center,
             FREE_REED_PUCK_HIT_RADIUS,
@@ -536,13 +581,19 @@ impl FreeReedView {
         );
 
         // Draw 5 Spectrum Bars
-        let rank_names = ["16' Bassoon", "8' Clarinet", "8'+ Musette", "8'- Musette", "4' Piccolo"];
+        let rank_names = [
+            "16' Bassoon",
+            "8' Clarinet",
+            "8'+ Musette",
+            "8'- Musette",
+            "4' Piccolo",
+        ];
         let rank_colors = [
-            Color32::from_rgb(239, 68, 68),   // Red
-            Color32::from_rgb(245, 158, 11),  // Amber
-            Color32::from_rgb(16, 185, 129),  // Emerald
-            Color32::from_rgb(56, 189, 248),  // Sky Blue
-            Color32::from_rgb(168, 85, 247),  // Purple
+            Color32::from_rgb(239, 68, 68),  // Red
+            Color32::from_rgb(245, 158, 11), // Amber
+            Color32::from_rgb(16, 185, 129), // Emerald
+            Color32::from_rgb(56, 189, 248), // Sky Blue
+            Color32::from_rgb(168, 85, 247), // Purple
         ];
 
         let num_bars = 5;
@@ -553,7 +604,12 @@ impl FreeReedView {
         let bar_base_y = viz_rect.max.y - 32.0;
         let bar_max_h = bar_base_y - (viz_rect.min.y + 40.0);
 
-        for (i, (&energy, (&name, &color))) in self.rank_energies.iter().zip(rank_names.iter().zip(rank_colors.iter())).enumerate() {
+        for (i, (&energy, (&name, &color))) in self
+            .rank_energies
+            .iter()
+            .zip(rank_names.iter().zip(rank_colors.iter()))
+            .enumerate()
+        {
             let cx = viz_rect.min.x + bar_margin + (i as f32 + 0.5) * bar_slot;
             let bar_h = (energy.clamp(0.0, 1.0) * bar_max_h).max(3.0);
             let bar_box = egui::Rect::from_min_max(
@@ -588,26 +644,71 @@ impl FreeReedView {
         ui.allocate_ui_at_rect(controls_rect, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.label(RichText::new("Aeroelastic & Chamber:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
-                    ui.add(egui::Slider::new(&mut self.reed_stiffness, MIN_REED_STIFFNESS..=MAX_REED_STIFFNESS).text("Reed Stiffness"));
-                    ui.add(egui::Slider::new(&mut self.cassotto_aperture, MIN_CASSOTTO_APERTURE..=MAX_CASSOTTO_APERTURE).text("Cassotto Aperture"));
+                    ui.label(
+                        RichText::new("Aeroelastic & Chamber:")
+                            .font(FontId::proportional(11.0))
+                            .strong()
+                            .color(Color32::from_rgb(226, 232, 240)),
+                    );
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.reed_stiffness,
+                            MIN_REED_STIFFNESS..=MAX_REED_STIFFNESS,
+                        )
+                        .text("Reed Stiffness"),
+                    );
+                    ui.add(
+                        egui::Slider::new(
+                            &mut self.cassotto_aperture,
+                            MIN_CASSOTTO_APERTURE..=MAX_CASSOTTO_APERTURE,
+                        )
+                        .text("Cassotto Aperture"),
+                    );
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
-                    ui.label(RichText::new("Musette Detuning:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
-                    ui.add(egui::Slider::new(&mut self.musette_detune_cents, 0.0..=35.0).text("Detune (cents)"));
+                    ui.label(
+                        RichText::new("Musette Detuning:")
+                            .font(FontId::proportional(11.0))
+                            .strong()
+                            .color(Color32::from_rgb(226, 232, 240)),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut self.musette_detune_cents, 0.0..=35.0)
+                            .text("Detune (cents)"),
+                    );
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
-                    ui.label(RichText::new("Rank Energy Weights:").font(FontId::proportional(11.0)).strong().color(Color32::from_rgb(226, 232, 240)));
+                    ui.label(
+                        RichText::new("Rank Energy Weights:")
+                            .font(FontId::proportional(11.0))
+                            .strong()
+                            .color(Color32::from_rgb(226, 232, 240)),
+                    );
                     ui.horizontal(|ui| {
-                        ui.add(egui::DragValue::new(&mut self.rank_energies[0]).speed(0.01).range(0.0..=1.0).prefix("16': "));
-                        ui.add(egui::DragValue::new(&mut self.rank_energies[1]).speed(0.01).range(0.0..=1.0).prefix("8': "));
-                        ui.add(egui::DragValue::new(&mut self.rank_energies[2]).speed(0.01).range(0.0..=1.0).prefix("8'+: "));
+                        ui.add(
+                            egui::DragValue::new(&mut self.rank_energies[0])
+                                .speed(0.01)
+                                .range(0.0..=1.0)
+                                .prefix("16': "),
+                        );
+                        ui.add(
+                            egui::DragValue::new(&mut self.rank_energies[1])
+                                .speed(0.01)
+                                .range(0.0..=1.0)
+                                .prefix("8': "),
+                        );
+                        ui.add(
+                            egui::DragValue::new(&mut self.rank_energies[2])
+                                .speed(0.01)
+                                .range(0.0..=1.0)
+                                .prefix("8'+: "),
+                        );
                     });
                 });
             });
@@ -616,7 +717,12 @@ impl FreeReedView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

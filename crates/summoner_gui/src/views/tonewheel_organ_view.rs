@@ -259,7 +259,11 @@ impl TonewheelOrganView {
                 ui.separator();
 
                 // Scanner Vibrato Mode Selector
-                ui.label(egui::RichText::new("Scanner Vibrato/Chorus:").color(Color32::from_rgb(255, 215, 0)).strong());
+                ui.label(
+                    egui::RichText::new("Scanner Vibrato/Chorus:")
+                        .color(Color32::from_rgb(255, 215, 0))
+                        .strong(),
+                );
                 let modes = [
                     GuiVibratoMode::Off,
                     GuiVibratoMode::V1,
@@ -274,11 +278,19 @@ impl TonewheelOrganView {
                     let is_active = self.vibrato_mode == m;
                     let btn = egui::Button::new(
                         egui::RichText::new(m.name())
-                            .color(if is_active { Color32::from_rgb(10, 14, 22) } else { Color32::from_rgb(240, 245, 255) })
+                            .color(if is_active {
+                                Color32::from_rgb(10, 14, 22)
+                            } else {
+                                Color32::from_rgb(240, 245, 255)
+                            })
                             .strong(),
                     )
                     .min_size(Vec2::new(36.0, MIN_HIT_TARGET_PT))
-                    .fill(if is_active { Color32::from_rgb(0, 229, 255) } else { Color32::from_rgb(32, 45, 66) });
+                    .fill(if is_active {
+                        Color32::from_rgb(0, 229, 255)
+                    } else {
+                        Color32::from_rgb(32, 45, 66)
+                    });
 
                     if ui.add(btn).clicked() {
                         self.vibrato_mode = m;
@@ -290,7 +302,11 @@ impl TonewheelOrganView {
 
             // Preset Registrations
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Registrations:").color(Color32::from_rgb(255, 215, 0)).strong());
+                ui.label(
+                    egui::RichText::new("Registrations:")
+                        .color(Color32::from_rgb(255, 215, 0))
+                        .strong(),
+                );
                 let presets = [
                     ("Gospel Rock", "88 8000 008"),
                     ("Jimmy Smith Jazz", "88 8000 000"),
@@ -316,11 +332,16 @@ impl TonewheelOrganView {
 
             // 2. Main 9-Drawbar Slider Rack Canvas
             let drawbar_w = ui.available_width().max(400.0);
-            let (res, painter) = ui.allocate_painter(Vec2::new(drawbar_w, 220.0), egui::Sense::click_and_drag());
+            let (res, painter) =
+                ui.allocate_painter(Vec2::new(drawbar_w, 220.0), egui::Sense::click_and_drag());
             let rect = res.rect;
 
             painter.rect_filled(rect, 6.0, Color32::from_rgb(14, 18, 28));
-            painter.rect_stroke(rect, 6.0, Stroke::new(1.5_f32, Color32::from_rgb(45, 60, 85)));
+            painter.rect_stroke(
+                rect,
+                6.0,
+                Stroke::new(1.5_f32, Color32::from_rgb(45, 60, 85)),
+            );
 
             let col_step = (rect.width() - 32.0) / 9.0;
             let rack_top = rect.min.y + 35.0;
@@ -332,7 +353,10 @@ impl TonewheelOrganView {
                 // Drawbar Track
                 let track_p1 = egui::pos2(cx, rack_top);
                 let track_p2 = egui::pos2(cx, rack_top + rack_height);
-                painter.line_segment([track_p1, track_p2], Stroke::new(4.0_f32, Color32::from_rgb(30, 40, 58)));
+                painter.line_segment(
+                    [track_p1, track_p2],
+                    Stroke::new(4.0_f32, Color32::from_rgb(30, 40, 58)),
+                );
 
                 // Drawbar Position (0 is fully pushed in / top, 8 is fully pulled out / bottom)
                 let norm_val = self.drawbars[d] / 8.0;
@@ -340,15 +364,26 @@ impl TonewheelOrganView {
 
                 // Tab color styling
                 let (tab_color, text_color) = match col_group {
-                    DrawbarColorGroup::BrownSubOctave => (Color32::from_rgb(145, 65, 30), Color32::WHITE),
-                    DrawbarColorGroup::WhiteOctave => (Color32::from_rgb(235, 240, 250), Color32::from_rgb(10, 14, 22)),
-                    DrawbarColorGroup::BlackHarmonic => (Color32::from_rgb(35, 45, 65), Color32::from_rgb(220, 235, 255)),
+                    DrawbarColorGroup::BrownSubOctave => {
+                        (Color32::from_rgb(145, 65, 30), Color32::WHITE)
+                    }
+                    DrawbarColorGroup::WhiteOctave => (
+                        Color32::from_rgb(235, 240, 250),
+                        Color32::from_rgb(10, 14, 22),
+                    ),
+                    DrawbarColorGroup::BlackHarmonic => (
+                        Color32::from_rgb(35, 45, 65),
+                        Color32::from_rgb(220, 235, 255),
+                    ),
                 };
 
                 // Drawbar Shaft (Pulled section)
                 if norm_val > 0.01 {
                     painter.rect_filled(
-                        egui::Rect::from_min_max(egui::pos2(cx - 8.0, rack_top), egui::pos2(cx + 8.0, handle_y)),
+                        egui::Rect::from_min_max(
+                            egui::pos2(cx - 8.0, rack_top),
+                            egui::pos2(cx + 8.0, handle_y),
+                        ),
                         2.0,
                         Color32::from_rgb(20, 26, 38),
                     );
@@ -361,7 +396,10 @@ impl TonewheelOrganView {
                     Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(0, 229, 255, 60)),
                 );
                 painter.rect_filled(
-                    egui::Rect::from_center_size(egui::pos2(cx, handle_y), Vec2::new(col_step - 6.0, 28.0)),
+                    egui::Rect::from_center_size(
+                        egui::pos2(cx, handle_y),
+                        Vec2::new(col_step - 6.0, 28.0),
+                    ),
                     4.0,
                     tab_color,
                 );
@@ -400,21 +438,37 @@ impl TonewheelOrganView {
                 ui.horizontal(|ui| {
                     // Percussion On/Off
                     let perc_btn = egui::Button::new(
-                        egui::RichText::new(if self.percussion.enabled { "PERCUSSION: ON" } else { "PERCUSSION: OFF" })
-                            .color(if self.percussion.enabled { Color32::from_rgb(10, 14, 22) } else { Color32::from_rgb(240, 245, 255) })
-                            .strong(),
+                        egui::RichText::new(if self.percussion.enabled {
+                            "PERCUSSION: ON"
+                        } else {
+                            "PERCUSSION: OFF"
+                        })
+                        .color(if self.percussion.enabled {
+                            Color32::from_rgb(10, 14, 22)
+                        } else {
+                            Color32::from_rgb(240, 245, 255)
+                        })
+                        .strong(),
                     )
                     .min_size(Vec2::new(140.0, MIN_HIT_TARGET_PT))
-                    .fill(if self.percussion.enabled { Color32::from_rgb(0, 255, 180) } else { Color32::from_rgb(32, 45, 66) });
+                    .fill(if self.percussion.enabled {
+                        Color32::from_rgb(0, 255, 180)
+                    } else {
+                        Color32::from_rgb(32, 45, 66)
+                    });
                     if ui.add(perc_btn).clicked() {
                         self.percussion.enabled = !self.percussion.enabled;
                     }
 
                     // Percussion Harmonic (2nd vs 3rd)
                     let harm_btn = egui::Button::new(
-                        egui::RichText::new(if self.percussion.third_harmonic { "HARMONIC: 3rd (2-2/3')" } else { "HARMONIC: 2nd (4')" })
-                            .color(Color32::from_rgb(240, 245, 255))
-                            .strong(),
+                        egui::RichText::new(if self.percussion.third_harmonic {
+                            "HARMONIC: 3rd (2-2/3')"
+                        } else {
+                            "HARMONIC: 2nd (4')"
+                        })
+                        .color(Color32::from_rgb(240, 245, 255))
+                        .strong(),
                     )
                     .min_size(Vec2::new(160.0, MIN_HIT_TARGET_PT))
                     .fill(Color32::from_rgb(32, 45, 66));
@@ -424,9 +478,13 @@ impl TonewheelOrganView {
 
                     // Percussion Decay (Fast vs Slow)
                     let decay_btn = egui::Button::new(
-                        egui::RichText::new(if self.percussion.fast_decay { "DECAY: FAST" } else { "DECAY: SLOW" })
-                            .color(Color32::from_rgb(240, 245, 255))
-                            .strong(),
+                        egui::RichText::new(if self.percussion.fast_decay {
+                            "DECAY: FAST"
+                        } else {
+                            "DECAY: SLOW"
+                        })
+                        .color(Color32::from_rgb(240, 245, 255))
+                        .strong(),
                     )
                     .min_size(Vec2::new(120.0, MIN_HIT_TARGET_PT))
                     .fill(Color32::from_rgb(32, 45, 66));
@@ -436,9 +494,13 @@ impl TonewheelOrganView {
 
                     // Percussion Volume (Soft vs Normal)
                     let vol_btn = egui::Button::new(
-                        egui::RichText::new(if self.percussion.soft_volume { "VOL: SOFT" } else { "VOL: NORMAL" })
-                            .color(Color32::from_rgb(240, 245, 255))
-                            .strong(),
+                        egui::RichText::new(if self.percussion.soft_volume {
+                            "VOL: SOFT"
+                        } else {
+                            "VOL: NORMAL"
+                        })
+                        .color(Color32::from_rgb(240, 245, 255))
+                        .strong(),
                     )
                     .min_size(Vec2::new(120.0, MIN_HIT_TARGET_PT))
                     .fill(Color32::from_rgb(32, 45, 66));
@@ -491,7 +553,16 @@ impl TonewheelOrganView {
             };
 
             // Vertical track
-            draw_line_segment_to(&mut pixels, width, height, cx, rack_top, cx, rack_top + rack_height, line_col);
+            draw_line_segment_to(
+                &mut pixels,
+                width,
+                height,
+                cx,
+                rack_top,
+                cx,
+                rack_top + rack_height,
+                line_col,
+            );
 
             // Handle tab
             draw_rect_filled_to(
@@ -506,12 +577,29 @@ impl TonewheelOrganView {
             );
 
             // Hit target circle outline (>= 22pt)
-            draw_circle_stroke_to(&mut pixels, width, height, cx, handle_y, DRAWBAR_HANDLE_HIT_RADIUS, cyan_col);
+            draw_circle_stroke_to(
+                &mut pixels,
+                width,
+                height,
+                cx,
+                handle_y,
+                DRAWBAR_HANDLE_HIT_RADIUS,
+                cyan_col,
+            );
         }
 
         // Draw harmonic percussion badge
         if self.percussion.enabled {
-            draw_rect_filled_to(&mut pixels, width, height, 40.0, height as f32 - 60.0, 200.0, height as f32 - 20.0, amber_col);
+            draw_rect_filled_to(
+                &mut pixels,
+                width,
+                height,
+                40.0,
+                height as f32 - 60.0,
+                200.0,
+                height as f32 - 20.0,
+                amber_col,
+            );
         }
 
         encode_minimal_png_to(path, &pixels, width, height)
@@ -519,7 +607,16 @@ impl TonewheelOrganView {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_line_segment_to(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+fn draw_line_segment_to(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    col: [u8; 4],
+) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let steps = (dx.abs().max(dy.abs()) as usize).max(1);
@@ -537,7 +634,16 @@ fn draw_line_segment_to(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f3
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_rect_filled_to(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+fn draw_rect_filled_to(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    col: [u8; 4],
+) {
     let min_x = (x0.min(x1).max(0.0)) as u32;
     let max_x = (x0.max(x1).min(w as f32 - 1.0)) as u32;
     let min_y = (y0.min(y1).max(0.0)) as u32;
@@ -564,7 +670,12 @@ fn draw_circle_stroke_to(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f3
     }
 }
 
-fn encode_minimal_png_to(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_to(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

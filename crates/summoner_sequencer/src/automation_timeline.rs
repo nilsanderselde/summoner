@@ -217,7 +217,11 @@ impl AutomationLane {
             value: val.clamp(0.0, 1.0),
             interp: Interpolation::Linear,
         };
-        match self.curve.points.binary_search_by(|p| p.beat.partial_cmp(&beat).unwrap()) {
+        match self
+            .curve
+            .points
+            .binary_search_by(|p| p.beat.partial_cmp(&beat).unwrap())
+        {
             Ok(idx) => self.curve.points[idx] = pt,
             Err(idx) => self.curve.points.insert(idx, pt),
         }
@@ -244,7 +248,9 @@ impl AutomationLane {
             return;
         }
         let steps = steps.clamp(4, 64);
-        self.curve.points.retain(|p| p.beat < start_beat || p.beat > end_beat);
+        self.curve
+            .points
+            .retain(|p| p.beat < start_beat || p.beat > end_beat);
 
         for step in 0..=steps {
             let t = step as f64 / steps as f64;
@@ -258,7 +264,9 @@ impl AutomationLane {
                 interp: Interpolation::Linear,
             });
         }
-        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+        self.curve
+            .points
+            .sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
     }
 
     /// Add an S-curve (cubic hermite smoothstep) segment between two points.
@@ -281,20 +289,25 @@ impl AutomationLane {
             return;
         }
         let steps = steps.clamp(4, 64);
-        self.curve.points.retain(|p| p.beat < start_beat || p.beat > end_beat);
+        self.curve
+            .points
+            .retain(|p| p.beat < start_beat || p.beat > end_beat);
 
         for step in 0..=steps {
             let t = step as f64 / steps as f64;
             let beat = start_beat + t * (end_beat - start_beat);
             let s = t * t * (3.0 - 2.0 * t);
-            let val = (start_val as f64 + s * (end_val as f64 - start_val as f64)).clamp(0.0, 1.0) as f32;
+            let val =
+                (start_val as f64 + s * (end_val as f64 - start_val as f64)).clamp(0.0, 1.0) as f32;
             self.curve.points.push(AutomationPoint {
                 beat,
                 value: val,
                 interp: Interpolation::Smooth,
             });
         }
-        self.curve.points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
+        self.curve
+            .points
+            .sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap());
     }
 
     /// Thin dense automation curve points using the Ramer-Douglas-Peucker algorithm.
@@ -310,7 +323,11 @@ impl AutomationLane {
     }
 }
 
-fn perpendicular_distance(p: &AutomationPoint, line_start: &AutomationPoint, line_end: &AutomationPoint) -> f32 {
+fn perpendicular_distance(
+    p: &AutomationPoint,
+    line_start: &AutomationPoint,
+    line_end: &AutomationPoint,
+) -> f32 {
     let dx = (line_end.beat - line_start.beat) as f32;
     let dy = line_end.value - line_start.value;
     let mag = (dx * dx + dy * dy).sqrt();
@@ -320,7 +337,8 @@ fn perpendicular_distance(p: &AutomationPoint, line_start: &AutomationPoint, lin
         return (px * px + py * py).sqrt();
     }
     let num = ((line_end.beat - line_start.beat) as f32 * (line_start.value - p.value)
-        - (line_start.beat - p.beat) as f32 * (line_end.value - line_start.value)).abs();
+        - (line_start.beat - p.beat) as f32 * (line_end.value - line_start.value))
+        .abs();
     num / mag
 }
 
@@ -802,18 +820,29 @@ mod tests {
         lane.add_parabola_segment(2.0, 0.0, 6.0, 0.0, 0.8, 16, None);
         // Middle of parabola should be elevated by curvature
         let mid_val = lane.curve.evaluate_at_beat(4.0);
-        assert!(mid_val > 0.5, "Parabola midpoint should be elevated: {}", mid_val);
+        assert!(
+            mid_val > 0.5,
+            "Parabola midpoint should be elevated: {}",
+            mid_val
+        );
 
         // 3. S-curve
         lane.add_s_curve_segment(8.0, 0.0, 12.0, 1.0, 16, None);
         let s_mid = lane.curve.evaluate_at_beat(10.0);
-        assert!((s_mid - 0.5).abs() < 0.05, "S-curve midpoint should be ~0.5: {}", s_mid);
+        assert!(
+            (s_mid - 0.5).abs() < 0.05,
+            "S-curve midpoint should be ~0.5: {}",
+            s_mid
+        );
 
         // 4. Ramer-Douglas-Peucker Thinning
         let dense_count = lane.curve.points.len();
         lane.thin_ramer_douglas_peucker(0.05);
         let thinned_count = lane.curve.points.len();
-        assert!(thinned_count < dense_count, "RDP should thin redundant collinear points");
+        assert!(
+            thinned_count < dense_count,
+            "RDP should thin redundant collinear points"
+        );
         assert!(thinned_count >= 4, "Key shape anchors must be retained");
     }
 
@@ -829,13 +858,19 @@ mod tests {
         registry.set_mode(AutomationMode::Touch);
         param.set(0.5);
         timeline.record_beat(&mut registry, 1.0);
-        assert!(!timeline.lanes.contains_key("cutoff"), "Untouched param should not record in Touch mode");
+        assert!(
+            !timeline.lanes.contains_key("cutoff"),
+            "Untouched param should not record in Touch mode"
+        );
 
         // Touch the param
         registry.touch_param("cutoff", true);
         param.set(0.75);
         timeline.record_beat(&mut registry, 2.0);
-        assert!(timeline.lanes.contains_key("cutoff"), "Touched param should record in Touch mode");
+        assert!(
+            timeline.lanes.contains_key("cutoff"),
+            "Touched param should record in Touch mode"
+        );
         assert_eq!(timeline.evaluate("cutoff", 2.0), Some(0.75));
 
         // Mode 2: Latch mode => records and latches

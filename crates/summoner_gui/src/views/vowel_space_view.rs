@@ -144,7 +144,8 @@ impl VowelSpaceView {
 
         // Draw active formant puck on left half
         let puck_col = ((self.formant_puck_pos.0 * (mid_x - 4) as f32) + 2.0).round() as usize;
-        let puck_row = (((1.0 - self.formant_puck_pos.1) * (height - 4) as f32) + 2.0).round() as usize;
+        let puck_row =
+            (((1.0 - self.formant_puck_pos.1) * (height - 4) as f32) + 2.0).round() as usize;
         if puck_row < height - 1 && puck_col < mid_x {
             grid[puck_row][puck_col] = 'O';
         }
@@ -163,7 +164,9 @@ impl VowelSpaceView {
             }
         }
 
-        grid.into_iter().map(|row| row.into_iter().collect()).collect()
+        grid.into_iter()
+            .map(|row| row.into_iter().collect())
+            .collect()
     }
 
     #[cfg(feature = "gui")]
@@ -277,10 +280,22 @@ impl VowelSpaceView {
         let v_a = self.vowel_graph.nodes[4].chart_coordinates();
         let v_ash = self.vowel_graph.nodes[3].chart_coordinates();
 
-        let pt_i = egui::pos2(left_rect.min.x + v_i.0 * left_rect.width(), left_rect.max.y - v_i.1 * left_rect.height());
-        let pt_u = egui::pos2(left_rect.min.x + v_u.0 * left_rect.width(), left_rect.max.y - v_u.1 * left_rect.height());
-        let pt_a = egui::pos2(left_rect.min.x + v_a.0 * left_rect.width(), left_rect.max.y - v_a.1 * left_rect.height());
-        let pt_ash = egui::pos2(left_rect.min.x + v_ash.0 * left_rect.width(), left_rect.max.y - v_ash.1 * left_rect.height());
+        let pt_i = egui::pos2(
+            left_rect.min.x + v_i.0 * left_rect.width(),
+            left_rect.max.y - v_i.1 * left_rect.height(),
+        );
+        let pt_u = egui::pos2(
+            left_rect.min.x + v_u.0 * left_rect.width(),
+            left_rect.max.y - v_u.1 * left_rect.height(),
+        );
+        let pt_a = egui::pos2(
+            left_rect.min.x + v_a.0 * left_rect.width(),
+            left_rect.max.y - v_a.1 * left_rect.height(),
+        );
+        let pt_ash = egui::pos2(
+            left_rect.min.x + v_ash.0 * left_rect.width(),
+            left_rect.max.y - v_ash.1 * left_rect.height(),
+        );
 
         let guide_stroke = Stroke::new(1.0_f32, Color32::from_rgba_premultiplied(0, 229, 255, 60));
         painter.line_segment([pt_i, pt_u], guide_stroke);
@@ -291,7 +306,10 @@ impl VowelSpaceView {
         // Draw IPA Node markers
         for node in &self.vowel_graph.nodes {
             let (nx, ny) = node.chart_coordinates();
-            let pos = egui::pos2(left_rect.min.x + nx * left_rect.width(), left_rect.max.y - ny * left_rect.height());
+            let pos = egui::pos2(
+                left_rect.min.x + nx * left_rect.width(),
+                left_rect.max.y - ny * left_rect.height(),
+            );
             painter.circle_filled(pos, 4.0, Color32::from_rgb(0, 229, 255));
             painter.text(
                 egui::pos2(pos.x + 8.0, pos.y - 6.0),
@@ -310,10 +328,16 @@ impl VowelSpaceView {
             let pt = self.vowel_graph.evaluate_trajectory(t);
             let nx = ((pt.formants_hz[1] - MIN_F2_HZ) / (MAX_F2_HZ - MIN_F2_HZ)).clamp(0.0, 1.0);
             let ny = ((MAX_F1_HZ - pt.formants_hz[0]) / (MAX_F1_HZ - MIN_F1_HZ)).clamp(0.0, 1.0);
-            let c_pos = egui::pos2(left_rect.min.x + nx * left_rect.width(), left_rect.max.y - ny * left_rect.height());
+            let c_pos = egui::pos2(
+                left_rect.min.x + nx * left_rect.width(),
+                left_rect.max.y - ny * left_rect.height(),
+            );
 
             if let Some(prev) = prev_c_pt {
-                painter.line_segment([prev, c_pos], Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)));
+                painter.line_segment(
+                    [prev, c_pos],
+                    Stroke::new(2.0_f32, Color32::from_rgb(255, 215, 0)),
+                );
             }
             prev_c_pt = Some(c_pos);
         }
@@ -381,7 +405,10 @@ impl VowelSpaceView {
             let peak_h = 90.0;
 
             painter.line_segment(
-                [egui::pos2(px, spec_base_y), egui::pos2(px, spec_base_y - peak_h)],
+                [
+                    egui::pos2(px, spec_base_y),
+                    egui::pos2(px, spec_base_y - peak_h),
+                ],
                 Stroke::new(3.0_f32, col),
             );
             painter.circle_filled(egui::pos2(px, spec_base_y - peak_h), 6.0, col);
@@ -424,7 +451,11 @@ impl VowelSpaceView {
             ),
             (
                 "ACTIVE IPA VOWEL",
-                format!("{} ({:.1}% Morph)", self.selected_vowel.symbol(), self.morph_progress * 100.0),
+                format!(
+                    "{} ({:.1}% Morph)",
+                    self.selected_vowel.symbol(),
+                    self.morph_progress * 100.0
+                ),
                 Color32::from_rgb(0, 255, 180),
             ),
         ];
@@ -501,21 +532,77 @@ impl VowelSpaceView {
         }
 
         // Header Panel (y: 10..46, x: 20..width-20)
-        fill_rounded_rect_vs(&mut pixels, width, height, 20, 10, width - 40, 36, 4, [18, 24, 38, 255]);
-        draw_rect_border_vs(&mut pixels, width, height, 20, 10, width - 40, 36, [45, 60, 85, 255]);
+        fill_rounded_rect_vs(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            4,
+            [18, 24, 38, 255],
+        );
+        draw_rect_border_vs(
+            &mut pixels,
+            width,
+            height,
+            20,
+            10,
+            width - 40,
+            36,
+            [45, 60, 85, 255],
+        );
 
         // Left Canvas: 2D IPA Vowel Space (x: 20..width/2 - 10, y: 56..height - 120)
         let left_w = (width - 60) / 2;
         let canvas_h = height - 170;
-        fill_rounded_rect_vs(&mut pixels, width, height, 20, 56, left_w, canvas_h, 6, [14, 20, 32, 255]);
-        draw_rect_border_vs(&mut pixels, width, height, 20, 56, left_w, canvas_h, [45, 60, 85, 255]);
+        fill_rounded_rect_vs(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            left_w,
+            canvas_h,
+            6,
+            [14, 20, 32, 255],
+        );
+        draw_rect_border_vs(
+            &mut pixels,
+            width,
+            height,
+            20,
+            56,
+            left_w,
+            canvas_h,
+            [45, 60, 85, 255],
+        );
 
         // Draw Left Grid lines
         for step in 1..4 {
             let gx = 20.0 + (step as f32 / 4.0) * left_w as f32;
             let gy = 56.0 + (step as f32 / 4.0) * canvas_h as f32;
-            draw_line_segment_vs(&mut pixels, width, height, gx, 56.0, gx, 56.0 + canvas_h as f32, [25, 35, 55, 255]);
-            draw_line_segment_vs(&mut pixels, width, height, 20.0, gy, 20.0 + left_w as f32, gy, [25, 35, 55, 255]);
+            draw_line_segment_vs(
+                &mut pixels,
+                width,
+                height,
+                gx,
+                56.0,
+                gx,
+                56.0 + canvas_h as f32,
+                [25, 35, 55, 255],
+            );
+            draw_line_segment_vs(
+                &mut pixels,
+                width,
+                height,
+                20.0,
+                gy,
+                20.0 + left_w as f32,
+                gy,
+                [25, 35, 55, 255],
+            );
         }
 
         // Draw IPA Node markers
@@ -529,15 +616,58 @@ impl VowelSpaceView {
         // Formant Puck (Gold, >= 22pt radius -> 44x44pt touch bounding target)
         let puck_x = 20.0 + self.formant_puck_pos.0 * left_w as f32;
         let puck_y = 56.0 + (1.0 - self.formant_puck_pos.1) * canvas_h as f32;
-        draw_circle_ring_vs(&mut pixels, width, height, puck_x, puck_y, VOWEL_PUCK_HIT_RADIUS, [255, 215, 0, 160]);
-        draw_circle_filled_vs(&mut pixels, width, height, puck_x, puck_y, 14.0, [255, 215, 0, 255]);
-        draw_circle_filled_vs(&mut pixels, width, height, puck_x, puck_y, 4.0, [255, 255, 255, 255]);
+        draw_circle_ring_vs(
+            &mut pixels,
+            width,
+            height,
+            puck_x,
+            puck_y,
+            VOWEL_PUCK_HIT_RADIUS,
+            [255, 215, 0, 160],
+        );
+        draw_circle_filled_vs(
+            &mut pixels,
+            width,
+            height,
+            puck_x,
+            puck_y,
+            14.0,
+            [255, 215, 0, 255],
+        );
+        draw_circle_filled_vs(
+            &mut pixels,
+            width,
+            height,
+            puck_x,
+            puck_y,
+            4.0,
+            [255, 255, 255, 255],
+        );
 
         // Right Canvas: Formant Peaks Spectrum (x: width/2 + 10..width - 20, y: 56..height - 120)
         let right_x = 20 + left_w + 20;
         let right_w = left_w;
-        fill_rounded_rect_vs(&mut pixels, width, height, right_x, 56, right_w, canvas_h, 6, [14, 20, 32, 255]);
-        draw_rect_border_vs(&mut pixels, width, height, right_x, 56, right_w, canvas_h, [45, 60, 85, 255]);
+        fill_rounded_rect_vs(
+            &mut pixels,
+            width,
+            height,
+            right_x,
+            56,
+            right_w,
+            canvas_h,
+            6,
+            [14, 20, 32, 255],
+        );
+        draw_rect_border_vs(
+            &mut pixels,
+            width,
+            height,
+            right_x,
+            56,
+            right_w,
+            canvas_h,
+            [45, 60, 85, 255],
+        );
 
         let spec_base_y = 56.0 + canvas_h as f32 * 0.85;
         let formants = [
@@ -551,15 +681,51 @@ impl VowelSpaceView {
             let norm_f = (f_hz / 4000.0).clamp(0.05, 0.95);
             let px = right_x as f32 + 15.0 + norm_f * (right_w as f32 - 30.0);
             let peak_h = 75.0;
-            draw_line_segment_vs(&mut pixels, width, height, px, spec_base_y, px, spec_base_y - peak_h, col);
-            draw_circle_filled_vs(&mut pixels, width, height, px, spec_base_y - peak_h, 6.0, col);
+            draw_line_segment_vs(
+                &mut pixels,
+                width,
+                height,
+                px,
+                spec_base_y,
+                px,
+                spec_base_y - peak_h,
+                col,
+            );
+            draw_circle_filled_vs(
+                &mut pixels,
+                width,
+                height,
+                px,
+                spec_base_y - peak_h,
+                6.0,
+                col,
+            );
         }
 
         // Bottom Metrics Dock (x: 20..width - 20, y: height - 100..height - 20)
         let dock_y = height - 100;
         let dock_w = width - 40;
-        fill_rounded_rect_vs(&mut pixels, width, height, 20, dock_y, dock_w, 80, 4, [16, 35, 28, 255]);
-        draw_rect_border_vs(&mut pixels, width, height, 20, dock_y, dock_w, 80, [0, 255, 180, 255]);
+        fill_rounded_rect_vs(
+            &mut pixels,
+            width,
+            height,
+            20,
+            dock_y,
+            dock_w,
+            80,
+            4,
+            [16, 35, 28, 255],
+        );
+        draw_rect_border_vs(
+            &mut pixels,
+            width,
+            height,
+            20,
+            dock_y,
+            dock_w,
+            80,
+            [0, 255, 180, 255],
+        );
 
         encode_minimal_png_vs(path, &pixels, width, height)
     }
@@ -611,7 +777,16 @@ fn fill_rounded_rect_vs(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_rect_border_vs(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32, rh: u32, col: [u8; 4]) {
+fn draw_rect_border_vs(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    rx: u32,
+    ry: u32,
+    rw: u32,
+    rh: u32,
+    col: [u8; 4],
+) {
     for x in rx..(rx + rw).min(w) {
         if ry < h {
             let idx = ((ry * w + x) * 4) as usize;
@@ -635,7 +810,16 @@ fn draw_rect_border_vs(buf: &mut [u8], w: u32, h: u32, rx: u32, ry: u32, rw: u32
 }
 
 #[allow(clippy::too_many_arguments)]
-fn draw_line_segment_vs(buf: &mut [u8], w: u32, h: u32, x0: f32, y0: f32, x1: f32, y1: f32, col: [u8; 4]) {
+fn draw_line_segment_vs(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    x0: f32,
+    y0: f32,
+    x1: f32,
+    y1: f32,
+    col: [u8; 4],
+) {
     let dx = x1 - x0;
     let dy = y1 - y0;
     let steps = (dx.abs().max(dy.abs()) * 2.0).max(1.0) as u32;
@@ -689,7 +873,12 @@ fn draw_circle_ring_vs(buf: &mut [u8], w: u32, h: u32, cx: f32, cy: f32, r: f32,
     }
 }
 
-fn encode_minimal_png_vs(path: &str, rgba_pixels: &[u8], width: u32, height: u32) -> Result<(), String> {
+fn encode_minimal_png_vs(
+    path: &str,
+    rgba_pixels: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
     let mut out = Vec::with_capacity((width * height * 4 + 1024) as usize);
     out.extend_from_slice(b"\x89PNG\r\n\x1a\n");
 

@@ -84,7 +84,9 @@ impl JawariBridgeView {
             jiva_thread_pos: 0.45,
             curvature_c: 120.0,
             tarab_bleed: 0.40,
-            tarab_energy: [0.75, 0.60, 0.85, 0.45, 0.90, 0.55, 0.70, 0.80, 0.65, 0.50, 0.40, 0.60, 0.35],
+            tarab_energy: [
+                0.75, 0.60, 0.85, 0.45, 0.90, 0.55, 0.70, 0.80, 0.65, 0.50, 0.40, 0.60, 0.35,
+            ],
             puck_pos: (0.0, 0.0),
             is_dragging_puck: false,
             color_palette: ContrastColorPalette::default(),
@@ -95,15 +97,21 @@ impl JawariBridgeView {
     }
 
     pub fn update_puck_from_physics(&mut self) {
-        let norm_x = ((self.jiva_thread_pos - MIN_JIVA_THREAD_POS) / (MAX_JIVA_THREAD_POS - MIN_JIVA_THREAD_POS)).clamp(0.0, 1.0);
-        let norm_y = ((self.clearance_gap_mm - MIN_JAWARI_CLEARANCE_GAP) / (MAX_JAWARI_CLEARANCE_GAP - MIN_JAWARI_CLEARANCE_GAP)).clamp(0.0, 1.0);
+        let norm_x = ((self.jiva_thread_pos - MIN_JIVA_THREAD_POS)
+            / (MAX_JIVA_THREAD_POS - MIN_JIVA_THREAD_POS))
+            .clamp(0.0, 1.0);
+        let norm_y = ((self.clearance_gap_mm - MIN_JAWARI_CLEARANCE_GAP)
+            / (MAX_JAWARI_CLEARANCE_GAP - MIN_JAWARI_CLEARANCE_GAP))
+            .clamp(0.0, 1.0);
         self.puck_pos = (norm_x, norm_y);
     }
 
     pub fn update_physics_from_puck(&mut self, norm_x: f32, norm_y: f32) {
         self.puck_pos = (norm_x.clamp(0.0, 1.0), norm_y.clamp(0.0, 1.0));
-        self.jiva_thread_pos = MIN_JIVA_THREAD_POS + self.puck_pos.0 * (MAX_JIVA_THREAD_POS - MIN_JIVA_THREAD_POS);
-        self.clearance_gap_mm = MIN_JAWARI_CLEARANCE_GAP + self.puck_pos.1 * (MAX_JAWARI_CLEARANCE_GAP - MIN_JAWARI_CLEARANCE_GAP);
+        self.jiva_thread_pos =
+            MIN_JIVA_THREAD_POS + self.puck_pos.0 * (MAX_JIVA_THREAD_POS - MIN_JIVA_THREAD_POS);
+        self.clearance_gap_mm = MIN_JAWARI_CLEARANCE_GAP
+            + self.puck_pos.1 * (MAX_JAWARI_CLEARANCE_GAP - MIN_JAWARI_CLEARANCE_GAP);
         self.update_jawari_acoustics();
     }
 
@@ -112,32 +120,44 @@ impl JawariBridgeView {
             JawariBridgeHudPreset::DeerHornRaviShankar => {
                 self.curvature_c = 120.0;
                 self.tarab_bleed = 0.40;
-                self.tarab_energy = [0.80, 0.65, 0.85, 0.50, 0.92, 0.58, 0.72, 0.85, 0.68, 0.52, 0.45, 0.62, 0.38];
+                self.tarab_energy = [
+                    0.80, 0.65, 0.85, 0.50, 0.92, 0.58, 0.72, 0.85, 0.68, 0.52, 0.45, 0.62, 0.38,
+                ];
             }
             JawariBridgeHudPreset::CamelBoneVilayatKhan => {
                 self.curvature_c = 240.0;
                 self.tarab_bleed = 0.35;
-                self.tarab_energy = [0.90, 0.75, 0.70, 0.60, 0.88, 0.65, 0.78, 0.80, 0.72, 0.58, 0.50, 0.48, 0.30];
+                self.tarab_energy = [
+                    0.90, 0.75, 0.70, 0.60, 0.88, 0.65, 0.78, 0.80, 0.72, 0.58, 0.50, 0.48, 0.30,
+                ];
             }
             JawariBridgeHudPreset::EbonySurbaharMellow => {
                 self.curvature_c = 60.0;
                 self.tarab_bleed = 0.50;
-                self.tarab_energy = [0.95, 0.88, 0.82, 0.75, 0.90, 0.70, 0.65, 0.60, 0.55, 0.48, 0.40, 0.35, 0.28];
+                self.tarab_energy = [
+                    0.95, 0.88, 0.82, 0.75, 0.90, 0.70, 0.65, 0.60, 0.55, 0.48, 0.40, 0.35, 0.28,
+                ];
             }
             JawariBridgeHudPreset::SyntheticDelrinPrecision => {
                 self.curvature_c = 160.0;
                 self.tarab_bleed = 0.30;
-                self.tarab_energy = [0.70, 0.60, 0.65, 0.55, 0.75, 0.60, 0.68, 0.72, 0.60, 0.50, 0.42, 0.45, 0.35];
+                self.tarab_energy = [
+                    0.70, 0.60, 0.65, 0.55, 0.75, 0.60, 0.68, 0.72, 0.60, 0.50, 0.42, 0.45, 0.35,
+                ];
             }
             JawariBridgeHudPreset::ElectricMetalSizzle => {
                 self.curvature_c = 320.0;
                 self.tarab_bleed = 0.20;
-                self.tarab_energy = [0.60, 0.50, 0.55, 0.45, 0.65, 0.48, 0.52, 0.58, 0.45, 0.40, 0.35, 0.30, 0.25];
+                self.tarab_energy = [
+                    0.60, 0.50, 0.55, 0.45, 0.65, 0.48, 0.52, 0.58, 0.45, 0.40, 0.35, 0.30, 0.25,
+                ];
             }
             JawariBridgeHudPreset::OpenAcousticGourd => {
                 self.curvature_c = 90.0;
                 self.tarab_bleed = 0.55;
-                self.tarab_energy = [0.85, 0.72, 0.90, 0.65, 0.95, 0.70, 0.80, 0.88, 0.75, 0.62, 0.55, 0.68, 0.45];
+                self.tarab_energy = [
+                    0.85, 0.72, 0.90, 0.65, 0.95, 0.70, 0.80, 0.88, 0.75, 0.62, 0.55, 0.68, 0.45,
+                ];
             }
         }
     }
@@ -228,7 +248,11 @@ impl JawariBridgeView {
 
             for col in 0..(width.saturating_sub(2)) {
                 let string_idx = (col * 13) / (width - 2).max(1);
-                let string_e = if string_idx < 13 { self.tarab_energy[string_idx] } else { 0.0 };
+                let string_e = if string_idx < 13 {
+                    self.tarab_energy[string_idx]
+                } else {
+                    0.0
+                };
 
                 if string_e >= row_ratio {
                     line_buf.push('#');
@@ -247,7 +271,12 @@ impl JawariBridgeView {
     }
 
     /// Render headless PNG snapshot to verify layout alignment, hit targets, and WCAG AAA contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background color: Deep midnight slate `#0A0E18`
@@ -364,9 +393,13 @@ impl JawariBridgeView {
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(
-                        RichText::new(format!("c = {:.0} m⁻¹ | Bleed = {:.0}%", self.curvature_c, self.tarab_bleed * 100.0))
-                            .font(FontId::proportional(11.0))
-                            .color(Color32::from_rgb(148, 163, 184)),
+                        RichText::new(format!(
+                            "c = {:.0} m⁻¹ | Bleed = {:.0}%",
+                            self.curvature_c,
+                            self.tarab_bleed * 100.0
+                        ))
+                        .font(FontId::proportional(11.0))
+                        .color(Color32::from_rgb(148, 163, 184)),
                     );
                 });
             });
@@ -375,11 +408,23 @@ impl JawariBridgeView {
 
             // Preset Selection Bar (>=44pt touch buttons)
             let presets = [
-                (JawariBridgeHudPreset::DeerHornRaviShankar, "Deer Horn (Ravi)"),
-                (JawariBridgeHudPreset::CamelBoneVilayatKhan, "Camel Bone (Vilayat)"),
+                (
+                    JawariBridgeHudPreset::DeerHornRaviShankar,
+                    "Deer Horn (Ravi)",
+                ),
+                (
+                    JawariBridgeHudPreset::CamelBoneVilayatKhan,
+                    "Camel Bone (Vilayat)",
+                ),
                 (JawariBridgeHudPreset::EbonySurbaharMellow, "Ebony Surbahar"),
-                (JawariBridgeHudPreset::SyntheticDelrinPrecision, "Delrin Precision"),
-                (JawariBridgeHudPreset::ElectricMetalSizzle, "Electric Sizzle"),
+                (
+                    JawariBridgeHudPreset::SyntheticDelrinPrecision,
+                    "Delrin Precision",
+                ),
+                (
+                    JawariBridgeHudPreset::ElectricMetalSizzle,
+                    "Electric Sizzle",
+                ),
                 (JawariBridgeHudPreset::OpenAcousticGourd, "Open Gourd"),
             ];
 
@@ -389,10 +434,18 @@ impl JawariBridgeView {
                     let btn = egui::Button::new(
                         RichText::new(label)
                             .font(FontId::proportional(11.0))
-                            .color(if is_sel { Color32::from_rgb(15, 23, 42) } else { Color32::from_rgb(226, 232, 240) })
+                            .color(if is_sel {
+                                Color32::from_rgb(15, 23, 42)
+                            } else {
+                                Color32::from_rgb(226, 232, 240)
+                            }),
                     )
                     .min_size(Vec2::new(120.0, 32.0))
-                    .fill(if is_sel { Color32::from_rgb(245, 158, 11) } else { Color32::from_rgb(30, 41, 59) })
+                    .fill(if is_sel {
+                        Color32::from_rgb(245, 158, 11)
+                    } else {
+                        Color32::from_rgb(30, 41, 59)
+                    })
                     .rounding(Rounding::same(4.0));
 
                     if ui.add(btn).clicked() {
@@ -404,12 +457,19 @@ impl JawariBridgeView {
             ui.add_space(8.0);
 
             // Main Interactive Display (Canvas + Tarab Spectrum)
-            let (canvas_rect, response) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 240.0), egui::Sense::click_and_drag());
+            let (canvas_rect, response) = ui.allocate_exact_size(
+                Vec2::new(ui.available_width(), 240.0),
+                egui::Sense::click_and_drag(),
+            );
             let painter = ui.painter_at(canvas_rect);
 
             // Dark Charcoal background
             painter.rect_filled(canvas_rect, 6.0, Color32::from_rgb(15, 23, 42));
-            painter.rect_stroke(canvas_rect, 6.0, Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)));
+            painter.rect_stroke(
+                canvas_rect,
+                6.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(51, 65, 85)),
+            );
 
             // Left interactive pad: 62% width for Jawari geometry & puck
             let pad_w = (canvas_rect.width() - 24.0) * 0.62;
@@ -418,7 +478,11 @@ impl JawariBridgeView {
                 Vec2::new(pad_w, canvas_rect.height() - 16.0),
             );
             painter.rect_filled(pad_rect, 4.0, Color32::from_rgb(20, 28, 44));
-            painter.rect_stroke(pad_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)));
+            painter.rect_stroke(
+                pad_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)),
+            );
 
             // Right Tarab resonator pad: 38% width
             let tarab_x0 = pad_rect.max.x + 8.0;
@@ -428,7 +492,11 @@ impl JawariBridgeView {
                 Vec2::new(tarab_w, canvas_rect.height() - 16.0),
             );
             painter.rect_filled(tarab_rect, 4.0, Color32::from_rgb(18, 24, 38));
-            painter.rect_stroke(tarab_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)));
+            painter.rect_stroke(
+                tarab_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(71, 85, 105)),
+            );
 
             // Draw Curved Jawari Bridge Profile on pad
             let curve_pts = 32;
@@ -441,7 +509,10 @@ impl JawariBridgeView {
                 let y = pad_rect.max.y - 20.0 - (1.0 - curve_offset * 0.4) * 50.0;
                 let pt = egui::pos2(x, y);
                 if let Some(prev) = prev_pt {
-                    painter.line_segment([prev, pt], Stroke::new(2.5_f32, Color32::from_rgb(180, 130, 70)));
+                    painter.line_segment(
+                        [prev, pt],
+                        Stroke::new(2.5_f32, Color32::from_rgb(180, 130, 70)),
+                    );
                 }
                 prev_pt = Some(pt);
             }
@@ -449,7 +520,10 @@ impl JawariBridgeView {
             // Draw Jiva Cotton Thread Line
             let jiva_screen_x = pad_rect.min.x + self.puck_pos.0 * pad_rect.width();
             painter.line_segment(
-                [egui::pos2(jiva_screen_x, pad_rect.min.y + 10.0), egui::pos2(jiva_screen_x, pad_rect.max.y - 10.0)],
+                [
+                    egui::pos2(jiva_screen_x, pad_rect.min.y + 10.0),
+                    egui::pos2(jiva_screen_x, pad_rect.max.y - 10.0),
+                ],
                 Stroke::new(1.8_f32, Color32::from_rgb(250, 250, 240)),
             );
             painter.text(
@@ -479,8 +553,16 @@ impl JawariBridgeView {
             }
 
             // Draw Interactive Puck (44x44pt touch bounding target)
-            painter.circle_filled(puck_center, JAWARI_PUCK_HIT_RADIUS, Color32::from_rgb(245, 158, 11));
-            painter.circle_stroke(puck_center, JAWARI_PUCK_HIT_RADIUS, Stroke::new(2.5_f32, Color32::from_rgb(254, 240, 138)));
+            painter.circle_filled(
+                puck_center,
+                JAWARI_PUCK_HIT_RADIUS,
+                Color32::from_rgb(245, 158, 11),
+            );
+            painter.circle_stroke(
+                puck_center,
+                JAWARI_PUCK_HIT_RADIUS,
+                Stroke::new(2.5_f32, Color32::from_rgb(254, 240, 138)),
+            );
             painter.circle_filled(puck_center, 4.0, Color32::from_rgb(15, 23, 42));
 
             // Axis labels inside pad
@@ -547,12 +629,27 @@ impl JawariBridgeView {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     let mut gap = self.clearance_gap_mm;
-                    if ui.add(egui::Slider::new(&mut gap, MIN_JAWARI_CLEARANCE_GAP..=MAX_JAWARI_CLEARANCE_GAP).text("Clearance Gap h₀ (mm)")).changed() {
+                    if ui
+                        .add(
+                            egui::Slider::new(
+                                &mut gap,
+                                MIN_JAWARI_CLEARANCE_GAP..=MAX_JAWARI_CLEARANCE_GAP,
+                            )
+                            .text("Clearance Gap h₀ (mm)"),
+                        )
+                        .changed()
+                    {
                         self.clearance_gap_mm = gap;
                         self.update_puck_from_physics();
                     }
                     let mut jiva = self.jiva_thread_pos;
-                    if ui.add(egui::Slider::new(&mut jiva, MIN_JIVA_THREAD_POS..=MAX_JIVA_THREAD_POS).text("Cotton Jiva Position")).changed() {
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut jiva, MIN_JIVA_THREAD_POS..=MAX_JIVA_THREAD_POS)
+                                .text("Cotton Jiva Position"),
+                        )
+                        .changed()
+                    {
                         self.jiva_thread_pos = jiva;
                         self.update_puck_from_physics();
                     }
@@ -562,11 +659,23 @@ impl JawariBridgeView {
 
                 ui.vertical(|ui| {
                     let mut curv = self.curvature_c;
-                    if ui.add(egui::Slider::new(&mut curv, 40.0..=400.0).text("Bridge Curvature c (m⁻¹)")).changed() {
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut curv, 40.0..=400.0)
+                                .text("Bridge Curvature c (m⁻¹)"),
+                        )
+                        .changed()
+                    {
                         self.curvature_c = curv;
                     }
                     let mut bleed = self.tarab_bleed;
-                    if ui.add(egui::Slider::new(&mut bleed, 0.0..=1.0).text("Tarab Sympathetic Bleed")).changed() {
+                    if ui
+                        .add(
+                            egui::Slider::new(&mut bleed, 0.0..=1.0)
+                                .text("Tarab Sympathetic Bleed"),
+                        )
+                        .changed()
+                    {
                         self.tarab_bleed = bleed;
                     }
                 });
@@ -575,8 +684,12 @@ impl JawariBridgeView {
     }
 }
 
-
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // PNG Header
 

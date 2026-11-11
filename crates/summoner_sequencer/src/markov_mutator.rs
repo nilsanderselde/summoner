@@ -28,17 +28,17 @@ pub enum MarkovOrder {
 /// Polyrhythmic step division defining step durations relative to quarter note beats.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
 pub enum PolyrhythmicDivision {
-    Quarter,        // 1.0 beat (1/4)
-    Eighth,         // 0.5 beat (1/8)
+    Quarter, // 1.0 beat (1/4)
+    Eighth,  // 0.5 beat (1/8)
     #[default]
-    Sixteenth,      // 0.25 beat (1/16)
-    ThirtySecond,   // 0.125 beat (1/32)
-    Triplet8th,     // 1/3 beat (8th triplet)
-    Triplet16th,    // 1/6 beat (16th triplet)
+    Sixteenth, // 0.25 beat (1/16)
+    ThirtySecond, // 0.125 beat (1/32)
+    Triplet8th, // 1/3 beat (8th triplet)
+    Triplet16th, // 1/6 beat (16th triplet)
     Quintuplet16th, // 1/5 beat (5:4 16th quintuplet)
-    Septuplet16th,  // 1/7 beat (7:4 16th septuplet)
-    DottedEighth,   // 0.75 beat (3/16)
-    Custom(f64),    // Arbitrary fractional beat duration
+    Septuplet16th, // 1/7 beat (7:4 16th septuplet)
+    DottedEighth, // 0.75 beat (3/16)
+    Custom(f64), // Arbitrary fractional beat duration
 }
 
 impl PolyrhythmicDivision {
@@ -252,7 +252,10 @@ impl MarkovSequenceMutator {
             let next_event = win[2];
 
             let candidates = self.matrix.transitions_order2.entry(key).or_default();
-            if let Some(existing) = candidates.iter_mut().find(|(e, _)| (e.pitch - next_event.pitch).abs() < 0.01) {
+            if let Some(existing) = candidates
+                .iter_mut()
+                .find(|(e, _)| (e.pitch - next_event.pitch).abs() < 0.01)
+            {
                 existing.1 += 1;
             } else {
                 candidates.push((next_event, 1));
@@ -269,7 +272,10 @@ impl MarkovSequenceMutator {
                 let next_event = win[3];
 
                 let candidates = self.matrix.transitions_order3.entry(key).or_default();
-                if let Some(existing) = candidates.iter_mut().find(|(e, _)| (e.pitch - next_event.pitch).abs() < 0.01) {
+                if let Some(existing) = candidates
+                    .iter_mut()
+                    .find(|(e, _)| (e.pitch - next_event.pitch).abs() < 0.01)
+                {
                     existing.1 += 1;
                 } else {
                     candidates.push((next_event, 1));
@@ -415,7 +421,9 @@ impl MarkovSequenceMutator {
                     self.matrix
                         .transitions_order2
                         .get(&(k1, k2))
-                        .and_then(|cands| Self::sample_candidate(cands, self.config.temperature, &mut rng_seed))
+                        .and_then(|cands| {
+                            Self::sample_candidate(cands, self.config.temperature, &mut rng_seed)
+                        })
                 } else {
                     None
                 };
@@ -585,7 +593,10 @@ mod tests {
         let seq2 = mutator.generate_sequence(&[60.0, 64.0], 16, 0xABCDEF01);
 
         assert_eq!(seq1.len(), 16);
-        assert_eq!(seq1, seq2, "Markov generation with identical seed must be 100% deterministic");
+        assert_eq!(
+            seq1, seq2,
+            "Markov generation with identical seed must be 100% deterministic"
+        );
     }
 
     #[test]
@@ -598,8 +609,8 @@ mod tests {
 
     #[test]
     fn test_markov_timeline_dispatch_and_parambus() {
-        let mut mutator = MarkovSequenceMutator::new()
-            .with_division(PolyrhythmicDivision::Triplet16th);
+        let mut mutator =
+            MarkovSequenceMutator::new().with_division(PolyrhythmicDivision::Triplet16th);
         let melody = vec![48.0, 50.0, 52.0, 53.0, 55.0];
         mutator.train_from_pitches(&melody);
 

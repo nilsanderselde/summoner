@@ -142,11 +142,13 @@ impl CrystalResonatorView {
 
     pub fn speed_to_normalized(speed: f32) -> f32 {
         let s = speed.clamp(MIN_FRICTION_SPEED_MPS, MAX_FRICTION_SPEED_MPS);
-        ((s - MIN_FRICTION_SPEED_MPS) / (MAX_FRICTION_SPEED_MPS - MIN_FRICTION_SPEED_MPS)).clamp(0.0, 1.0)
+        ((s - MIN_FRICTION_SPEED_MPS) / (MAX_FRICTION_SPEED_MPS - MIN_FRICTION_SPEED_MPS))
+            .clamp(0.0, 1.0)
     }
 
     pub fn normalized_to_speed(norm: f32) -> f32 {
-        MIN_FRICTION_SPEED_MPS + norm.clamp(0.0, 1.0) * (MAX_FRICTION_SPEED_MPS - MIN_FRICTION_SPEED_MPS)
+        MIN_FRICTION_SPEED_MPS
+            + norm.clamp(0.0, 1.0) * (MAX_FRICTION_SPEED_MPS - MIN_FRICTION_SPEED_MPS)
     }
 
     pub fn force_to_normalized(force: f32) -> f32 {
@@ -209,7 +211,11 @@ impl CrystalResonatorView {
 
             // Modal amplitudes with roll-off and fluid damping
             let mode_roll = 1.0 / (1.0 + 0.45 * (i as f32).powf(1.4));
-            let damp = if i > 0 { water_damping.powi(i as i32) } else { 1.0 };
+            let damp = if i > 0 {
+                water_damping.powi(i as i32)
+            } else {
+                1.0
+            };
             let amp = (total_drive * mode_roll * damp).clamp(0.001, 1.5);
             self.modal_amplitudes[i] = amp;
         }
@@ -269,7 +275,9 @@ impl CrystalResonatorView {
             }
         }
 
-        grid.into_iter().map(|row| row.into_iter().collect()).collect()
+        grid.into_iter()
+            .map(|row| row.into_iter().collect())
+            .collect()
     }
 
     #[cfg(feature = "gui")]
@@ -296,20 +304,27 @@ impl CrystalResonatorView {
 
         // Material Profile Tabs (y: 46..90) - Each tab >= 44pt touch target
         let tabs = [
-            (CrystalMaterialProfile::PureQuartzCrystal, "CRYSTAL BOWL (432Hz)"),
-            (CrystalMaterialProfile::FranklinQuartzGlass, "FRANKLIN CHALICE"),
+            (
+                CrystalMaterialProfile::PureQuartzCrystal,
+                "CRYSTAL BOWL (432Hz)",
+            ),
+            (
+                CrystalMaterialProfile::FranklinQuartzGlass,
+                "FRANKLIN CHALICE",
+            ),
             (CrystalMaterialProfile::WetCrystalGoblet, "WET GOBLET"),
-            (CrystalMaterialProfile::BorosilicateBell, "BOROSILICATE BELL"),
+            (
+                CrystalMaterialProfile::BorosilicateBell,
+                "BOROSILICATE BELL",
+            ),
             (CrystalMaterialProfile::MetallophoneAlloy, "METALLOPHONE"),
         ];
 
         let tab_w = (rect.width() - 40.0 - 4.0 * 8.0) / 5.0;
         for (i, (prof, name)) in tabs.iter().enumerate() {
             let bx = rect.min.x + 20.0 + i as f32 * (tab_w + 8.0);
-            let tab_rect = egui::Rect::from_min_size(
-                Pos2::new(bx, rect.min.y + 46.0),
-                Vec2::new(tab_w, 44.0),
-            );
+            let tab_rect =
+                egui::Rect::from_min_size(Pos2::new(bx, rect.min.y + 46.0), Vec2::new(tab_w, 44.0));
             let is_sel = self.material_profile == *prof;
             let bg_col = if is_sel {
                 Color32::from_rgb(56, 189, 248)
@@ -317,9 +332,17 @@ impl CrystalResonatorView {
                 Color32::from_rgb(20, 28, 44)
             };
             painter.rect_filled(tab_rect, 4.0, bg_col);
-            painter.rect_stroke(tab_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)));
+            painter.rect_stroke(
+                tab_rect,
+                4.0,
+                Stroke::new(1.0_f32, Color32::from_rgb(45, 60, 85)),
+            );
 
-            let text_col = if is_sel { Color32::from_rgb(10, 14, 26) } else { Color32::from_rgb(200, 215, 235) };
+            let text_col = if is_sel {
+                Color32::from_rgb(10, 14, 26)
+            } else {
+                Color32::from_rgb(200, 215, 235)
+            };
             painter.text(
                 tab_rect.center(),
                 egui::Align2::CENTER_CENTER,
@@ -343,9 +366,16 @@ impl CrystalResonatorView {
         let half_w = (rect.width() - 50.0) * 0.5;
 
         // Left Panel: Wand Stick-Slip Excitation Puck Canvas
-        let left_rect = egui::Rect::from_min_size(Pos2::new(rect.min.x + 20.0, main_top), Vec2::new(half_w, main_h));
+        let left_rect = egui::Rect::from_min_size(
+            Pos2::new(rect.min.x + 20.0, main_top),
+            Vec2::new(half_w, main_h),
+        );
         painter.rect_filled(left_rect, 4.0, Color32::from_rgb(14, 20, 32));
-        painter.rect_stroke(left_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 75)));
+        painter.rect_stroke(
+            left_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 75)),
+        );
 
         painter.text(
             Pos2::new(left_rect.min.x + 12.0, left_rect.min.y + 10.0),
@@ -360,7 +390,8 @@ impl CrystalResonatorView {
         let max_r = (left_rect.height() * 0.38).min(left_rect.width() * 0.38);
         for ring in 1..=4 {
             let r = max_r * (ring as f32 / 4.0);
-            let ring_stroke = Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 40));
+            let ring_stroke =
+                Stroke::new(1.0_f32, Color32::from_rgba_unmultiplied(56, 189, 248, 40));
             painter.circle_stroke(bowl_center, r, ring_stroke);
         }
 
@@ -378,7 +409,11 @@ impl CrystalResonatorView {
         let puck_center = Pos2::new(puck_screen_x, puck_screen_y);
 
         // Puck Outer Aura & Inner Dot
-        painter.circle_filled(puck_center, 14.0, Color32::from_rgba_unmultiplied(56, 189, 248, 60));
+        painter.circle_filled(
+            puck_center,
+            14.0,
+            Color32::from_rgba_unmultiplied(56, 189, 248, 60),
+        );
         painter.circle_filled(puck_center, 7.0, Color32::from_rgb(56, 189, 248));
         painter.circle_stroke(puck_center, 14.0, Stroke::new(1.5_f32, Color32::WHITE));
 
@@ -386,7 +421,10 @@ impl CrystalResonatorView {
         painter.text(
             Pos2::new(puck_center.x, puck_center.y - 18.0),
             egui::Align2::CENTER_BOTTOM,
-            format!("{:.2}m/s | {:.2}N", self.friction_speed_mps, self.normal_force_n),
+            format!(
+                "{:.2}m/s | {:.2}N",
+                self.friction_speed_mps, self.normal_force_n
+            ),
             FontId::proportional(9.0),
             Color32::from_rgb(220, 235, 255),
         );
@@ -407,7 +445,8 @@ impl CrystalResonatorView {
         if self.is_dragging_puck && response.dragged() {
             if let Some(pos) = response.interact_pointer_pos() {
                 let norm_x = ((pos.x - left_rect.min.x) / left_rect.width()).clamp(0.0, 1.0);
-                let norm_y = (1.0 - ((pos.y - left_rect.min.y) / left_rect.height())).clamp(0.0, 1.0);
+                let norm_y =
+                    (1.0 - ((pos.y - left_rect.min.y) / left_rect.height())).clamp(0.0, 1.0);
                 self.puck_pos = (norm_x, norm_y);
                 self.friction_speed_mps = Self::normalized_to_speed(norm_x);
                 self.normal_force_n = Self::normalized_to_force(norm_y);
@@ -416,14 +455,24 @@ impl CrystalResonatorView {
         }
 
         // Right Panel: 8-Mode Thin-Shell Modal Resonance Spectrum
-        let right_rect = egui::Rect::from_min_size(Pos2::new(rect.min.x + 30.0 + half_w, main_top), Vec2::new(half_w, main_h));
+        let right_rect = egui::Rect::from_min_size(
+            Pos2::new(rect.min.x + 30.0 + half_w, main_top),
+            Vec2::new(half_w, main_h),
+        );
         painter.rect_filled(right_rect, 4.0, Color32::from_rgb(14, 20, 32));
-        painter.rect_stroke(right_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 75)));
+        painter.rect_stroke(
+            right_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 75)),
+        );
 
         painter.text(
             Pos2::new(right_rect.min.x + 12.0, right_rect.min.y + 10.0),
             egui::Align2::LEFT_TOP,
-            format!("8-Mode Thin-Shell Resonance Doublets (f0 = {:.1} Hz)", self.effective_f0_hz),
+            format!(
+                "8-Mode Thin-Shell Resonance Doublets (f0 = {:.1} Hz)",
+                self.effective_f0_hz
+            ),
             FontId::proportional(11.0),
             Color32::from_rgb(148, 163, 184),
         );
@@ -467,14 +516,31 @@ impl CrystalResonatorView {
 
         // Bottom Strip Controls: Water Fill, Modal Q, Pitch & Strike Trigger
         let bottom_top = main_top + main_h + 14.0;
-        let ctrl_rect = egui::Rect::from_min_size(Pos2::new(rect.min.x + 20.0, bottom_top), Vec2::new(rect.width() - 40.0, 110.0));
+        let ctrl_rect = egui::Rect::from_min_size(
+            Pos2::new(rect.min.x + 20.0, bottom_top),
+            Vec2::new(rect.width() - 40.0, 110.0),
+        );
         painter.rect_filled(ctrl_rect, 4.0, Color32::from_rgb(18, 24, 38));
-        painter.rect_stroke(ctrl_rect, 4.0, Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 75)));
+        painter.rect_stroke(
+            ctrl_rect,
+            4.0,
+            Stroke::new(1.0_f32, Color32::from_rgb(36, 50, 75)),
+        );
 
         // Strike Mallet Button (Left side >= 44x44pt)
-        let strike_btn_rect = egui::Rect::from_min_size(Pos2::new(ctrl_rect.min.x + 12.0, ctrl_rect.min.y + 12.0), Vec2::new(120.0, 44.0));
-        let is_strike_hover = response.hover_pos().map(|p| strike_btn_rect.contains(p)).unwrap_or(false);
-        let strike_bg = if is_strike_hover { Color32::from_rgb(245, 158, 11) } else { Color32::from_rgb(217, 119, 6) };
+        let strike_btn_rect = egui::Rect::from_min_size(
+            Pos2::new(ctrl_rect.min.x + 12.0, ctrl_rect.min.y + 12.0),
+            Vec2::new(120.0, 44.0),
+        );
+        let is_strike_hover = response
+            .hover_pos()
+            .map(|p| strike_btn_rect.contains(p))
+            .unwrap_or(false);
+        let strike_bg = if is_strike_hover {
+            Color32::from_rgb(245, 158, 11)
+        } else {
+            Color32::from_rgb(217, 119, 6)
+        };
         painter.rect_filled(strike_btn_rect, 4.0, strike_bg);
         painter.text(
             strike_btn_rect.center(),
@@ -496,14 +562,21 @@ impl CrystalResonatorView {
         painter.text(
             Pos2::new(ctrl_rect.min.x + 150.0, ctrl_rect.min.y + 18.0),
             egui::Align2::LEFT_TOP,
-            format!("💧 Water Mass Loading: {:.0}%  (Pitch: {:.1} Hz)", self.water_fill_pct * 100.0, self.effective_f0_hz),
+            format!(
+                "💧 Water Mass Loading: {:.0}%  (Pitch: {:.1} Hz)",
+                self.water_fill_pct * 100.0,
+                self.effective_f0_hz
+            ),
             FontId::proportional(10.5),
             Color32::from_rgb(56, 189, 248),
         );
         painter.text(
             Pos2::new(ctrl_rect.min.x + 150.0, ctrl_rect.min.y + 40.0),
             egui::Align2::LEFT_TOP,
-            format!("💎 Crystalline Q-Scale: {:.2}x  |  Doublet Beating Shimmer: {:.2} Hz", self.q_scale, self.doublet_split_hz),
+            format!(
+                "💎 Crystalline Q-Scale: {:.2}x  |  Doublet Beating Shimmer: {:.2} Hz",
+                self.q_scale, self.doublet_split_hz
+            ),
             FontId::proportional(10.5),
             Color32::from_rgb(200, 215, 235),
         );
@@ -512,14 +585,24 @@ impl CrystalResonatorView {
         painter.text(
             Pos2::new(ctrl_rect.min.x + 12.0, ctrl_rect.max.y - 20.0),
             egui::Align2::LEFT_BOTTOM,
-            format!("Mode: {} | Velocity: {:.2} m/s | Contact: {:.2} N | Zero-Alloc Audio Ready", self.material_profile.name(), self.friction_speed_mps, self.normal_force_n),
+            format!(
+                "Mode: {} | Velocity: {:.2} m/s | Contact: {:.2} N | Zero-Alloc Audio Ready",
+                self.material_profile.name(),
+                self.friction_speed_mps,
+                self.normal_force_n
+            ),
             FontId::proportional(9.0),
             Color32::from_rgb(148, 163, 184),
         );
     }
 
     /// Render headless PNG snapshot visualizer for layout alignment, touch target verification, and WCAG contrast.
-    pub fn render_snapshot_png(&self, path: &str, width: usize, height: usize) -> Result<(), String> {
+    pub fn render_snapshot_png(
+        &self,
+        path: &str,
+        width: usize,
+        height: usize,
+    ) -> Result<(), String> {
         let mut pixels = vec![0u8; width * height * 4];
 
         // Background: Deep Slate Navy (#0A0E18)
@@ -590,7 +673,11 @@ impl CrystalResonatorView {
             let theta = (i as f32 / num_pts as f32) * 2.0 * std::f32::consts::PI;
             let px = (center_x + bowl_r * theta.cos()) as isize;
             let py = (center_y + bowl_r * theta.sin()) as isize;
-            if px >= c_left as isize && px < c_right as isize && py >= c_top as isize && py < c_bottom as isize {
+            if px >= c_left as isize
+                && px < c_right as isize
+                && py >= c_top as isize
+                && py < c_bottom as isize
+            {
                 let idx = (py as usize * width + px as usize) * 4;
                 pixels[idx] = 0x38;
                 pixels[idx + 1] = 0xBD;
@@ -681,7 +768,8 @@ impl CrystalResonatorView {
             }
         }
 
-        let water_fill_split = bar_left + ((bar_right - bar_left) as f32 * self.water_fill_pct) as usize;
+        let water_fill_split =
+            bar_left + ((bar_right - bar_left) as f32 * self.water_fill_pct) as usize;
         for y in bar_y_start..bar_y_end {
             for x in bar_left..=water_fill_split.min(bar_right) {
                 let idx = (y * width + x) * 4;
@@ -695,7 +783,12 @@ impl CrystalResonatorView {
     }
 }
 
-fn save_png_file(path: &str, width: usize, height: usize, rgba_pixels: &[u8]) -> Result<(), String> {
+fn save_png_file(
+    path: &str,
+    width: usize,
+    height: usize,
+    rgba_pixels: &[u8],
+) -> Result<(), String> {
     let mut out = Vec::with_capacity(width * height * 4 + 1024);
     out.extend_from_slice(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 
@@ -783,7 +876,10 @@ mod tests {
     #[test]
     fn test_crystal_resonator_defaults() {
         let view = CrystalResonatorView::new();
-        assert_eq!(view.material_profile, CrystalMaterialProfile::PureQuartzCrystal);
+        assert_eq!(
+            view.material_profile,
+            CrystalMaterialProfile::PureQuartzCrystal
+        );
         assert_eq!(view.root_freq_hz, 432.0);
         assert!(view.effective_f0_hz <= 432.0);
         assert_eq!(view.modal_amplitudes.len(), NUM_CRYSTAL_MODES);
@@ -818,14 +914,22 @@ mod tests {
             let (fa, fb) = view.modal_frequencies[i];
             assert!(fb > fa, "Doublet mode B must be higher than mode A");
             let df = fb - fa;
-            assert!((0.1..=5.0).contains(&df), "Split interval must be realistic");
+            assert!(
+                (0.1..=5.0).contains(&df),
+                "Split interval must be realistic"
+            );
         }
     }
 
     #[test]
     fn test_puck_touch_target_and_normalization() {
         let mut view = CrystalResonatorView::new();
-        let canvas = Rect { x: 50.0, y: 50.0, width: 200.0, height: 200.0 };
+        let canvas = Rect {
+            x: 50.0,
+            y: 50.0,
+            width: 200.0,
+            height: 200.0,
+        };
 
         view.puck_pos = (0.5, 0.5);
         let center_x = canvas.x + 0.5 * canvas.width;

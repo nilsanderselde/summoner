@@ -65,8 +65,21 @@ pub struct EpWaypoint {
 
 impl Default for EpWaypoint {
     fn default() -> Self {
-        let (model, hardness, air_gap, bark, tonebar, damper, trem_en, trem_rate, trem_depth, trem_stereo, drive, bass, treble) =
-            EpArticulation::ClassicSuitcase.nominal_parameters();
+        let (
+            model,
+            hardness,
+            air_gap,
+            bark,
+            tonebar,
+            damper,
+            trem_en,
+            trem_rate,
+            trem_depth,
+            trem_stereo,
+            drive,
+            bass,
+            treble,
+        ) = EpArticulation::ClassicSuitcase.nominal_parameters();
         Self {
             beat: 0.0,
             model_type: model,
@@ -468,7 +481,11 @@ impl EpGestureEngine {
                 self.loop_length_beats
             } else {
                 let b = beat % self.loop_length_beats;
-                if b < 0.0 { b + self.loop_length_beats } else { b }
+                if b < 0.0 {
+                    b + self.loop_length_beats
+                } else {
+                    b
+                }
             }
         } else {
             beat
@@ -497,62 +514,120 @@ impl EpGestureEngine {
         let hardness = match curve {
             EpInterpolationCurve::Hold => w1.hammer_hardness,
             EpInterpolationCurve::Linear => lerp(w1.hammer_hardness, w2.hammer_hardness, t),
-            _ => catmull_rom_1d(w0.hammer_hardness, w1.hammer_hardness, w2.hammer_hardness, w3.hammer_hardness, t),
-        }.clamp(0.0, 1.0);
+            _ => catmull_rom_1d(
+                w0.hammer_hardness,
+                w1.hammer_hardness,
+                w2.hammer_hardness,
+                w3.hammer_hardness,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let air_gap = match curve {
             EpInterpolationCurve::Hold => w1.air_gap_mm,
             EpInterpolationCurve::Linear => lerp(w1.air_gap_mm, w2.air_gap_mm, t),
-            _ => catmull_rom_1d(w0.air_gap_mm, w1.air_gap_mm, w2.air_gap_mm, w3.air_gap_mm, t),
-        }.clamp(0.4, 6.0);
+            _ => catmull_rom_1d(
+                w0.air_gap_mm,
+                w1.air_gap_mm,
+                w2.air_gap_mm,
+                w3.air_gap_mm,
+                t,
+            ),
+        }
+        .clamp(0.4, 6.0);
 
         let bark = match curve {
             EpInterpolationCurve::Hold => w1.bark_drive,
             EpInterpolationCurve::Linear => lerp(w1.bark_drive, w2.bark_drive, t),
-            _ => catmull_rom_1d(w0.bark_drive, w1.bark_drive, w2.bark_drive, w3.bark_drive, t),
-        }.clamp(0.0, 1.0);
+            _ => catmull_rom_1d(
+                w0.bark_drive,
+                w1.bark_drive,
+                w2.bark_drive,
+                w3.bark_drive,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let tonebar = match curve {
             EpInterpolationCurve::Hold => w1.tonebar_coupling,
             EpInterpolationCurve::Linear => lerp(w1.tonebar_coupling, w2.tonebar_coupling, t),
-            _ => catmull_rom_1d(w0.tonebar_coupling, w1.tonebar_coupling, w2.tonebar_coupling, w3.tonebar_coupling, t),
-        }.clamp(0.0, 1.0);
+            _ => catmull_rom_1d(
+                w0.tonebar_coupling,
+                w1.tonebar_coupling,
+                w2.tonebar_coupling,
+                w3.tonebar_coupling,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let damper = match curve {
             EpInterpolationCurve::Hold => w1.damper_clunk_volume,
             EpInterpolationCurve::Linear => lerp(w1.damper_clunk_volume, w2.damper_clunk_volume, t),
-            _ => catmull_rom_1d(w0.damper_clunk_volume, w1.damper_clunk_volume, w2.damper_clunk_volume, w3.damper_clunk_volume, t),
-        }.clamp(0.0, 1.0);
+            _ => catmull_rom_1d(
+                w0.damper_clunk_volume,
+                w1.damper_clunk_volume,
+                w2.damper_clunk_volume,
+                w3.damper_clunk_volume,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let trem_rate = match curve {
             EpInterpolationCurve::Hold => w1.tremolo_rate_hz,
             EpInterpolationCurve::Linear => lerp(w1.tremolo_rate_hz, w2.tremolo_rate_hz, t),
-            _ => catmull_rom_1d(w0.tremolo_rate_hz, w1.tremolo_rate_hz, w2.tremolo_rate_hz, w3.tremolo_rate_hz, t),
-        }.clamp(0.2, 20.0);
+            _ => catmull_rom_1d(
+                w0.tremolo_rate_hz,
+                w1.tremolo_rate_hz,
+                w2.tremolo_rate_hz,
+                w3.tremolo_rate_hz,
+                t,
+            ),
+        }
+        .clamp(0.2, 20.0);
 
         let trem_depth = match curve {
             EpInterpolationCurve::Hold => w1.tremolo_depth,
             EpInterpolationCurve::Linear => lerp(w1.tremolo_depth, w2.tremolo_depth, t),
-            _ => catmull_rom_1d(w0.tremolo_depth, w1.tremolo_depth, w2.tremolo_depth, w3.tremolo_depth, t),
-        }.clamp(0.0, 1.0);
+            _ => catmull_rom_1d(
+                w0.tremolo_depth,
+                w1.tremolo_depth,
+                w2.tremolo_depth,
+                w3.tremolo_depth,
+                t,
+            ),
+        }
+        .clamp(0.0, 1.0);
 
         let drive = match curve {
             EpInterpolationCurve::Hold => w1.tube_drive_db,
             EpInterpolationCurve::Linear => lerp(w1.tube_drive_db, w2.tube_drive_db, t),
-            _ => catmull_rom_1d(w0.tube_drive_db, w1.tube_drive_db, w2.tube_drive_db, w3.tube_drive_db, t),
-        }.clamp(0.0, 24.0);
+            _ => catmull_rom_1d(
+                w0.tube_drive_db,
+                w1.tube_drive_db,
+                w2.tube_drive_db,
+                w3.tube_drive_db,
+                t,
+            ),
+        }
+        .clamp(0.0, 24.0);
 
         let bass = match curve {
             EpInterpolationCurve::Hold => w1.bass_db,
             EpInterpolationCurve::Linear => lerp(w1.bass_db, w2.bass_db, t),
             _ => catmull_rom_1d(w0.bass_db, w1.bass_db, w2.bass_db, w3.bass_db, t),
-        }.clamp(-12.0, 12.0);
+        }
+        .clamp(-12.0, 12.0);
 
         let treble = match curve {
             EpInterpolationCurve::Hold => w1.treble_db,
             EpInterpolationCurve::Linear => lerp(w1.treble_db, w2.treble_db, t),
             _ => catmull_rom_1d(w0.treble_db, w1.treble_db, w2.treble_db, w3.treble_db, t),
-        }.clamp(-12.0, 12.0);
+        }
+        .clamp(-12.0, 12.0);
 
         let progress = if self.loop_length_beats > 0.0 {
             (effective_beat / self.loop_length_beats).clamp(0.0, 1.0) as f32
@@ -561,8 +636,16 @@ impl EpGestureEngine {
         };
 
         EpBusSnapshot {
-            articulation: if t > 0.5 { w2.articulation } else { w1.articulation },
-            model_type: if t > 0.5 { w2.model_type } else { w1.model_type },
+            articulation: if t > 0.5 {
+                w2.articulation
+            } else {
+                w1.articulation
+            },
+            model_type: if t > 0.5 {
+                w2.model_type
+            } else {
+                w1.model_type
+            },
             hammer_hardness: hardness,
             air_gap_mm: air_gap,
             bark_drive: bark,
@@ -596,10 +679,16 @@ impl EpGestureEngine {
         param_bus.set(ParamId(base_id.0 + 4), snap.bark_drive);
         param_bus.set(ParamId(base_id.0 + 5), snap.tonebar_coupling);
         param_bus.set(ParamId(base_id.0 + 6), snap.damper_clunk_volume);
-        param_bus.set(ParamId(base_id.0 + 7), if snap.tremolo_enabled { 1.0 } else { 0.0 });
+        param_bus.set(
+            ParamId(base_id.0 + 7),
+            if snap.tremolo_enabled { 1.0 } else { 0.0 },
+        );
         param_bus.set(ParamId(base_id.0 + 8), snap.tremolo_rate_hz);
         param_bus.set(ParamId(base_id.0 + 9), snap.tremolo_depth);
-        param_bus.set(ParamId(base_id.0 + 10), if snap.tremolo_stereo { 1.0 } else { 0.0 });
+        param_bus.set(
+            ParamId(base_id.0 + 10),
+            if snap.tremolo_stereo { 1.0 } else { 0.0 },
+        );
         param_bus.set(ParamId(base_id.0 + 11), snap.tube_drive_db);
         param_bus.set(ParamId(base_id.0 + 12), snap.bass_db);
         param_bus.set(ParamId(base_id.0 + 13), snap.treble_db);
@@ -678,7 +767,8 @@ mod tests {
         });
 
         let toml_str = engine.to_toml().expect("Failed to serialize to TOML");
-        let decoded: EpGestureEngine = EpGestureEngine::from_toml(&toml_str).expect("Failed to deserialize from TOML");
+        let decoded: EpGestureEngine =
+            EpGestureEngine::from_toml(&toml_str).expect("Failed to deserialize from TOML");
 
         assert_eq!(engine.waypoints.len(), decoded.waypoints.len());
         assert_eq!(engine.loop_length_beats, decoded.loop_length_beats);
