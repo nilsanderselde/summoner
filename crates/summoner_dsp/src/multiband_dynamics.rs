@@ -242,8 +242,10 @@ impl LinkwitzRiley4BandCrossover {
         self.splitter_high.update_coeffs(self.f_c3, sample_rate);
 
         // Phase alignment allpasses (1 2nd-order allpass section per crossover point)
-        self.allpass_high_branch_c1.design_allpass(self.f_c1, sample_rate);
-        self.allpass_low_branch_c3.design_allpass(self.f_c3, sample_rate);
+        self.allpass_high_branch_c1
+            .design_allpass(self.f_c1, sample_rate);
+        self.allpass_low_branch_c3
+            .design_allpass(self.f_c3, sample_rate);
     }
 
     /// Process a stereo sample and return 4 stereo band signals:
@@ -255,18 +257,24 @@ impl LinkwitzRiley4BandCrossover {
             self.splitter_mid.process_sample(in_l, in_r);
 
         // Step 2: Phase-align LowBranch with f_c3 allpass
-        let (low_aligned_l, low_aligned_r) = self.allpass_low_branch_c3.process_sample(low_branch_l, low_branch_r);
+        let (low_aligned_l, low_aligned_r) = self
+            .allpass_low_branch_c3
+            .process_sample(low_branch_l, low_branch_r);
 
         // Step 3: Phase-align HighBranch with f_c1 allpass
-        let (high_aligned_l, high_aligned_r) = self.allpass_high_branch_c1.process_sample(high_branch_l, high_branch_r);
+        let (high_aligned_l, high_aligned_r) = self
+            .allpass_high_branch_c1
+            .process_sample(high_branch_l, high_branch_r);
 
         // Step 4: Split phase-aligned LowBranch at f_c1 -> Low, LowMid
-        let ((low_l, low_r), (lowmid_l, lowmid_r)) =
-            self.splitter_low.process_sample(low_aligned_l, low_aligned_r);
+        let ((low_l, low_r), (lowmid_l, lowmid_r)) = self
+            .splitter_low
+            .process_sample(low_aligned_l, low_aligned_r);
 
         // Step 5: Split phase-aligned HighBranch at f_c3 -> HighMid, High
-        let ((highmid_l, highmid_r), (high_l, high_r)) =
-            self.splitter_high.process_sample(high_aligned_l, high_aligned_r);
+        let ((highmid_l, highmid_r), (high_l, high_r)) = self
+            .splitter_high
+            .process_sample(high_aligned_l, high_aligned_r);
 
         [
             (low_l, low_r),
@@ -388,7 +396,10 @@ impl BandDynamics {
             let knee = self.exp_knee_db;
             if level_db < thresh - knee * 0.5 {
                 ge_db = -(thresh - level_db) * (self.exp_ratio - 1.0);
-            } else if knee > 0.0 && level_db >= thresh - knee * 0.5 && level_db <= thresh + knee * 0.5 {
+            } else if knee > 0.0
+                && level_db >= thresh - knee * 0.5
+                && level_db <= thresh + knee * 0.5
+            {
                 let delta = thresh + knee * 0.5 - level_db;
                 let curve = (delta * delta) / (2.0 * knee);
                 ge_db = -curve * (self.exp_ratio - 1.0);
@@ -507,7 +518,8 @@ impl MultibandDynamicsProcessor {
 
     /// Update crossover cutoff frequencies.
     pub fn set_crossover_frequencies(&mut self, f_c1: f32, f_c2: f32, f_c3: f32, sample_rate: f32) {
-        self.crossover.update_crossover_freqs(f_c1, f_c2, f_c3, sample_rate);
+        self.crossover
+            .update_crossover_freqs(f_c1, f_c2, f_c3, sample_rate);
     }
 
     /// Process a stereo sample through the 4-band crossover and dynamics engine with zero allocations.
@@ -549,12 +561,7 @@ impl MultibandDynamicsProcessor {
     }
 
     /// Process a block of stereo audio samples in-place.
-    pub fn process_stereo_block(
-        &mut self,
-        left: &mut [f32],
-        right: &mut [f32],
-        sample_rate: u32,
-    ) {
+    pub fn process_stereo_block(&mut self, left: &mut [f32], right: &mut [f32], sample_rate: u32) {
         let sr = sample_rate as f32;
         let count = left.len().min(right.len());
         for i in 0..count {
@@ -609,12 +616,7 @@ impl AudioNode for MultibandDynamicsProcessor {
         "MultibandDynamicsProcessor"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -631,7 +633,9 @@ mod tests {
         let mut crossover = LinkwitzRiley4BandCrossover::new(150.0, 1200.0, 6000.0, sample_rate);
 
         // Test across multiple frequencies spanning the audible spectrum
-        let test_frequencies = [40.0, 100.0, 150.0, 500.0, 1200.0, 3000.0, 6000.0, 12000.0, 18000.0];
+        let test_frequencies = [
+            40.0, 100.0, 150.0, 500.0, 1200.0, 3000.0, 6000.0, 12000.0, 18000.0,
+        ];
 
         for &freq in &test_frequencies {
             crossover.reset();
@@ -678,7 +682,8 @@ mod tests {
 
         // Verify gain reduction occurred across bands
         assert!(
-            processor.bands[0].gain_reduction_db < 0.0 || processor.bands[1].gain_reduction_db < 0.0,
+            processor.bands[0].gain_reduction_db < 0.0
+                || processor.bands[1].gain_reduction_db < 0.0,
             "Compressor should produce gain reduction on loud input"
         );
         assert!(left[511].is_finite());

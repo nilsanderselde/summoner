@@ -10,12 +10,12 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::friction_model::{FrictionModel, RosinType};
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::friction_model::{FrictionModel, RosinType};
-use crate::traits::SignalProcessor;
 
 /// Maximum delay buffer capacity in samples (~20 Hz fundamental at 192 kHz).
 pub const MAX_BOWED_DELAY: usize = 8192;
@@ -38,10 +38,10 @@ impl BowedInstrument {
     /// Returns default fundamental frequency in Hz (A string / open fundamental).
     pub fn default_fundamental_hz(&self) -> f32 {
         match self {
-            Self::Violin => 440.0,     // A4
-            Self::Viola => 220.0,      // A3
-            Self::Cello => 110.0,      // A2
-            Self::DoubleBass => 55.0,  // A1
+            Self::Violin => 440.0,    // A4
+            Self::Viola => 220.0,     // A3
+            Self::Cello => 110.0,     // A2
+            Self::DoubleBass => 55.0, // A1
         }
     }
 
@@ -125,7 +125,9 @@ impl BodyResonatorMode {
 
     #[inline]
     pub fn step(&mut self, input: f32) -> f32 {
-        let out = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2 - self.a1 * self.y1 - self.a2 * self.y2;
+        let out = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2
+            - self.a1 * self.y1
+            - self.a2 * self.y2;
         self.x2 = self.x1;
         self.x1 = input;
         self.y2 = self.y1;
@@ -302,7 +304,11 @@ impl BowedString {
 
     /// Reads sample from delay buffer with 4-point Hermite cubic fractional interpolation.
     #[inline]
-    fn read_fractional_delay(buffer: &[f32; MAX_BOWED_DELAY], write_idx: usize, delay_samples: f32) -> f32 {
+    fn read_fractional_delay(
+        buffer: &[f32; MAX_BOWED_DELAY],
+        write_idx: usize,
+        delay_samples: f32,
+    ) -> f32 {
         let int_delay = delay_samples.floor() as usize;
         let frac = delay_samples - int_delay as f32;
 
@@ -312,7 +318,11 @@ impl BowedString {
             MAX_BOWED_DELAY + write_idx - int_delay
         };
 
-        let i0 = if base_idx == 0 { MAX_BOWED_DELAY - 1 } else { base_idx - 1 };
+        let i0 = if base_idx == 0 {
+            MAX_BOWED_DELAY - 1
+        } else {
+            base_idx - 1
+        };
         let i1 = base_idx;
         let i2 = (base_idx + 1) % MAX_BOWED_DELAY;
         let i3 = (base_idx + 2) % MAX_BOWED_DELAY;
@@ -369,13 +379,15 @@ impl BowedString {
         let v_in_nut = self.nut_damping_state;
 
         // 2. Read wave returning from bridge section (reflected with phase inversion -1.0 and bridge damping)
-        let bridge_wave_raw = Self::read_fractional_delay(&self.bridge_delay, self.bridge_write_idx, d_bridge);
+        let bridge_wave_raw =
+            Self::read_fractional_delay(&self.bridge_delay, self.bridge_write_idx, d_bridge);
         let bridge_loss = 0.995;
         let bridge_wave_reflected = -bridge_loss * bridge_wave_raw;
 
         // String bridge termination loss filter (frequency dependent damping)
         let damp_coeff = (0.20 + 0.50 * self.string_damping).clamp(0.05, 0.90);
-        self.bridge_damping_state = (1.0 - damp_coeff) * bridge_wave_reflected + damp_coeff * self.bridge_damping_state;
+        self.bridge_damping_state =
+            (1.0 - damp_coeff) * bridge_wave_reflected + damp_coeff * self.bridge_damping_state;
         let v_in_bridge = self.bridge_damping_state;
 
         // 3. Modulate bow velocity and force with external excitation / articulation
@@ -383,7 +395,9 @@ impl BowedString {
         let eff_bow_force = self.bow_force.clamp(0.0, 5.0);
 
         // 4. Solve non-linear stick-slip friction scattering junction
-        let friction_res = self.friction_model.solve(v_in_nut, v_in_bridge, eff_bow_vel, eff_bow_force);
+        let friction_res =
+            self.friction_model
+                .solve(v_in_nut, v_in_bridge, eff_bow_vel, eff_bow_force);
 
         // 5. Write scattered waves into delay lines
         self.nut_delay[self.nut_write_idx] = friction_res.out_nut;
@@ -393,7 +407,8 @@ impl BowedString {
         self.bridge_write_idx = (self.bridge_write_idx + 1) % MAX_BOWED_DELAY;
 
         // 6. Bridge force transmitted into acoustic body: F_bridge = 2 * Z_0 * v_bridge
-        let bridge_driving_force = 2.0 * self.friction_model.params.string_impedance * friction_res.out_bridge;
+        let bridge_driving_force =
+            2.0 * self.friction_model.params.string_impedance * friction_res.out_bridge;
 
         // 7. Process through 5-mode acoustic body resonator bank
         let mut body_output = 0.0f32;
@@ -462,12 +477,7 @@ impl AudioNode for BowedStringNode {
         "BowedStringNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.bowed_string.process_block(input, output, ctx);
     }
 }
@@ -493,7 +503,10 @@ mod tests {
             assert!((-1.0..=1.0).contains(&s));
             max_amp = max_amp.max(s.abs());
         }
-        assert!(max_amp > 0.05, "Bowed string should produce non-zero Helmholtz oscillation");
+        assert!(
+            max_amp > 0.05,
+            "Bowed string should produce non-zero Helmholtz oscillation"
+        );
     }
 
     #[test]

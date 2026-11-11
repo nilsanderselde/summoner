@@ -15,14 +15,14 @@
 //!
 //! Enforces zero heap allocations in audio render loops under `AllocGuard`.
 
-use serde::{Deserialize, Serialize};
-use summoner_core::audio::Sample;
-use summoner_core::node::{AudioNode, ProcessContext};
 use crate::ji_bridge::{
     oshi_ite_pitch_multiplier, JiBridgeJunction, JiBridgeProfile, KotoTuningSchema,
     PaulowniaSoundboardBody, NUM_KOTO_STRINGS,
 };
 use crate::traits::SignalProcessor;
+use serde::{Deserialize, Serialize};
+use summoner_core::audio::Sample;
+use summoner_core::node::{AudioNode, ProcessContext};
 
 /// Maximum delay buffer capacity in samples (~20 Hz fundamental at 192 kHz).
 pub const MAX_KOTO_DELAY: usize = 16384;
@@ -173,7 +173,13 @@ pub struct KotoStringVoice {
 }
 
 impl KotoStringVoice {
-    pub fn new(string_index: usize, nominal_freq_hz: f32, sample_rate: u32, bridge_profile: JiBridgeProfile, bridge_pos: f32) -> Self {
+    pub fn new(
+        string_index: usize,
+        nominal_freq_hz: f32,
+        sample_rate: u32,
+        bridge_profile: JiBridgeProfile,
+        bridge_pos: f32,
+    ) -> Self {
         // Pan position spread from left (-0.7) for string 1 (bass) to right (+0.7) for string 13 (treble)
         let pan = -0.7 + 1.4 * (string_index as f32 / (NUM_KOTO_STRINGS.max(2) - 1) as f32);
 
@@ -207,7 +213,8 @@ impl KotoStringVoice {
 
     pub fn recalculate_delays(&mut self, sample_rate: u32) {
         let sr = sample_rate as f32;
-        let pitch_mult = oshi_ite_pitch_multiplier(self.oshi_ite_force_n) * (1.0 - 0.15 * self.hiki_iro_release);
+        let pitch_mult =
+            oshi_ite_pitch_multiplier(self.oshi_ite_force_n) * (1.0 - 0.15 * self.hiki_iro_release);
         let eff_freq = (self.nominal_freq_hz * pitch_mult).clamp(20.0, 10000.0);
         self.active_freq_hz = eff_freq;
 
@@ -272,11 +279,21 @@ impl KotoStringVoice {
         }
 
         // Read forward propagating waves from delay lines
-        let incident_playing = Self::read_interpolated(&self.playing_buffer, self.playing_write_pos, self.playing_delay_samples);
-        let incident_behind = Self::read_interpolated(&self.behind_buffer, self.behind_write_pos, self.behind_delay_samples);
+        let incident_playing = Self::read_interpolated(
+            &self.playing_buffer,
+            self.playing_write_pos,
+            self.playing_delay_samples,
+        );
+        let incident_behind = Self::read_interpolated(
+            &self.behind_buffer,
+            self.behind_write_pos,
+            self.behind_delay_samples,
+        );
 
         // Process boundary scattering at Ji bridge
-        let (refl_playing, trans_behind, body_exc) = self.ji_junction.process_scattering(incident_playing, incident_behind);
+        let (refl_playing, trans_behind, body_exc) = self
+            .ji_junction
+            .process_scattering(incident_playing, incident_behind);
 
         // Apply inharmonic dispersion filter
         let dispersed_playing = self.dispersion.step(refl_playing);
@@ -284,7 +301,9 @@ impl KotoStringVoice {
         // Apply frequency-dependent loop damping
         let damped_playing = 0.7 * dispersed_playing + 0.3 * self.filter_prev;
         self.filter_prev = dispersed_playing;
-        let next_playing = (damped_playing * self.loop_damping + pluck_impulse + sympathetic_excitation * 0.05).clamp(-2.0, 2.0);
+        let next_playing =
+            (damped_playing * self.loop_damping + pluck_impulse + sympathetic_excitation * 0.05)
+                .clamp(-2.0, 2.0);
 
         // Write back into delay lines
         self.playing_buffer[self.playing_write_pos] = next_playing;
@@ -357,7 +376,8 @@ impl Koto {
         let mut strings = Vec::with_capacity(NUM_KOTO_STRINGS);
         for i in 0..NUM_KOTO_STRINGS {
             let freq = root_hz * ratios[i];
-            let voice = KotoStringVoice::new(i, freq, sample_rate, bridge_prof, bridge_positions[i]);
+            let voice =
+                KotoStringVoice::new(i, freq, sample_rate, bridge_prof, bridge_positions[i]);
             strings.push(voice);
         }
 
@@ -437,7 +457,9 @@ impl Koto {
     pub fn set_bridge_offset(&mut self, string_idx: usize, offset: f32) {
         if string_idx < self.strings.len() {
             let base_pos = self.tuning_schema.default_bridge_positions()[string_idx];
-            self.strings[string_idx].ji_junction.set_position_offset(base_pos, offset);
+            self.strings[string_idx]
+                .ji_junction
+                .set_position_offset(base_pos, offset);
             self.strings[string_idx].recalculate_delays(self.sample_rate);
         }
     }
@@ -495,7 +517,9 @@ impl Koto {
         }
 
         // 2. Process Paulownia soundboard acoustic body
-        let body_out = self.body.process(total_body_excitation * self.body_coupling_gain);
+        let body_out = self
+            .body
+            .process(total_body_excitation * self.body_coupling_gain);
         total_left += body_out * 0.5;
         total_right += body_out * 0.5;
 
@@ -602,6 +626,9 @@ mod tests {
 
         koto.set_oshi_ite(0, 20.0);
         let bent_freq = koto.strings[0].active_freq_hz;
-        assert!(bent_freq > base_freq, "Oshi-Ite press must increase string frequency");
+        assert!(
+            bent_freq > base_freq,
+            "Oshi-Ite press must increase string frequency"
+        );
     }
 }

@@ -20,9 +20,7 @@ use summoner_dsp::traits::SignalProcessor;
 use summoner_gui::views::grand_piano_view::GrandPianoView;
 #[cfg(feature = "gui")]
 use summoner_gui::views::soundboard_bridge_view::SoundboardBridgeView;
-use summoner_sequencer::grand_piano_gesture::{
-    GrandPianoGestureEngine, GrandPianoGesturePattern,
-};
+use summoner_sequencer::grand_piano_gesture::{GrandPianoGestureEngine, GrandPianoGesturePattern};
 
 const BLOCK_SIZE: usize = 64;
 
@@ -154,7 +152,9 @@ fn test_golden_grand_piano_deterministic() {
             assert!(out_inti_l[i].is_finite() && out_inti_r[i].is_finite());
             assert!(out_prep_l[i].is_finite() && out_prep_r[i].is_finite());
 
-            assert!((-1.0..=1.0).contains(&out_stein_l[i]) && (-1.0..=1.0).contains(&out_stein_r[i]));
+            assert!(
+                (-1.0..=1.0).contains(&out_stein_l[i]) && (-1.0..=1.0).contains(&out_stein_r[i])
+            );
             assert!((-1.0..=1.0).contains(&out_bose_l[i]) && (-1.0..=1.0).contains(&out_bose_r[i]));
             assert!((-1.0..=1.0).contains(&out_yama_l[i]) && (-1.0..=1.0).contains(&out_yama_r[i]));
             assert!((-1.0..=1.0).contains(&out_unac_l[i]) && (-1.0..=1.0).contains(&out_unac_r[i]));
@@ -223,12 +223,11 @@ fn test_golden_grand_piano_soundboard_bridge_deterministic() {
 
 #[test]
 fn test_golden_grand_piano_gesture_and_bus_deterministic() {
-    let mut engine = GrandPianoGestureEngine::with_pattern(
-        GrandPianoGesturePattern::ChopinRecitalNocturne {
+    let mut engine =
+        GrandPianoGestureEngine::with_pattern(GrandPianoGesturePattern::ChopinRecitalNocturne {
             phrase_length_beats: 8.0,
             max_velocity: 0.90,
-        },
-    );
+        });
     engine.is_looping = true;
 
     let bus = GrandPianoBus::new();
@@ -298,11 +297,32 @@ fn test_golden_grand_piano_views_ascii_and_snapshots() {
     // Save PNG snapshots across the project render directories
     let _ = piano_view.render_snapshot_png("scratch/renders/grand_piano_view.png", 800, 520);
     let _ = piano_view.render_snapshot_png("../../scratch/renders/grand_piano_view.png", 800, 520);
-    let _ = piano_view.render_snapshot_png("crates/summon/scratch/renders/grand_piano_view.png", 800, 520);
-    let _ = piano_view.render_snapshot_png("crates/summoner_gui/scratch/renders/grand_piano_view.png", 800, 520);
+    let _ = piano_view.render_snapshot_png(
+        "crates/summon/scratch/renders/grand_piano_view.png",
+        800,
+        520,
+    );
+    let _ = piano_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/grand_piano_view.png",
+        800,
+        520,
+    );
 
-    let _ = soundboard_view.render_snapshot_png("scratch/renders/soundboard_bridge_view.png", 800, 520);
-    let _ = soundboard_view.render_snapshot_png("../../scratch/renders/soundboard_bridge_view.png", 800, 520);
-    let _ = soundboard_view.render_snapshot_png("crates/summon/scratch/renders/soundboard_bridge_view.png", 800, 520);
-    let _ = soundboard_view.render_snapshot_png("crates/summoner_gui/scratch/renders/soundboard_bridge_view.png", 800, 520);
+    let _ =
+        soundboard_view.render_snapshot_png("scratch/renders/soundboard_bridge_view.png", 800, 520);
+    let _ = soundboard_view.render_snapshot_png(
+        "../../scratch/renders/soundboard_bridge_view.png",
+        800,
+        520,
+    );
+    let _ = soundboard_view.render_snapshot_png(
+        "crates/summon/scratch/renders/soundboard_bridge_view.png",
+        800,
+        520,
+    );
+    let _ = soundboard_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/soundboard_bridge_view.png",
+        800,
+        520,
+    );
 }

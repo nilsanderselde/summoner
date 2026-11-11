@@ -9,10 +9,10 @@
 //!
 //! Enforces zero heap allocations during audio thread execution under `AllocGuard`.
 
+use crate::param_bus::{ParamBus, ParamId};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
-use crate::param_bus::{ParamBus, ParamId};
 
 /// Total standard MIDI note slots supported in the primary tuning table.
 pub const TUNING_TABLE_SIZE: usize = 128;

@@ -7,9 +7,9 @@
 //! - [`LtcAudioGenerator`]: Encodes SMPTE timecode as an 80-bit biphase mark code (BMC) audio signal.
 //! - [`LtcAudioDecoder`]: Demodulates audio-rate LTC input via zero-crossing detection and sync word alignment.
 
+use crate::audio::Sample;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use crate::audio::Sample;
 
 /// SMPTE frame rate format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -113,7 +113,9 @@ impl SmpteTimecode {
             let m = total_frames % frames_per_10_minutes;
 
             let adjusted_frames = if m > drop_frames {
-                total_frames + drop_frames * 9 * d + drop_frames * ((m - drop_frames) / frames_per_minute)
+                total_frames
+                    + drop_frames * 9 * d
+                    + drop_frames * ((m - drop_frames) / frames_per_minute)
             } else {
                 total_frames + drop_frames * 9 * d
             };
@@ -219,7 +221,11 @@ impl MtcGenerator {
         while self.accumulated_samples >= samples_per_qframe {
             self.accumulated_samples -= samples_per_qframe;
 
-            let tc = SmpteTimecode::from_sample_position(current_sample_position, self.sample_rate, self.rate);
+            let tc = SmpteTimecode::from_sample_position(
+                current_sample_position,
+                self.sample_rate,
+                self.rate,
+            );
             let piece = self.quarter_frame_index % 8;
             self.quarter_frame_index = (self.quarter_frame_index + 1) % 8;
 
@@ -442,7 +448,8 @@ impl LtcAudioGenerator {
                     self.current_bit_index = 0;
                     // Advance to next frame
                     let next_frames = self.current_timecode.to_total_frames() + 1;
-                    self.current_timecode = SmpteTimecode::from_total_frames(next_frames, self.rate);
+                    self.current_timecode =
+                        SmpteTimecode::from_total_frames(next_frames, self.rate);
                     self.encode_current_frame();
                 }
             }
@@ -493,7 +500,9 @@ impl LtcAudioDecoder {
             self.samples_since_last_edge += 1;
 
             // Zero-crossing edge detection
-            if (self.last_sample <= 0.0 && sample > 0.0) || (self.last_sample >= 0.0 && sample < 0.0) {
+            if (self.last_sample <= 0.0 && sample > 0.0)
+                || (self.last_sample >= 0.0 && sample < 0.0)
+            {
                 let interval = self.samples_since_last_edge as f64;
                 self.samples_since_last_edge = 0;
 

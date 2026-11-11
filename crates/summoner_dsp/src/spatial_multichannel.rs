@@ -8,11 +8,11 @@
 //! - First-Order Ambisonics B-format (W, X, Y, Z)
 //! - 3D HRTF Binaural headphone rendering with ITD (interaural time difference) and ILD head-shadowing.
 
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::{ChannelLayout, Sample};
 use summoner_core::node::{AudioNode, NodeEvent, ProcessContext};
-use crate::traits::SignalProcessor;
 
 /// Supported spatial audio output speaker layouts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -169,7 +169,7 @@ impl MultichannelSpatialPannerNode {
                 // Stereo pan law (-180..180 mapped to left/right)
                 let pan = (az.sin() + 1.0) * 0.5; // 0.0 (left) to 1.0 (right)
                 gains[0] = (1.0 - pan).sqrt() * dist_gain; // Left
-                gains[1] = pan.sqrt() * dist_gain;         // Right
+                gains[1] = pan.sqrt() * dist_gain; // Right
             }
 
             SpatialOutputFormat::Surround5_1 => {
@@ -187,7 +187,11 @@ impl MultichannelSpatialPannerNode {
 
                 // Normalize energy
                 let sum_sq = l * l + r * r + c * c + ls * ls + rs * rs;
-                let norm = if sum_sq > 1e-6 { 1.0 / sum_sq.sqrt() } else { 1.0 };
+                let norm = if sum_sq > 1e-6 {
+                    1.0 / sum_sq.sqrt()
+                } else {
+                    1.0
+                };
 
                 gains[0] = l * norm * dist_gain;
                 gains[1] = r * norm * dist_gain;
@@ -213,7 +217,11 @@ impl MultichannelSpatialPannerNode {
                 let rsr = right_w * rear_w;
 
                 let sum_sq = l * l + r * r + c * c + lss * lss + rss * rss + lsr * lsr + rsr * rsr;
-                let norm = if sum_sq > 1e-6 { 1.0 / sum_sq.sqrt() } else { 1.0 };
+                let norm = if sum_sq > 1e-6 {
+                    1.0 / sum_sq.sqrt()
+                } else {
+                    1.0
+                };
 
                 gains[0] = l * norm * dist_gain;
                 gains[1] = r * norm * dist_gain;
@@ -252,9 +260,22 @@ impl MultichannelSpatialPannerNode {
                 let tbl = left_w * back_w * height_factor;
                 let tbr = right_w * back_w * height_factor;
 
-                let sum_sq = l * l + r * r + c * c + ls * ls + rs * rs + lb * lb + rb * rb
-                    + tfl * tfl + tfr * tfr + tbl * tbl + tbr * tbr;
-                let norm = if sum_sq > 1e-6 { 1.0 / sum_sq.sqrt() } else { 1.0 };
+                let sum_sq = l * l
+                    + r * r
+                    + c * c
+                    + ls * ls
+                    + rs * rs
+                    + lb * lb
+                    + rb * rb
+                    + tfl * tfl
+                    + tfr * tfr
+                    + tbl * tbl
+                    + tbr * tbr;
+                let norm = if sum_sq > 1e-6 {
+                    1.0 / sum_sq.sqrt()
+                } else {
+                    1.0
+                };
 
                 gains[0] = l * norm * dist_gain;
                 gains[1] = r * norm * dist_gain;
@@ -333,7 +354,11 @@ impl SignalProcessor for MultichannelSpatialPannerNode {
             }
 
             let in_l = if i < in_mono.len() { in_mono[i] } else { 0.0 };
-            let in_r = if i < in_right.len() { in_right[i] } else { in_l };
+            let in_r = if i < in_right.len() {
+                in_right[i]
+            } else {
+                in_l
+            };
             let source_mono = (in_l + in_r) * 0.5;
 
             // Lowpass LFE signal
@@ -362,8 +387,10 @@ impl SignalProcessor for MultichannelSpatialPannerNode {
                 self.left_shadow_filter += (left_delayed - self.left_shadow_filter) * 0.4;
                 self.right_shadow_filter += (right_delayed - self.right_shadow_filter) * 0.4;
 
-                let out_l = (left_delayed * 0.6 + self.left_shadow_filter * 0.4) * self.current_gains[0];
-                let out_r = (right_delayed * 0.6 + self.right_shadow_filter * 0.4) * self.current_gains[1];
+                let out_l =
+                    (left_delayed * 0.6 + self.left_shadow_filter * 0.4) * self.current_gains[0];
+                let out_r =
+                    (right_delayed * 0.6 + self.right_shadow_filter * 0.4) * self.current_gains[1];
 
                 outputs[0][i] = out_l;
                 if outputs.len() > 1 {
@@ -427,7 +454,8 @@ mod tests {
 
     #[test]
     fn test_surround_5_1_panning_center_and_rears() {
-        let mut panner = MultichannelSpatialPannerNode::new(SpatialOutputFormat::Surround5_1, 48000.0);
+        let mut panner =
+            MultichannelSpatialPannerNode::new(SpatialOutputFormat::Surround5_1, 48000.0);
 
         // 1. Position front-center (azimuth = 0.0)
         panner.set_position(0.0, 0.0, 1.0);
@@ -447,7 +475,8 @@ mod tests {
 
     #[test]
     fn test_dolby_atmos_7_1_4_height_speakers() {
-        let mut panner = MultichannelSpatialPannerNode::new(SpatialOutputFormat::DolbyAtmos7_1_4, 48000.0);
+        let mut panner =
+            MultichannelSpatialPannerNode::new(SpatialOutputFormat::DolbyAtmos7_1_4, 48000.0);
 
         // Floor level (elevation = 0)
         panner.set_position(45.0, 0.0, 1.0);
@@ -464,7 +493,8 @@ mod tests {
 
     #[test]
     fn test_ambisonics_b_format_spherical_harmonics() {
-        let mut panner = MultichannelSpatialPannerNode::new(SpatialOutputFormat::AmbisonicsBFormat, 48000.0);
+        let mut panner =
+            MultichannelSpatialPannerNode::new(SpatialOutputFormat::AmbisonicsBFormat, 48000.0);
 
         // Front source (azimuth = 0, elevation = 0)
         panner.set_position(0.0, 0.0, 1.0);
@@ -477,7 +507,8 @@ mod tests {
 
     #[test]
     fn test_multichannel_panner_process_block_execution() {
-        let mut panner = MultichannelSpatialPannerNode::new(SpatialOutputFormat::Surround5_1, 48000.0);
+        let mut panner =
+            MultichannelSpatialPannerNode::new(SpatialOutputFormat::Surround5_1, 48000.0);
         panner.set_position(-45.0, 0.0, 1.0);
 
         let in_buf = vec![0.8f32; 64];
@@ -513,4 +544,3 @@ mod tests {
         assert!(outputs[0][32].abs() > 0.1);
     }
 }
-

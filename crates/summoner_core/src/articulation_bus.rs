@@ -161,7 +161,8 @@ impl ArticulationBus {
 
     /// Sets the active bowing technique and loads nominal parameter defaults.
     pub fn set_technique(&self, technique: BowingTechnique) {
-        self.technique_raw.store(technique as u32, Ordering::Release);
+        self.technique_raw
+            .store(technique as u32, Ordering::Release);
         let (vel, force, beta) = technique.nominal_parameters();
         self.set_gesture_vector(vel, force, beta, 0.80, 0.15);
     }
@@ -180,11 +181,18 @@ impl ArticulationBus {
         rosin_adhesion: f32,
         string_damping: f32,
     ) {
-        self.velocity_bits.store(velocity_mps.clamp(-2.0, 2.0).to_bits(), Ordering::Release);
-        self.force_bits.store(force_n.clamp(0.0, 5.0).to_bits(), Ordering::Release);
-        self.beta_bits.store(bridge_proximity_beta.clamp(0.02, 0.50).to_bits(), Ordering::Release);
-        self.rosin_bits.store(rosin_adhesion.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.damping_bits.store(string_damping.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.velocity_bits
+            .store(velocity_mps.clamp(-2.0, 2.0).to_bits(), Ordering::Release);
+        self.force_bits
+            .store(force_n.clamp(0.0, 5.0).to_bits(), Ordering::Release);
+        self.beta_bits.store(
+            bridge_proximity_beta.clamp(0.02, 0.50).to_bits(),
+            Ordering::Release,
+        );
+        self.rosin_bits
+            .store(rosin_adhesion.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.damping_bits
+            .store(string_damping.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Gets physical bowing vector $(v_b, F_N, \beta, \text{rosin}, \text{damping})$.
@@ -200,8 +208,10 @@ impl ArticulationBus {
 
     /// Sets vibrato depth (semitones) and rate (Hz).
     pub fn set_vibrato(&self, depth_semitones: f32, rate_hz: f32) {
-        self.vib_depth_bits.store(depth_semitones.clamp(0.0, 2.0).to_bits(), Ordering::Release);
-        self.vib_rate_bits.store(rate_hz.clamp(0.5, 15.0).to_bits(), Ordering::Release);
+        self.vib_depth_bits
+            .store(depth_semitones.clamp(0.0, 2.0).to_bits(), Ordering::Release);
+        self.vib_rate_bits
+            .store(rate_hz.clamp(0.5, 15.0).to_bits(), Ordering::Release);
     }
 
     /// Gets vibrato depth and rate.
@@ -214,12 +224,16 @@ impl ArticulationBus {
 
     /// Sets continuous gesture trajectory progress $[0.0 ..= 1.0]$.
     pub fn set_progress(&self, progress: f32, is_active: bool) {
-        self.progress_bits.store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
 
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if is_active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -265,7 +279,11 @@ impl ArticulationBus {
 
     /// Synchronizes articulation bus values from `ParamBus` handles.
     pub fn sync_from_param_bus(&self, bus: &ParamBus, base_param_id: ParamId) {
-        let tech_idx = bus.get(ParamId(base_param_id.0)).unwrap_or(0.0).max(0.0).round() as u32;
+        let tech_idx = bus
+            .get(ParamId(base_param_id.0))
+            .unwrap_or(0.0)
+            .max(0.0)
+            .round() as u32;
         let vel = bus.get(ParamId(base_param_id.0 + 1)).unwrap_or(0.35);
         let force = bus.get(ParamId(base_param_id.0 + 2)).unwrap_or(1.20);
         let beta = bus.get(ParamId(base_param_id.0 + 3)).unwrap_or(0.12);

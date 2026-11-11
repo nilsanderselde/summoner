@@ -113,7 +113,11 @@ fn test_golden_tonewheel_organ_deterministic() {
 
         {
             let _guard = AllocGuard::new();
-            gospel.process_block(&[], &mut [&mut out_gospel_l[..], &mut out_gospel_r[..]], &ctx);
+            gospel.process_block(
+                &[],
+                &mut [&mut out_gospel_l[..], &mut out_gospel_r[..]],
+                &ctx,
+            );
             jazz.process_block(&[], &mut [&mut out_jazz_l[..], &mut out_jazz_r[..]], &ctx);
             rock.process_block(&[], &mut [&mut out_rock_l[..], &mut out_rock_r[..]], &ctx);
             theater.process_block(&[], &mut [&mut out_theat_l[..], &mut out_theat_r[..]], &ctx);
@@ -135,10 +139,14 @@ fn test_golden_tonewheel_organ_deterministic() {
             assert!(out_funk_l[i].is_finite() && out_funk_r[i].is_finite());
             assert!(out_amb_l[i].is_finite() && out_amb_r[i].is_finite());
 
-            assert!((-1.0..=1.0).contains(&out_gospel_l[i]) && (-1.0..=1.0).contains(&out_gospel_r[i]));
+            assert!(
+                (-1.0..=1.0).contains(&out_gospel_l[i]) && (-1.0..=1.0).contains(&out_gospel_r[i])
+            );
             assert!((-1.0..=1.0).contains(&out_jazz_l[i]) && (-1.0..=1.0).contains(&out_jazz_r[i]));
             assert!((-1.0..=1.0).contains(&out_rock_l[i]) && (-1.0..=1.0).contains(&out_rock_r[i]));
-            assert!((-1.0..=1.0).contains(&out_theat_l[i]) && (-1.0..=1.0).contains(&out_theat_r[i]));
+            assert!(
+                (-1.0..=1.0).contains(&out_theat_l[i]) && (-1.0..=1.0).contains(&out_theat_r[i])
+            );
             assert!((-1.0..=1.0).contains(&out_funk_l[i]) && (-1.0..=1.0).contains(&out_funk_r[i]));
             assert!((-1.0..=1.0).contains(&out_amb_l[i]) && (-1.0..=1.0).contains(&out_amb_r[i]));
 
@@ -220,10 +228,26 @@ fn test_golden_rotary_speaker_cabinet_deterministic() {
 
         {
             let _guard = AllocGuard::new();
-            leslie122.process_block(&[&in_organ[..]], &mut [&mut out_122_l[..], &mut out_122_r[..]], &ctx);
-            leslie147.process_block(&[&in_organ[..]], &mut [&mut out_147_l[..], &mut out_147_r[..]], &ctx);
-            leslie760.process_block(&[&in_organ[..]], &mut [&mut out_760_l[..], &mut out_760_r[..]], &ctx);
-            twin_horn.process_block(&[&in_organ[..]], &mut [&mut out_twin_l[..], &mut out_twin_r[..]], &ctx);
+            leslie122.process_block(
+                &[&in_organ[..]],
+                &mut [&mut out_122_l[..], &mut out_122_r[..]],
+                &ctx,
+            );
+            leslie147.process_block(
+                &[&in_organ[..]],
+                &mut [&mut out_147_l[..], &mut out_147_r[..]],
+                &ctx,
+            );
+            leslie760.process_block(
+                &[&in_organ[..]],
+                &mut [&mut out_760_l[..], &mut out_760_r[..]],
+                &ctx,
+            );
+            twin_horn.process_block(
+                &[&in_organ[..]],
+                &mut [&mut out_twin_l[..], &mut out_twin_r[..]],
+                &ctx,
+            );
         }
 
         for i in 0..BLOCK_SIZE {
@@ -378,12 +402,28 @@ fn test_golden_rotary_tonewheel_views_ascii_and_snapshots() {
 
     // Save PNG snapshots across the project render directories
     let _ = organ_view.render_snapshot_png("scratch/renders/tonewheel_organ_view.png", 800, 520);
-    let _ = organ_view.render_snapshot_png("crates/summon/scratch/renders/tonewheel_organ_view.png", 800, 520);
-    let _ = organ_view.render_snapshot_png("crates/summoner_gui/scratch/renders/tonewheel_organ_view.png", 800, 520);
+    let _ = organ_view.render_snapshot_png(
+        "crates/summon/scratch/renders/tonewheel_organ_view.png",
+        800,
+        520,
+    );
+    let _ = organ_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/tonewheel_organ_view.png",
+        800,
+        520,
+    );
 
     let _ = speaker_view.render_snapshot_png("scratch/renders/rotary_speaker_view.png", 800, 520);
-    let _ = speaker_view.render_snapshot_png("crates/summon/scratch/renders/rotary_speaker_view.png", 800, 520);
-    let _ = speaker_view.render_snapshot_png("crates/summoner_gui/scratch/renders/rotary_speaker_view.png", 800, 520);
+    let _ = speaker_view.render_snapshot_png(
+        "crates/summon/scratch/renders/rotary_speaker_view.png",
+        800,
+        520,
+    );
+    let _ = speaker_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/rotary_speaker_view.png",
+        800,
+        520,
+    );
 }
 
 fn check_or_save(filename: &str, digest: &str) {

@@ -297,4 +297,3 @@ mod tests {
         assert!((compensated_beat - (4.0 - 500.0 / 24000.0)).abs() < 1e-6);
     }
 }
-

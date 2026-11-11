@@ -241,12 +241,18 @@ impl SpatialRoomNode {
         let h = self.room_height;
         let s = self.source_pos;
         let l = self.listener_pos;
-        let alpha = self.material.absorption_coefficient().max(self.custom_absorption * 0.5);
+        let alpha = self
+            .material
+            .absorption_coefficient()
+            .max(self.custom_absorption * 0.5);
         let refl_coeff = (1.0 - alpha).clamp(0.05, 0.98).sqrt();
 
         // 1. Direct path (Index 0)
-        let direct_dist = ((s.x - l.x).powi(2) + (s.y - l.y).powi(2) + (s.z - l.z).powi(2)).sqrt().max(0.1);
-        let direct_delay = (direct_dist / SPEED_OF_SOUND_M_S * self.sample_rate as f32).clamp(0.0, (EARLY_DELAY_BUFFER_SIZE - 1) as f32);
+        let direct_dist = ((s.x - l.x).powi(2) + (s.y - l.y).powi(2) + (s.z - l.z).powi(2))
+            .sqrt()
+            .max(0.1);
+        let direct_delay = (direct_dist / SPEED_OF_SOUND_M_S * self.sample_rate as f32)
+            .clamp(0.0, (EARLY_DELAY_BUFFER_SIZE - 1) as f32);
         let direct_azimuth = (s.x - l.x).atan2(s.y - l.y) - self.listener_yaw;
         let direct_pan = (direct_azimuth.sin() + 1.0) * (PI / 4.0);
         let direct_att = (1.0 / direct_dist).min(2.0);
@@ -265,16 +271,20 @@ impl SpatialRoomNode {
         // 2. Six 1st-order image sources (Indices 1..6)
         let first_order_sources = [
             Position3D::new(-s.x, s.y, s.z),          // Left wall
-            Position3D::new(2.0 * w - s.x, s.y, s.z),  // Right wall
-            Position3D::new(s.x, 2.0 * d - s.y, s.z),  // Front wall
+            Position3D::new(2.0 * w - s.x, s.y, s.z), // Right wall
+            Position3D::new(s.x, 2.0 * d - s.y, s.z), // Front wall
             Position3D::new(s.x, -s.y, s.z),          // Back wall
             Position3D::new(s.x, s.y, -s.z),          // Floor
-            Position3D::new(s.x, s.y, 2.0 * h - s.z),  // Ceiling
+            Position3D::new(s.x, s.y, 2.0 * h - s.z), // Ceiling
         ];
 
         for (i, &img_pos) in first_order_sources.iter().enumerate() {
-            let dist = ((img_pos.x - l.x).powi(2) + (img_pos.y - l.y).powi(2) + (img_pos.z - l.z).powi(2)).sqrt().max(0.2);
-            let delay = (dist / SPEED_OF_SOUND_M_S * self.sample_rate as f32).clamp(0.0, (EARLY_DELAY_BUFFER_SIZE - 1) as f32);
+            let dist =
+                ((img_pos.x - l.x).powi(2) + (img_pos.y - l.y).powi(2) + (img_pos.z - l.z).powi(2))
+                    .sqrt()
+                    .max(0.2);
+            let delay = (dist / SPEED_OF_SOUND_M_S * self.sample_rate as f32)
+                .clamp(0.0, (EARLY_DELAY_BUFFER_SIZE - 1) as f32);
             let azimuth = (img_pos.x - l.x).atan2(img_pos.y - l.y) - self.listener_yaw;
             let pan = (azimuth.sin() + 1.0) * (PI / 4.0);
             let att = (1.0 / dist) * refl_coeff * self.early_gain;
@@ -312,8 +322,12 @@ impl SpatialRoomNode {
             if 7 + i >= MAX_EARLY_REFLECTIONS {
                 break;
             }
-            let dist = ((img_pos.x - l.x).powi(2) + (img_pos.y - l.y).powi(2) + (img_pos.z - l.z).powi(2)).sqrt().max(0.3);
-            let delay = (dist / SPEED_OF_SOUND_M_S * self.sample_rate as f32).clamp(0.0, (EARLY_DELAY_BUFFER_SIZE - 1) as f32);
+            let dist =
+                ((img_pos.x - l.x).powi(2) + (img_pos.y - l.y).powi(2) + (img_pos.z - l.z).powi(2))
+                    .sqrt()
+                    .max(0.3);
+            let delay = (dist / SPEED_OF_SOUND_M_S * self.sample_rate as f32)
+                .clamp(0.0, (EARLY_DELAY_BUFFER_SIZE - 1) as f32);
             let azimuth = (img_pos.x - l.x).atan2(img_pos.y - l.y) - self.listener_yaw;
             let pan = (azimuth.sin() + 1.0) * (PI / 4.0);
             let att = (1.0 / dist) * refl_coeff_2 * self.early_gain * 0.75;
@@ -461,7 +475,8 @@ impl SignalProcessor for SpatialRoomNode {
 
                 // Apply damping lowpass and feedback gain
                 let fed = scat * self.fdn_feedback_gains[ch] + fdn_in * 0.25;
-                self.fdn_lp_states[ch] = self.fdn_lp_states[ch] * (1.0 - damp_coeff) + fed * damp_coeff;
+                self.fdn_lp_states[ch] =
+                    self.fdn_lp_states[ch] * (1.0 - damp_coeff) + fed * damp_coeff;
 
                 self.fdn_buffers[ch][idx] = self.fdn_lp_states[ch];
                 self.fdn_indices[ch] = (idx + 1) % len;
@@ -509,7 +524,10 @@ mod tests {
     fn test_spatial_room_image_sources_recalculation() {
         let mut room = SpatialRoomNode::new(48000);
         room.set_room_dimensions(10.0, 15.0, 4.0);
-        room.set_positions(Position3D::new(2.0, 3.0, 1.5), Position3D::new(5.0, 10.0, 1.7));
+        room.set_positions(
+            Position3D::new(2.0, 3.0, 1.5),
+            Position3D::new(5.0, 10.0, 1.7),
+        );
         room.set_rt60(2.5);
 
         assert!(room.reflections[0].active);

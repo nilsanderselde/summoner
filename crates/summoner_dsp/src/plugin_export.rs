@@ -75,7 +75,14 @@ pub struct ExportedParam {
 }
 
 impl ExportedParam {
-    pub fn new(id: u32, name: &str, min_val: f64, max_val: f64, default_val: f64, unit: &str) -> Self {
+    pub fn new(
+        id: u32,
+        name: &str,
+        min_val: f64,
+        max_val: f64,
+        default_val: f64,
+        unit: &str,
+    ) -> Self {
         Self {
             id,
             name: name.to_string(),
@@ -114,8 +121,8 @@ pub struct PluginExportManifest {
     pub audio_inputs: u32,
     pub audio_outputs: u32,
     pub parameters: Vec<ExportedParam>,
-    pub cid_hex: String, // 16-byte VST3 class ID hex string
-    pub au_subtype: String, // 4-character AU subtype code (e.g. "TAPE")
+    pub cid_hex: String,         // 16-byte VST3 class ID hex string
+    pub au_subtype: String,      // 4-character AU subtype code (e.g. "TAPE")
     pub au_manufacturer: String, // 4-character AU manufacturer code (e.g. "SMMN")
 }
 
@@ -269,7 +276,11 @@ impl PluginExportManifest {
     }
 
     /// Generate standard filesystem directory bundle for target format.
-    pub fn create_bundle_layout(&self, root_dir: &Path, format: PluginTargetFormat) -> std::io::Result<PathBuf> {
+    pub fn create_bundle_layout(
+        &self,
+        root_dir: &Path,
+        format: PluginTargetFormat,
+    ) -> std::io::Result<PathBuf> {
         match format {
             PluginTargetFormat::Vst3 => {
                 let bundle_dir = root_dir.join(format!("{}.vst3", self.name));
@@ -326,7 +337,11 @@ pub struct PluginRuntimeBridge {
 }
 
 impl PluginRuntimeBridge {
-    pub fn new(manifest: PluginExportManifest, inner_node: Box<dyn AudioNode + Send>, sample_rate: f64) -> Self {
+    pub fn new(
+        manifest: PluginExportManifest,
+        inner_node: Box<dyn AudioNode + Send>,
+        sample_rate: f64,
+    ) -> Self {
         let mut param_values = HashMap::new();
         for p in &manifest.parameters {
             param_values.insert(p.id, p.default_val);
@@ -467,13 +482,21 @@ mod tests {
             false,
         );
 
-        let vst3_bundle = manifest.create_bundle_layout(&temp_dir, PluginTargetFormat::Vst3).unwrap();
-        assert!(vst3_bundle.join("Contents/Resources/moduleinfo.json").exists());
+        let vst3_bundle = manifest
+            .create_bundle_layout(&temp_dir, PluginTargetFormat::Vst3)
+            .unwrap();
+        assert!(vst3_bundle
+            .join("Contents/Resources/moduleinfo.json")
+            .exists());
 
-        let au_bundle = manifest.create_bundle_layout(&temp_dir, PluginTargetFormat::AudioUnit).unwrap();
+        let au_bundle = manifest
+            .create_bundle_layout(&temp_dir, PluginTargetFormat::AudioUnit)
+            .unwrap();
         assert!(au_bundle.join("Contents/Info.plist").exists());
 
-        let clap_bundle = manifest.create_bundle_layout(&temp_dir, PluginTargetFormat::Clap).unwrap();
+        let clap_bundle = manifest
+            .create_bundle_layout(&temp_dir, PluginTargetFormat::Clap)
+            .unwrap();
         assert!(clap_bundle.join("descriptor.json").exists());
 
         // Clean up
@@ -493,7 +516,9 @@ mod tests {
         manifest.add_param(ExportedParam::new(0, "Gain", 0.0, 2.0, 1.0, "linear"));
 
         let mut code_node = GenCodeNode::new(44100.0);
-        code_node.set_code("out1 = in1 * 0.5; out2 = in2 * 0.5;").unwrap();
+        code_node
+            .set_code("out1 = in1 * 0.5; out2 = in2 * 0.5;")
+            .unwrap();
 
         let mut bridge = PluginRuntimeBridge::new(manifest, Box::new(code_node), 44100.0);
 
@@ -528,7 +553,9 @@ mod tests {
         bridge.set_parameter(0, 0.2);
         assert_eq!(bridge.get_parameter(0), Some(0.2));
 
-        bridge.load_state(&state_bytes).expect("State load should succeed");
+        bridge
+            .load_state(&state_bytes)
+            .expect("State load should succeed");
         assert_eq!(bridge.get_parameter(0), Some(1.75));
     }
 }

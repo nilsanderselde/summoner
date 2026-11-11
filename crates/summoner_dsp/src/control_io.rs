@@ -6,12 +6,12 @@
 //! - [`UdpControlNode`]: Receives raw UDP datagrams containing binary floats or ASCII numbers.
 //! - [`SerialControlNode`]: Decodes microcontroller / sensor telemetry (ASCII lines or framed binary packets).
 
+use crate::traits::SignalProcessor;
 use std::collections::HashMap;
 use std::net::UdpSocket;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::sync::Arc;
-use crate::traits::SignalProcessor;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, NodeEvent, ProcessContext};
 
@@ -285,7 +285,8 @@ impl OscControlNode {
                             OscValue::Int(i) => *i as f32,
                             _ => 0.0,
                         };
-                        let scaled = self.min_range + raw_val.clamp(0.0, 1.0) * (self.max_range - self.min_range);
+                        let scaled = self.min_range
+                            + raw_val.clamp(0.0, 1.0) * (self.max_range - self.min_range);
                         self.mailbox.set(scaled, true);
                     }
                 }
@@ -430,7 +431,8 @@ impl UdpControlNode {
         if let Ok(s) = std::str::from_utf8(data) {
             // Line-delimited ASCII number
             if let Ok(val) = s.trim().parse::<f32>() {
-                let scaled = self.min_range + val.clamp(0.0, 1.0) * (self.max_range - self.min_range);
+                let scaled =
+                    self.min_range + val.clamp(0.0, 1.0) * (self.max_range - self.min_range);
                 self.mailbox.set(scaled, true);
                 return;
             }

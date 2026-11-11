@@ -10,11 +10,11 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
 
 /// Number of Bessel modal resonators for the circular membrane.
 pub const NUM_MEMBRANE_MODES: usize = 12;
@@ -41,12 +41,12 @@ impl MembraneInstrumentProfile {
     /// Returns default fundamental frequency in Hz.
     pub fn default_fundamental_hz(&self) -> f32 {
         match self {
-            Self::TimpaniKettle => 146.83,   // D3
-            Self::ConcertBassDrum => 48.00,  // Low G1
-            Self::SnareDrum => 185.00,       // F#3
-            Self::TomTom => 110.00,          // A2
-            Self::BongosCongas => 260.00,    // C4
-            Self::DjembeFramedrum => 85.00,  // F2
+            Self::TimpaniKettle => 146.83,  // D3
+            Self::ConcertBassDrum => 48.00, // Low G1
+            Self::SnareDrum => 185.00,      // F#3
+            Self::TomTom => 110.00,         // A2
+            Self::BongosCongas => 260.00,   // C4
+            Self::DjembeFramedrum => 85.00, // F2
         }
     }
 
@@ -174,28 +174,47 @@ fn bessel_j0(x: f32) -> f32 {
     let ax = x.abs();
     if ax < 3.75 {
         let y = (x / 3.75).powi(2);
-        1.0 + y * (-2.2499997 + y * (1.2656208 + y * (-0.3163866 + y * (0.0444479 - y * 0.0039444))))
+        1.0 + y
+            * (-2.2499997 + y * (1.2656208 + y * (-0.3163866 + y * (0.0444479 - y * 0.0039444))))
     } else {
         let y = 3.75 / ax;
-        let f0 = 0.79788456 + y * (-0.00000077 + y * (-0.00552740 + y * (0.00009512 + y * (0.00137237 - y * 0.00072805))));
-        let theta0 = ax - 0.78539816 + y * (-0.04166397 + y * (-0.00003954 + y * (0.00262573 + y * (-0.00054125 - y * 0.00029333))));
+        let f0 = 0.79788456
+            + y * (-0.00000077
+                + y * (-0.00552740 + y * (0.00009512 + y * (0.00137237 - y * 0.00072805))));
+        let theta0 = ax - 0.78539816
+            + y * (-0.04166397
+                + y * (-0.00003954 + y * (0.00262573 + y * (-0.00054125 - y * 0.00029333))));
         (1.0 / ax.sqrt()) * f0 * theta0.cos()
     }
 }
 
 /// Helper function to approximate $J_1(x)$.
-#[allow(clippy::excessive_precision, clippy::approx_constant, clippy::let_and_return)]
+#[allow(
+    clippy::excessive_precision,
+    clippy::approx_constant,
+    clippy::let_and_return
+)]
 fn bessel_j1(x: f32) -> f32 {
     let ax = x.abs();
     if ax < 3.75 {
         let y = (x / 3.75).powi(2);
-        x * (0.5 + y * (-0.56249985 + y * (0.21093573 + y * (-0.03954289 + y * (0.00443319 - y * 0.00031761)))))
+        x * (0.5
+            + y * (-0.56249985
+                + y * (0.21093573 + y * (-0.03954289 + y * (0.00443319 - y * 0.00031761)))))
     } else {
         let y = 3.75 / ax;
-        let f1 = 0.79788456 + y * (0.00000156 + y * (0.01659667 + y * (0.00017105 + y * (-0.00249511 + y * 0.00113653))));
-        let theta1 = ax - 2.35619449 + y * (0.04166397 + y * (-0.00003954 + y * (-0.00262573 + y * (-0.00054125 + y * 0.00029333))));
+        let f1 = 0.79788456
+            + y * (0.00000156
+                + y * (0.01659667 + y * (0.00017105 + y * (-0.00249511 + y * 0.00113653))));
+        let theta1 = ax - 2.35619449
+            + y * (0.04166397
+                + y * (-0.00003954 + y * (-0.00262573 + y * (-0.00054125 + y * 0.00029333))));
         let ans = (1.0 / ax.sqrt()) * f1 * theta1.cos();
-        if x < 0.0 { -ans } else { ans }
+        if x < 0.0 {
+            -ans
+        } else {
+            ans
+        }
     }
 }
 
@@ -245,17 +264,17 @@ fn bessel_jn_approx(n: u32, x: f32) -> f32 {
 
 /// Static Bessel roots table $(m, n, \alpha_{m,n})$ for the first 12 circular membrane modes.
 pub const BESSEL_MODES_TABLE: [(u32, u32, f32); NUM_MEMBRANE_MODES] = [
-    (0, 1, 2.4048), // Mode 0: (0,1) Fundamental, alpha=2.4048, ratio=1.000
-    (1, 1, 3.8317), // Mode 1: (1,1) alpha=3.8317, ratio=1.593
-    (2, 1, 5.1356), // Mode 2: (2,1) alpha=5.1356, ratio=2.136
-    (0, 2, 5.5201), // Mode 3: (0,2) alpha=5.5201, ratio=2.296 (Axisymmetric 2nd)
-    (3, 1, 6.3802), // Mode 4: (3,1) alpha=6.3802, ratio=2.653
-    (1, 2, 7.0156), // Mode 5: (1,2) alpha=7.0156, ratio=2.917
-    (4, 1, 7.5883), // Mode 6: (4,1) alpha=7.5883, ratio=3.156
-    (2, 2, 8.4172), // Mode 7: (2,2) alpha=8.4172, ratio=3.500
-    (0, 3, 8.6537), // Mode 8: (0,3) alpha=8.6537, ratio=3.599 (Axisymmetric 3rd)
-    (5, 1, 8.7715), // Mode 9: (5,1) alpha=8.7715, ratio=3.648
-    (3, 2, 9.7610), // Mode 10: (3,2) alpha=9.7610, ratio=4.059
+    (0, 1, 2.4048),  // Mode 0: (0,1) Fundamental, alpha=2.4048, ratio=1.000
+    (1, 1, 3.8317),  // Mode 1: (1,1) alpha=3.8317, ratio=1.593
+    (2, 1, 5.1356),  // Mode 2: (2,1) alpha=5.1356, ratio=2.136
+    (0, 2, 5.5201),  // Mode 3: (0,2) alpha=5.5201, ratio=2.296 (Axisymmetric 2nd)
+    (3, 1, 6.3802),  // Mode 4: (3,1) alpha=6.3802, ratio=2.653
+    (1, 2, 7.0156),  // Mode 5: (1,2) alpha=7.0156, ratio=2.917
+    (4, 1, 7.5883),  // Mode 6: (4,1) alpha=7.5883, ratio=3.156
+    (2, 2, 8.4172),  // Mode 7: (2,2) alpha=8.4172, ratio=3.500
+    (0, 3, 8.6537),  // Mode 8: (0,3) alpha=8.6537, ratio=3.599 (Axisymmetric 3rd)
+    (5, 1, 8.7715),  // Mode 9: (5,1) alpha=8.7715, ratio=3.648
+    (3, 2, 9.7610),  // Mode 10: (3,2) alpha=9.7610, ratio=4.059
     (1, 3, 10.1735), // Mode 11: (1,3) alpha=10.1735, ratio=4.230
 ];
 
@@ -296,7 +315,10 @@ impl SnareRattleModel {
         }
 
         // Fast zero-alloc PRNG for wideband snare wire noise
-        self.prng_seed = self.prng_seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        self.prng_seed = self
+            .prng_seed
+            .wrapping_mul(1664525)
+            .wrapping_add(1013904223);
         let noise = (self.prng_seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
 
         // Snare wire impact threshold non-linearity
@@ -442,7 +464,11 @@ impl PercussionMembrane {
             // Rim strike damping: high r suppresses low modes, emphasizes high modes
             let rim_factor = if r > 0.85 {
                 let rim_amt = (r - 0.85) / 0.15;
-                if m == 0 { 1.0 - 0.7 * rim_amt } else { 1.0 + 0.5 * rim_amt }
+                if m == 0 {
+                    1.0 - 0.7 * rim_amt
+                } else {
+                    1.0 + 0.5 * rim_amt
+                }
             } else {
                 1.0
             };
@@ -496,7 +522,8 @@ impl PercussionMembrane {
                 self.is_striking = false;
                 0.0
             } else {
-                let phase = (PI * self.mallet_pulse_timer / self.mallet_pulse_duration).clamp(0.0, PI);
+                let phase =
+                    (PI * self.mallet_pulse_timer / self.mallet_pulse_duration).clamp(0.0, PI);
                 phase.sin().powf(1.8) * self.mallet_pulse_amp * 2.0
             }
         } else {

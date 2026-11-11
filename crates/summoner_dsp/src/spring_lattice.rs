@@ -10,11 +10,11 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
 
 /// Grid dimension for the 2D spring-mass lattice ($6 \times 6 = 36$ nodes).
 pub const LATTICE_DIM: usize = 6;
@@ -43,7 +43,7 @@ impl SpringLatticeProfile {
     /// Returns default excitation fundamental frequency in Hz.
     pub fn default_fundamental_hz(&self) -> f32 {
         match self {
-            Self::VintageAccutronicsSpring => 98.0,  // G2
+            Self::VintageAccutronicsSpring => 98.0, // G2
             Self::StudioPlateSuspension => 164.81,  // E3
             Self::DualHelicalSpringTank => 110.0,   // A2
             Self::ResonantHelicalCoil => 220.0,     // A3
@@ -277,7 +277,8 @@ impl SpringLattice {
                 self.is_striking = false;
                 0.0
             } else {
-                let phase = (PI * self.strike_pulse_timer / self.strike_pulse_duration).clamp(0.0, PI);
+                let phase =
+                    (PI * self.strike_pulse_timer / self.strike_pulse_duration).clamp(0.0, PI);
                 phase.sin().powf(1.6) * self.strike_pulse_amplitude
             }
         } else {
@@ -313,7 +314,8 @@ impl SpringLattice {
                         let dv = v_curr - self.nodes[r_idx].velocity;
 
                         // Duffing non-linear restoring force: F = -k * dz - beta * dz^3
-                        let f_spring = -self.linear_stiffness * dz - self.duffing_nonlinearity * 12000.0 * dz.powi(3);
+                        let f_spring = -self.linear_stiffness * dz
+                            - self.duffing_nonlinearity * 12000.0 * dz.powi(3);
                         let f_damping = -self.inter_node_damping * 80.0 * dv;
                         let f_total = f_spring + f_damping;
 
@@ -327,7 +329,8 @@ impl SpringLattice {
                         let dz = z_curr - self.nodes[b_idx].displacement;
                         let dv = v_curr - self.nodes[b_idx].velocity;
 
-                        let f_spring = -self.linear_stiffness * dz - self.duffing_nonlinearity * 12000.0 * dz.powi(3);
+                        let f_spring = -self.linear_stiffness * dz
+                            - self.duffing_nonlinearity * 12000.0 * dz.powi(3);
                         let f_damping = -self.inter_node_damping * 80.0 * dv;
                         let f_total = f_spring + f_damping;
 
@@ -381,7 +384,11 @@ impl SpringLattice {
         // DC block filter on Left output
         let dc_blocked = out_l - self.dc_block_x1 + 0.995 * self.dc_block_y1;
         self.dc_block_x1 = out_l;
-        self.dc_block_y1 = if dc_blocked.is_finite() { dc_blocked } else { 0.0 };
+        self.dc_block_y1 = if dc_blocked.is_finite() {
+            dc_blocked
+        } else {
+            0.0
+        };
 
         (self.dc_block_y1.clamp(-1.0, 1.0), out_r.clamp(-1.0, 1.0))
     }
@@ -487,7 +494,10 @@ mod tests {
         }
 
         assert!(peak_amp > 0.01, "Spring lattice strike must produce sound");
-        assert!(late_amp < peak_amp, "Spring lattice oscillation must naturally decay");
+        assert!(
+            late_amp < peak_amp,
+            "Spring lattice oscillation must naturally decay"
+        );
     }
 
     #[test]

@@ -39,8 +39,8 @@ pub const NO_ERR: OSStatus = 0;
 
 // Standard Component Types
 pub const K_AUDIO_UNIT_TYPE_MUSIC_DEVICE: OSType = 0x61756d75; // 'aumu'
-pub const K_AUDIO_UNIT_TYPE_EFFECT: OSType = 0x61756678;       // 'aufx'
-pub const K_AUDIO_UNIT_TYPE_GENERATOR: OSType = 0x6175676e;    // 'augn'
+pub const K_AUDIO_UNIT_TYPE_EFFECT: OSType = 0x61756678; // 'aufx'
+pub const K_AUDIO_UNIT_TYPE_GENERATOR: OSType = 0x6175676e; // 'augn'
 
 // Standard AudioUnit Properties
 pub const K_AUDIO_UNIT_PROPERTY_SAMPLE_RATE: u32 = 2;
@@ -64,7 +64,7 @@ impl Default for AudioComponentDescription {
     fn default() -> Self {
         Self {
             component_type: K_AUDIO_UNIT_TYPE_EFFECT,
-            component_sub_type: 0x646c6179, // 'dlay'
+            component_sub_type: 0x646c6179,     // 'dlay'
             component_manufacturer: 0x6170706c, // 'appl'
             component_flags: 0,
             component_flags_mask: 0,
@@ -170,12 +170,17 @@ impl AudioUnitPluginInstance {
     /// Save AU ClassInfo property list chunk (Task F7).
     pub fn save_state(&mut self) -> Result<PluginStateConfig, String> {
         // Construct standard macOS CFPropertyList XML snippet
-        let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n");
+        let mut xml = String::from(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\">\n<dict>\n",
+        );
         xml.push_str("  <key>manufacturer</key><integer>1634758764</integer>\n");
         xml.push_str("  <key>type</key><integer>1635083896</integer>\n");
         xml.push_str("  <key>data</key><dict>\n");
         for (&id, param) in &self.parameters {
-            xml.push_str(&format!("    <key>param_{}</key><real>{}</real>\n", id, param.value));
+            xml.push_str(&format!(
+                "    <key>param_{}</key><real>{}</real>\n",
+                id, param.value
+            ));
         }
         xml.push_str("  </dict>\n</dict>\n</plist>");
 
@@ -207,9 +212,12 @@ impl AudioUnitPluginInstance {
                     for line in xml.lines() {
                         if line.contains("<key>param_") {
                             let parts: Vec<&str> = line.split(&['<', '>'][..]).collect();
-                            if let Some(key_idx) = parts.iter().position(|&s| s.starts_with("param_")) {
+                            if let Some(key_idx) =
+                                parts.iter().position(|&s| s.starts_with("param_"))
+                            {
                                 let key_str = parts[key_idx];
-                                if let Ok(id) = key_str.trim_start_matches("param_").parse::<u32>() {
+                                if let Ok(id) = key_str.trim_start_matches("param_").parse::<u32>()
+                                {
                                     if let Some(val_idx) = parts.iter().position(|&s| s == "real") {
                                         if let Some(val_str) = parts.get(val_idx + 1) {
                                             if let Ok(val) = val_str.parse::<f32>() {
@@ -242,7 +250,11 @@ impl AudioUnitPluginInstance {
         output: &mut [&mut [Sample]],
         _ctx: &ProcessContext,
     ) {
-        let num_samples = if output.is_empty() { 0 } else { output[0].len() };
+        let num_samples = if output.is_empty() {
+            0
+        } else {
+            output[0].len()
+        };
         if num_samples == 0 {
             return;
         }
@@ -280,12 +292,7 @@ impl AudioNode for AudioUnitPluginInstance {
         "AudioUnitPluginInstance"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         if let Some(ref bus) = ctx.param_bus {
             for (&param_id, param) in self.parameters.iter_mut() {
                 if let Some(val) = bus.get(ParamId(param_id)) {
@@ -305,8 +312,8 @@ impl AudioNode for AudioUnitPluginInstance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use crate::plugin_host::PluginFormat;
+    use std::path::PathBuf;
 
     #[test]
     fn test_audiounit_component_description_and_properties() {
@@ -341,7 +348,11 @@ mod tests {
         let mut out_r = vec![0.0f32; 64];
         let ctx = ProcessContext::new(44100, 120.0, 0);
 
-        instance.process(&[&in_l[..], &in_r[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+        instance.process(
+            &[&in_l[..], &in_r[..]],
+            &mut [&mut out_l[..], &mut out_r[..]],
+            &ctx,
+        );
         assert_eq!(out_l[0], 1.25);
         assert_eq!(out_r[0], 1.25);
 

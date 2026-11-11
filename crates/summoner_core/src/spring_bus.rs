@@ -102,7 +102,8 @@ pub struct SpringBusSnapshot {
 
 impl Default for SpringBusSnapshot {
     fn default() -> Self {
-        let (f, disp, tens, nonlin, angle, damp) = SpringArticulation::DriverDrive.nominal_parameters();
+        let (f, disp, tens, nonlin, angle, damp) =
+            SpringArticulation::DriverDrive.nominal_parameters();
         Self {
             articulation: SpringArticulation::DriverDrive,
             drive_force: f,
@@ -141,7 +142,8 @@ impl Default for SpringBus {
 impl SpringBus {
     /// Creates a new SpringBus initialized to standard DriverDrive defaults.
     pub fn new() -> Self {
-        let (f, disp, tens, nonlin, angle, damp) = SpringArticulation::DriverDrive.nominal_parameters();
+        let (f, disp, tens, nonlin, angle, damp) =
+            SpringArticulation::DriverDrive.nominal_parameters();
         Self {
             articulation_raw: AtomicU32::new(SpringArticulation::DriverDrive as u32),
             drive_force_bits: AtomicU32::new(f.to_bits()),
@@ -158,7 +160,8 @@ impl SpringBus {
 
     /// Sets active articulation and loads nominal default parameters.
     pub fn set_articulation(&self, articulation: SpringArticulation) {
-        self.articulation_raw.store(articulation as u32, Ordering::Release);
+        self.articulation_raw
+            .store(articulation as u32, Ordering::Release);
         let (f, disp, tens, nonlin, angle, damp) = articulation.nominal_parameters();
         self.set_gesture_vector(f, disp, tens, nonlin, angle, damp);
     }
@@ -178,12 +181,28 @@ impl SpringBus {
         transducer_pickup_angle: f32,
         damper_damping: f32,
     ) {
-        self.drive_force_bits.store(drive_force.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.dispersion_bits.store(dispersion_factor.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.tension_bits.store(boundary_tension.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.nonlinearity_bits.store(spring_nonlinearity.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.pickup_angle_bits.store(transducer_pickup_angle.clamp(0.0, std::f32::consts::TAU).to_bits(), Ordering::Release);
-        self.damping_bits.store(damper_damping.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.drive_force_bits
+            .store(drive_force.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.dispersion_bits.store(
+            dispersion_factor.clamp(0.0, 1.0).to_bits(),
+            Ordering::Release,
+        );
+        self.tension_bits.store(
+            boundary_tension.clamp(0.0, 1.0).to_bits(),
+            Ordering::Release,
+        );
+        self.nonlinearity_bits.store(
+            spring_nonlinearity.clamp(0.0, 1.0).to_bits(),
+            Ordering::Release,
+        );
+        self.pickup_angle_bits.store(
+            transducer_pickup_angle
+                .clamp(0.0, std::f32::consts::TAU)
+                .to_bits(),
+            Ordering::Release,
+        );
+        self.damping_bits
+            .store(damper_damping.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Gets continuous mechanical gesture vector $(F_{\text{drive}}, D_{\text{dispersion}}, T_{\text{boundary}}, \beta_{\text{nonlin}}, \theta_{\text{pickup}}, \gamma_{\text{damping}})$.
@@ -200,7 +219,8 @@ impl SpringBus {
 
     /// Sets plate decay time $T_{60}$ in seconds.
     pub fn set_decay_t60(&self, t60_sec: f32) {
-        self.t60_bits.store(t60_sec.clamp(0.1, 15.0).to_bits(), Ordering::Release);
+        self.t60_bits
+            .store(t60_sec.clamp(0.1, 15.0).to_bits(), Ordering::Release);
     }
 
     /// Gets plate decay time $T_{60}$ in seconds.
@@ -210,12 +230,16 @@ impl SpringBus {
 
     /// Sets gesture trajectory progress $[0.0 ..= 1.0]$.
     pub fn set_progress(&self, progress: f32, is_active: bool) {
-        self.progress_bits.store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
 
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if is_active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -246,16 +270,26 @@ impl SpringBus {
 
     /// Applies a complete snapshot into this bus.
     pub fn apply_snapshot(&self, snap: &SpringBusSnapshot) {
-        self.articulation_raw.store(snap.articulation as u32, Ordering::Release);
-        self.drive_force_bits.store(snap.drive_force.to_bits(), Ordering::Release);
-        self.dispersion_bits.store(snap.dispersion_factor.to_bits(), Ordering::Release);
-        self.tension_bits.store(snap.boundary_tension.to_bits(), Ordering::Release);
-        self.nonlinearity_bits.store(snap.spring_nonlinearity.to_bits(), Ordering::Release);
-        self.pickup_angle_bits.store(snap.transducer_pickup_angle.to_bits(), Ordering::Release);
-        self.damping_bits.store(snap.damper_damping.to_bits(), Ordering::Release);
-        self.t60_bits.store(snap.decay_t60_sec.to_bits(), Ordering::Release);
-        self.progress_bits.store(snap.gesture_progress.to_bits(), Ordering::Release);
-        self.flags.store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
+        self.articulation_raw
+            .store(snap.articulation as u32, Ordering::Release);
+        self.drive_force_bits
+            .store(snap.drive_force.to_bits(), Ordering::Release);
+        self.dispersion_bits
+            .store(snap.dispersion_factor.to_bits(), Ordering::Release);
+        self.tension_bits
+            .store(snap.boundary_tension.to_bits(), Ordering::Release);
+        self.nonlinearity_bits
+            .store(snap.spring_nonlinearity.to_bits(), Ordering::Release);
+        self.pickup_angle_bits
+            .store(snap.transducer_pickup_angle.to_bits(), Ordering::Release);
+        self.damping_bits
+            .store(snap.damper_damping.to_bits(), Ordering::Release);
+        self.t60_bits
+            .store(snap.decay_t60_sec.to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(snap.gesture_progress.to_bits(), Ordering::Release);
+        self.flags
+            .store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
     }
 
     /// Dispatches current spring bus snapshot values to central `ParamBus`.

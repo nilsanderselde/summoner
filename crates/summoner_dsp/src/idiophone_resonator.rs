@@ -10,11 +10,11 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
 
 /// Maximum number of modal resonators per idiophone voice.
 pub const NUM_IDIOPHONE_MODES: usize = 8;
@@ -44,7 +44,7 @@ impl IdiophoneInstrumentProfile {
     /// Returns default fundamental frequency in Hz.
     pub fn default_fundamental_hz(&self) -> f32 {
         match self {
-            Self::MarimbaWood => 261.63,       // C4
+            Self::MarimbaWood => 261.63,        // C4
             Self::XylophoneRosewood => 523.25,  // C5
             Self::VibraphoneAluminum => 440.00, // A4
             Self::SteelpanTrinidad => 293.66,   // D4
@@ -59,9 +59,13 @@ impl IdiophoneInstrumentProfile {
             // Marimba: 1.0 (fundamental), 4.0 (2 octaves up), 10.0 (3 octaves + major 3rd), plus higher modes
             Self::MarimbaWood => [1.000, 4.000, 10.000, 14.250, 18.600, 24.500, 31.200, 38.800],
             // Xylophone: 1.0 (fundamental), 3.0 (octave + fifth), 9.0 (3 octaves + major 2nd), higher modes
-            Self::XylophoneRosewood => [1.000, 3.000, 9.000, 13.500, 18.000, 23.400, 29.800, 37.100],
+            Self::XylophoneRosewood => {
+                [1.000, 3.000, 9.000, 13.500, 18.000, 23.400, 29.800, 37.100]
+            }
             // Vibraphone: 1.0, 4.0, 10.0, with clean metallic sustain
-            Self::VibraphoneAluminum => [1.000, 3.980, 9.950, 15.200, 21.400, 28.100, 35.600, 43.900],
+            Self::VibraphoneAluminum => {
+                [1.000, 3.980, 9.950, 15.200, 21.400, 28.100, 35.600, 43.900]
+            }
             // Steelpan: 1.0, 2.0 (octave), 3.0 (fifth above octave), plus shell cross-modes
             Self::SteelpanTrinidad => [1.000, 2.000, 3.000, 4.120, 5.350, 6.780, 8.420, 10.250],
             // Kalimba clamped-free bar: 1.0, 6.267, 17.55, 34.39 (Rayleigh beam theory)
@@ -433,7 +437,8 @@ impl StruckIdiophoneResonator {
 
         // 4. Vibraphone motorized rotating disc tremolo AM modulation
         let tremolo_gain = if self.tremolo_enabled && self.tremolo_depth > 0.0 {
-            self.tremolo_phase = (self.tremolo_phase + 2.0 * PI * self.tremolo_rate_hz * dt) % (2.0 * PI);
+            self.tremolo_phase =
+                (self.tremolo_phase + 2.0 * PI * self.tremolo_rate_hz * dt) % (2.0 * PI);
             1.0 - self.tremolo_depth * 0.5 * (1.0 + self.tremolo_phase.sin())
         } else {
             1.0
@@ -538,8 +543,14 @@ mod tests {
             late_amp = late_amp.max(s.abs());
         }
 
-        assert!(peak_amp > 0.02, "Idiophone strike must produce audible output");
-        assert!(late_amp < peak_amp, "Idiophone resonance must naturally decay");
+        assert!(
+            peak_amp > 0.02,
+            "Idiophone strike must produce audible output"
+        );
+        assert!(
+            late_amp < peak_amp,
+            "Idiophone resonance must naturally decay"
+        );
     }
 
     #[test]

@@ -317,12 +317,7 @@ impl TapeSaturationNode {
 
     /// Evaluate magnetic hysteresis transfer function on self.
     #[inline]
-    pub fn process_hysteresis_sample(
-        &self,
-        x: f32,
-        mag_state: &mut f32,
-        bias_osc: f32,
-    ) -> f32 {
+    pub fn process_hysteresis_sample(&self, x: f32, mag_state: &mut f32, bias_osc: f32) -> f32 {
         Self::eval_hysteresis(
             self.drive,
             self.saturation,
@@ -439,7 +434,8 @@ impl SignalProcessor for TapeSaturationNode {
             let flutter_mod = self.flutter_phase.sin() * 0.8;
             let total_mod_samples = (wow_mod + flutter_mod) * self.wow_flutter;
             let base_delay = 16.0f32;
-            let read_offset = (base_delay + total_mod_samples).clamp(1.0, (WOW_FLUTTER_BUFFER_SIZE - 4) as f32);
+            let read_offset =
+                (base_delay + total_mod_samples).clamp(1.0, (WOW_FLUTTER_BUFFER_SIZE - 4) as f32);
 
             let bias_osc = self.ac_bias_phase.sin();
 
@@ -461,11 +457,13 @@ impl SignalProcessor for TapeSaturationNode {
                 ch_state.write_idx = (w_idx + 1) % WOW_FLUTTER_BUFFER_SIZE;
 
                 // 2. Read interpolated delayed sample for wow/flutter pitch modulation
-                let read_pos = (w_idx as f32 + WOW_FLUTTER_BUFFER_SIZE as f32 - read_offset) % (WOW_FLUTTER_BUFFER_SIZE as f32);
+                let read_pos = (w_idx as f32 + WOW_FLUTTER_BUFFER_SIZE as f32 - read_offset)
+                    % (WOW_FLUTTER_BUFFER_SIZE as f32);
                 let idx0 = read_pos.floor() as usize % WOW_FLUTTER_BUFFER_SIZE;
                 let idx1 = (idx0 + 1) % WOW_FLUTTER_BUFFER_SIZE;
                 let frac = read_pos.fract();
-                let delayed_in = ch_state.delay_buf[idx0] * (1.0 - frac) + ch_state.delay_buf[idx1] * frac;
+                let delayed_in =
+                    ch_state.delay_buf[idx0] * (1.0 - frac) + ch_state.delay_buf[idx1] * frac;
 
                 // 3. Apply Low-Frequency Head Bump Resonance
                 let bumped = ch_state.head_bump_filter.process_sample(delayed_in);
@@ -506,12 +504,7 @@ impl AudioNode for TapeSaturationNode {
         "TapeSaturationNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }

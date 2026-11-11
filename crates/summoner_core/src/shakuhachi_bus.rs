@@ -118,7 +118,10 @@ pub fn register_shakuhachi_params(param_bus: &mut ParamBus, base_id: ParamId) {
     let (p, angle, meri, dist, murai, mask, gain) =
         ShakuhachiArticulation::HonkyokuTraditional.nominal_parameters();
 
-    param_bus.register(ParamId(base_id.0), ShakuhachiArticulation::HonkyokuTraditional as u32 as f32);
+    param_bus.register(
+        ParamId(base_id.0),
+        ShakuhachiArticulation::HonkyokuTraditional as u32 as f32,
+    );
     param_bus.register(ParamId(base_id.0 + 1), p);
     param_bus.register(ParamId(base_id.0 + 2), angle);
     param_bus.register(ParamId(base_id.0 + 3), meri);
@@ -194,38 +197,48 @@ impl ShakuhachiBus {
         let (p, angle, meri, dist, murai, mask, gain) = art.nominal_parameters();
 
         self.articulation.store(art as u32, Ordering::Relaxed);
-        self.blowing_pressure_pa.store(p.to_bits(), Ordering::Relaxed);
-        self.embouchure_angle_deg.store(angle.to_bits(), Ordering::Relaxed);
-        self.meri_kari_cents.store(meri.to_bits(), Ordering::Relaxed);
-        self.jet_distance_mm.store(dist.to_bits(), Ordering::Relaxed);
-        self.murai_iki_intensity.store(murai.to_bits(), Ordering::Relaxed);
+        self.blowing_pressure_pa
+            .store(p.to_bits(), Ordering::Relaxed);
+        self.embouchure_angle_deg
+            .store(angle.to_bits(), Ordering::Relaxed);
+        self.meri_kari_cents
+            .store(meri.to_bits(), Ordering::Relaxed);
+        self.jet_distance_mm
+            .store(dist.to_bits(), Ordering::Relaxed);
+        self.murai_iki_intensity
+            .store(murai.to_bits(), Ordering::Relaxed);
         self.hole_mask.store(mask, Ordering::Relaxed);
         self.master_gain.store(gain.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_blowing_pressure(&self, pressure_pa: f32) {
-        self.blowing_pressure_pa.store(pressure_pa.to_bits(), Ordering::Relaxed);
+        self.blowing_pressure_pa
+            .store(pressure_pa.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_meri_kari(&self, cents: f32) {
-        self.meri_kari_cents.store(cents.to_bits(), Ordering::Relaxed);
+        self.meri_kari_cents
+            .store(cents.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_embouchure_angle(&self, angle_deg: f32) {
-        self.embouchure_angle_deg.store(angle_deg.to_bits(), Ordering::Relaxed);
+        self.embouchure_angle_deg
+            .store(angle_deg.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_jet_distance(&self, dist_mm: f32) {
-        self.jet_distance_mm.store(dist_mm.to_bits(), Ordering::Relaxed);
+        self.jet_distance_mm
+            .store(dist_mm.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_murai_iki(&self, intensity: f32) {
-        self.murai_iki_intensity.store(intensity.to_bits(), Ordering::Relaxed);
+        self.murai_iki_intensity
+            .store(intensity.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
@@ -247,11 +260,17 @@ mod tests {
     fn test_shakuhachi_bus_articulation_round_trip() {
         let bus = ShakuhachiBus::new();
         let snap = bus.snapshot();
-        assert_eq!(snap.articulation, ShakuhachiArticulation::HonkyokuTraditional);
+        assert_eq!(
+            snap.articulation,
+            ShakuhachiArticulation::HonkyokuTraditional
+        );
 
         bus.set_articulation(ShakuhachiArticulation::MuraiIkiExplosive);
         let snap2 = bus.snapshot();
-        assert_eq!(snap2.articulation, ShakuhachiArticulation::MuraiIkiExplosive);
+        assert_eq!(
+            snap2.articulation,
+            ShakuhachiArticulation::MuraiIkiExplosive
+        );
         assert_eq!(snap2.blowing_pressure_pa, 2400.0);
         assert_eq!(snap2.murai_iki_intensity, 0.85);
     }

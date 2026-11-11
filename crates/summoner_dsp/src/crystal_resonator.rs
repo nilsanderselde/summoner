@@ -92,7 +92,9 @@ impl CrystalModalFilter {
         let sr = sample_rate as f32;
         let omega = 2.0 * PI * (self.freq_hz / sr).clamp(0.0001, 0.495);
         // Pole radius r = exp(-pi * f / (Q * fs))
-        let pole_radius = (-PI * self.freq_hz / (self.q * sr)).exp().clamp(0.0, 0.99999);
+        let pole_radius = (-PI * self.freq_hz / (self.q * sr))
+            .exp()
+            .clamp(0.0, 0.99999);
 
         self.coeff_a1 = -2.0 * pole_radius * omega.cos();
         self.coeff_a2 = pole_radius * pole_radius;
@@ -412,7 +414,10 @@ mod tests {
                 max_amp = s.abs();
             }
         }
-        assert!(max_amp > 0.0, "Continuous stick-slip rubbing should excite the crystal bowl");
+        assert!(
+            max_amp > 0.0,
+            "Continuous stick-slip rubbing should excite the crystal bowl"
+        );
     }
 
     #[test]
@@ -439,6 +444,9 @@ mod tests {
                 decayed_peak = s.abs();
             }
         }
-        assert!(decayed_peak < peak_sample, "Struck crystal resonance must decay over time");
+        assert!(
+            decayed_peak < peak_sample,
+            "Struck crystal resonance must decay over time"
+        );
     }
 }

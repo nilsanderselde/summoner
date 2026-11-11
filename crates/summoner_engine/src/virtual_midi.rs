@@ -14,8 +14,8 @@
 //! Virtual MIDI port manager supporting macOS CoreMIDI, Linux ALSA sequencer,
 //! and Windows loopMIDI/teVirtualMIDI software bridges (Task B6).
 
-use std::collections::VecDeque;
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
 /// Direction of virtual MIDI port data flow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,7 +65,8 @@ impl VirtualMidiPort {
         if self.direction == VirtualMidiDirection::Input {
             return Err("Cannot send on an input-only virtual port".into());
         }
-        self.outgoing_queue.push_back((timestamp_samples, message.to_vec()));
+        self.outgoing_queue
+            .push_back((timestamp_samples, message.to_vec()));
         Ok(())
     }
 
@@ -77,7 +78,8 @@ impl VirtualMidiPort {
         if self.direction == VirtualMidiDirection::Output {
             return Err("Cannot receive on an output-only virtual port".into());
         }
-        self.incoming_queue.push_back((timestamp_samples, message.to_vec()));
+        self.incoming_queue
+            .push_back((timestamp_samples, message.to_vec()));
         Ok(())
     }
 
@@ -211,4 +213,3 @@ mod tests {
         assert_eq!(inc[0].0, 600);
     }
 }
-

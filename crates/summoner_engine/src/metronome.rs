@@ -176,4 +176,3 @@ mod tests {
         assert!(out_l.iter().all(|&s| s == 0.0));
     }
 }
-

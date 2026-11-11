@@ -268,7 +268,8 @@ fn test_golden_slendro_scala_synthesis() {
     transport.play();
 
     // Javanese Slendro 5-tone equidistant pentatonic system
-    let scl_content = "! slendro.scl\nJavanese Slendro 5-tone scale\n5\n!\n240.0\n480.0\n720.0\n960.0\n1200.0\n";
+    let scl_content =
+        "! slendro.scl\nJavanese Slendro 5-tone scale\n5\n!\n240.0\n480.0\n720.0\n960.0\n1200.0\n";
     let tuning = SclTuning::parse(scl_content).expect("Failed to parse Slendro SCL");
     assert_eq!(tuning.num_notes, 5);
 

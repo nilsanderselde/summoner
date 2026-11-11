@@ -5,9 +5,7 @@ use blake3::Hasher;
 use std::fs;
 use std::path::Path;
 use summoner_core::allocator::AllocGuard;
-use summoner_core::bellows_bus::{
-    register_bellows_params, BellowsBus, BELLOWS_BASE_PARAM_ID,
-};
+use summoner_core::bellows_bus::{register_bellows_params, BellowsBus, BELLOWS_BASE_PARAM_ID};
 use summoner_core::node::ProcessContext;
 use summoner_core::param_bus::ParamBus;
 use summoner_core::transport::Transport;
@@ -21,9 +19,7 @@ use summoner_dsp::traits::SignalProcessor;
 use summoner_gui::views::bellows_view::BellowsView;
 #[cfg(feature = "gui")]
 use summoner_gui::views::free_reed_view::FreeReedView;
-use summoner_sequencer::bellows_gesture::{
-    BellowsGestureEngine, BellowsGesturePattern,
-};
+use summoner_sequencer::bellows_gesture::{BellowsGestureEngine, BellowsGesturePattern};
 
 const BLOCK_SIZE: usize = 64;
 
@@ -153,7 +149,9 @@ fn test_golden_free_reed_deterministic() {
 
             assert!((-1.0..=1.0).contains(&out_band_l[i]) && (-1.0..=1.0).contains(&out_band_r[i]));
             assert!((-1.0..=1.0).contains(&out_muse_l[i]) && (-1.0..=1.0).contains(&out_muse_r[i]));
-            assert!((-1.0..=1.0).contains(&out_bayan_l[i]) && (-1.0..=1.0).contains(&out_bayan_r[i]));
+            assert!(
+                (-1.0..=1.0).contains(&out_bayan_l[i]) && (-1.0..=1.0).contains(&out_bayan_r[i])
+            );
             assert!((-1.0..=1.0).contains(&out_harm_l[i]) && (-1.0..=1.0).contains(&out_harm_r[i]));
             assert!((-1.0..=1.0).contains(&out_conc_l[i]) && (-1.0..=1.0).contains(&out_conc_r[i]));
 
@@ -213,12 +211,11 @@ fn test_golden_free_reed_cassotto_and_aeroelastic_deterministic() {
 
 #[test]
 fn test_golden_free_reed_gesture_and_bus_deterministic() {
-    let mut engine = BellowsGestureEngine::with_pattern(
-        BellowsGesturePattern::TangoBandoneonAccented {
+    let mut engine =
+        BellowsGestureEngine::with_pattern(BellowsGesturePattern::TangoBandoneonAccented {
             phrase_length_beats: 4.0,
             max_pressure_pa: 800.0,
-        },
-    );
+        });
     engine.is_looping = true;
 
     let bus = BellowsBus::new();
@@ -281,11 +278,28 @@ fn test_golden_free_reed_views_ascii_and_snapshots() {
     // Save PNG snapshots across the project render directories
     let _ = bellows_view.render_snapshot_png("scratch/renders/bellows_view.png", 800, 520);
     let _ = bellows_view.render_snapshot_png("../../scratch/renders/bellows_view.png", 800, 520);
-    let _ = bellows_view.render_snapshot_png("crates/summon/scratch/renders/bellows_view.png", 800, 520);
-    let _ = bellows_view.render_snapshot_png("crates/summoner_gui/scratch/renders/bellows_view.png", 800, 520);
+    let _ = bellows_view.render_snapshot_png(
+        "crates/summon/scratch/renders/bellows_view.png",
+        800,
+        520,
+    );
+    let _ = bellows_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/bellows_view.png",
+        800,
+        520,
+    );
 
     let _ = free_reed_view.render_snapshot_png("scratch/renders/free_reed_view.png", 800, 520);
-    let _ = free_reed_view.render_snapshot_png("../../scratch/renders/free_reed_view.png", 800, 520);
-    let _ = free_reed_view.render_snapshot_png("crates/summon/scratch/renders/free_reed_view.png", 800, 520);
-    let _ = free_reed_view.render_snapshot_png("crates/summoner_gui/scratch/renders/free_reed_view.png", 800, 520);
+    let _ =
+        free_reed_view.render_snapshot_png("../../scratch/renders/free_reed_view.png", 800, 520);
+    let _ = free_reed_view.render_snapshot_png(
+        "crates/summon/scratch/renders/free_reed_view.png",
+        800,
+        520,
+    );
+    let _ = free_reed_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/free_reed_view.png",
+        800,
+        520,
+    );
 }

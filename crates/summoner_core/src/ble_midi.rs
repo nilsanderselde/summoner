@@ -15,8 +15,8 @@
 //! - Running status reconstruction across BLE MTU boundaries
 //! - Bidirectional packet parser and MTU-aware packet framer
 
-use serde::{Deserialize, Serialize};
 use crate::midi::MidiEvent;
+use serde::{Deserialize, Serialize};
 
 /// Official MIDI Association Bluetooth LE MIDI GATT UUIDs.
 pub const BLE_MIDI_SERVICE_UUID: &str = "03B80E5A-EDE8-4B33-A028-510000000001";
@@ -170,7 +170,11 @@ impl BleMidiDriver {
     }
 
     /// Parse raw incoming BLE-MIDI packet bytes into timestamped MIDI events.
-    pub fn parse_packet(&mut self, packet: &[u8], host_receive_us: u64) -> Vec<TimestampedMidiEvent> {
+    pub fn parse_packet(
+        &mut self,
+        packet: &[u8],
+        host_receive_us: u64,
+    ) -> Vec<TimestampedMidiEvent> {
         self.packets_received += 1;
         let mut events = Vec::new();
         if packet.len() < 3 {
@@ -228,7 +232,9 @@ impl BleMidiDriver {
 
                 if let Some(event) = MidiEvent::from_bytes(&msg_bytes) {
                     let raw_13bit = (ts_high << 7) | (if has_timestamp { ts_low } else { 0 });
-                    let ts_us = self.jitter_compensator.unwrap_timestamp(raw_13bit, host_receive_us);
+                    let ts_us = self
+                        .jitter_compensator
+                        .unwrap_timestamp(raw_13bit, host_receive_us);
                     events.push(TimestampedMidiEvent {
                         timestamp_us: ts_us,
                         event,
@@ -254,7 +260,9 @@ impl BleMidiDriver {
             let raw = match *event {
                 MidiEvent::NoteOn(ch, n, v) => vec![0x90 | (ch & 0x0F), n & 0x7F, v & 0x7F],
                 MidiEvent::NoteOff(ch, n, v) => vec![0x80 | (ch & 0x0F), n & 0x7F, v & 0x7F],
-                MidiEvent::ControlChange(ch, cc, v) => vec![0xB0 | (ch & 0x0F), cc & 0x7F, v & 0x7F],
+                MidiEvent::ControlChange(ch, cc, v) => {
+                    vec![0xB0 | (ch & 0x0F), cc & 0x7F, v & 0x7F]
+                }
                 MidiEvent::PitchBend(ch, val) => {
                     let lsb = (val & 0x7F) as u8;
                     let msb = ((val >> 7) & 0x7F) as u8;
@@ -329,4 +337,3 @@ mod tests {
         assert!(t2 > t1);
     }
 }
-

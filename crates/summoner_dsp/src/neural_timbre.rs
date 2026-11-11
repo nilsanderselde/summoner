@@ -40,19 +40,23 @@ impl NeuralTargetTimbre {
     pub fn harmonic_weights(&self) -> [f32; 16] {
         match self {
             Self::Violin => [
-                1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.12, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01,
+                1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.12, 0.1, 0.08, 0.06, 0.04, 0.02,
+                0.01,
             ],
             Self::Cello => [
-                1.0, 0.95, 0.75, 0.6, 0.45, 0.35, 0.25, 0.18, 0.12, 0.08, 0.05, 0.03, 0.02, 0.01, 0.01, 0.0,
+                1.0, 0.95, 0.75, 0.6, 0.45, 0.35, 0.25, 0.18, 0.12, 0.08, 0.05, 0.03, 0.02, 0.01,
+                0.01, 0.0,
             ],
             Self::Flute => [
                 1.0, 0.25, 0.15, 0.05, 0.02, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
             ],
             Self::TenorSax => [
-                1.0, 0.85, 0.9, 0.7, 0.6, 0.5, 0.4, 0.35, 0.25, 0.2, 0.15, 0.1, 0.05, 0.03, 0.02, 0.01,
+                1.0, 0.85, 0.9, 0.7, 0.6, 0.5, 0.4, 0.35, 0.25, 0.2, 0.15, 0.1, 0.05, 0.03, 0.02,
+                0.01,
             ],
             Self::ElectricGuitarLead => [
-                1.0, 0.9, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15,
+                1.0, 0.9, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2,
+                0.15,
             ],
         }
     }
@@ -95,7 +99,7 @@ impl NeuralTimbreTransfer {
         }
 
         let min_period = (self.sample_rate / 1000.0) as usize; // Max 1000 Hz
-        let max_period = (self.sample_rate / 50.0) as usize;   // Min 50 Hz
+        let max_period = (self.sample_rate / 50.0) as usize; // Min 50 Hz
         let max_period = max_period.min(frame.len() / 2);
 
         let mut best_period = min_period;
@@ -143,7 +147,9 @@ impl NeuralTimbreTransfer {
         let noise_level = self.target_timbre.noise_ratio();
 
         // Calculate RMS loudness contour
-        let rms = (input.iter().map(|&s| s * s).sum::<f32>() / len as f32).sqrt().max(1e-4);
+        let rms = (input.iter().map(|&s| s * s).sum::<f32>() / len as f32)
+            .sqrt()
+            .max(1e-4);
 
         for i in 0..len {
             let original_sample = input[i];
@@ -174,7 +180,8 @@ impl NeuralTimbreTransfer {
             resynthesized *= rms * 1.5;
 
             // Morph blend between original audio and resynthesized target timbre
-            output[i] = (1.0 - self.morph_blend) * original_sample + self.morph_blend * resynthesized;
+            output[i] =
+                (1.0 - self.morph_blend) * original_sample + self.morph_blend * resynthesized;
         }
     }
 }
@@ -210,7 +217,7 @@ pub struct RoomAcousticConfig {
     pub dimensions_m: Vec3, // Length, Width, Height in meters
     pub source_pos: Vec3,
     pub listener_pos: Vec3,
-    pub wall_absorption_low: f32,  // 0.0 (reflective) to 1.0 (absorptive)
+    pub wall_absorption_low: f32, // 0.0 (reflective) to 1.0 (absorptive)
     pub wall_absorption_mid: f32,
     pub wall_absorption_high: f32,
     pub target_rt60_sec: f32,
@@ -263,13 +270,13 @@ impl NeuralRirSynthesizer {
         let lis_right = Vec3::new(lis.x + ear_offset, lis.y, lis.z);
 
         let reflections = [
-            Vec3::new(src.x, src.y, src.z),                  // Direct line of sight
-            Vec3::new(-src.x, src.y, src.z),                 // X=0 wall reflection
-            Vec3::new(2.0 * room.x - src.x, src.y, src.z),   // X=L wall reflection
-            Vec3::new(src.x, -src.y, src.z),                 // Y=0 wall reflection
-            Vec3::new(src.x, 2.0 * room.y - src.y, src.z),   // Y=W wall reflection
-            Vec3::new(src.x, src.y, -src.z),                 // Floor reflection
-            Vec3::new(src.x, src.y, 2.0 * room.z - src.z),   // Ceiling reflection
+            Vec3::new(src.x, src.y, src.z),                // Direct line of sight
+            Vec3::new(-src.x, src.y, src.z),               // X=0 wall reflection
+            Vec3::new(2.0 * room.x - src.x, src.y, src.z), // X=L wall reflection
+            Vec3::new(src.x, -src.y, src.z),               // Y=0 wall reflection
+            Vec3::new(src.x, 2.0 * room.y - src.y, src.z), // Y=W wall reflection
+            Vec3::new(src.x, src.y, -src.z),               // Floor reflection
+            Vec3::new(src.x, src.y, 2.0 * room.z - src.z), // Ceiling reflection
         ];
 
         for (idx, ref_pos) in reflections.iter().enumerate() {

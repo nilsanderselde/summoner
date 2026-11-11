@@ -10,12 +10,14 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::hammer_strike::{
+    ExcitationType, HammerStrike, SympatheticResonatorMatrix, NUM_SYMPATHETIC_STRINGS,
+};
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::hammer_strike::{ExcitationType, HammerStrike, SympatheticResonatorMatrix, NUM_SYMPATHETIC_STRINGS};
-use crate::traits::SignalProcessor;
 
 /// Maximum delay buffer capacity in samples (~15 Hz fundamental at 192 kHz).
 pub const MAX_PLUCKED_DELAY: usize = 16384;
@@ -190,7 +192,9 @@ impl SoundboardMode {
 
     #[inline]
     pub fn step(&mut self, input: f32) -> f32 {
-        let out = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2 - self.a1 * self.y1 - self.a2 * self.y2;
+        let out = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2
+            - self.a1 * self.y1
+            - self.a2 * self.y2;
         self.x2 = self.x1;
         self.x1 = input;
         self.y2 = self.y1;
@@ -321,7 +325,9 @@ impl CommutedPluckedString {
             prev_dc_vert_in: 0.0,
             prev_dc_horiz_in: 0.0,
         };
-        synth.hammer_strike.set_excitation_type(instrument.default_excitation());
+        synth
+            .hammer_strike
+            .set_excitation_type(instrument.default_excitation());
         synth.sympathetic_matrix.set_coupling_strength(bleed);
         synth
     }
@@ -334,7 +340,8 @@ impl CommutedPluckedString {
         self.decay_t60_sec = t60;
         self.string_stiffness = stiff;
         self.polarization_detune_cents = detune;
-        self.hammer_strike.set_excitation_type(instrument.default_excitation());
+        self.hammer_strike
+            .set_excitation_type(instrument.default_excitation());
         self.sympathetic_matrix.set_coupling_strength(bleed);
 
         let (f1, f2, f3, f4) = instrument.soundboard_modes();
@@ -417,7 +424,11 @@ impl CommutedPluckedString {
 
     /// Reads fractional delay sample using 4-point Hermite cubic interpolation.
     #[inline]
-    fn read_fractional_delay(buffer: &[f32; MAX_PLUCKED_DELAY], write_idx: usize, delay_samples: f32) -> f32 {
+    fn read_fractional_delay(
+        buffer: &[f32; MAX_PLUCKED_DELAY],
+        write_idx: usize,
+        delay_samples: f32,
+    ) -> f32 {
         let int_delay = delay_samples.floor() as usize;
         let frac = delay_samples - int_delay as f32;
 
@@ -427,7 +438,11 @@ impl CommutedPluckedString {
             MAX_PLUCKED_DELAY + write_idx - int_delay
         };
 
-        let i0 = if base_idx == 0 { MAX_PLUCKED_DELAY - 1 } else { base_idx - 1 };
+        let i0 = if base_idx == 0 {
+            MAX_PLUCKED_DELAY - 1
+        } else {
+            base_idx - 1
+        };
         let i1 = base_idx;
         let i2 = (base_idx + 1) % MAX_PLUCKED_DELAY;
         let i3 = (base_idx + 2) % MAX_PLUCKED_DELAY;
@@ -456,7 +471,9 @@ impl CommutedPluckedString {
         let period_sec = 1.0 / fundamental_hz.max(20.0);
         let attenuation_db_per_sec = 60.0 / eff_t60.max(0.1);
         let attenuation_db_per_period = attenuation_db_per_sec * period_sec;
-        10.0f32.powf(-attenuation_db_per_period / 20.0).clamp(0.85, 0.9999)
+        10.0f32
+            .powf(-attenuation_db_per_period / 20.0)
+            .clamp(0.85, 0.9999)
     }
 
     /// Computes and returns the next output audio sample.
@@ -473,8 +490,10 @@ impl CommutedPluckedString {
         let delay_horiz_len = (sr / f0_horiz).clamp(2.0, (MAX_PLUCKED_DELAY - 4) as f32);
 
         // 2. Read circulating traveling waves from delay buffers
-        let wave_v = Self::read_fractional_delay(&self.delay_vert, self.write_idx_vert, delay_vert_len);
-        let wave_h = Self::read_fractional_delay(&self.delay_horiz, self.write_idx_horiz, delay_horiz_len);
+        let wave_v =
+            Self::read_fractional_delay(&self.delay_vert, self.write_idx_vert, delay_vert_len);
+        let wave_h =
+            Self::read_fractional_delay(&self.delay_horiz, self.write_idx_horiz, delay_horiz_len);
 
         // 3. String stiffness inharmonic dispersion (allpass filtering)
         let disp_v = self.dispersion_vert.step(wave_v);
@@ -501,8 +520,10 @@ impl CommutedPluckedString {
         let reflected_v = -coupled_v * loop_gain_v;
         let reflected_h = -coupled_h * loop_gain_h;
 
-        self.damp_vert_state = (1.0 - damp_coeff_v) * reflected_v + damp_coeff_v * self.damp_vert_state;
-        self.damp_horiz_state = (1.0 - damp_coeff_h) * reflected_h + damp_coeff_h * self.damp_horiz_state;
+        self.damp_vert_state =
+            (1.0 - damp_coeff_v) * reflected_v + damp_coeff_v * self.damp_vert_state;
+        self.damp_horiz_state =
+            (1.0 - damp_coeff_h) * reflected_h + damp_coeff_h * self.damp_horiz_state;
 
         // DC blocker: y[n] = x[n] - x[n-1] + 0.995 * y[n-1]
         let dc_v = self.damp_vert_state - self.prev_dc_vert_in + 0.995 * self.dc_vert_state;
@@ -518,7 +539,8 @@ impl CommutedPluckedString {
         sym_in[0] = dc_v;
         sym_in[1] = dc_h;
         let mut sym_out = [0.0f32; NUM_SYMPATHETIC_STRINGS];
-        self.sympathetic_matrix.process_junction(&sym_in, &mut sym_out);
+        self.sympathetic_matrix
+            .process_junction(&sym_in, &mut sym_out);
 
         // 8. Inject hammer contact force and feedback waves back into delay lines
         let in_v = (sym_out[0] + hammer_force * 0.70).clamp(-2.0, 2.0);

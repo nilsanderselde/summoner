@@ -5,9 +5,7 @@ use blake3::Hasher;
 use std::fs;
 use std::path::Path;
 use summoner_core::allocator::AllocGuard;
-use summoner_core::clavinet_bus::{
-    ClavinetArticulation, ClavinetBus, ClavinetPickupMode,
-};
+use summoner_core::clavinet_bus::{ClavinetArticulation, ClavinetBus, ClavinetPickupMode};
 use summoner_core::node::ProcessContext;
 use summoner_core::param_bus::{ParamBus, ParamId};
 use summoner_core::transport::Transport;
@@ -367,13 +365,23 @@ fn test_golden_clavinet_views_ascii_and_snapshots() {
     // Save PNG snapshots across the project render directories
     let _ = clav_view.render_snapshot_png("scratch/renders/clavinet_view.png", 800, 520);
     let _ = clav_view.render_snapshot_png("../../scratch/renders/clavinet_view.png", 800, 520);
-    let _ = clav_view.render_snapshot_png("crates/summon/scratch/renders/clavinet_view.png", 800, 520);
-    let _ = clav_view.render_snapshot_png("crates/summoner_gui/scratch/renders/clavinet_view.png", 800, 520);
+    let _ =
+        clav_view.render_snapshot_png("crates/summon/scratch/renders/clavinet_view.png", 800, 520);
+    let _ = clav_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/clavinet_view.png",
+        800,
+        520,
+    );
 
     let _ = wah_view.render_snapshot_png("scratch/renders/auto_wah_view.png", 800, 520);
     let _ = wah_view.render_snapshot_png("../../scratch/renders/auto_wah_view.png", 800, 520);
-    let _ = wah_view.render_snapshot_png("crates/summon/scratch/renders/auto_wah_view.png", 800, 520);
-    let _ = wah_view.render_snapshot_png("crates/summoner_gui/scratch/renders/auto_wah_view.png", 800, 520);
+    let _ =
+        wah_view.render_snapshot_png("crates/summon/scratch/renders/auto_wah_view.png", 800, 520);
+    let _ = wah_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/auto_wah_view.png",
+        800,
+        520,
+    );
 }
 
 fn check_or_save(filename: &str, digest: &str) {

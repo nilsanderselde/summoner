@@ -239,10 +239,19 @@ fn test_golden_vocal_tract_and_vowel_space_views_snapshot() {
     let ascii_tract = tract_view.render_ascii(80, 16);
     assert!(!ascii_tract.is_empty());
 
-    let res_tract = tract_view.render_snapshot_png("scratch/renders/vocal_tract_view.png", 800, 520);
+    let res_tract =
+        tract_view.render_snapshot_png("scratch/renders/vocal_tract_view.png", 800, 520);
     let _ = tract_view.render_snapshot_png("../../scratch/renders/vocal_tract_view.png", 800, 520);
-    let _ = tract_view.render_snapshot_png("C:/Users/Nils/Code/Summoner/scratch/renders/vocal_tract_view.png", 800, 520);
-    assert!(res_tract.is_ok(), "Vocal tract snapshot render failed: {:?}", res_tract);
+    let _ = tract_view.render_snapshot_png(
+        "C:/Users/Nils/Code/Summoner/scratch/renders/vocal_tract_view.png",
+        800,
+        520,
+    );
+    assert!(
+        res_tract.is_ok(),
+        "Vocal tract snapshot render failed: {:?}",
+        res_tract
+    );
 
     let mut vowel_view = VowelSpaceView::new();
     vowel_view.set_vowel(IpaVowel::OpenFrontA);
@@ -251,10 +260,19 @@ fn test_golden_vocal_tract_and_vowel_space_views_snapshot() {
     let ascii_vowel = vowel_view.render_ascii(80, 16);
     assert!(!ascii_vowel.is_empty());
 
-    let res_vowel = vowel_view.render_snapshot_png("scratch/renders/vowel_space_view.png", 800, 520);
+    let res_vowel =
+        vowel_view.render_snapshot_png("scratch/renders/vowel_space_view.png", 800, 520);
     let _ = vowel_view.render_snapshot_png("../../scratch/renders/vowel_space_view.png", 800, 520);
-    let _ = vowel_view.render_snapshot_png("C:/Users/Nils/Code/Summoner/scratch/renders/vowel_space_view.png", 800, 520);
-    assert!(res_vowel.is_ok(), "Vowel space snapshot render failed: {:?}", res_vowel);
+    let _ = vowel_view.render_snapshot_png(
+        "C:/Users/Nils/Code/Summoner/scratch/renders/vowel_space_view.png",
+        800,
+        520,
+    );
+    assert!(
+        res_vowel.is_ok(),
+        "Vowel space snapshot render failed: {:?}",
+        res_vowel
+    );
 
     let mut hasher = Hasher::new();
     for line in &ascii_tract {

@@ -365,7 +365,10 @@ impl SummonerApp {
             show_dpi_scale_panel_modal: false,
             award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView::new(),
             audio_engine: None,
-            session_dag: summoner_project::git_dag::GitSessionDag::new(project.clone(), "Summoner User"),
+            session_dag: summoner_project::git_dag::GitSessionDag::new(
+                project.clone(),
+                "Summoner User",
+            ),
             show_preferences_window: false,
             preferences_state: crate::param_controls::PreferencesState::default(),
         };
@@ -515,7 +518,12 @@ impl SummonerApp {
             .input_device_list
             .get(self.audio_driver_panel.selected_input_device_index)
             .cloned();
-        let backend = match self.audio_driver_panel.selected_driver_name.to_lowercase().as_str() {
+        let backend = match self
+            .audio_driver_panel
+            .selected_driver_name
+            .to_lowercase()
+            .as_str()
+        {
             "wasapi" => Some(summoner_core::audio_drivers::AudioDriverBackendType::Wasapi),
             "asio" => Some(summoner_core::audio_drivers::AudioDriverBackendType::Asio),
             "coreaudio" => Some(summoner_core::audio_drivers::AudioDriverBackendType::CoreAudio),
@@ -569,7 +577,8 @@ impl SummonerApp {
             None
         });
         if let Some(text) = clipboard {
-            if let Ok(tracks) = toml::from_str::<Vec<summoner_project::schema::TrackConfig>>(&text) {
+            if let Ok(tracks) = toml::from_str::<Vec<summoner_project::schema::TrackConfig>>(&text)
+            {
                 for mut t in tracks {
                     t.id = (self.project.tracks.len() + 1) as u64;
                     t.name = format!("{} (Pasted)", t.name);
@@ -743,7 +752,9 @@ impl SummonerApp {
                 let asset_id = format!("asset_{}", self.project.assets.len() + 1);
                 let hash_str = match std::fs::read(path) {
                     Ok(bytes) => blake3::hash(&bytes).to_hex().to_string(),
-                    Err(_) => blake3::hash(path.to_string_lossy().as_bytes()).to_hex().to_string(),
+                    Err(_) => blake3::hash(path.to_string_lossy().as_bytes())
+                        .to_hex()
+                        .to_string(),
                 };
                 self.project
                     .assets
@@ -1008,21 +1019,18 @@ impl SummonerApp {
                 let proj = self.project.clone();
                 let bus = Arc::clone(&self.param_bus);
                 self.status_message = Some(format!("Exporting WAV to {}...", path.display()));
-                std::thread::spawn(move || match summoner_engine::render_project_to_wav(
-                    &proj,
-                    &path,
-                    None,
-                    Some(bus),
-                ) {
-                    Ok(frames) => {
-                        println!(
-                            "Exported WAV render ({} frames) to {}",
-                            frames,
-                            path.display()
-                        );
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to export WAV to {}: {}", path.display(), e);
+                std::thread::spawn(move || {
+                    match summoner_engine::render_project_to_wav(&proj, &path, None, Some(bus)) {
+                        Ok(frames) => {
+                            println!(
+                                "Exported WAV render ({} frames) to {}",
+                                frames,
+                                path.display()
+                            );
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to export WAV to {}: {}", path.display(), e);
+                        }
                     }
                 });
             }
@@ -2014,7 +2022,8 @@ impl eframe::App for SummonerApp {
                 }
                 "open_parallel_transient_saturator_hud" => {
                     self.current_view = ViewMode::ModernStudio;
-                    self.award_winning_view.open_parallel_transient_saturator_hud();
+                    self.award_winning_view
+                        .open_parallel_transient_saturator_hud();
                 }
                 "open_midside_focuser_hud" => {
                     self.current_view = ViewMode::ModernStudio;
@@ -3965,7 +3974,9 @@ mod tests {
         // Verify that export_wav_to_path renders real audio, not zeros (audit #9)
         let wav_path =
             std::env::temp_dir().join(format!("gui_export_real_{}.wav", std::process::id()));
-        let frames = app.export_wav_to_path(&wav_path).expect("export should succeed");
+        let frames = app
+            .export_wav_to_path(&wav_path)
+            .expect("export should succeed");
         assert!(frames > 44100);
         let mut reader = hound::WavReader::open(&wav_path).unwrap();
         let samples: Vec<f32> = reader
@@ -4043,15 +4054,27 @@ mod tests {
         assert!(!app.show_preferences_window);
         app.show_preferences_window = true;
         app.preferences_state.active_category = crate::param_controls::PreferencesCategory::Audio;
-        assert_eq!(app.preferences_state.active_category, crate::param_controls::PreferencesCategory::Audio);
+        assert_eq!(
+            app.preferences_state.active_category,
+            crate::param_controls::PreferencesCategory::Audio
+        );
 
         // Customize shortcut binding
-        app.preferences_state.shortcuts.set_binding("Play / Pause", "P");
-        assert_eq!(app.preferences_state.shortcuts.get_binding("Play / Pause"), Some("P"));
+        app.preferences_state
+            .shortcuts
+            .set_binding("Play / Pause", "P");
+        assert_eq!(
+            app.preferences_state.shortcuts.get_binding("Play / Pause"),
+            Some("P")
+        );
 
         // Switch preferences category
-        app.preferences_state.active_category = crate::param_controls::PreferencesCategory::Shortcuts;
-        assert_eq!(app.preferences_state.active_category, crate::param_controls::PreferencesCategory::Shortcuts);
+        app.preferences_state.active_category =
+            crate::param_controls::PreferencesCategory::Shortcuts;
+        assert_eq!(
+            app.preferences_state.active_category,
+            crate::param_controls::PreferencesCategory::Shortcuts
+        );
 
         // Verify state persistence
         app.save_gui_state();

@@ -237,7 +237,9 @@ impl ArmonicaChassisMode {
 
     #[inline]
     pub fn step(&mut self, input: f32) -> f32 {
-        let y = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2 - self.a1 * self.y1 - self.a2 * self.y2;
+        let y = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2
+            - self.a1 * self.y1
+            - self.a2 * self.y2;
         self.x2 = self.x1;
         self.x1 = input;
         self.y2 = self.y1;
@@ -264,9 +266,9 @@ impl ArmonicaChassisResonator {
     pub fn new(sample_rate: u32) -> Self {
         let modes = [
             ArmonicaChassisMode::new(135.0, 8.0, 1.2, sample_rate), // Main wooden casing Helmholtz mode
-            ArmonicaChassisMode::new(280.0, 12.0, 0.95, sample_rate),// Soundboard table flexure
-            ArmonicaChassisMode::new(510.0, 15.0, 0.70, sample_rate),// Water trough fluid-structure mode
-            ArmonicaChassisMode::new(920.0, 20.0, 0.50, sample_rate),// Spindle iron axle bearing resonance
+            ArmonicaChassisMode::new(280.0, 12.0, 0.95, sample_rate), // Soundboard table flexure
+            ArmonicaChassisMode::new(510.0, 15.0, 0.70, sample_rate), // Water trough fluid-structure mode
+            ArmonicaChassisMode::new(920.0, 20.0, 0.50, sample_rate), // Spindle iron axle bearing resonance
         ];
         Self {
             modes,
@@ -379,7 +381,8 @@ impl GlassArmonica {
 
     /// Touch bowl by MIDI note number with specified finger pressure $[0.05 ..= 2.0]\text{ N}$.
     pub fn touch_note(&mut self, midi_note: u8, normal_force_n: f32) {
-        if (ARMONICA_BASE_MIDI..ARMONICA_BASE_MIDI + NUM_ARMONICA_BOWLS as u8).contains(&midi_note) {
+        if (ARMONICA_BASE_MIDI..ARMONICA_BASE_MIDI + NUM_ARMONICA_BOWLS as u8).contains(&midi_note)
+        {
             let idx = (midi_note - ARMONICA_BASE_MIDI) as usize;
             self.bowls[idx].touch(normal_force_n);
         }
@@ -387,7 +390,8 @@ impl GlassArmonica {
 
     /// Lift finger off bowl by MIDI note number.
     pub fn release_note(&mut self, midi_note: u8) {
-        if (ARMONICA_BASE_MIDI..ARMONICA_BASE_MIDI + NUM_ARMONICA_BOWLS as u8).contains(&midi_note) {
+        if (ARMONICA_BASE_MIDI..ARMONICA_BASE_MIDI + NUM_ARMONICA_BOWLS as u8).contains(&midi_note)
+        {
             let idx = (midi_note - ARMONICA_BASE_MIDI) as usize;
             self.bowls[idx].release();
         }
@@ -395,7 +399,8 @@ impl GlassArmonica {
 
     /// Strike bowl by MIDI note number with a soft mallet.
     pub fn strike_note(&mut self, midi_note: u8, velocity: f32) {
-        if (ARMONICA_BASE_MIDI..ARMONICA_BASE_MIDI + NUM_ARMONICA_BOWLS as u8).contains(&midi_note) {
+        if (ARMONICA_BASE_MIDI..ARMONICA_BASE_MIDI + NUM_ARMONICA_BOWLS as u8).contains(&midi_note)
+        {
             let idx = (midi_note - ARMONICA_BASE_MIDI) as usize;
             self.bowls[idx].strike(velocity);
         }
@@ -433,7 +438,9 @@ impl GlassArmonica {
         }
 
         // Wooden chassis cavity resonator
-        let chassis_out = self.chassis.process(chassis_drive * self.chassis_coupling_gain * 0.25);
+        let chassis_out = self
+            .chassis
+            .process(chassis_drive * self.chassis_coupling_gain * 0.25);
         total_left += chassis_out * 0.30;
         total_right += chassis_out * 0.30;
 
@@ -549,7 +556,10 @@ mod tests {
                 sound_detected = true;
             }
         }
-        assert!(sound_detected, "Touching rotating bowls must generate audible friction sound");
+        assert!(
+            sound_detected,
+            "Touching rotating bowls must generate audible friction sound"
+        );
 
         armonica.note_off(60);
         armonica.note_off(67);

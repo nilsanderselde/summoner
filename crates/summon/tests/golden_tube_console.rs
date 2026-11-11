@@ -47,9 +47,12 @@ fn test_golden_vacuum_tube_saturation_multitopology_deterministic() {
     let mut transport = Transport::new(sample_rate, 120.0);
     transport.play();
 
-    let mut tube_triode = TubeSaturationNode::new(3.2, -1.85).with_topology(TubeTopology::Triode12AX7);
-    let mut tube_pentode = TubeSaturationNode::new(3.5, -1.50).with_topology(TubeTopology::PentodeEL34);
-    let mut tube_tetrode = TubeSaturationNode::new(2.8, -2.10).with_topology(TubeTopology::BeamTetrode6L6);
+    let mut tube_triode =
+        TubeSaturationNode::new(3.2, -1.85).with_topology(TubeTopology::Triode12AX7);
+    let mut tube_pentode =
+        TubeSaturationNode::new(3.5, -1.50).with_topology(TubeTopology::PentodeEL34);
+    let mut tube_tetrode =
+        TubeSaturationNode::new(2.8, -2.10).with_topology(TubeTopology::BeamTetrode6L6);
 
     tube_triode.sag_compression = 0.45;
     tube_triode.warmth = 0.65;
@@ -299,7 +302,11 @@ fn test_golden_tube_bias_view_snapshot_and_telemetry() {
     let render_path = "scratch/renders/tube_bias_view.png";
     let res = view.render_snapshot_png(render_path, 800, 520);
     let _ = view.render_snapshot_png("../../scratch/renders/tube_bias_view.png", 800, 520);
-    assert!(res.is_ok(), "Tube bias view snapshot render must succeed: {:?}", res);
+    assert!(
+        res.is_ok(),
+        "Tube bias view snapshot render must succeed: {:?}",
+        res
+    );
 
     let mut hasher = Hasher::new();
     for line in &ascii {

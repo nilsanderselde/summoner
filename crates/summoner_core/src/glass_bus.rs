@@ -85,12 +85,16 @@ impl GlassArticulation {
     /// Returns nominal default parameter values tuple.
     pub fn nominal_parameters(&self) -> GlassNominalParameters {
         match self {
-            Self::FranklinAuthenticContinuous => (2.5 * PI, 0.45, 0.05, 0.0, 0.85, 0.75, 1.00, 0.90),
+            Self::FranklinAuthenticContinuous => {
+                (2.5 * PI, 0.45, 0.05, 0.0, 0.85, 0.75, 1.00, 0.90)
+            }
             Self::MesmerMagneticHealing => (1.5 * PI, 0.65, 0.35, 0.0, 0.90, 0.85, 1.25, 0.95),
             Self::MozartVirtuosoAdagio => (3.0 * PI, 0.50, 0.02, 0.2, 0.85, 0.70, 0.95, 0.92),
             Self::EtherealBorosilicateSwell => (2.2 * PI, 0.40, 0.10, 0.0, 0.80, 0.80, 1.15, 0.88),
             Self::WaterTunedCrystalGlissando => (2.0 * PI, 0.55, 0.50, 0.1, 0.85, 0.65, 1.05, 0.90),
-            Self::CrystalSingingBowlMeditation => (1.2 * PI, 0.70, 0.0, 0.4, 0.95, 0.90, 1.50, 0.95),
+            Self::CrystalSingingBowlMeditation => {
+                (1.2 * PI, 0.70, 0.0, 0.4, 0.95, 0.90, 1.50, 0.95)
+            }
             Self::CustomSpline => (2.5 * PI, 0.45, 0.05, 0.0, 0.85, 0.75, 1.00, 0.90),
         }
     }
@@ -118,7 +122,10 @@ pub fn register_glass_armonica_params(param_bus: &mut ParamBus, base_id: ParamId
     let (speed, force, water, strike, moist, chassis, qscale, mgain) =
         GlassArticulation::FranklinAuthenticContinuous.nominal_parameters();
 
-    param_bus.register(ParamId(base_id.0), GlassArticulation::FranklinAuthenticContinuous as u32 as f32);
+    param_bus.register(
+        ParamId(base_id.0),
+        GlassArticulation::FranklinAuthenticContinuous as u32 as f32,
+    );
     param_bus.register(ParamId(base_id.0 + 1), speed);
     param_bus.register(ParamId(base_id.0 + 2), force);
     param_bus.register(ParamId(base_id.0 + 3), water);
@@ -196,48 +203,59 @@ impl GlassArmonicaBus {
 
     /// Update articulation and set nominal parameters atomically.
     pub fn set_articulation(&self, art: GlassArticulation) {
-        let (speed, force, water, strike, moist, chassis, qscale, mgain) =
-            art.nominal_parameters();
+        let (speed, force, water, strike, moist, chassis, qscale, mgain) = art.nominal_parameters();
 
         self.articulation.store(art as u32, Ordering::Relaxed);
-        self.spindle_speed_rad_s.store(speed.to_bits(), Ordering::Relaxed);
-        self.normal_force_n.store(force.to_bits(), Ordering::Relaxed);
-        self.water_fill_level.store(water.to_bits(), Ordering::Relaxed);
-        self.strike_velocity.store(strike.to_bits(), Ordering::Relaxed);
-        self.moisture_lubrication.store(moist.to_bits(), Ordering::Relaxed);
-        self.chassis_resonance.store(chassis.to_bits(), Ordering::Relaxed);
+        self.spindle_speed_rad_s
+            .store(speed.to_bits(), Ordering::Relaxed);
+        self.normal_force_n
+            .store(force.to_bits(), Ordering::Relaxed);
+        self.water_fill_level
+            .store(water.to_bits(), Ordering::Relaxed);
+        self.strike_velocity
+            .store(strike.to_bits(), Ordering::Relaxed);
+        self.moisture_lubrication
+            .store(moist.to_bits(), Ordering::Relaxed);
+        self.chassis_resonance
+            .store(chassis.to_bits(), Ordering::Relaxed);
         self.q_scale.store(qscale.to_bits(), Ordering::Relaxed);
         self.master_gain.store(mgain.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_spindle_speed(&self, speed: f32) {
-        self.spindle_speed_rad_s.store(speed.to_bits(), Ordering::Relaxed);
+        self.spindle_speed_rad_s
+            .store(speed.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_normal_force(&self, force: f32) {
-        self.normal_force_n.store(force.to_bits(), Ordering::Relaxed);
+        self.normal_force_n
+            .store(force.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_water_fill_level(&self, water: f32) {
-        self.water_fill_level.store(water.to_bits(), Ordering::Relaxed);
+        self.water_fill_level
+            .store(water.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_strike_velocity(&self, strike: f32) {
-        self.strike_velocity.store(strike.to_bits(), Ordering::Relaxed);
+        self.strike_velocity
+            .store(strike.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_moisture_lubrication(&self, moist: f32) {
-        self.moisture_lubrication.store(moist.to_bits(), Ordering::Relaxed);
+        self.moisture_lubrication
+            .store(moist.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_chassis_resonance(&self, chassis: f32) {
-        self.chassis_resonance.store(chassis.to_bits(), Ordering::Relaxed);
+        self.chassis_resonance
+            .store(chassis.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
@@ -260,7 +278,10 @@ mod tests {
         let bus = GlassArmonicaBus::new();
         let snap = bus.snapshot();
 
-        assert_eq!(snap.articulation, GlassArticulation::FranklinAuthenticContinuous);
+        assert_eq!(
+            snap.articulation,
+            GlassArticulation::FranklinAuthenticContinuous
+        );
         assert!((snap.spindle_speed_rad_s - 2.5 * PI).abs() < 1e-4);
         assert!((snap.normal_force_n - 0.45).abs() < 1e-4);
 

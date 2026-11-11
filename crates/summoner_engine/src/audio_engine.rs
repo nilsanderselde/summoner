@@ -320,7 +320,9 @@ impl LiveEngineHandle {
     }
 
     pub fn set_metronome_enabled(&self, enabled: bool) {
-        let _ = self.cmd_tx.try_send(EngineCommand::SetMetronomeEnabled(enabled));
+        let _ = self
+            .cmd_tx
+            .try_send(EngineCommand::SetMetronomeEnabled(enabled));
     }
 
     pub fn set_metronome_gain(&self, gain: f32) {
@@ -593,11 +595,9 @@ pub fn spawn_live_engine_with_settings(
 
     // 3. Resolve MIDI input device if enabled
     let midi_receiver = if settings.enable_midi {
-        crate::midi_engine::MidiInputReceiver::open_port(
-            settings.midi_input_device_name.as_deref(),
-        )
-        .ok()
-        .map(|(rx, _)| Arc::new(rx))
+        crate::midi_engine::MidiInputReceiver::open_port(settings.midi_input_device_name.as_deref())
+            .ok()
+            .map(|(rx, _)| Arc::new(rx))
     } else {
         None
     };
@@ -737,7 +737,10 @@ pub fn spawn_live_engine_with_settings(
                 let elapsed = start_time.elapsed();
                 let block_duration = frames as f64 / sample_rate as f64;
                 let cpu_pct = (elapsed.as_secs_f64() / block_duration.max(0.0001) * 100.0) as f32;
-                cpu_cb.store((cpu_pct.clamp(0.0, 1000.0) * 1000.0) as u32, Ordering::Relaxed);
+                cpu_cb.store(
+                    (cpu_pct.clamp(0.0, 1000.0) * 1000.0) as u32,
+                    Ordering::Relaxed,
+                );
                 if elapsed.as_secs_f64() > block_duration {
                     xrun_cb.fetch_add(1, Ordering::Relaxed);
                 }
@@ -761,7 +764,8 @@ pub fn spawn_live_engine_with_settings(
                     let loop_end_frame = (loop_end_beat * frames_per_beat).round() as u64;
                     if current_frame >= loop_end_frame && loop_end_frame > loop_start_frame {
                         let loop_len = loop_end_frame - loop_start_frame;
-                        current_frame = loop_start_frame + ((current_frame - loop_start_frame) % loop_len);
+                        current_frame =
+                            loop_start_frame + ((current_frame - loop_start_frame) % loop_len);
                     }
                 }
                 frame_pos_cb.store(current_frame, Ordering::Relaxed);
@@ -963,7 +967,8 @@ mod tests {
             AudioDriverBackendType::Jack,
             AudioDriverBackendType::PipeWire,
         ] {
-            let devs = AudioDeviceManager::list_devices_for_backend(backend, DeviceDirection::Output);
+            let devs =
+                AudioDeviceManager::list_devices_for_backend(backend, DeviceDirection::Output);
             let _ = devs.len();
         }
     }
@@ -985,4 +990,3 @@ mod tests {
         assert!(!handle.is_playing());
     }
 }
-

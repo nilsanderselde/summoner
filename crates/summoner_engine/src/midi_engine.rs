@@ -454,4 +454,3 @@ mod tests {
         assert_eq!(received.event, MidiEvent::NoteOn(0, 60, 100));
     }
 }
-

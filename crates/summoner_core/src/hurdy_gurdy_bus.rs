@@ -81,12 +81,22 @@ impl HurdyGurdyArticulation {
     /// Returns nominal default parameters tuple.
     pub fn nominal_parameters(&self) -> HurdyGurdyNominalParameters {
         match self {
-            Self::BourbonnaisClassicCoupDePoignet => (2.0 * PI, 1.2, 0.70, 0.35, 0.85, 0.45, 0.85, 0.85, 0.90),
-            Self::MedievalMonasticDrone => (1.5 * PI, 0.0, 0.55, 0.90, 0.95, 0.60, 0.20, 0.80, 0.88),
-            Self::BaroqueVirtuosoChanterelle => (2.2 * PI, 0.4, 0.80, 0.25, 0.75, 0.35, 0.95, 0.90, 0.92),
-            Self::AuvergneHighSpeedBuzz => (3.0 * PI, 2.5, 0.90, 0.15, 0.80, 0.50, 1.30, 0.85, 0.95),
+            Self::BourbonnaisClassicCoupDePoignet => {
+                (2.0 * PI, 1.2, 0.70, 0.35, 0.85, 0.45, 0.85, 0.85, 0.90)
+            }
+            Self::MedievalMonasticDrone => {
+                (1.5 * PI, 0.0, 0.55, 0.90, 0.95, 0.60, 0.20, 0.80, 0.88)
+            }
+            Self::BaroqueVirtuosoChanterelle => {
+                (2.2 * PI, 0.4, 0.80, 0.25, 0.75, 0.35, 0.95, 0.90, 0.92)
+            }
+            Self::AuvergneHighSpeedBuzz => {
+                (3.0 * PI, 2.5, 0.90, 0.15, 0.80, 0.50, 1.30, 0.85, 0.95)
+            }
             Self::GothicPaganDrone => (1.2 * PI, 0.8, 0.65, 0.45, 0.90, 0.70, 0.75, 0.95, 0.90),
-            Self::ElectroAcousticHybrid => (2.5 * PI, 1.5, 0.85, 0.30, 0.80, 0.40, 1.00, 0.90, 0.92),
+            Self::ElectroAcousticHybrid => {
+                (2.5 * PI, 1.5, 0.85, 0.30, 0.80, 0.40, 1.00, 0.90, 0.92)
+            }
             Self::CustomSpline => (2.0 * PI, 1.0, 0.70, 0.35, 0.85, 0.45, 0.85, 0.85, 0.90),
         }
     }
@@ -115,7 +125,10 @@ pub fn register_hurdy_gurdy_params(param_bus: &mut ParamBus, base_id: ParamId) {
     let (speed, wrist, press, gap, damp, dmix, buzz, wood, mgain) =
         HurdyGurdyArticulation::BourbonnaisClassicCoupDePoignet.nominal_parameters();
 
-    param_bus.register(ParamId(base_id.0), HurdyGurdyArticulation::BourbonnaisClassicCoupDePoignet as u32 as f32);
+    param_bus.register(
+        ParamId(base_id.0),
+        HurdyGurdyArticulation::BourbonnaisClassicCoupDePoignet as u32 as f32,
+    );
     param_bus.register(ParamId(base_id.0 + 1), speed);
     param_bus.register(ParamId(base_id.0 + 2), wrist);
     param_bus.register(ParamId(base_id.0 + 3), press);
@@ -155,7 +168,9 @@ impl HurdyGurdyBus {
             HurdyGurdyArticulation::BourbonnaisClassicCoupDePoignet.nominal_parameters();
 
         Self {
-            articulation: AtomicU32::new(HurdyGurdyArticulation::BourbonnaisClassicCoupDePoignet as u32),
+            articulation: AtomicU32::new(
+                HurdyGurdyArticulation::BourbonnaisClassicCoupDePoignet as u32,
+            ),
             crank_speed_rad_s: AtomicU32::new(speed.to_bits()),
             wrist_acceleration_pulse: AtomicU32::new(wrist.to_bits()),
             wheel_pressure: AtomicU32::new(press.to_bits()),
@@ -198,59 +213,74 @@ impl HurdyGurdyBus {
 
     /// Update articulation and set nominal parameters atomically.
     pub fn set_articulation(&self, art: HurdyGurdyArticulation) {
-        let (speed, wrist, press, gap, damp, dmix, buzz, wood, mgain) =
-            art.nominal_parameters();
+        let (speed, wrist, press, gap, damp, dmix, buzz, wood, mgain) = art.nominal_parameters();
 
         self.articulation.store(art as u32, Ordering::Relaxed);
-        self.crank_speed_rad_s.store(speed.to_bits(), Ordering::Relaxed);
-        self.wrist_acceleration_pulse.store(wrist.to_bits(), Ordering::Relaxed);
-        self.wheel_pressure.store(press.to_bits(), Ordering::Relaxed);
-        self.chien_clearance_mm.store(gap.to_bits(), Ordering::Relaxed);
-        self.tangent_damping.store(damp.to_bits(), Ordering::Relaxed);
-        self.drone_melody_mix.store(dmix.to_bits(), Ordering::Relaxed);
-        self.trompette_buzz_level.store(buzz.to_bits(), Ordering::Relaxed);
-        self.body_wood_resonance.store(wood.to_bits(), Ordering::Relaxed);
+        self.crank_speed_rad_s
+            .store(speed.to_bits(), Ordering::Relaxed);
+        self.wrist_acceleration_pulse
+            .store(wrist.to_bits(), Ordering::Relaxed);
+        self.wheel_pressure
+            .store(press.to_bits(), Ordering::Relaxed);
+        self.chien_clearance_mm
+            .store(gap.to_bits(), Ordering::Relaxed);
+        self.tangent_damping
+            .store(damp.to_bits(), Ordering::Relaxed);
+        self.drone_melody_mix
+            .store(dmix.to_bits(), Ordering::Relaxed);
+        self.trompette_buzz_level
+            .store(buzz.to_bits(), Ordering::Relaxed);
+        self.body_wood_resonance
+            .store(wood.to_bits(), Ordering::Relaxed);
         self.master_gain.store(mgain.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_crank_speed(&self, speed: f32) {
-        self.crank_speed_rad_s.store(speed.to_bits(), Ordering::Relaxed);
+        self.crank_speed_rad_s
+            .store(speed.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_wrist_acceleration(&self, wrist: f32) {
-        self.wrist_acceleration_pulse.store(wrist.to_bits(), Ordering::Relaxed);
+        self.wrist_acceleration_pulse
+            .store(wrist.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_wheel_pressure(&self, press: f32) {
-        self.wheel_pressure.store(press.to_bits(), Ordering::Relaxed);
+        self.wheel_pressure
+            .store(press.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_chien_clearance(&self, gap_mm: f32) {
-        self.chien_clearance_mm.store(gap_mm.to_bits(), Ordering::Relaxed);
+        self.chien_clearance_mm
+            .store(gap_mm.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_tangent_damping(&self, damp: f32) {
-        self.tangent_damping.store(damp.to_bits(), Ordering::Relaxed);
+        self.tangent_damping
+            .store(damp.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_drone_melody_mix(&self, mix: f32) {
-        self.drone_melody_mix.store(mix.to_bits(), Ordering::Relaxed);
+        self.drone_melody_mix
+            .store(mix.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_trompette_buzz_level(&self, buzz: f32) {
-        self.trompette_buzz_level.store(buzz.to_bits(), Ordering::Relaxed);
+        self.trompette_buzz_level
+            .store(buzz.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_body_wood_resonance(&self, wood: f32) {
-        self.body_wood_resonance.store(wood.to_bits(), Ordering::Relaxed);
+        self.body_wood_resonance
+            .store(wood.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
@@ -268,14 +298,20 @@ mod tests {
         let bus = HurdyGurdyBus::new();
         let snap = bus.snapshot();
 
-        assert_eq!(snap.articulation, HurdyGurdyArticulation::BourbonnaisClassicCoupDePoignet);
+        assert_eq!(
+            snap.articulation,
+            HurdyGurdyArticulation::BourbonnaisClassicCoupDePoignet
+        );
         assert!((snap.crank_speed_rad_s - 2.0 * PI).abs() < 1e-4);
         assert!((snap.chien_clearance_mm - 0.35).abs() < 1e-4);
 
         // Update articulation
         bus.set_articulation(HurdyGurdyArticulation::AuvergneHighSpeedBuzz);
         let snap2 = bus.snapshot();
-        assert_eq!(snap2.articulation, HurdyGurdyArticulation::AuvergneHighSpeedBuzz);
+        assert_eq!(
+            snap2.articulation,
+            HurdyGurdyArticulation::AuvergneHighSpeedBuzz
+        );
         assert!((snap2.crank_speed_rad_s - 3.0 * PI).abs() < 1e-4);
         assert!((snap2.trompette_buzz_level - 1.30).abs() < 1e-4);
 

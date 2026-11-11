@@ -5,15 +5,12 @@ use blake3::Hasher;
 use std::fs;
 use std::path::Path;
 use summoner_core::allocator::AllocGuard;
-use summoner_core::koto_bus::{
-    register_koto_params, KotoBus, KOTO_BASE_PARAM_ID,
-};
+use summoner_core::koto_bus::{register_koto_params, KotoBus, KOTO_BASE_PARAM_ID};
 use summoner_core::node::ProcessContext;
 use summoner_core::param_bus::ParamBus;
 use summoner_core::transport::Transport;
 use summoner_dsp::ji_bridge::{
-    oshi_ite_pitch_multiplier, JiBridgeJunction, JiBridgeProfile,
-    PaulowniaSoundboardBody,
+    oshi_ite_pitch_multiplier, JiBridgeJunction, JiBridgeProfile, PaulowniaSoundboardBody,
 };
 use summoner_dsp::koto::{Koto, KotoProfile};
 use summoner_dsp::traits::SignalProcessor;
@@ -21,9 +18,7 @@ use summoner_dsp::traits::SignalProcessor;
 use summoner_gui::views::ji_bridge_view::JiBridgeView;
 #[cfg(feature = "gui")]
 use summoner_gui::views::koto_view::KotoView;
-use summoner_sequencer::koto_gesture::{
-    KotoGestureEngine, KotoGesturePattern,
-};
+use summoner_sequencer::koto_gesture::{KotoGestureEngine, KotoGesturePattern};
 
 const BLOCK_SIZE: usize = 64;
 
@@ -133,17 +128,17 @@ fn test_golden_koto_deterministic() {
             hirajoshi.set_oshi_ite(0, 12.0); // +150 cents press
             hirajoshi.pluck_string(6, 0.92); // String 7: G4
 
-            kokin.pluck_string(7, 0.90);    // String 8: Ab4
-            kokin.set_hiki_iro(3, 0.30);    // Yuri release
+            kokin.pluck_string(7, 0.90); // String 8: Ab4
+            kokin.set_hiki_iro(3, 0.30); // Yuri release
 
-            insen.set_oshi_ite(0, 28.0);    // +400 cents (Major 3rd deflection)
-            insen.pluck_string(11, 0.95);   // String 12: G5
+            insen.set_oshi_ite(0, 28.0); // +400 cents (Major 3rd deflection)
+            insen.pluck_string(11, 0.95); // String 12: G5
 
-            kumoi.pluck_string(8, 0.85);    // String 9: Bb4
+            kumoi.pluck_string(8, 0.85); // String 9: Bb4
             kumoi.set_bridge_offset(8, 0.05);
 
-            ryukyu.pluck_string(9, 0.90);   // String 10: D5
-            ryukyu.pluck_string(12, 0.92);  // String 13: B5
+            ryukyu.pluck_string(9, 0.90); // String 10: D5
+            ryukyu.pluck_string(12, 0.92); // String 13: B5
 
             guzheng.pluck_string(2, 0.88);
             guzheng.pluck_string(9, 0.94);
@@ -158,9 +153,15 @@ fn test_golden_koto_deterministic() {
             assert!(out_guzh_l[i].is_finite() && out_guzh_r[i].is_finite());
 
             assert!((-1.0..=1.0).contains(&out_hira_l[i]) && (-1.0..=1.0).contains(&out_hira_r[i]));
-            assert!((-1.0..=1.0).contains(&out_kokin_l[i]) && (-1.0..=1.0).contains(&out_kokin_r[i]));
-            assert!((-1.0..=1.0).contains(&out_insen_l[i]) && (-1.0..=1.0).contains(&out_insen_r[i]));
-            assert!((-1.0..=1.0).contains(&out_kumoi_l[i]) && (-1.0..=1.0).contains(&out_kumoi_r[i]));
+            assert!(
+                (-1.0..=1.0).contains(&out_kokin_l[i]) && (-1.0..=1.0).contains(&out_kokin_r[i])
+            );
+            assert!(
+                (-1.0..=1.0).contains(&out_insen_l[i]) && (-1.0..=1.0).contains(&out_insen_r[i])
+            );
+            assert!(
+                (-1.0..=1.0).contains(&out_kumoi_l[i]) && (-1.0..=1.0).contains(&out_kumoi_r[i])
+            );
             assert!((-1.0..=1.0).contains(&out_ryuk_l[i]) && (-1.0..=1.0).contains(&out_ryuk_r[i]));
             assert!((-1.0..=1.0).contains(&out_guzh_l[i]) && (-1.0..=1.0).contains(&out_guzh_r[i]));
 
@@ -192,14 +193,26 @@ fn test_golden_koto_ji_bridge_and_oshi_ite_deterministic() {
     assert_eq!(base_mult, 1.0);
 
     let half_step = oshi_ite_pitch_multiplier(7.5);
-    assert!(half_step > 1.05 && half_step < 1.15, "Expected ~100 cents bend, got multiplier {}", half_step);
+    assert!(
+        half_step > 1.05 && half_step < 1.15,
+        "Expected ~100 cents bend, got multiplier {}",
+        half_step
+    );
 
     let whole_step = oshi_ite_pitch_multiplier(15.0);
-    assert!(whole_step > 1.10 && whole_step < 1.20, "Expected ~200 cents bend, got multiplier {}", whole_step);
+    assert!(
+        whole_step > 1.10 && whole_step < 1.20,
+        "Expected ~200 cents bend, got multiplier {}",
+        whole_step
+    );
 
     let major_third = oshi_ite_pitch_multiplier(30.0);
     let cents_30n = 1200.0 * major_third.log2();
-    assert!((cents_30n - 400.0).abs() < 1.0, "Expected ~400 cents, got {}", cents_30n);
+    assert!(
+        (cents_30n - 400.0).abs() < 1.0,
+        "Expected ~400 cents, got {}",
+        cents_30n
+    );
 
     // 2. Ji bridge scattering energy conservation
     for profile in [
@@ -216,7 +229,11 @@ fn test_golden_koto_ji_bridge_and_oshi_ite_deterministic() {
         assert!(body >= 0.0);
 
         let energy_sum = refl * refl + trans * trans;
-        assert!(energy_sum <= 1.05, "Scattering energy non-conservation for {:?}", profile);
+        assert!(
+            energy_sum <= 1.05,
+            "Scattering energy non-conservation for {:?}",
+            profile
+        );
     }
 
     // 3. Paulownia soundboard modal resonance stability
@@ -240,12 +257,27 @@ fn test_koto_gesture_dispatch_and_param_bus_roundtrip() {
     let bus = KotoBus::new();
 
     for pattern in [
-        KotoGesturePattern::HirajoshiMeditativeAlap { phrase_length_beats: 4.0, max_oshi_ite_n: 15.0 },
-        KotoGesturePattern::KokinJoshiFastMiyako { phrase_length_beats: 4.0 },
-        KotoGesturePattern::InSenDramaticGendai { phrase_length_beats: 6.0, max_pitch_bend_n: 25.0 },
-        KotoGesturePattern::KumoiJoshiSpringRain { phrase_length_beats: 4.0 },
-        KotoGesturePattern::RyukyuIslandSwell { phrase_length_beats: 4.0 },
-        KotoGesturePattern::GuzhengVirtuosoWaterfall { phrase_length_beats: 8.0, arpeggio_rate_hz: 12.0 },
+        KotoGesturePattern::HirajoshiMeditativeAlap {
+            phrase_length_beats: 4.0,
+            max_oshi_ite_n: 15.0,
+        },
+        KotoGesturePattern::KokinJoshiFastMiyako {
+            phrase_length_beats: 4.0,
+        },
+        KotoGesturePattern::InSenDramaticGendai {
+            phrase_length_beats: 6.0,
+            max_pitch_bend_n: 25.0,
+        },
+        KotoGesturePattern::KumoiJoshiSpringRain {
+            phrase_length_beats: 4.0,
+        },
+        KotoGesturePattern::RyukyuIslandSwell {
+            phrase_length_beats: 4.0,
+        },
+        KotoGesturePattern::GuzhengVirtuosoWaterfall {
+            phrase_length_beats: 8.0,
+            arpeggio_rate_hz: 12.0,
+        },
     ] {
         let engine = KotoGestureEngine::with_pattern(pattern);
 
@@ -260,7 +292,8 @@ fn test_koto_gesture_dispatch_and_param_bus_roundtrip() {
             assert!(snap.body_wood_resonance >= 0.0);
             assert!(snap.master_gain > 0.0);
 
-            let bus_vel = param_bus.get(summoner_core::param_bus::ParamId(KOTO_BASE_PARAM_ID.0 + 1));
+            let bus_vel =
+                param_bus.get(summoner_core::param_bus::ParamId(KOTO_BASE_PARAM_ID.0 + 1));
             assert!(bus_vel.is_some());
             assert!((bus_vel.unwrap() - snap.tsume_velocity).abs() < 1e-4);
         }
@@ -284,7 +317,8 @@ fn test_koto_gui_views_headless_snapshots() {
     }
 
     let mut ji_view = JiBridgeView::new();
-    ji_view.set_profile(summoner_gui::views::ji_bridge_view::JiBridgeViewProfile::PaulowniaHardwood);
+    ji_view
+        .set_profile(summoner_gui::views::ji_bridge_view::JiBridgeViewProfile::PaulowniaHardwood);
 
     let ji_png_paths = [
         "scratch/renders/ji_bridge_view.png",

@@ -138,8 +138,8 @@ fn test_golden_generative_markov_sequence_mutator_deterministic() {
         .with_division(PolyrhythmicDivision::Quintuplet16th);
 
     let training_phrase = vec![
-        60.0, 62.0, 64.0, 67.0, 69.0, 67.0, 64.0, 62.0,
-        60.0, 63.0, 65.0, 68.0, 70.0, 68.0, 65.0, 63.0,
+        60.0, 62.0, 64.0, 67.0, 69.0, 67.0, 64.0, 62.0, 60.0, 63.0, 65.0, 68.0, 70.0, 68.0, 65.0,
+        63.0,
     ];
     mutator.train_from_pitches(&training_phrase);
 
@@ -206,7 +206,11 @@ fn test_golden_tape_saturation_view_snapshot_and_telemetry() {
     let render_path = "scratch/renders/tape_saturation.png";
     let res = view.render_snapshot_png(render_path, 800, 520);
     let _ = view.render_snapshot_png("../../scratch/renders/tape_saturation.png", 800, 520);
-    assert!(res.is_ok(), "Tape saturation snapshot render must succeed: {:?}", res);
+    assert!(
+        res.is_ok(),
+        "Tape saturation snapshot render must succeed: {:?}",
+        res
+    );
 
     let mut hasher = Hasher::new();
     hasher.update(ascii.as_bytes());

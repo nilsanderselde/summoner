@@ -404,7 +404,13 @@ mod tests {
         let evt1 = MidiEvent::NoteOn(2, 60, 100);
         let mpe1 = parser.process_event(&evt1);
         assert!(mpe1.is_some());
-        if let Some(MpeEvent::NoteOn { voice_id, channel, note, velocity }) = mpe1 {
+        if let Some(MpeEvent::NoteOn {
+            voice_id,
+            channel,
+            note,
+            velocity,
+        }) = mpe1
+        {
             assert_eq!(channel, 2);
             assert_eq!(note, 60.0);
             assert!((velocity - 100.0 / 127.0).abs() < 1e-4);
@@ -433,6 +439,10 @@ mod tests {
         let evt_off = MidiEvent::NoteOff(2, 60, 64);
         let mpe_off = parser.process_event(&evt_off);
         assert!(mpe_off.is_some());
-        assert!(!parser.router.voices.iter().any(|v| v.channel == 2 && v.is_active));
+        assert!(!parser
+            .router
+            .voices
+            .iter()
+            .any(|v| v.channel == 2 && v.is_active));
     }
 }

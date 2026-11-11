@@ -9,14 +9,14 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use crate::glottal_pulse::GlottalPulse;
+use crate::traits::SignalProcessor;
 use serde::de::{SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::glottal_pulse::GlottalPulse;
-use crate::traits::SignalProcessor;
 
 /// Number of cylindrical sections in the main oral/pharyngeal vocal tract (~17.5 cm).
 pub const NUM_CYLINDERS: usize = 44;
@@ -399,7 +399,9 @@ impl VocalTract {
                 let a_total = (a_in + a_out + a_nasal).max(0.1);
 
                 // Junction pressure
-                let p_j = (2.0 * (a_in * self.fwd[k] + a_out * self.rev[k + 1] + a_nasal * self.nasal_rev[0])) / a_total;
+                let p_j = (2.0
+                    * (a_in * self.fwd[k] + a_out * self.rev[k + 1] + a_nasal * self.nasal_rev[0]))
+                    / a_total;
 
                 self.next_rev[k] = ((p_j - self.fwd[k]) * wall_loss).clamp(-3.0, 3.0);
                 self.next_fwd[k + 1] = ((p_j - self.rev[k + 1]) * wall_loss).clamp(-3.0, 3.0);
@@ -441,7 +443,8 @@ impl VocalTract {
         let nose_radiated = if self.velum_opening > 0.001 {
             let r_nose = -0.80f32;
             let nose_fwd = self.nasal_fwd[NUM_NASAL_CYLINDERS - 1];
-            self.next_nasal_rev[NUM_NASAL_CYLINDERS - 1] = (nose_fwd * r_nose * wall_loss).clamp(-3.0, 3.0);
+            self.next_nasal_rev[NUM_NASAL_CYLINDERS - 1] =
+                (nose_fwd * r_nose * wall_loss).clamp(-3.0, 3.0);
 
             let rad = (nose_fwd * (1.0 + r_nose) - self.prev_nose_out * 0.45).clamp(-2.0, 2.0);
             self.prev_nose_out = nose_fwd.clamp(-3.0, 3.0);
@@ -586,11 +589,7 @@ mod tests {
 
         {
             let _guard = AllocGuard::new();
-            tract.process_block(
-                &[&in_buf[..]],
-                &mut [&mut out_l[..], &mut out_r[..]],
-                &ctx,
-            );
+            tract.process_block(&[&in_buf[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
         }
 
         assert!(out_l.iter().all(|s| s.is_finite()));

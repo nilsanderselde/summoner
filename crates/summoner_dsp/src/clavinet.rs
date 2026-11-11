@@ -11,12 +11,12 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::auto_wah::{AutoWah, AutoWahDirection, AutoWahFilterMode};
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::auto_wah::{AutoWah, AutoWahDirection, AutoWahFilterMode};
-use crate::traits::SignalProcessor;
 
 /// Maximum number of polyphonic Clavinet voices.
 pub const MAX_CLAV_VOICES: usize = 32;
@@ -66,10 +66,18 @@ impl ClavinetToneSwitches {
     /// Returns 4-bit bitmask encoding.
     pub fn to_bitmask(&self) -> u32 {
         let mut mask = 0u32;
-        if self.brilliant { mask |= 1; }
-        if self.treble { mask |= 2; }
-        if self.medium { mask |= 4; }
-        if self.soft { mask |= 8; }
+        if self.brilliant {
+            mask |= 1;
+        }
+        if self.treble {
+            mask |= 2;
+        }
+        if self.medium {
+            mask |= 4;
+        }
+        if self.soft {
+            mask |= 8;
+        }
         mask
     }
 
@@ -121,37 +129,67 @@ impl ClavinetProfile {
                 ClavinetPickupSelection::ParallelInPhase,
                 0.50,
                 0.0,
-                ClavinetToneSwitches { brilliant: true, treble: true, medium: true, soft: false },
+                ClavinetToneSwitches {
+                    brilliant: true,
+                    treble: true,
+                    medium: true,
+                    soft: false,
+                },
             ),
             Self::OutPhaseFunkQuack => (
                 ClavinetPickupSelection::ParallelOutOfPhase,
                 0.50,
                 180.0,
-                ClavinetToneSwitches { brilliant: true, treble: true, medium: false, soft: false },
+                ClavinetToneSwitches {
+                    brilliant: true,
+                    treble: true,
+                    medium: false,
+                    soft: false,
+                },
             ),
             Self::ClassicD6Clean => (
                 ClavinetPickupSelection::ParallelInPhase,
                 0.55,
                 0.0,
-                ClavinetToneSwitches { brilliant: true, treble: false, medium: true, soft: false },
+                ClavinetToneSwitches {
+                    brilliant: true,
+                    treble: false,
+                    medium: true,
+                    soft: false,
+                },
             ),
             Self::MellowChamber => (
                 ClavinetPickupSelection::NeckOnly,
                 0.0,
                 0.0,
-                ClavinetToneSwitches { brilliant: false, treble: false, medium: false, soft: true },
+                ClavinetToneSwitches {
+                    brilliant: false,
+                    treble: false,
+                    medium: false,
+                    soft: true,
+                },
             ),
             Self::ScreamingAutoWah => (
                 ClavinetPickupSelection::ParallelOutOfPhase,
                 0.50,
                 180.0,
-                ClavinetToneSwitches { brilliant: true, treble: true, medium: false, soft: false },
+                ClavinetToneSwitches {
+                    brilliant: true,
+                    treble: true,
+                    medium: false,
+                    soft: false,
+                },
             ),
             Self::TwangyBridgeLead => (
                 ClavinetPickupSelection::BridgeOnly,
                 1.0,
                 0.0,
-                ClavinetToneSwitches { brilliant: true, treble: true, medium: false, soft: false },
+                ClavinetToneSwitches {
+                    brilliant: true,
+                    treble: true,
+                    medium: false,
+                    soft: false,
+                },
             ),
         }
     }
@@ -404,7 +442,8 @@ impl ClavinetVoice {
     pub fn note_off(&mut self) {
         if self.key_held {
             self.key_held = false;
-            self.damper.trigger_release(self.frequency, self.sample_rate);
+            self.damper
+                .trigger_release(self.frequency, self.sample_rate);
         }
     }
 
@@ -416,7 +455,8 @@ impl ClavinetVoice {
         }
 
         // Read fundamental delayed sample
-        let read_pos = (self.write_pos as f32 - self.delay_len + MAX_CLAV_DELAY as f32) % (MAX_CLAV_DELAY as f32);
+        let read_pos = (self.write_pos as f32 - self.delay_len + MAX_CLAV_DELAY as f32)
+            % (MAX_CLAV_DELAY as f32);
         let r0 = read_pos.floor() as usize % MAX_CLAV_DELAY;
         let r1 = (r0 + 1) % MAX_CLAV_DELAY;
         let frac = read_pos.fract();
@@ -429,21 +469,30 @@ impl ClavinetVoice {
         self.disp_y = dispersed;
 
         // 1-pole damping filter
-        let effective_damping = if self.key_held { 0.22 } else { 0.88 * self.damper.damping_amount };
+        let effective_damping = if self.key_held {
+            0.22
+        } else {
+            0.88 * self.damper.damping_amount
+        };
         self.damping_state += effective_damping * (dispersed - self.damping_state);
         let damped = self.damping_state;
 
         // Anvil strike force injection
         let anvil_force = self.anvil.compute_force(damped);
 
-        let loop_gain = if self.key_held { self.loop_feedback } else { 0.65 };
+        let loop_gain = if self.key_held {
+            self.loop_feedback
+        } else {
+            0.65
+        };
         let new_string_sample = (damped * loop_gain + anvil_force).clamp(-4.0, 4.0);
 
         self.delay_buffer[self.write_pos] = new_string_sample;
 
         // Sample Neck Pickup tap
         let neck_delay = (self.delay_len * self.neck_tap_ratio).clamp(1.0, self.delay_len);
-        let neck_pos = (self.write_pos as f32 - neck_delay + MAX_CLAV_DELAY as f32) % (MAX_CLAV_DELAY as f32);
+        let neck_pos =
+            (self.write_pos as f32 - neck_delay + MAX_CLAV_DELAY as f32) % (MAX_CLAV_DELAY as f32);
         let n0 = neck_pos.floor() as usize % MAX_CLAV_DELAY;
         let n1 = (n0 + 1) % MAX_CLAV_DELAY;
         let n_frac = neck_pos.fract();
@@ -451,7 +500,8 @@ impl ClavinetVoice {
 
         // Sample Bridge Pickup tap
         let bridge_delay = (self.delay_len * self.bridge_tap_ratio).clamp(1.0, self.delay_len);
-        let bridge_pos = (self.write_pos as f32 - bridge_delay + MAX_CLAV_DELAY as f32) % (MAX_CLAV_DELAY as f32);
+        let bridge_pos = (self.write_pos as f32 - bridge_delay + MAX_CLAV_DELAY as f32)
+            % (MAX_CLAV_DELAY as f32);
         let b0 = bridge_pos.floor() as usize % MAX_CLAV_DELAY;
         let b1 = (b0 + 1) % MAX_CLAV_DELAY;
         let b_frac = bridge_pos.fract();
@@ -765,7 +815,9 @@ impl Clavinet {
         let eq_audio = self.tone_filters.process(pickup_audio, self.sample_rate);
 
         // Dynamic State-Variable Auto-Wah
-        let (wah_l, wah_r) = self.auto_wah.process_sample(eq_audio, eq_audio, self.sample_rate);
+        let (wah_l, wah_r) = self
+            .auto_wah
+            .process_sample(eq_audio, eq_audio, self.sample_rate);
 
         let final_l = (wah_l * self.master_level).clamp(-1.0, 1.0);
         let final_r = (wah_r * self.master_level).clamp(-1.0, 1.0);

@@ -174,7 +174,8 @@ impl TrompetteChienJunction {
         }
 
         self.last_contact_force = contact_force;
-        let body_excitation = (contact_force * 0.05 + self.displacement_mm.abs() * 0.1).clamp(0.0, 2.0);
+        let body_excitation =
+            (contact_force * 0.05 + self.displacement_mm.abs() * 0.1).clamp(0.0, 2.0);
 
         (contact_force, buzz_out, body_excitation)
     }
@@ -248,7 +249,9 @@ impl HurdyGurdyBodyMode {
 
     #[inline]
     pub fn step(&mut self, input: f32) -> f32 {
-        let y = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2 - self.a1 * self.y1 - self.a2 * self.y2;
+        let y = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2
+            - self.a1 * self.y1
+            - self.a2 * self.y2;
         self.x2 = self.x1;
         self.x1 = input;
         self.y2 = self.y1;
@@ -281,11 +284,12 @@ impl HurdyGurdySoundboxBody {
             (380.0, 20.0, 0.85), // Mode 4: Second longitudinal soundboard mode
             (520.0, 24.0, 0.75), // Mode 5: Transverse soundbox flexure
             (740.0, 26.0, 0.65), // Mode 6: Upper soundboard harmonic mode
-            (1050.0, 30.0, 0.50),// Mode 7: Friction wheel contact bridge peak
-            (1550.0, 32.0, 0.40),// Mode 8: Chien buzzing transient harmonic ring
+            (1050.0, 30.0, 0.50), // Mode 7: Friction wheel contact bridge peak
+            (1550.0, 32.0, 0.40), // Mode 8: Chien buzzing transient harmonic ring
         ];
 
-        let mut modes = [HurdyGurdyBodyMode::new(100.0, 10.0, 1.0, sample_rate); NUM_HURDY_GURDY_BODY_MODES];
+        let mut modes =
+            [HurdyGurdyBodyMode::new(100.0, 10.0, 1.0, sample_rate); NUM_HURDY_GURDY_BODY_MODES];
         for (i, &(f, q, g)) in modal_specs.iter().enumerate() {
             modes[i] = HurdyGurdyBodyMode::new(f, q, g, sample_rate);
         }
@@ -342,7 +346,10 @@ mod tests {
                 break;
             }
         }
-        assert!(has_collided, "Chien should collide under large negative displacement");
+        assert!(
+            has_collided,
+            "Chien should collide under large negative displacement"
+        );
     }
 
     #[test]
@@ -375,6 +382,9 @@ mod tests {
         }
 
         let decayed = body.process(0.0);
-        assert!(decayed.abs() < resp.abs(), "Modal body resonance must decay over time");
+        assert!(
+            decayed.abs() < resp.abs(),
+            "Modal body resonance must decay over time"
+        );
     }
 }

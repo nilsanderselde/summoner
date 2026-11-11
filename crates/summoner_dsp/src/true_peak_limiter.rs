@@ -25,23 +25,53 @@ pub const POLYPHASE_TAPS: usize = 12;
 pub const ITU_BS1770_POLYPHASE_COEFFS: [[f32; POLYPHASE_TAPS]; 4] = [
     // Phase 0: Sub-sample offset 0.00
     [
-        0.00000000, 0.00000000, 0.00000000, 0.00000000, 0.00000000, 1.00000000,
-        0.00000000, 0.00000000, 0.00000000, 0.00000000, 0.00000000, 0.00000000,
+        0.00000000, 0.00000000, 0.00000000, 0.00000000, 0.00000000, 1.00000000, 0.00000000,
+        0.00000000, 0.00000000, 0.00000000, 0.00000000, 0.00000000,
     ],
     // Phase 1: Sub-sample offset +0.25
     [
-        -0.00390625, 0.01562500, -0.04687500, 0.11718750, -0.27343750, 0.89843750,
-        0.39062500, -0.14062500, 0.06250000, -0.02734375, 0.00976562, -0.00195312,
+        -0.00390625,
+        0.01562500,
+        -0.04687500,
+        0.11718750,
+        -0.27343750,
+        0.89843750,
+        0.39062500,
+        -0.14062500,
+        0.06250000,
+        -0.02734375,
+        0.00976562,
+        -0.00195312,
     ],
     // Phase 2: Sub-sample offset +0.50
     [
-        -0.00781250, 0.02734375, -0.07812500, 0.18750000, -0.42187500, 0.64062500,
-        0.64062500, -0.42187500, 0.18750000, -0.07812500, 0.02734375, -0.00781250,
+        -0.00781250,
+        0.02734375,
+        -0.07812500,
+        0.18750000,
+        -0.42187500,
+        0.64062500,
+        0.64062500,
+        -0.42187500,
+        0.18750000,
+        -0.07812500,
+        0.02734375,
+        -0.00781250,
     ],
     // Phase 3: Sub-sample offset +0.75
     [
-        -0.00195312, 0.00976562, -0.02734375, 0.06250000, -0.14062500, 0.39062500,
-        0.89843750, -0.27343750, 0.11718750, -0.04687500, 0.01562500, -0.00390625,
+        -0.00195312,
+        0.00976562,
+        -0.02734375,
+        0.06250000,
+        -0.14062500,
+        0.39062500,
+        0.89843750,
+        -0.27343750,
+        0.11718750,
+        -0.04687500,
+        0.01562500,
+        -0.00390625,
     ],
 ];
 
@@ -284,7 +314,10 @@ impl TruePeakLimiter {
         let thresh_db = self.threshold_db;
         let knee_db = self.knee_db;
 
-        let target_out_db = if knee_db > 0.0 && (peak_db > thresh_db - knee_db * 0.5) && (peak_db < thresh_db + knee_db * 0.5) {
+        let target_out_db = if knee_db > 0.0
+            && (peak_db > thresh_db - knee_db * 0.5)
+            && (peak_db < thresh_db + knee_db * 0.5)
+        {
             // Quadratic soft knee interpolation
             let delta = peak_db - thresh_db + knee_db * 0.5;
             thresh_db - knee_db * 0.5 + (delta * delta) / (2.0 * knee_db)
@@ -302,12 +335,7 @@ impl TruePeakLimiter {
 
     /// Process a single stereo sample pair with sample-accurate true-peak detection and limiting.
     #[inline]
-    pub fn process_stereo_sample(
-        &mut self,
-        in_l: f32,
-        in_r: f32,
-        sample_rate: u32,
-    ) -> (f32, f32) {
+    pub fn process_stereo_sample(&mut self, in_l: f32, in_r: f32, sample_rate: u32) -> (f32, f32) {
         let (tp_l, _) = self.detector_l.process_sample(in_l);
         let (tp_r, _) = self.detector_r.process_sample(in_r);
 
@@ -325,7 +353,8 @@ impl TruePeakLimiter {
         self.target_gain_buf[self.lookahead_write_idx] = target_gain;
 
         // Read delayed sample from lookahead position
-        let read_idx = (self.lookahead_write_idx + MAX_LOOKAHEAD - self.lookahead_samples) % MAX_LOOKAHEAD;
+        let read_idx =
+            (self.lookahead_write_idx + MAX_LOOKAHEAD - self.lookahead_samples) % MAX_LOOKAHEAD;
         let delayed_l = self.lookahead_buf_l[read_idx];
         let delayed_r = self.lookahead_buf_r[read_idx];
 
@@ -348,7 +377,8 @@ impl TruePeakLimiter {
             self.gain_linear = min_target_gain;
         } else {
             // Exponential release recovery
-            self.gain_linear = min_target_gain + (self.gain_linear - min_target_gain) * release_coeff;
+            self.gain_linear =
+                min_target_gain + (self.gain_linear - min_target_gain) * release_coeff;
         }
 
         self.current_gr_db = 20.0 * self.gain_linear.max(1e-6).log10();
@@ -379,12 +409,7 @@ impl TruePeakLimiter {
     }
 
     /// Process planar stereo blocks in-place with zero heap allocations.
-    pub fn process_stereo_block(
-        &mut self,
-        left: &mut [f32],
-        right: &mut [f32],
-        sample_rate: u32,
-    ) {
+    pub fn process_stereo_block(&mut self, left: &mut [f32], right: &mut [f32], sample_rate: u32) {
         let count = left.len().min(right.len());
         for i in 0..count {
             let (out_l, out_r) = self.process_stereo_sample(left[i], right[i], sample_rate);
@@ -434,12 +459,7 @@ impl AudioNode for TruePeakLimiter {
         "TruePeakLimiter"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -447,9 +467,9 @@ impl AudioNode for TruePeakLimiter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f32::consts::PI;
     use summoner_core::allocator::AllocGuard;
     use summoner_core::transport::Transport;
-    use std::f32::consts::PI;
 
     #[test]
     fn test_true_peak_detection_inter_sample_peak() {
@@ -517,7 +537,10 @@ mod tests {
             );
         }
 
-        assert!(limiter.max_gr_db < -3.0, "Limiter must apply gain reduction");
+        assert!(
+            limiter.max_gr_db < -3.0,
+            "Limiter must apply gain reduction"
+        );
     }
 
     #[test]

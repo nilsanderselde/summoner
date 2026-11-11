@@ -9,11 +9,11 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
 
 /// Voicing register mode for glottal source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -380,7 +380,10 @@ mod tests {
         }
 
         assert!(max_abs > 0.1, "Glottal pulse must produce active waveform");
-        assert!(energy > 1.0, "Glottal pulse must conserve energy during voiced playback");
+        assert!(
+            energy > 1.0,
+            "Glottal pulse must conserve energy during voiced playback"
+        );
     }
 
     #[test]
@@ -414,11 +417,7 @@ mod tests {
 
         {
             let _guard = AllocGuard::new();
-            pulse.process_block(
-                &[],
-                &mut [&mut out_l[..], &mut out_r[..]],
-                &ctx,
-            );
+            pulse.process_block(&[], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
         }
 
         assert!(out_l.iter().all(|s| s.is_finite()));

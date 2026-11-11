@@ -81,11 +81,11 @@ impl KotoArticulation {
     pub fn nominal_parameters(&self) -> KotoNominalParameters {
         match self {
             Self::HirajoshiMeditativeAlap => (0.75, 2.0, 0.10, 0.0, 0, 0.25, 0.85, 0.90), // Hirajoshi
-            Self::KokinJoshiFastMiyako => (0.90, 4.0, 0.05, 0.0, 1, 0.20, 0.80, 0.88),    // Kokin-joshi
-            Self::InSenDramaticGendai => (0.85, 18.0, 0.25, 0.0, 2, 0.30, 0.90, 0.92),    // In-sen with high oshi-ite
-            Self::KumoiJoshiSpringRain => (0.65, 3.0, 0.15, 0.0, 3, 0.22, 0.75, 0.85),    // Kumoi-joshi
-            Self::RyukyuIslandSwell => (0.80, 5.0, 0.08, 0.0, 4, 0.20, 0.82, 0.88),       // Ryukyu
-            Self::GuzhengVirtuosoWaterfall => (0.92, 6.0, 0.12, 0.0, 5, 0.40, 0.95, 0.95),// Guzheng
+            Self::KokinJoshiFastMiyako => (0.90, 4.0, 0.05, 0.0, 1, 0.20, 0.80, 0.88), // Kokin-joshi
+            Self::InSenDramaticGendai => (0.85, 18.0, 0.25, 0.0, 2, 0.30, 0.90, 0.92), // In-sen with high oshi-ite
+            Self::KumoiJoshiSpringRain => (0.65, 3.0, 0.15, 0.0, 3, 0.22, 0.75, 0.85), // Kumoi-joshi
+            Self::RyukyuIslandSwell => (0.80, 5.0, 0.08, 0.0, 4, 0.20, 0.82, 0.88),    // Ryukyu
+            Self::GuzhengVirtuosoWaterfall => (0.92, 6.0, 0.12, 0.0, 5, 0.40, 0.95, 0.95), // Guzheng
             Self::CustomSpline => (0.80, 5.0, 0.10, 0.0, 0, 0.25, 0.85, 0.90),
         }
     }
@@ -113,7 +113,10 @@ pub fn register_koto_params(param_bus: &mut ParamBus, base_id: ParamId) {
     let (vel, oshi, hiki, offset, tuning, bleed, wood, mgain) =
         KotoArticulation::HirajoshiMeditativeAlap.nominal_parameters();
 
-    param_bus.register(ParamId(base_id.0), KotoArticulation::HirajoshiMeditativeAlap as u32 as f32);
+    param_bus.register(
+        ParamId(base_id.0),
+        KotoArticulation::HirajoshiMeditativeAlap as u32 as f32,
+    );
     param_bus.register(ParamId(base_id.0 + 1), vel);
     param_bus.register(ParamId(base_id.0 + 2), oshi);
     param_bus.register(ParamId(base_id.0 + 3), hiki);
@@ -191,17 +194,21 @@ impl KotoBus {
 
     /// Update articulation and set nominal parameters atomically.
     pub fn set_articulation(&self, art: KotoArticulation) {
-        let (vel, oshi, hiki, offset, tuning, bleed, wood, mgain) =
-            art.nominal_parameters();
+        let (vel, oshi, hiki, offset, tuning, bleed, wood, mgain) = art.nominal_parameters();
 
         self.articulation.store(art as u32, Ordering::Relaxed);
         self.tsume_velocity.store(vel.to_bits(), Ordering::Relaxed);
-        self.oshi_ite_force_n.store(oshi.to_bits(), Ordering::Relaxed);
-        self.hiki_iro_release.store(hiki.to_bits(), Ordering::Relaxed);
-        self.ji_bridge_offset.store(offset.to_bits(), Ordering::Relaxed);
+        self.oshi_ite_force_n
+            .store(oshi.to_bits(), Ordering::Relaxed);
+        self.hiki_iro_release
+            .store(hiki.to_bits(), Ordering::Relaxed);
+        self.ji_bridge_offset
+            .store(offset.to_bits(), Ordering::Relaxed);
         self.tuning_schema_idx.store(tuning, Ordering::Relaxed);
-        self.behind_bridge_bleed.store(bleed.to_bits(), Ordering::Relaxed);
-        self.body_wood_resonance.store(wood.to_bits(), Ordering::Relaxed);
+        self.behind_bridge_bleed
+            .store(bleed.to_bits(), Ordering::Relaxed);
+        self.body_wood_resonance
+            .store(wood.to_bits(), Ordering::Relaxed);
         self.master_gain.store(mgain.to_bits(), Ordering::Relaxed);
     }
 
@@ -212,17 +219,20 @@ impl KotoBus {
 
     #[inline]
     pub fn set_oshi_ite_force(&self, force_n: f32) {
-        self.oshi_ite_force_n.store(force_n.to_bits(), Ordering::Relaxed);
+        self.oshi_ite_force_n
+            .store(force_n.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_hiki_iro_release(&self, release: f32) {
-        self.hiki_iro_release.store(release.to_bits(), Ordering::Relaxed);
+        self.hiki_iro_release
+            .store(release.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_ji_bridge_offset(&self, offset: f32) {
-        self.ji_bridge_offset.store(offset.to_bits(), Ordering::Relaxed);
+        self.ji_bridge_offset
+            .store(offset.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
@@ -232,12 +242,14 @@ impl KotoBus {
 
     #[inline]
     pub fn set_behind_bridge_bleed(&self, bleed: f32) {
-        self.behind_bridge_bleed.store(bleed.to_bits(), Ordering::Relaxed);
+        self.behind_bridge_bleed
+            .store(bleed.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_body_wood_resonance(&self, wood: f32) {
-        self.body_wood_resonance.store(wood.to_bits(), Ordering::Relaxed);
+        self.body_wood_resonance
+            .store(wood.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]

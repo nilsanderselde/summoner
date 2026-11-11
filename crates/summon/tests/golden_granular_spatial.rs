@@ -160,14 +160,20 @@ fn test_golden_spatial_room_early_reflections_and_fdn_diffuse_reverb_determinist
 
     let mut room_studio = SpatialRoomNode::new(sample_rate);
     room_studio.set_room_dimensions(8.0, 12.0, 3.5);
-    room_studio.set_positions(Position3D::new(2.5, 3.0, 1.5), Position3D::new(4.0, 7.0, 1.7));
+    room_studio.set_positions(
+        Position3D::new(2.5, 3.0, 1.5),
+        Position3D::new(4.0, 7.0, 1.7),
+    );
     room_studio.material = WallMaterial::StudioAcoustic;
     room_studio.set_rt60(1.6);
     room_studio.dry_wet = 0.65;
 
     let mut room_cathedral = SpatialRoomNode::new(sample_rate);
     room_cathedral.set_room_dimensions(20.0, 45.0, 18.0);
-    room_cathedral.set_positions(Position3D::new(5.0, 8.0, 2.0), Position3D::new(10.0, 25.0, 1.8));
+    room_cathedral.set_positions(
+        Position3D::new(5.0, 8.0, 2.0),
+        Position3D::new(10.0, 25.0, 1.8),
+    );
     room_cathedral.material = WallMaterial::CathedralStone;
     room_cathedral.set_rt60(4.5);
     room_cathedral.late_gain = 0.85;
@@ -311,7 +317,8 @@ fn test_golden_spatial_trajectory_spline_and_automation_dispatch() {
 
     // Verify TOML round-trip
     let toml_str = engine.to_toml_string().expect("TOML serialization failed");
-    let restored = SpatialAutomationEngine::from_toml_str(&toml_str).expect("TOML deserialization failed");
+    let restored =
+        SpatialAutomationEngine::from_toml_str(&toml_str).expect("TOML deserialization failed");
     assert_eq!(engine, restored);
 
     let spatial_bus = SpatialBus::new();
@@ -373,8 +380,16 @@ fn test_golden_spatial_trajectory_view_snapshot_and_hud_telemetry() {
 
     let render_path = "scratch/renders/spatial_trajectory_view.png";
     let res = view.render_snapshot_png(render_path, 800, 520);
-    let _ = view.render_snapshot_png("../../scratch/renders/spatial_trajectory_view.png", 800, 520);
-    assert!(res.is_ok(), "Spatial trajectory snapshot render must succeed: {:?}", res);
+    let _ = view.render_snapshot_png(
+        "../../scratch/renders/spatial_trajectory_view.png",
+        800,
+        520,
+    );
+    assert!(
+        res.is_ok(),
+        "Spatial trajectory snapshot render must succeed: {:?}",
+        res
+    );
 
     let mut hasher = Hasher::new();
     for line in &ascii {

@@ -40,7 +40,13 @@ pub struct MacroKnobConfig {
 }
 
 impl MacroKnobConfig {
-    pub fn new(name: impl Into<String>, value: f32, min: f32, max: f32, unit: impl Into<String>) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        value: f32,
+        min: f32,
+        max: f32,
+        unit: impl Into<String>,
+    ) -> Self {
         Self {
             name: name.into(),
             value: value.clamp(0.0, 1.0),
@@ -263,8 +269,8 @@ impl SignalProcessor for DailySubtractiveSynth {
             let f_env = self.filter_env.process_sample(ctx.sample_rate);
 
             // Modulate filter cutoff with envelope and LFO
-            let mod_cutoff = (base_cutoff * (1.0 + f_env * env_amount + lfo_val * 0.2))
-                .clamp(20.0, 20000.0);
+            let mod_cutoff =
+                (base_cutoff * (1.0 + f_env * env_amount + lfo_val * 0.2)).clamp(20.0, 20000.0);
             self.filter.cutoff = mod_cutoff;
 
             let s_saw = self.osc_saw.process_sample(ctx.sample_rate);
@@ -501,7 +507,7 @@ impl DailyFmSynth {
         match name {
             "Solid DX Bass" => {
                 self.macros.set_macro(0, 0.60); // punchy FM depth
-                self.macros.set_macro(1, 0.0);  // 1.0 ratio
+                self.macros.set_macro(1, 0.0); // 1.0 ratio
                 self.macros.set_macro(2, 0.80);
                 self.macros.set_macro(3, 0.30);
                 self.macros.set_macro(4, 0.20);
@@ -661,7 +667,7 @@ impl DailySampler {
                 self.macros.set_macro(0, 0.90);
                 self.macros.set_macro(1, 0.10);
                 self.macros.set_macro(2, 0.50); // 0 st tune
-                self.macros.set_macro(3, 0.0);  // clean
+                self.macros.set_macro(3, 0.0); // clean
                 self.macros.set_macro(4, 0.005);
                 self.macros.set_macro(5, 0.50);
                 self.macros.set_macro(6, 0.35);
@@ -759,7 +765,13 @@ mod tests {
         assert_eq!(synth.current_preset, "Acid 303 Resonance");
 
         let ctx = ProcessContext::new(44100, 120.0, 0);
-        synth.handle_event(&summoner_core::node::NodeEvent::NoteOn { note: 36, velocity: 0.9 }, &ctx);
+        synth.handle_event(
+            &summoner_core::node::NodeEvent::NoteOn {
+                note: 36,
+                velocity: 0.9,
+            },
+            &ctx,
+        );
 
         let mut out = vec![0.0f32; 128];
         synth.process_block(&[], &mut [&mut out[..]], &ctx);
@@ -775,7 +787,13 @@ mod tests {
         assert_eq!(synth.current_preset, "Electric Tine Piano");
 
         let ctx = ProcessContext::new(44100, 120.0, 0);
-        synth.handle_event(&summoner_core::node::NodeEvent::NoteOn { note: 60, velocity: 0.8 }, &ctx);
+        synth.handle_event(
+            &summoner_core::node::NodeEvent::NoteOn {
+                note: 60,
+                velocity: 0.8,
+            },
+            &ctx,
+        );
 
         let mut out = vec![0.0f32; 128];
         synth.process_block(&[], &mut [&mut out[..]], &ctx);
@@ -791,7 +809,13 @@ mod tests {
         assert_eq!(synth.current_preset, "Crystal Glass Bells");
 
         let ctx = ProcessContext::new(44100, 120.0, 0);
-        synth.handle_event(&summoner_core::node::NodeEvent::NoteOn { note: 72, velocity: 1.0 }, &ctx);
+        synth.handle_event(
+            &summoner_core::node::NodeEvent::NoteOn {
+                note: 72,
+                velocity: 1.0,
+            },
+            &ctx,
+        );
 
         let mut out = vec![0.0f32; 128];
         synth.process_block(&[], &mut [&mut out[..]], &ctx);
@@ -802,8 +826,8 @@ mod tests {
 
     #[test]
     fn test_daily_sampler() {
-        use std::sync::Arc;
         use crate::sampler::{LoopMode, SampleBuffer, SampleRegion};
+        use std::sync::Arc;
 
         let mut bank = MultiSampleBank::new();
         let mut reg = SampleRegion::new(0, 127, 60, "piano_c4.wav");
@@ -817,7 +841,13 @@ mod tests {
         assert_eq!(sampler.current_preset, "Grand Piano");
 
         let ctx = ProcessContext::new(44100, 120.0, 0);
-        sampler.handle_event(&summoner_core::node::NodeEvent::NoteOn { note: 60, velocity: 0.9 }, &ctx);
+        sampler.handle_event(
+            &summoner_core::node::NodeEvent::NoteOn {
+                note: 60,
+                velocity: 0.9,
+            },
+            &ctx,
+        );
 
         let mut out = vec![0.0f32; 128];
         sampler.process_block(&[], &mut [&mut out[..]], &ctx);

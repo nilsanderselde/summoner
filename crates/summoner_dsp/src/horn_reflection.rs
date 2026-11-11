@@ -389,12 +389,21 @@ mod tests {
         let refl_low = filter.compute_reflection_coefficient(200.0);
         let refl_high = filter.compute_reflection_coefficient(4000.0);
 
-        assert!(refl_low > 0.85, "Low frequencies should strongly reflect in horn bore");
-        assert!(refl_high < 0.35, "High frequencies above cutoff should radiate, low reflection");
+        assert!(
+            refl_low > 0.85,
+            "Low frequencies should strongly reflect in horn bore"
+        );
+        assert!(
+            refl_high < 0.35,
+            "High frequencies above cutoff should radiate, low reflection"
+        );
 
         let rad_low = filter.compute_radiation_gain(200.0);
         let rad_high = filter.compute_radiation_gain(4000.0);
-        assert!(rad_high > rad_low, "Radiation efficiency should be higher above cutoff");
+        assert!(
+            rad_high > rad_low,
+            "Radiation efficiency should be higher above cutoff"
+        );
     }
 
     #[test]
@@ -419,7 +428,12 @@ mod tests {
     #[test]
     fn test_horn_mutes_stability() {
         let mut filter = HornReflectionFilter::new(48000);
-        for mute in [HornMuteType::Open, HornMuteType::Straight, HornMuteType::Harmon, HornMuteType::Cup] {
+        for mute in [
+            HornMuteType::Open,
+            HornMuteType::Straight,
+            HornMuteType::Harmon,
+            HornMuteType::Cup,
+        ] {
             filter.set_mute(mute);
             for _ in 0..100 {
                 let (refl, rad) = filter.process_reflection(0.4);

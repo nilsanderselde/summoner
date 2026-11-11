@@ -12,13 +12,13 @@
 //!
 //! Enforces zero heap allocations in audio render loops under `AllocGuard`.
 
-use serde::{Deserialize, Serialize};
-use summoner_core::audio::Sample;
-use summoner_core::node::{AudioNode, ProcessContext};
 use crate::air_reed::{
     meri_kari_to_pitch_multiplier, AirReed, DEFAULT_PRESSURE_PA, MIN_PRESSURE_PA,
 };
 use crate::traits::SignalProcessor;
+use serde::{Deserialize, Serialize};
+use summoner_core::audio::Sample;
+use summoner_core::node::{AudioNode, ProcessContext};
 
 /// Maximum bore delay line capacity in samples (~20 Hz at 192 kHz).
 pub const MAX_BORE_DELAY: usize = 8192;
@@ -30,11 +30,11 @@ pub const MAX_SHAKUHACHI_VOICES: usize = 16;
 pub const NUM_HOLES: usize = 5;
 
 /// Hole bitmask definitions.
-pub const HOLE_1_TSU: u32 = 1 << 0;  // Hole 1 (Front bottom: F on 1.8 shaku)
-pub const HOLE_2_RE: u32 = 1 << 1;   // Hole 2 (Front lower-mid: G on 1.8 shaku)
-pub const HOLE_3_CHI: u32 = 1 << 2;  // Hole 3 (Front upper-mid: A on 1.8 shaku)
-pub const HOLE_4_RI: u32 = 1 << 3;   // Hole 4 (Front top: C on 1.8 shaku)
-pub const HOLE_5_THUMB: u32 = 1 << 4;// Hole 5 (Back thumb: Octave vent / D on 1.8 shaku)
+pub const HOLE_1_TSU: u32 = 1 << 0; // Hole 1 (Front bottom: F on 1.8 shaku)
+pub const HOLE_2_RE: u32 = 1 << 1; // Hole 2 (Front lower-mid: G on 1.8 shaku)
+pub const HOLE_3_CHI: u32 = 1 << 2; // Hole 3 (Front upper-mid: A on 1.8 shaku)
+pub const HOLE_4_RI: u32 = 1 << 3; // Hole 4 (Front top: C on 1.8 shaku)
+pub const HOLE_5_THUMB: u32 = 1 << 4; // Hole 5 (Back thumb: Octave vent / D on 1.8 shaku)
 
 /// 5 traditional Shakuhachi flute length profiles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -56,11 +56,11 @@ impl ShakuhachiFluteLength {
     /// Return nominal fundamental frequency in Hz (all holes closed, Ro tone).
     pub fn fundamental_hz(&self) -> f32 {
         match self {
-            Self::IchishakuHassun => 293.66, // D4
-            Self::NishakuYonsun => 220.00,   // A3
-            Self::IchishakuRokusun => 329.63,// E4
-            Self::NishakuIssun => 246.94,    // B3
-            Self::SanShakuKyotaku => 146.83, // D3
+            Self::IchishakuHassun => 293.66,  // D4
+            Self::NishakuYonsun => 220.00,    // A3
+            Self::IchishakuRokusun => 329.63, // E4
+            Self::NishakuIssun => 246.94,     // B3
+            Self::SanShakuKyotaku => 146.83,  // D3
         }
     }
 
@@ -163,7 +163,10 @@ impl ShakuhachiProfile {
 }
 
 fn default_bore_buffer() -> Box<[f32; MAX_BORE_DELAY]> {
-    vec![0.0; MAX_BORE_DELAY].into_boxed_slice().try_into().unwrap()
+    vec![0.0; MAX_BORE_DELAY]
+        .into_boxed_slice()
+        .try_into()
+        .unwrap()
 }
 
 /// A single monophonic physical modeling Shakuhachi voice.
@@ -305,7 +308,11 @@ impl ShakuhachiVoice {
 
     /// Read fractional delay from circular bore buffer using linear interpolation.
     #[inline]
-    fn read_bore_delay(buffer: &[f32; MAX_BORE_DELAY], write_pos: usize, delay_samples: f32) -> f32 {
+    fn read_bore_delay(
+        buffer: &[f32; MAX_BORE_DELAY],
+        write_pos: usize,
+        delay_samples: f32,
+    ) -> f32 {
         let d_clamped = delay_samples.clamp(0.0, (MAX_BORE_DELAY - 2) as f32);
         let d_int = d_clamped.floor() as usize;
         let d_frac = d_clamped - (d_int as f32);
@@ -337,7 +344,8 @@ impl ShakuhachiVoice {
         let delay_len = self.calculate_bore_delay_samples();
 
         // 1. Read backward wave arriving at bore entrance from bell
-        let bwd_wave_at_mouth = Self::read_bore_delay(&self.bore_delay_bwd, self.bore_write_pos, delay_len);
+        let bwd_wave_at_mouth =
+            Self::read_bore_delay(&self.bore_delay_bwd, self.bore_write_pos, delay_len);
 
         // 2. Air-reed excitation (utaguchi jet splitting)
         let excitation = self.air_reed.step(bwd_wave_at_mouth);
@@ -346,12 +354,14 @@ impl ShakuhachiVoice {
         let fwd_wave_in = excitation - bwd_wave_at_mouth * self.bore_damping;
 
         // 4. Forward wave arriving at open bell end
-        let fwd_wave_at_bell = Self::read_bore_delay(&self.bore_delay_fwd, self.bore_write_pos, delay_len);
+        let fwd_wave_at_bell =
+            Self::read_bore_delay(&self.bore_delay_fwd, self.bore_write_pos, delay_len);
 
         // 5. Open bell negative reflection with one-pole lowpass damping:
         // y[n] = - ( (1 - c) * x[n] + c * y[n-1] )
         let bell_refl_coeff = self.bell_reflection_coeff;
-        self.bell_filter_state = (1.0 - bell_refl_coeff) * fwd_wave_at_bell + bell_refl_coeff * self.bell_filter_state;
+        self.bell_filter_state =
+            (1.0 - bell_refl_coeff) * fwd_wave_at_bell + bell_refl_coeff * self.bell_filter_state;
         let bwd_wave_in = -self.bell_filter_state * self.bore_damping;
 
         // 6. Write waves to circular delay lines
@@ -442,7 +452,9 @@ impl Shakuhachi {
     pub fn set_blowing_pressure(&mut self, pressure_pa: f32) {
         self.blowing_pressure_pa = pressure_pa.clamp(MIN_PRESSURE_PA, 4000.0);
         for voice in &mut self.voices {
-            voice.air_reed.set_blowing_pressure(self.blowing_pressure_pa);
+            voice
+                .air_reed
+                .set_blowing_pressure(self.blowing_pressure_pa);
         }
     }
 
@@ -490,7 +502,9 @@ impl Shakuhachi {
     /// Apply global parameters to all voices.
     fn apply_parameters_to_voices(&mut self) {
         for voice in &mut self.voices {
-            voice.air_reed.set_blowing_pressure(self.blowing_pressure_pa);
+            voice
+                .air_reed
+                .set_blowing_pressure(self.blowing_pressure_pa);
             voice.air_reed.set_meri_kari(self.meri_kari_cents);
             voice.air_reed.config.embouchure_angle_deg = self.embouchure_angle_deg;
             voice.air_reed.set_jet_distance_mm(self.jet_distance_mm);
@@ -590,7 +604,12 @@ impl AudioNode for Shakuhachi {
         "Shakuhachi"
     }
 
-    fn process(&mut self, inputs: &[&[Sample]], outputs: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        inputs: &[&[Sample]],
+        outputs: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         self.process_block(inputs, outputs, ctx);
     }
 }
@@ -603,7 +622,10 @@ mod tests {
     #[test]
     fn test_shakuhachi_initialization() {
         let shakuhachi = Shakuhachi::new(48000);
-        assert_eq!(shakuhachi.flute_length, ShakuhachiFluteLength::IchishakuHassun);
+        assert_eq!(
+            shakuhachi.flute_length,
+            ShakuhachiFluteLength::IchishakuHassun
+        );
         assert!((shakuhachi.blowing_pressure_pa - 850.0).abs() < 1.0);
     }
 

@@ -126,10 +126,7 @@ impl Windchest {
 
     /// Set nominal reservoir pressure in mmH2O.
     pub fn set_nominal_pressure(&mut self, pressure_mmh2o: f32) {
-        let p = pressure_mmh2o.clamp(
-            MIN_WIND_PRESSURE_MMH2O,
-            MAX_WIND_PRESSURE_MMH2O,
-        );
+        let p = pressure_mmh2o.clamp(MIN_WIND_PRESSURE_MMH2O, MAX_WIND_PRESSURE_MMH2O);
         self.config.nominal_pressure_mmh2o = p;
         if self.smoothed_demand < 0.001 {
             self.current_pressure = p;
@@ -156,23 +153,27 @@ impl Windchest {
         // Smooth air demand (simulate acoustic mass of air in windchest trunk)
         let demand_tau = 0.015; // 15ms smoothing
         let demand_alpha = (-dt / demand_tau).exp();
-        self.smoothed_demand = demand_alpha * self.smoothed_demand + (1.0 - demand_alpha) * total_air_demand;
+        self.smoothed_demand =
+            demand_alpha * self.smoothed_demand + (1.0 - demand_alpha) * total_air_demand;
 
         // Pressure sag: target pressure sags under load
-        let target_sag = self.smoothed_demand * self.config.sag_coefficient * self.config.nominal_pressure_mmh2o;
+        let target_sag =
+            self.smoothed_demand * self.config.sag_coefficient * self.config.nominal_pressure_mmh2o;
         let target_pressure = (self.config.nominal_pressure_mmh2o - target_sag).max(20.0);
 
         // Blower replenishment recovery towards target pressure
         let rec_tau = self.config.recovery_time_sec.max(0.005);
         let rec_alpha = (-dt / rec_tau).exp();
-        self.current_pressure = rec_alpha * self.current_pressure + (1.0 - rec_alpha) * target_pressure;
+        self.current_pressure =
+            rec_alpha * self.current_pressure + (1.0 - rec_alpha) * target_pressure;
 
         // Tremulant modulation
         if self.config.tremulant_enabled {
             let phase_inc = (TAU * self.config.tremulant_rate_hz) / self.sample_rate as f32;
             self.tremulant_phase = (self.tremulant_phase + phase_inc) % TAU;
             // Pneumatic tremulant pulses pressure downward below nominal
-            let trem_mod = 1.0 - self.config.tremulant_depth * (0.5 * (self.tremulant_phase.sin() + 1.0));
+            let trem_mod =
+                1.0 - self.config.tremulant_depth * (0.5 * (self.tremulant_phase.sin() + 1.0));
             self.effective_pressure = (self.current_pressure * trem_mod).max(10.0);
         } else {
             self.effective_pressure = self.current_pressure;
@@ -243,13 +244,21 @@ mod tests {
         }
         // Sag expected: ~10 * 0.0065 * 80 = 5.2 mmH2O drop -> ~74.8 mmH2O
         let sagged = chest.effective_pressure();
-        assert!(sagged < 78.0 && sagged > 70.0, "Expected sagged pressure, got {}", sagged);
+        assert!(
+            sagged < 78.0 && sagged > 70.0,
+            "Expected sagged pressure, got {}",
+            sagged
+        );
 
         // Release demand (pipes stop) -> pressure recovers to 80.0
         for _ in 0..48000 {
             chest.process_sample(0.0);
         }
-        assert!((chest.effective_pressure() - 80.0).abs() < 0.05, "Expected recovered pressure, got {}", chest.effective_pressure());
+        assert!(
+            (chest.effective_pressure() - 80.0).abs() < 0.05,
+            "Expected recovered pressure, got {}",
+            chest.effective_pressure()
+        );
     }
 
     #[test]
@@ -262,12 +271,27 @@ mod tests {
         let mut max_p = 0.0f32;
         for _ in 0..48000 {
             let p = chest.process_sample(0.0);
-            if p < min_p { min_p = p; }
-            if p > max_p { max_p = p; }
+            if p < min_p {
+                min_p = p;
+            }
+            if p > max_p {
+                max_p = p;
+            }
         }
 
-        assert!(min_p < 65.0, "Tremulant should drop pressure, min_p={}", min_p);
-        assert!(max_p <= 76.0, "Max pressure should be close to nominal, max_p={}", max_p);
-        assert!(max_p - min_p > 10.0, "Modulation depth should produce pressure swing");
+        assert!(
+            min_p < 65.0,
+            "Tremulant should drop pressure, min_p={}",
+            min_p
+        );
+        assert!(
+            max_p <= 76.0,
+            "Max pressure should be close to nominal, max_p={}",
+            max_p
+        );
+        assert!(
+            max_p - min_p > 10.0,
+            "Modulation depth should produce pressure swing"
+        );
     }
 }

@@ -103,7 +103,8 @@ pub struct MalletBusSnapshot {
 
 impl Default for MalletBusSnapshot {
     fn default() -> Self {
-        let (r, vel, hard, rim, roll, tens) = MalletArticulation::EdgeSweetSpot.nominal_parameters();
+        let (r, vel, hard, rim, roll, tens) =
+            MalletArticulation::EdgeSweetSpot.nominal_parameters();
         Self {
             articulation: MalletArticulation::EdgeSweetSpot,
             radial_strike_pos: r,
@@ -144,7 +145,8 @@ impl Default for MalletBus {
 impl MalletBus {
     /// Creates a new MalletBus initialized to standard EdgeSweetSpot defaults.
     pub fn new() -> Self {
-        let (r, vel, hard, rim, roll, tens) = MalletArticulation::EdgeSweetSpot.nominal_parameters();
+        let (r, vel, hard, rim, roll, tens) =
+            MalletArticulation::EdgeSweetSpot.nominal_parameters();
         Self {
             articulation_raw: AtomicU32::new(MalletArticulation::EdgeSweetSpot as u32),
             radial_pos_bits: AtomicU32::new(r.to_bits()),
@@ -162,7 +164,8 @@ impl MalletBus {
 
     /// Sets active articulation and loads nominal default parameters.
     pub fn set_articulation(&self, articulation: MalletArticulation) {
-        self.articulation_raw.store(articulation as u32, Ordering::Release);
+        self.articulation_raw
+            .store(articulation as u32, Ordering::Release);
         let (r, vel, hard, rim, roll, tens) = articulation.nominal_parameters();
         self.set_gesture_vector(r, vel, hard, rim, roll, tens);
     }
@@ -182,12 +185,24 @@ impl MalletBus {
         roll_tremolo_rate_hz: f32,
         kettle_tension_cents: f32,
     ) {
-        self.radial_pos_bits.store(radial_strike_pos.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.velocity_bits.store(strike_velocity.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.hardness_bits.store(mallet_hardness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.rim_damping_bits.store(rimshot_damping.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.roll_rate_bits.store(roll_tremolo_rate_hz.clamp(0.0, 60.0).to_bits(), Ordering::Release);
-        self.tension_cents_bits.store(kettle_tension_cents.clamp(-1200.0, 1200.0).to_bits(), Ordering::Release);
+        self.radial_pos_bits.store(
+            radial_strike_pos.clamp(0.0, 1.0).to_bits(),
+            Ordering::Release,
+        );
+        self.velocity_bits
+            .store(strike_velocity.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.hardness_bits
+            .store(mallet_hardness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.rim_damping_bits
+            .store(rimshot_damping.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.roll_rate_bits.store(
+            roll_tremolo_rate_hz.clamp(0.0, 60.0).to_bits(),
+            Ordering::Release,
+        );
+        self.tension_cents_bits.store(
+            kettle_tension_cents.clamp(-1200.0, 1200.0).to_bits(),
+            Ordering::Release,
+        );
     }
 
     /// Gets continuous mallet gesture vector $(r, v_s, h, d_{\text{rim}}, f_{\text{roll}}, \Delta\text{cents})$.
@@ -204,7 +219,8 @@ impl MalletBus {
 
     /// Sets air cavity depth $[0.0 ..= 1.0]$.
     pub fn set_air_cavity_depth(&self, depth: f32) {
-        self.cavity_depth_bits.store(depth.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.cavity_depth_bits
+            .store(depth.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Gets air cavity depth.
@@ -214,7 +230,8 @@ impl MalletBus {
 
     /// Sets base membrane tension $[0.0 ..= 1.0]$.
     pub fn set_membrane_tension(&self, tension: f32) {
-        self.membrane_tension_bits.store(tension.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.membrane_tension_bits
+            .store(tension.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Gets base membrane tension.
@@ -224,12 +241,16 @@ impl MalletBus {
 
     /// Sets gesture trajectory progress $[0.0 ..= 1.0]$.
     pub fn set_progress(&self, progress: f32, is_active: bool) {
-        self.progress_bits.store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
 
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if is_active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -262,17 +283,28 @@ impl MalletBus {
 
     /// Applies a complete snapshot into this bus.
     pub fn apply_snapshot(&self, snap: &MalletBusSnapshot) {
-        self.articulation_raw.store(snap.articulation as u32, Ordering::Release);
-        self.radial_pos_bits.store(snap.radial_strike_pos.to_bits(), Ordering::Release);
-        self.velocity_bits.store(snap.strike_velocity.to_bits(), Ordering::Release);
-        self.hardness_bits.store(snap.mallet_hardness.to_bits(), Ordering::Release);
-        self.rim_damping_bits.store(snap.rimshot_damping.to_bits(), Ordering::Release);
-        self.roll_rate_bits.store(snap.roll_tremolo_rate_hz.to_bits(), Ordering::Release);
-        self.tension_cents_bits.store(snap.kettle_tension_cents.to_bits(), Ordering::Release);
-        self.cavity_depth_bits.store(snap.air_cavity_depth.to_bits(), Ordering::Release);
-        self.membrane_tension_bits.store(snap.membrane_tension.to_bits(), Ordering::Release);
-        self.progress_bits.store(snap.gesture_progress.to_bits(), Ordering::Release);
-        self.flags.store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
+        self.articulation_raw
+            .store(snap.articulation as u32, Ordering::Release);
+        self.radial_pos_bits
+            .store(snap.radial_strike_pos.to_bits(), Ordering::Release);
+        self.velocity_bits
+            .store(snap.strike_velocity.to_bits(), Ordering::Release);
+        self.hardness_bits
+            .store(snap.mallet_hardness.to_bits(), Ordering::Release);
+        self.rim_damping_bits
+            .store(snap.rimshot_damping.to_bits(), Ordering::Release);
+        self.roll_rate_bits
+            .store(snap.roll_tremolo_rate_hz.to_bits(), Ordering::Release);
+        self.tension_cents_bits
+            .store(snap.kettle_tension_cents.to_bits(), Ordering::Release);
+        self.cavity_depth_bits
+            .store(snap.air_cavity_depth.to_bits(), Ordering::Release);
+        self.membrane_tension_bits
+            .store(snap.membrane_tension.to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(snap.gesture_progress.to_bits(), Ordering::Release);
+        self.flags
+            .store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
     }
 
     /// Dispatches current mallet bus snapshot values to `ParamBus`.

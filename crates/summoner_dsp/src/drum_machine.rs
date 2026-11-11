@@ -412,7 +412,14 @@ mod tests {
         let mut closed_hh = DrumPad::new("Closed HH", 42, 0.001, 0.05, 0.0, 0.02, 1.0)
             .with_choke_group(1)
             .with_pan(-0.5);
-        closed_hh.add_sample(42, 42, 42, "ch.wav", Some(dummy_buf.clone()), LoopMode::NoLoop);
+        closed_hh.add_sample(
+            42,
+            42,
+            42,
+            "ch.wav",
+            Some(dummy_buf.clone()),
+            LoopMode::NoLoop,
+        );
 
         let mut open_hh = DrumPad::new("Open HH", 46, 0.001, 1.0, 0.5, 0.5, 1.0)
             .with_choke_group(1)
@@ -430,6 +437,9 @@ mod tests {
         // 2. Trigger Closed Hi-Hat (note 42) -> Open Hi-Hat must be choked immediately!
         kit.trigger_note(42, 100);
         assert!(kit.pads[0].is_active(), "Closed HH should now be active");
-        assert!(!kit.pads[1].is_active(), "Open HH must be choked and inactive");
+        assert!(
+            !kit.pads[1].is_active(),
+            "Open HH must be choked and inactive"
+        );
     }
 }

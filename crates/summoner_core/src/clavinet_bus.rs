@@ -90,15 +90,150 @@ impl ClavinetArticulation {
     /// Returns nominal default parameters tuple.
     pub fn nominal_parameters(&self) -> ClavinetNominalParameters {
         match self {
-            Self::StevieFunk => (ClavinetPickupMode::ParallelInPhase, 0.50, 0.0, 0.85, 0.75, true, true, true, false, false, 0.70, 350.0, 6.0, 0.85),
-            Self::OutPhaseQuack => (ClavinetPickupMode::ParallelOutOfPhase, 0.50, 180.0, 0.90, 0.85, true, true, false, false, false, 0.80, 400.0, 7.5, 0.90),
-            Self::ClassicD6Clean => (ClavinetPickupMode::ParallelInPhase, 0.55, 0.0, 0.70, 0.65, true, false, true, false, false, 0.60, 300.0, 5.0, 0.75),
-            Self::MellowChamber => (ClavinetPickupMode::NeckOnly, 0.0, 0.0, 0.45, 0.50, false, false, false, true, false, 0.40, 250.0, 3.5, 0.60),
-            Self::ScreamingAutoWah => (ClavinetPickupMode::ParallelOutOfPhase, 0.50, 180.0, 0.90, 0.80, true, true, false, false, true, 0.88, 420.0, 9.5, 0.95),
-            Self::TwangyBridge => (ClavinetPickupMode::BridgeOnly, 1.0, 0.0, 0.95, 0.90, true, true, false, false, false, 0.75, 450.0, 6.0, 0.80),
-            Self::StaccatoChop => (ClavinetPickupMode::ParallelInPhase, 0.60, 0.0, 0.92, 0.95, true, true, true, false, false, 0.75, 380.0, 5.5, 0.80),
-            Self::VowelWahSweep => (ClavinetPickupMode::ParallelInPhase, 0.50, 0.0, 0.80, 0.70, true, false, true, false, true, 0.85, 300.0, 10.0, 0.90),
-            Self::CustomSpline => (ClavinetPickupMode::ParallelInPhase, 0.50, 0.0, 0.85, 0.75, true, true, true, false, false, 0.70, 350.0, 6.0, 0.85),
+            Self::StevieFunk => (
+                ClavinetPickupMode::ParallelInPhase,
+                0.50,
+                0.0,
+                0.85,
+                0.75,
+                true,
+                true,
+                true,
+                false,
+                false,
+                0.70,
+                350.0,
+                6.0,
+                0.85,
+            ),
+            Self::OutPhaseQuack => (
+                ClavinetPickupMode::ParallelOutOfPhase,
+                0.50,
+                180.0,
+                0.90,
+                0.85,
+                true,
+                true,
+                false,
+                false,
+                false,
+                0.80,
+                400.0,
+                7.5,
+                0.90,
+            ),
+            Self::ClassicD6Clean => (
+                ClavinetPickupMode::ParallelInPhase,
+                0.55,
+                0.0,
+                0.70,
+                0.65,
+                true,
+                false,
+                true,
+                false,
+                false,
+                0.60,
+                300.0,
+                5.0,
+                0.75,
+            ),
+            Self::MellowChamber => (
+                ClavinetPickupMode::NeckOnly,
+                0.0,
+                0.0,
+                0.45,
+                0.50,
+                false,
+                false,
+                false,
+                true,
+                false,
+                0.40,
+                250.0,
+                3.5,
+                0.60,
+            ),
+            Self::ScreamingAutoWah => (
+                ClavinetPickupMode::ParallelOutOfPhase,
+                0.50,
+                180.0,
+                0.90,
+                0.80,
+                true,
+                true,
+                false,
+                false,
+                true,
+                0.88,
+                420.0,
+                9.5,
+                0.95,
+            ),
+            Self::TwangyBridge => (
+                ClavinetPickupMode::BridgeOnly,
+                1.0,
+                0.0,
+                0.95,
+                0.90,
+                true,
+                true,
+                false,
+                false,
+                false,
+                0.75,
+                450.0,
+                6.0,
+                0.80,
+            ),
+            Self::StaccatoChop => (
+                ClavinetPickupMode::ParallelInPhase,
+                0.60,
+                0.0,
+                0.92,
+                0.95,
+                true,
+                true,
+                true,
+                false,
+                false,
+                0.75,
+                380.0,
+                5.5,
+                0.80,
+            ),
+            Self::VowelWahSweep => (
+                ClavinetPickupMode::ParallelInPhase,
+                0.50,
+                0.0,
+                0.80,
+                0.70,
+                true,
+                false,
+                true,
+                false,
+                true,
+                0.85,
+                300.0,
+                10.0,
+                0.90,
+            ),
+            Self::CustomSpline => (
+                ClavinetPickupMode::ParallelInPhase,
+                0.50,
+                0.0,
+                0.85,
+                0.75,
+                true,
+                true,
+                true,
+                false,
+                false,
+                0.70,
+                350.0,
+                6.0,
+                0.85,
+            ),
         }
     }
 }
@@ -147,14 +282,36 @@ pub struct ClavinetBusSnapshot {
 
 impl Default for ClavinetBusSnapshot {
     fn default() -> Self {
-        let (mode, blend, phase, hardness, damping, br, tr, md, sf, wah_en, wah_sens, wah_freq, wah_res, wah_mix) =
-            ClavinetArticulation::StevieFunk.nominal_parameters();
+        let (
+            mode,
+            blend,
+            phase,
+            hardness,
+            damping,
+            br,
+            tr,
+            md,
+            sf,
+            wah_en,
+            wah_sens,
+            wah_freq,
+            wah_res,
+            wah_mix,
+        ) = ClavinetArticulation::StevieFunk.nominal_parameters();
 
         let mut mask = 0u32;
-        if br { mask |= 1; }
-        if tr { mask |= 2; }
-        if md { mask |= 4; }
-        if sf { mask |= 8; }
+        if br {
+            mask |= 1;
+        }
+        if tr {
+            mask |= 2;
+        }
+        if md {
+            mask |= 4;
+        }
+        if sf {
+            mask |= 8;
+        }
 
         Self {
             articulation: ClavinetArticulation::StevieFunk,
@@ -202,14 +359,36 @@ impl Default for ClavinetBus {
 impl ClavinetBus {
     /// Creates a new ClavinetBus initialized to StevieFunk defaults.
     pub fn new() -> Self {
-        let (mode, blend, phase, hardness, damping, br, tr, md, sf, wah_en, wah_sens, wah_freq, wah_res, wah_mix) =
-            ClavinetArticulation::StevieFunk.nominal_parameters();
+        let (
+            mode,
+            blend,
+            phase,
+            hardness,
+            damping,
+            br,
+            tr,
+            md,
+            sf,
+            wah_en,
+            wah_sens,
+            wah_freq,
+            wah_res,
+            wah_mix,
+        ) = ClavinetArticulation::StevieFunk.nominal_parameters();
 
         let mut mask = 0u32;
-        if br { mask |= 1; }
-        if tr { mask |= 2; }
-        if md { mask |= 4; }
-        if sf { mask |= 8; }
+        if br {
+            mask |= 1;
+        }
+        if tr {
+            mask |= 2;
+        }
+        if md {
+            mask |= 4;
+        }
+        if sf {
+            mask |= 8;
+        }
 
         Self {
             articulation_raw: AtomicU32::new(ClavinetArticulation::StevieFunk as u32),
@@ -231,27 +410,59 @@ impl ClavinetBus {
 
     /// Sets active articulation and loads nominal parameters.
     pub fn set_articulation(&self, articulation: ClavinetArticulation) {
-        self.articulation_raw.store(articulation as u32, Ordering::Release);
-        let (mode, blend, phase, hardness, damping, br, tr, md, sf, wah_en, wah_sens, wah_freq, wah_res, wah_mix) =
-            articulation.nominal_parameters();
+        self.articulation_raw
+            .store(articulation as u32, Ordering::Release);
+        let (
+            mode,
+            blend,
+            phase,
+            hardness,
+            damping,
+            br,
+            tr,
+            md,
+            sf,
+            wah_en,
+            wah_sens,
+            wah_freq,
+            wah_res,
+            wah_mix,
+        ) = articulation.nominal_parameters();
 
         let mut mask = 0u32;
-        if br { mask |= 1; }
-        if tr { mask |= 2; }
-        if md { mask |= 4; }
-        if sf { mask |= 8; }
+        if br {
+            mask |= 1;
+        }
+        if tr {
+            mask |= 2;
+        }
+        if md {
+            mask |= 4;
+        }
+        if sf {
+            mask |= 8;
+        }
 
         self.pickup_mode_raw.store(mode as u32, Ordering::Release);
-        self.pickup_blend_bits.store(blend.to_bits(), Ordering::Release);
-        self.pickup_phase_bits.store(phase.to_bits(), Ordering::Release);
-        self.anvil_hardness_bits.store(hardness.to_bits(), Ordering::Release);
-        self.yarn_damping_bits.store(damping.to_bits(), Ordering::Release);
+        self.pickup_blend_bits
+            .store(blend.to_bits(), Ordering::Release);
+        self.pickup_phase_bits
+            .store(phase.to_bits(), Ordering::Release);
+        self.anvil_hardness_bits
+            .store(hardness.to_bits(), Ordering::Release);
+        self.yarn_damping_bits
+            .store(damping.to_bits(), Ordering::Release);
         self.tone_switches_mask.store(mask, Ordering::Release);
-        self.auto_wah_flags.store(if wah_en { 1 } else { 0 }, Ordering::Release);
-        self.auto_wah_sens_bits.store(wah_sens.to_bits(), Ordering::Release);
-        self.auto_wah_freq_bits.store(wah_freq.to_bits(), Ordering::Release);
-        self.auto_wah_res_bits.store(wah_res.to_bits(), Ordering::Release);
-        self.auto_wah_mix_bits.store(wah_mix.to_bits(), Ordering::Release);
+        self.auto_wah_flags
+            .store(if wah_en { 1 } else { 0 }, Ordering::Release);
+        self.auto_wah_sens_bits
+            .store(wah_sens.to_bits(), Ordering::Release);
+        self.auto_wah_freq_bits
+            .store(wah_freq.to_bits(), Ordering::Release);
+        self.auto_wah_res_bits
+            .store(wah_res.to_bits(), Ordering::Release);
+        self.auto_wah_mix_bits
+            .store(wah_mix.to_bits(), Ordering::Release);
     }
 
     /// Gets active articulation.
@@ -260,36 +471,56 @@ impl ClavinetBus {
     }
 
     /// Sets electronic pickup and tone switch properties.
-    pub fn set_electronics(&self, mode: ClavinetPickupMode, blend: f32, phase_deg: f32, switches_mask: u32) {
+    pub fn set_electronics(
+        &self,
+        mode: ClavinetPickupMode,
+        blend: f32,
+        phase_deg: f32,
+        switches_mask: u32,
+    ) {
         self.pickup_mode_raw.store(mode as u32, Ordering::Release);
-        self.pickup_blend_bits.store(blend.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.pickup_phase_bits.store(phase_deg.clamp(0.0, 180.0).to_bits(), Ordering::Release);
-        self.tone_switches_mask.store(switches_mask & 0x0F, Ordering::Release);
+        self.pickup_blend_bits
+            .store(blend.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.pickup_phase_bits
+            .store(phase_deg.clamp(0.0, 180.0).to_bits(), Ordering::Release);
+        self.tone_switches_mask
+            .store(switches_mask & 0x0F, Ordering::Release);
     }
 
     /// Sets mechanical properties.
     pub fn set_mechanics(&self, hardness: f32, damping: f32) {
-        self.anvil_hardness_bits.store(hardness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.yarn_damping_bits.store(damping.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.anvil_hardness_bits
+            .store(hardness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.yarn_damping_bits
+            .store(damping.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Sets auto-wah properties.
     pub fn set_auto_wah(&self, enabled: bool, sens: f32, freq: f32, res: f32, mix: f32) {
-        self.auto_wah_flags.store(if enabled { 1 } else { 0 }, Ordering::Release);
-        self.auto_wah_sens_bits.store(sens.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.auto_wah_freq_bits.store(freq.clamp(50.0, 4000.0).to_bits(), Ordering::Release);
-        self.auto_wah_res_bits.store(res.clamp(0.5, 25.0).to_bits(), Ordering::Release);
-        self.auto_wah_mix_bits.store(mix.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.auto_wah_flags
+            .store(if enabled { 1 } else { 0 }, Ordering::Release);
+        self.auto_wah_sens_bits
+            .store(sens.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.auto_wah_freq_bits
+            .store(freq.clamp(50.0, 4000.0).to_bits(), Ordering::Release);
+        self.auto_wah_res_bits
+            .store(res.clamp(0.5, 25.0).to_bits(), Ordering::Release);
+        self.auto_wah_mix_bits
+            .store(mix.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Sets gesture progress $[0.0 ..= 1.0]$.
     pub fn set_progress(&self, progress: f32, is_active: bool) {
-        self.progress_bits.store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
 
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if is_active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -333,20 +564,34 @@ impl ClavinetBus {
 
     /// Applies a complete snapshot into this bus.
     pub fn apply_snapshot(&self, snap: &ClavinetBusSnapshot) {
-        self.articulation_raw.store(snap.articulation as u32, Ordering::Release);
-        self.pickup_mode_raw.store(snap.pickup_mode as u32, Ordering::Release);
-        self.pickup_blend_bits.store(snap.pickup_blend.to_bits(), Ordering::Release);
-        self.pickup_phase_bits.store(snap.pickup_phase_deg.to_bits(), Ordering::Release);
-        self.anvil_hardness_bits.store(snap.anvil_hardness.to_bits(), Ordering::Release);
-        self.yarn_damping_bits.store(snap.yarn_damping.to_bits(), Ordering::Release);
-        self.tone_switches_mask.store(snap.tone_switches_mask, Ordering::Release);
-        self.auto_wah_flags.store(if snap.auto_wah_enabled { 1 } else { 0 }, Ordering::Release);
-        self.auto_wah_sens_bits.store(snap.auto_wah_sensitivity.to_bits(), Ordering::Release);
-        self.auto_wah_freq_bits.store(snap.auto_wah_freq_hz.to_bits(), Ordering::Release);
-        self.auto_wah_res_bits.store(snap.auto_wah_resonance_q.to_bits(), Ordering::Release);
-        self.auto_wah_mix_bits.store(snap.auto_wah_mix.to_bits(), Ordering::Release);
-        self.progress_bits.store(snap.gesture_progress.to_bits(), Ordering::Release);
-        self.flags.store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
+        self.articulation_raw
+            .store(snap.articulation as u32, Ordering::Release);
+        self.pickup_mode_raw
+            .store(snap.pickup_mode as u32, Ordering::Release);
+        self.pickup_blend_bits
+            .store(snap.pickup_blend.to_bits(), Ordering::Release);
+        self.pickup_phase_bits
+            .store(snap.pickup_phase_deg.to_bits(), Ordering::Release);
+        self.anvil_hardness_bits
+            .store(snap.anvil_hardness.to_bits(), Ordering::Release);
+        self.yarn_damping_bits
+            .store(snap.yarn_damping.to_bits(), Ordering::Release);
+        self.tone_switches_mask
+            .store(snap.tone_switches_mask, Ordering::Release);
+        self.auto_wah_flags
+            .store(if snap.auto_wah_enabled { 1 } else { 0 }, Ordering::Release);
+        self.auto_wah_sens_bits
+            .store(snap.auto_wah_sensitivity.to_bits(), Ordering::Release);
+        self.auto_wah_freq_bits
+            .store(snap.auto_wah_freq_hz.to_bits(), Ordering::Release);
+        self.auto_wah_res_bits
+            .store(snap.auto_wah_resonance_q.to_bits(), Ordering::Release);
+        self.auto_wah_mix_bits
+            .store(snap.auto_wah_mix.to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(snap.gesture_progress.to_bits(), Ordering::Release);
+        self.flags
+            .store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
     }
 
     /// Dispatches current Clavinet bus snapshot values to central `ParamBus`.
@@ -359,7 +604,10 @@ impl ClavinetBus {
         bus.set(ParamId(base_id.0 + 4), snap.anvil_hardness);
         bus.set(ParamId(base_id.0 + 5), snap.yarn_damping);
         bus.set(ParamId(base_id.0 + 6), snap.tone_switches_mask as f32);
-        bus.set(ParamId(base_id.0 + 7), if snap.auto_wah_enabled { 1.0 } else { 0.0 });
+        bus.set(
+            ParamId(base_id.0 + 7),
+            if snap.auto_wah_enabled { 1.0 } else { 0.0 },
+        );
         bus.set(ParamId(base_id.0 + 8), snap.auto_wah_sensitivity);
         bus.set(ParamId(base_id.0 + 9), snap.auto_wah_freq_hz);
         bus.set(ParamId(base_id.0 + 10), snap.auto_wah_resonance_q);

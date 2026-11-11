@@ -193,12 +193,8 @@ impl StreamingSamplerNode {
             .name("summoner-stream-sampler-io".to_string())
             .spawn(move || {
                 while let Ok(req) = req_rx.recv() {
-                    let (samples, is_eof) = read_disk_frames(
-                        &req.path,
-                        req.start_frame,
-                        req.num_frames,
-                        req.channels,
-                    );
+                    let (samples, is_eof) =
+                        read_disk_frames(&req.path, req.start_frame, req.num_frames, req.channels);
                     let _ = resp_tx.send(DiskStreamResponse {
                         voice_id: req.voice_id,
                         start_frame: req.start_frame,
@@ -209,9 +205,7 @@ impl StreamingSamplerNode {
             })
             .ok();
 
-        let voices = (0..MAX_STREAMING_VOICES)
-            .map(StreamingVoice::new)
-            .collect();
+        let voices = (0..MAX_STREAMING_VOICES).map(StreamingVoice::new).collect();
 
         Self {
             bank,
@@ -226,11 +220,7 @@ impl StreamingSamplerNode {
     pub fn trigger_note(&mut self, note: u8, velocity: u8) {
         if let Some((region_idx, region)) = self.bank.find_region(note, velocity) {
             // Allocate a voice (idle first, else oldest)
-            let voice_id = self
-                .voices
-                .iter()
-                .position(|v| !v.active)
-                .unwrap_or(0);
+            let voice_id = self.voices.iter().position(|v| !v.active).unwrap_or(0);
 
             let semitone_diff = note as f64 - region.pitch_keycenter as f64;
             let playback_rate = 2.0f64.powf(semitone_diff / 12.0);
@@ -355,7 +345,8 @@ impl SignalProcessor for StreamingSamplerNode {
                 let (s0_l, s1_l, s0_r, s1_r) = if current_frame < region.prebuffer_frames {
                     // Prebuffer playback (in RAM)
                     let p_pos = current_frame * region.channels;
-                    let p_next = ((current_frame + 1).min(region.prebuffer_frames - 1)) * region.channels;
+                    let p_next =
+                        ((current_frame + 1).min(region.prebuffer_frames - 1)) * region.channels;
 
                     let s0_l = region.prebuffer.get(p_pos).copied().unwrap_or(0.0);
                     let s1_l = region.prebuffer.get(p_next).copied().unwrap_or(s0_l);
@@ -522,6 +513,9 @@ mod tests {
 
         // Verify audio was generated immediately from the prebuffer with zero latency
         let energy: f32 = left.iter().map(|s| s * s).sum();
-        assert!(energy > 0.1, "Expected immediate audio energy from prebuffer");
+        assert!(
+            energy > 0.1,
+            "Expected immediate audio energy from prebuffer"
+        );
     }
 }

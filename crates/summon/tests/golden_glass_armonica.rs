@@ -19,9 +19,7 @@ use summoner_dsp::traits::SignalProcessor;
 use summoner_gui::views::crystal_resonator_view::CrystalResonatorView;
 #[cfg(feature = "gui")]
 use summoner_gui::views::glass_armonica_view::GlassArmonicaView;
-use summoner_sequencer::glass_gesture::{
-    GlassGestureEngine, GlassGesturePattern,
-};
+use summoner_sequencer::glass_gesture::{GlassGestureEngine, GlassGesturePattern};
 
 const BLOCK_SIZE: usize = 64;
 
@@ -171,7 +169,9 @@ fn test_golden_glass_armonica_deterministic() {
             assert!(chal_s.is_finite());
             assert!(gobl_s.is_finite());
 
-            assert!((-1.0..=1.0).contains(&out_frank_l[i]) && (-1.0..=1.0).contains(&out_frank_r[i]));
+            assert!(
+                (-1.0..=1.0).contains(&out_frank_l[i]) && (-1.0..=1.0).contains(&out_frank_r[i])
+            );
             assert!((-1.0..=1.0).contains(&out_mesm_l[i]) && (-1.0..=1.0).contains(&out_mesm_r[i]));
             assert!((-1.0..=1.0).contains(&out_moza_l[i]) && (-1.0..=1.0).contains(&out_moza_r[i]));
             assert!((-1.0..=1.0).contains(&out_ethe_l[i]) && (-1.0..=1.0).contains(&out_ethe_r[i]));
@@ -235,15 +235,24 @@ fn test_golden_glass_armonica_friction_and_doublets_deterministic() {
 
     bowl.set_water_fill_level(0.3);
     let f0_low = bowl.modes[0].freq_hz;
-    assert!(f0_low < f0_dry, "Water fill 0.3 must reduce fundamental frequency");
+    assert!(
+        f0_low < f0_dry,
+        "Water fill 0.3 must reduce fundamental frequency"
+    );
 
     bowl.set_water_fill_level(0.7);
     let f0_mid = bowl.modes[0].freq_hz;
-    assert!(f0_mid < f0_low, "Water fill 0.7 must further reduce frequency");
+    assert!(
+        f0_mid < f0_low,
+        "Water fill 0.7 must further reduce frequency"
+    );
 
     bowl.set_water_fill_level(1.0);
     let f0_full = bowl.modes[0].freq_hz;
-    assert!(f0_full < f0_mid, "Water fill 1.0 must produce lowest frequency");
+    assert!(
+        f0_full < f0_mid,
+        "Water fill 1.0 must produce lowest frequency"
+    );
 
     // 3. Stribeck wet-finger stick-slip excitation energy conservation & decay
     let mut armonica = GlassArmonica::new(48000);
@@ -255,7 +264,10 @@ fn test_golden_glass_armonica_friction_and_doublets_deterministic() {
         let (s_l, s_r) = armonica.process_stereo_frame();
         max_excited_amp = max_excited_amp.max(s_l.abs()).max(s_r.abs());
     }
-    assert!(max_excited_amp > 0.0, "Rubbed armonica bowl must generate audio");
+    assert!(
+        max_excited_amp > 0.0,
+        "Rubbed armonica bowl must generate audio"
+    );
 
     // Release finger contact
     armonica.release_note(60);
@@ -282,12 +294,27 @@ fn test_glass_armonica_gesture_dispatch_and_param_bus_roundtrip() {
     let bus = GlassArmonicaBus::new();
 
     for pattern in [
-        GlassGesturePattern::FranklinAuthenticContinuous { phrase_length_beats: 4.0 },
-        GlassGesturePattern::MesmerMagneticHealing { phrase_length_beats: 4.0, water_swell_depth: 0.35 },
-        GlassGesturePattern::MozartVirtuosoAdagio { phrase_length_beats: 4.0 },
-        GlassGesturePattern::EtherealBorosilicateSwell { phrase_length_beats: 4.0 },
-        GlassGesturePattern::WaterTunedCrystalGlissando { phrase_length_beats: 6.0, max_water_level: 0.8 },
-        GlassGesturePattern::CrystalSingingBowlMeditation { phrase_length_beats: 4.0, mallet_interval_beats: 1.0 },
+        GlassGesturePattern::FranklinAuthenticContinuous {
+            phrase_length_beats: 4.0,
+        },
+        GlassGesturePattern::MesmerMagneticHealing {
+            phrase_length_beats: 4.0,
+            water_swell_depth: 0.35,
+        },
+        GlassGesturePattern::MozartVirtuosoAdagio {
+            phrase_length_beats: 4.0,
+        },
+        GlassGesturePattern::EtherealBorosilicateSwell {
+            phrase_length_beats: 4.0,
+        },
+        GlassGesturePattern::WaterTunedCrystalGlissando {
+            phrase_length_beats: 6.0,
+            max_water_level: 0.8,
+        },
+        GlassGesturePattern::CrystalSingingBowlMeditation {
+            phrase_length_beats: 4.0,
+            mallet_interval_beats: 1.0,
+        },
     ] {
         let engine = GlassGestureEngine::with_pattern(pattern);
 
@@ -303,7 +330,9 @@ fn test_glass_armonica_gesture_dispatch_and_param_bus_roundtrip() {
             assert!(snap.q_scale > 0.0);
             assert!(snap.master_gain > 0.0);
 
-            let bus_speed = param_bus.get(summoner_core::param_bus::ParamId(GLASS_ARMONICA_BASE_PARAM_ID.0 + 1));
+            let bus_speed = param_bus.get(summoner_core::param_bus::ParamId(
+                GLASS_ARMONICA_BASE_PARAM_ID.0 + 1,
+            ));
             assert!(bus_speed.is_some());
             assert!((bus_speed.unwrap() - snap.spindle_speed_rad_s).abs() < 1e-4);
         }
@@ -323,7 +352,11 @@ fn test_glass_armonica_gui_views_headless_snapshots() {
     ];
     for path in armonica_png_paths {
         let res = armonica_view.render_snapshot_png(path, 800, 520);
-        assert!(res.is_ok(), "Failed to render GlassArmonicaView PNG to {}", path);
+        assert!(
+            res.is_ok(),
+            "Failed to render GlassArmonicaView PNG to {}",
+            path
+        );
     }
 
     let crystal_view = CrystalResonatorView::new();
@@ -336,6 +369,10 @@ fn test_glass_armonica_gui_views_headless_snapshots() {
     ];
     for path in crystal_png_paths {
         let res = crystal_view.render_snapshot_png(path, 800, 520);
-        assert!(res.is_ok(), "Failed to render CrystalResonatorView PNG to {}", path);
+        assert!(
+            res.is_ok(),
+            "Failed to render CrystalResonatorView PNG to {}",
+            path
+        );
     }
 }

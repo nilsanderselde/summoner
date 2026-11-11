@@ -7,9 +7,13 @@
 // (at your option) any later version.
 
 use summoner_core::graph::{Edge, NodeGraph};
+use summoner_core::node::NodeEvent;
 use summoner_core::node::{AudioNode, GainNode};
+use summoner_core::track::ScheduledEvent;
 use summoner_core::track::Track;
-use summoner_dsp::filters::{FilterComb, FilterLadder, FilterSVF, DcBlockFilter, LowCutFilter, HighCutFilter};
+use summoner_dsp::filters::{
+    DcBlockFilter, FilterComb, FilterLadder, FilterSVF, HighCutFilter, LowCutFilter,
+};
 use summoner_dsp::math::VCA;
 use summoner_dsp::modulators::EnvADSR;
 use summoner_dsp::oscillators::{NoiseGen, OscPulse, OscSaw, OscSine, OscTriangle, OscWavetable};
@@ -19,8 +23,6 @@ use summoner_dsp::{
     CompressorNode, EffectChorus, EffectFlanger, EffectPhaser, FilterBiquad, FrequencyShifter,
     GranularSynthNode, LimiterNode, LufsMeterNode, RingModulator,
 };
-use summoner_core::node::NodeEvent;
-use summoner_core::track::ScheduledEvent;
 use summoner_project::schema::{NodeConfig, ProjectConfig};
 
 use summoner_dsp::{
@@ -37,7 +39,10 @@ impl NodeFactory {
     }
 
     /// Create a node whose internal state is sized for sample_rate.
-    pub fn create_node_with_rate(config: &NodeConfig, sample_rate: u32) -> Option<Box<dyn AudioNode>> {
+    pub fn create_node_with_rate(
+        config: &NodeConfig,
+        sample_rate: u32,
+    ) -> Option<Box<dyn AudioNode>> {
         let params = &config.params;
         match config.kind.as_str() {
             "OscSaw" => Some(Box::new(ProcessorNodeAdapter::new(OscSaw::new(
@@ -76,7 +81,10 @@ impl NodeFactory {
                     .copied()
                     .unwrap_or(2.0);
                 Some(Box::new(ProcessorNodeAdapter::new(
-                    summoner_dsp::modulators::LFO::new(freq, summoner_dsp::modulators::LfoShape::Sine),
+                    summoner_dsp::modulators::LFO::new(
+                        freq,
+                        summoner_dsp::modulators::LfoShape::Sine,
+                    ),
                 )))
             }
             "MathAdd" => Some(Box::new(ProcessorNodeAdapter::new(
@@ -290,7 +298,10 @@ impl NodeFactory {
             }
             "TubeSaturationNode" | "TubeSaturation" => {
                 let drive = *params.get("drive").unwrap_or(&2.5);
-                let bias = *params.get("bias").or_else(|| params.get("bias_voltage_v")).unwrap_or(&-1.85);
+                let bias = *params
+                    .get("bias")
+                    .or_else(|| params.get("bias_voltage_v"))
+                    .unwrap_or(&-1.85);
                 let mut node = summoner_dsp::TubeSaturationNode::new(drive, bias);
                 if let Some(&topo) = params.get("topology") {
                     match topo.round() as i32 {
@@ -300,7 +311,10 @@ impl NodeFactory {
                         _ => node.topology = summoner_dsp::TubeTopology::CleanModern,
                     }
                 }
-                if let Some(&plate) = params.get("plate_voltage").or_else(|| params.get("plate_voltage_v")) {
+                if let Some(&plate) = params
+                    .get("plate_voltage")
+                    .or_else(|| params.get("plate_voltage_v"))
+                {
                     node.plate_voltage_v = plate;
                 }
                 if let Some(&sag) = params.get("sag_compression") {
@@ -321,7 +335,10 @@ impl NodeFactory {
                 if let Some(&warmth) = params.get("warmth") {
                     node.warmth = warmth;
                 }
-                if let Some(&iron) = params.get("transformer_iron").or_else(|| params.get("iron")) {
+                if let Some(&iron) = params
+                    .get("transformer_iron")
+                    .or_else(|| params.get("iron"))
+                {
                     node.transformer_iron = iron;
                 }
                 if let Some(&crosstalk) = params.get("crosstalk") {
@@ -509,10 +526,15 @@ pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> Nod
 
     if let Some(track) = project.tracks.first() {
         for nc in &track.nodes {
-            if let Some(node) = NodeFactory::create_node_with_rate(nc, project.transport.sample_rate) {
+            if let Some(node) =
+                NodeFactory::create_node_with_rate(nc, project.transport.sample_rate)
+            {
                 graph.add_node(node);
             } else {
-                eprintln!("Warning: Unknown node kind '{}'; using passthrough", nc.kind);
+                eprintln!(
+                    "Warning: Unknown node kind '{}'; using passthrough",
+                    nc.kind
+                );
                 graph.add_node(Box::new(summoner_core::node::PassthroughNode));
             }
         }
@@ -559,7 +581,11 @@ fn build_schedule(
     }];
     let mut has_notes = false;
     for seq in tc.sequence.iter().chain(tc.clips.iter()) {
-        let stretch = if seq.time_stretch > 0.0 { seq.time_stretch } else { 1.0 };
+        let stretch = if seq.time_stretch > 0.0 {
+            seq.time_stretch
+        } else {
+            1.0
+        };
         let effective_step_division = seq.step_division * stretch;
         let total_seq_beats = seq.steps.len() as f64 * effective_step_division;
 
@@ -671,11 +697,7 @@ fn parse_node_port(spec: &str) -> Option<(usize, usize)> {
         let p = port_str.trim().parse::<usize>().ok()?;
         Some((n, p))
     } else {
-        let n = spec
-            .trim()
-            .trim_start_matches('n')
-            .parse::<usize>()
-            .ok()?;
+        let n = spec.trim().trim_start_matches('n').parse::<usize>().ok()?;
         Some((n, 0))
     }
 }
@@ -730,7 +752,8 @@ impl PdcDelayBuffer {
         for i in 0..len {
             let in_l = left[i];
             let in_r = right[i];
-            let read_pos = (self.write_pos + MAX_PDC_DELAY_SAMPLES - self.delay_samples) % MAX_PDC_DELAY_SAMPLES;
+            let read_pos = (self.write_pos + MAX_PDC_DELAY_SAMPLES - self.delay_samples)
+                % MAX_PDC_DELAY_SAMPLES;
             left[i] = self.buffer_l[read_pos];
             right[i] = self.buffer_r[read_pos];
             self.buffer_l[self.write_pos] = in_l;
@@ -857,11 +880,8 @@ impl GraphRunner {
             });
 
             if !tc.connections.is_empty() {
-                let mut dag = NodeGraph::new(
-                    tc.name.clone(),
-                    MAX_RUNNER_BLOCK_SIZE,
-                    tc.channels.max(2),
-                );
+                let mut dag =
+                    NodeGraph::new(tc.name.clone(), MAX_RUNNER_BLOCK_SIZE, tc.channels.max(2));
                 dag.parallel_execution = false;
                 for nc in &tc.nodes {
                     if let Some(node) =
@@ -913,8 +933,12 @@ impl GraphRunner {
             } else {
                 None
             };
-            let low_cut = tc.low_cut_hz.map(|hz| [LowCutFilter::new(hz), LowCutFilter::new(hz)]);
-            let high_cut = tc.high_cut_hz.map(|hz| [HighCutFilter::new(hz), HighCutFilter::new(hz)]);
+            let low_cut = tc
+                .low_cut_hz
+                .map(|hz| [LowCutFilter::new(hz), LowCutFilter::new(hz)]);
+            let high_cut = tc
+                .high_cut_hz
+                .map(|hz| [HighCutFilter::new(hz), HighCutFilter::new(hz)]);
             track_filters.push(TrackFilters {
                 dc_block,
                 low_cut,
@@ -923,7 +947,11 @@ impl GraphRunner {
         }
 
         // Calculate PDC delays per track
-        let max_lat = tracks.iter().map(|t| t.total_latency_samples()).max().unwrap_or(0);
+        let max_lat = tracks
+            .iter()
+            .map(|t| t.total_latency_samples())
+            .max()
+            .unwrap_or(0);
         let mut pdc_buffers = Vec::with_capacity(tracks.len());
         for t in &tracks {
             let lat = t.total_latency_samples();
@@ -1017,7 +1045,8 @@ impl GraphRunner {
                         continue;
                     }
                     let matches_target = vca_meta.vca_target_ids.contains(&t_meta.id);
-                    let matches_group = vca_meta.vca_group.is_some() && vca_meta.vca_group == t_meta.vca_group;
+                    let matches_group =
+                        vca_meta.vca_group.is_some() && vca_meta.vca_group == t_meta.vca_group;
                     if matches_target || matches_group {
                         vca_gains[t_idx] *= vca_gain;
                         if is_v_muted {
@@ -1046,8 +1075,11 @@ impl GraphRunner {
                 }
 
                 let track = &mut self.tracks[track_idx];
-                let is_mute_grouped = meta.mute_group.is_some_and(|g| muted_groups[(g as usize) % 32]);
-                let is_muted = track.muted || is_mute_grouped || (track_idx < 128 && vca_muted[track_idx]);
+                let is_mute_grouped = meta
+                    .mute_group
+                    .is_some_and(|g| muted_groups[(g as usize) % 32]);
+                let is_muted =
+                    track.muted || is_mute_grouped || (track_idx < 128 && vca_muted[track_idx]);
 
                 if any_soloed && !track.soloed && !meta.solo_safe {
                     continue;
@@ -1110,11 +1142,12 @@ impl GraphRunner {
                     let in_l = &self.track_in_buffers[track_idx][0][..block_size];
                     let in_r = &self.track_in_buffers[track_idx][1][..block_size];
                     let input_slices: [&[f32]; 2] = [in_l, in_r];
-                    let ins_param = if in_l.iter().any(|&s| s != 0.0) || in_r.iter().any(|&s| s != 0.0) {
-                        Some(&input_slices[..])
-                    } else {
-                        None
-                    };
+                    let ins_param =
+                        if in_l.iter().any(|&s| s != 0.0) || in_r.iter().any(|&s| s != 0.0) {
+                            Some(&input_slices[..])
+                        } else {
+                            None
+                        };
 
                     track.process_with_input(
                         block_size,
@@ -1132,14 +1165,18 @@ impl GraphRunner {
                         }
                         if let Some(ref mut lcf) = tf.low_cut {
                             for i in 0..block_size {
-                                self.scratch_l[i] = lcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
-                                self.scratch_r[i] = lcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                                self.scratch_l[i] =
+                                    lcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
+                                self.scratch_r[i] =
+                                    lcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
                             }
                         }
                         if let Some(ref mut hcf) = tf.high_cut {
                             for i in 0..block_size {
-                                self.scratch_l[i] = hcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
-                                self.scratch_r[i] = hcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                                self.scratch_l[i] =
+                                    hcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
+                                self.scratch_r[i] =
+                                    hcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
                             }
                         }
                     }
@@ -1152,11 +1189,17 @@ impl GraphRunner {
                 );
 
                 // Cache post-PDC audio for sidechain taps
-                self.track_buffers[track_idx][0][..block_size].copy_from_slice(&self.scratch_l[..block_size]);
-                self.track_buffers[track_idx][1][..block_size].copy_from_slice(&self.scratch_r[..block_size]);
+                self.track_buffers[track_idx][0][..block_size]
+                    .copy_from_slice(&self.scratch_l[..block_size]);
+                self.track_buffers[track_idx][1][..block_size]
+                    .copy_from_slice(&self.scratch_r[..block_size]);
 
                 let strip_db = track.input_gain_db + track.output_gain_db;
-                let vca_mult = if track_idx < 128 { vca_gains[track_idx] } else { 1.0 };
+                let vca_mult = if track_idx < 128 {
+                    vca_gains[track_idx]
+                } else {
+                    1.0
+                };
                 let strip_gain = 10.0f32.powf(strip_db / 20.0)
                     * if track.phase_flip { -1.0 } else { 1.0 }
                     * master_trim;
@@ -1171,22 +1214,29 @@ impl GraphRunner {
                     if send.muted || send.amount <= 0.0 {
                         continue;
                     }
-                    if let Some(target_idx) = self.track_meta.iter().position(|m| m.id == send.target_track_id) {
+                    if let Some(target_idx) = self
+                        .track_meta
+                        .iter()
+                        .position(|m| m.id == send.target_track_id)
+                    {
                         let (send_l_gain, send_r_gain) = if send.is_pre_fader {
                             (send.amount, send.amount)
                         } else {
                             (left_gain * send.amount, right_gain * send.amount)
                         };
                         for i in 0..block_size {
-                            self.track_in_buffers[target_idx][0][i] += self.scratch_l[i] * send_l_gain;
-                            self.track_in_buffers[target_idx][1][i] += self.scratch_r[i] * send_r_gain;
+                            self.track_in_buffers[target_idx][0][i] +=
+                                self.scratch_l[i] * send_l_gain;
+                            self.track_in_buffers[target_idx][1][i] +=
+                                self.scratch_r[i] * send_r_gain;
                         }
                     }
                 }
 
                 // Legacy send_level routing to return track if present
                 if meta.legacy_send_level > 0.0 {
-                    if let Some(target_idx) = self.track_meta.iter().position(|m| m.is_return_track) {
+                    if let Some(target_idx) = self.track_meta.iter().position(|m| m.is_return_track)
+                    {
                         let s_l = left_gain * meta.legacy_send_level;
                         let s_r = right_gain * meta.legacy_send_level;
                         for i in 0..block_size {
@@ -1199,10 +1249,16 @@ impl GraphRunner {
                 // Subgroup Bus routing or direct Master mix
                 let mut routed_to_bus = false;
                 if let Some(ref bus_name) = meta.bus_target {
-                    if let Some(target_idx) = self.track_meta.iter().position(|m| m.name == *bus_name || m.id.to_string() == *bus_name) {
+                    if let Some(target_idx) = self
+                        .track_meta
+                        .iter()
+                        .position(|m| m.name == *bus_name || m.id.to_string() == *bus_name)
+                    {
                         for i in 0..block_size {
-                            self.track_in_buffers[target_idx][0][i] += self.scratch_l[i] * left_gain;
-                            self.track_in_buffers[target_idx][1][i] += self.scratch_r[i] * right_gain;
+                            self.track_in_buffers[target_idx][0][i] +=
+                                self.scratch_l[i] * left_gain;
+                            self.track_in_buffers[target_idx][1][i] +=
+                                self.scratch_r[i] * right_gain;
                         }
                         routed_to_bus = true;
                     }
@@ -1243,8 +1299,12 @@ impl GraphRunner {
                 let r = if num_out > 1 { out_buffers[1][i] } else { l };
                 let abs_l = l.abs();
                 let abs_r = r.abs();
-                if abs_l > max_l { max_l = abs_l; }
-                if abs_r > max_r { max_r = abs_r; }
+                if abs_l > max_l {
+                    max_l = abs_l;
+                }
+                if abs_r > max_r {
+                    max_r = abs_r;
+                }
                 sum_sq_l += l * l;
                 sum_sq_r += r * r;
                 sum_lr += l * r;
@@ -1252,10 +1312,26 @@ impl GraphRunner {
 
             let rms_l = (sum_sq_l / block_size as f32).sqrt();
             let rms_r = (sum_sq_r / block_size as f32).sqrt();
-            let peak_l_db = if max_l > 1e-6 { 20.0 * max_l.log10() } else { -120.0 };
-            let peak_r_db = if max_r > 1e-6 { 20.0 * max_r.log10() } else { -120.0 };
-            let rms_l_db = if rms_l > 1e-6 { 20.0 * rms_l.log10() } else { -120.0 };
-            let rms_r_db = if rms_r > 1e-6 { 20.0 * rms_r.log10() } else { -120.0 };
+            let peak_l_db = if max_l > 1e-6 {
+                20.0 * max_l.log10()
+            } else {
+                -120.0
+            };
+            let peak_r_db = if max_r > 1e-6 {
+                20.0 * max_r.log10()
+            } else {
+                -120.0
+            };
+            let rms_l_db = if rms_l > 1e-6 {
+                20.0 * rms_l.log10()
+            } else {
+                -120.0
+            };
+            let rms_r_db = if rms_r > 1e-6 {
+                20.0 * rms_r.log10()
+            } else {
+                -120.0
+            };
 
             let denom = (sum_sq_l * sum_sq_r).sqrt();
             let phase_corr = if denom > 1e-9 {
@@ -1264,17 +1340,29 @@ impl GraphRunner {
                 1.0
             };
 
-            self.true_peak_meter.process_block(&out_buffers[0][..block_size]);
+            self.true_peak_meter
+                .process_block(&out_buffers[0][..block_size]);
             if num_out > 1 {
-                self.true_peak_meter.process_block(&out_buffers[1][..block_size]);
+                self.true_peak_meter
+                    .process_block(&out_buffers[1][..block_size]);
             }
 
             self.lufs_meter.process_block(&out_buffers[0][..block_size]);
 
             self.telemetry = MasterMeterTelemetry {
                 channels: [
-                    ChannelMeter { peak: max_l, peak_db: peak_l_db, rms: rms_l, rms_db: rms_l_db },
-                    ChannelMeter { peak: max_r, peak_db: peak_r_db, rms: rms_r, rms_db: rms_r_db },
+                    ChannelMeter {
+                        peak: max_l,
+                        peak_db: peak_l_db,
+                        rms: rms_l,
+                        rms_db: rms_l_db,
+                    },
+                    ChannelMeter {
+                        peak: max_r,
+                        peak_db: peak_r_db,
+                        rms: rms_r,
+                        rms_db: rms_r_db,
+                    },
                 ],
                 true_peak_db: self.true_peak_meter.max_true_peak_db,
                 momentary_lufs: self.lufs_meter.momentary_lufs,
@@ -1295,8 +1383,18 @@ mod tests {
     fn test_sequence_clip_modifiers_reversed_pitch_time_stretch_and_fades() {
         use summoner_project::schema::{SequenceConfig, TrackConfig, TrackerStepConfig};
         let mut tc = TrackConfig::default();
-        let step0 = TrackerStepConfig { note: 60.0, velocity: 1.0, active: true, ..Default::default() };
-        let step1 = TrackerStepConfig { note: 72.0, velocity: 1.0, active: true, ..Default::default() };
+        let step0 = TrackerStepConfig {
+            note: 60.0,
+            velocity: 1.0,
+            active: true,
+            ..Default::default()
+        };
+        let step1 = TrackerStepConfig {
+            note: 72.0,
+            velocity: 1.0,
+            active: true,
+            ..Default::default()
+        };
 
         let seq = SequenceConfig {
             start_beat: 0.0,
@@ -1313,10 +1411,13 @@ mod tests {
         let sched = build_schedule(&tc, &[], 44100, 120.0);
         // Reversed: step1 (note 72 + 2 = 74) is played first at frame 0
         // step0 (note 60 + 2 = 62) is played second at beat 2.0 (frame 44100)
-        let note_ons: Vec<_> = sched.iter().filter_map(|s| match s.event {
-            NodeEvent::NoteOn { note, velocity } => Some((s.frame, note, velocity)),
-            _ => None,
-        }).collect();
+        let note_ons: Vec<_> = sched
+            .iter()
+            .filter_map(|s| match s.event {
+                NodeEvent::NoteOn { note, velocity } => Some((s.frame, note, velocity)),
+                _ => None,
+            })
+            .collect();
 
         assert_eq!(note_ons.len(), 2);
         assert_eq!(note_ons[0].0, 0);
@@ -1342,8 +1443,15 @@ mod tests {
             phase: f32,
         }
         impl AudioNode for DcAndHighFreqNode {
-            fn name(&self) -> &str { "DcAndHighFreq" }
-            fn process(&mut self, _in: &[&[summoner_core::audio::Sample]], out: &mut [&mut [summoner_core::audio::Sample]], ctx: &summoner_core::node::ProcessContext) {
+            fn name(&self) -> &str {
+                "DcAndHighFreq"
+            }
+            fn process(
+                &mut self,
+                _in: &[&[summoner_core::audio::Sample]],
+                out: &mut [&mut [summoner_core::audio::Sample]],
+                ctx: &summoner_core::node::ProcessContext,
+            ) {
                 for sample in out[0].iter_mut() {
                     let freq = 5000.0f32;
                     let s = (self.phase * std::f32::consts::TAU).sin();
@@ -1365,7 +1473,11 @@ mod tests {
         }
 
         let dc_avg: f32 = out_l.iter().sum::<f32>() / out_l.len() as f32;
-        assert!(dc_avg.abs() < 0.1, "DC block filter failed to remove DC offset, avg: {}", dc_avg);
+        assert!(
+            dc_avg.abs() < 0.1,
+            "DC block filter failed to remove DC offset, avg: {}",
+            dc_avg
+        );
     }
 
     #[test]
@@ -1661,14 +1773,12 @@ mod tests {
             name: "Synth".to_string(),
             gain: 0.5,
             send_to_master: false, // Don't send directly to master so we only hear the return
-            sends: vec![
-                TrackSendConfig {
-                    target_track_id: 2,
-                    amount: 1.0,
-                    is_pre_fader: false,
-                    muted: false,
-                }
-            ],
+            sends: vec![TrackSendConfig {
+                target_track_id: 2,
+                amount: 1.0,
+                is_pre_fader: false,
+                muted: false,
+            }],
             ..Default::default()
         };
         t1.nodes.push(NodeConfig {

@@ -13,7 +13,9 @@ use summoner_dsp::multiband_dynamics::{LinkwitzRiley4BandCrossover, MultibandDyn
 use summoner_dsp::traits::SignalProcessor;
 #[cfg(feature = "gui")]
 use summoner_gui::views::multiband_visualizer::MultibandVisualizerView;
-use summoner_sequencer::clip_matrix::{ClipMatrix, FollowAction, FollowActionType, LaunchQuantize, SlotState};
+use summoner_sequencer::clip_matrix::{
+    ClipMatrix, FollowAction, FollowActionType, LaunchQuantize, SlotState,
+};
 
 const BLOCK_SIZE: usize = 64;
 

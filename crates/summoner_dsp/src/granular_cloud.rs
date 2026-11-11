@@ -335,8 +335,8 @@ impl GranularCloudNode {
         let pan_r = pan_angle.sin();
 
         // Reverse playback check
-        let reverse = self.reverse_probability > 0.0
-            && self.next_prng_unipolar() < self.reverse_probability;
+        let reverse =
+            self.reverse_probability > 0.0 && self.next_prng_unipolar() < self.reverse_probability;
 
         let window_type = self.window_type;
         let tukey_alpha = self.tukey_alpha;
@@ -533,7 +533,10 @@ impl SignalProcessor for GranularCloudNode {
                     (grain.start_pos_samples + read_offset + buf_len) % buf_len
                 };
 
-                let sample = read_interpolated_sample_from_buffers(sample_buf_ref, live_buf_ref, read_pos) * env * grain.amplitude;
+                let sample =
+                    read_interpolated_sample_from_buffers(sample_buf_ref, live_buf_ref, read_pos)
+                        * env
+                        * grain.amplitude;
                 grain_out_l += sample * grain.pan_l;
                 grain_out_r += sample * grain.pan_r;
 
@@ -542,8 +545,10 @@ impl SignalProcessor for GranularCloudNode {
 
             // 4. Apply feedback into circular buffer if active
             if self.feedback > 0.0 && self.record_live_input {
-                let write_idx = (self.capture_write_pos + CAPTURE_BUFFER_SIZE - 1) % CAPTURE_BUFFER_SIZE;
-                let fb_sample = ((grain_out_l + grain_out_r) * 0.5 * self.feedback).clamp(-1.0, 1.0);
+                let write_idx =
+                    (self.capture_write_pos + CAPTURE_BUFFER_SIZE - 1) % CAPTURE_BUFFER_SIZE;
+                let fb_sample =
+                    ((grain_out_l + grain_out_r) * 0.5 * self.feedback).clamp(-1.0, 1.0);
                 self.live_capture_buffer[write_idx] += fb_sample;
             }
 
@@ -600,9 +605,24 @@ mod tests {
             let mid = win.evaluate(0.5, 0.5);
             let end = win.evaluate(1.0, 0.5);
 
-            assert!((0.0..=1.0).contains(&start), "{:?} start out of bounds: {}", win, start);
-            assert!((0.5..=1.05).contains(&mid), "{:?} mid out of bounds: {}", win, mid);
-            assert!((0.0..=1.0).contains(&end), "{:?} end out of bounds: {}", win, end);
+            assert!(
+                (0.0..=1.0).contains(&start),
+                "{:?} start out of bounds: {}",
+                win,
+                start
+            );
+            assert!(
+                (0.5..=1.05).contains(&mid),
+                "{:?} mid out of bounds: {}",
+                win,
+                mid
+            );
+            assert!(
+                (0.0..=1.0).contains(&end),
+                "{:?} end out of bounds: {}",
+                win,
+                end
+            );
         }
     }
 

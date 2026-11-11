@@ -120,16 +120,18 @@ fn main() {
             };
             let path = Path::new(plugin_path_str);
             let mut blacklist = summoner_dsp::plugin_scanner::PluginBlacklist::new();
-            match summoner_dsp::plugin_scanner::PluginProcessSandbox::scan_isolated(path, 5000, &mut blacklist) {
-                Ok(desc) => {
-                    match serde_json::to_string(&desc) {
-                        Ok(json) => println!("{}", json),
-                        Err(e) => {
-                            eprintln!("Serialization error: {}", e);
-                            process::exit(1);
-                        }
+            match summoner_dsp::plugin_scanner::PluginProcessSandbox::scan_isolated(
+                path,
+                5000,
+                &mut blacklist,
+            ) {
+                Ok(desc) => match serde_json::to_string(&desc) {
+                    Ok(json) => println!("{}", json),
+                    Err(e) => {
+                        eprintln!("Serialization error: {}", e);
+                        process::exit(1);
                     }
-                }
+                },
                 Err(report) => {
                     eprintln!("Plugin scan error: {:?}", report);
                     process::exit(report.exit_code);
@@ -385,7 +387,9 @@ fn main() {
             let dir_str = match args.get(2) {
                 Some(d) => d.as_str(),
                 None => {
-                    eprintln!("Error: Project directory is required. Usage: summon undo <PROJECT_DIR>");
+                    eprintln!(
+                        "Error: Project directory is required. Usage: summon undo <PROJECT_DIR>"
+                    );
                     process::exit(1);
                 }
             };
@@ -416,7 +420,9 @@ fn main() {
             let dir_str = match args.get(2) {
                 Some(d) => d.as_str(),
                 None => {
-                    eprintln!("Error: Project directory is required. Usage: summon redo <PROJECT_DIR>");
+                    eprintln!(
+                        "Error: Project directory is required. Usage: summon redo <PROJECT_DIR>"
+                    );
                     process::exit(1);
                 }
             };
@@ -805,12 +811,23 @@ fn main() {
             }
 
             if let Some(lufs) = target_lufs {
-                let gain_applied = summoner_project::export::normalize_buffer_lufs(&mut all_interleaved, lufs, -0.3);
-                println!("Applied loudness normalization: {:.1} dB gain (target: {:.1} LUFS)", gain_applied, lufs);
+                let gain_applied = summoner_project::export::normalize_buffer_lufs(
+                    &mut all_interleaved,
+                    lufs,
+                    -0.3,
+                );
+                println!(
+                    "Applied loudness normalization: {:.1} dB gain (target: {:.1} LUFS)",
+                    gain_applied, lufs
+                );
             }
 
             if dither_mode != summoner_project::export::DitherMode::None {
-                summoner_project::export::apply_dither_buffer(&mut all_interleaved, summoner_project::export::BitDepth::Bit16, dither_mode);
+                summoner_project::export::apply_dither_buffer(
+                    &mut all_interleaved,
+                    summoner_project::export::BitDepth::Bit16,
+                    dither_mode,
+                );
                 println!("Applied export dithering: {:?}", dither_mode);
             }
 
@@ -1455,7 +1472,8 @@ fn main() {
                 preset.settings.sample_rate,
                 None,
             );
-            match manager.export_stems(&preset, &project, Path::new(out_dir), Some(&rendered_stems)) {
+            match manager.export_stems(&preset, &project, Path::new(out_dir), Some(&rendered_stems))
+            {
                 Ok(report) => {
                     println!("Stem export finished successfully!");
                     println!("  Preset used: {}", report.preset_used);

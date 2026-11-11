@@ -21,9 +21,7 @@ use summoner_dsp::trompette_bridge::{
 use summoner_gui::views::hurdy_gurdy_view::HurdyGurdyView;
 #[cfg(feature = "gui")]
 use summoner_gui::views::trompette_bridge_view::TrompetteBridgeView;
-use summoner_sequencer::hurdy_gurdy_gesture::{
-    HurdyGurdyGestureEngine, HurdyGurdyGesturePattern,
-};
+use summoner_sequencer::hurdy_gurdy_gesture::{HurdyGurdyGestureEngine, HurdyGurdyGesturePattern};
 
 const BLOCK_SIZE: usize = 64;
 
@@ -156,10 +154,18 @@ fn test_golden_hurdy_gurdy_deterministic() {
             assert!(out_goth_l[i].is_finite() && out_goth_r[i].is_finite());
             assert!(out_mod_l[i].is_finite() && out_mod_r[i].is_finite());
 
-            assert!((-1.0..=1.0).contains(&out_bourb_l[i]) && (-1.0..=1.0).contains(&out_bourb_r[i]));
-            assert!((-1.0..=1.0).contains(&out_symph_l[i]) && (-1.0..=1.0).contains(&out_symph_r[i]));
-            assert!((-1.0..=1.0).contains(&out_baroq_l[i]) && (-1.0..=1.0).contains(&out_baroq_r[i]));
-            assert!((-1.0..=1.0).contains(&out_auver_l[i]) && (-1.0..=1.0).contains(&out_auver_r[i]));
+            assert!(
+                (-1.0..=1.0).contains(&out_bourb_l[i]) && (-1.0..=1.0).contains(&out_bourb_r[i])
+            );
+            assert!(
+                (-1.0..=1.0).contains(&out_symph_l[i]) && (-1.0..=1.0).contains(&out_symph_r[i])
+            );
+            assert!(
+                (-1.0..=1.0).contains(&out_baroq_l[i]) && (-1.0..=1.0).contains(&out_baroq_r[i])
+            );
+            assert!(
+                (-1.0..=1.0).contains(&out_auver_l[i]) && (-1.0..=1.0).contains(&out_auver_r[i])
+            );
             assert!((-1.0..=1.0).contains(&out_goth_l[i]) && (-1.0..=1.0).contains(&out_goth_r[i]));
             assert!((-1.0..=1.0).contains(&out_mod_l[i]) && (-1.0..=1.0).contains(&out_mod_r[i]));
 
@@ -204,7 +210,10 @@ fn test_golden_hurdy_gurdy_chien_and_tangent_deterministic() {
             assert!(body_exc >= 0.0);
         }
 
-        assert!(total_contact_force > 0.0, "Chien should register contacts under excitation");
+        assert!(
+            total_contact_force > 0.0,
+            "Chien should register contacts under excitation"
+        );
     }
 
     // 2. Tangent key action pitch accuracy
@@ -229,7 +238,10 @@ fn test_golden_hurdy_gurdy_chien_and_tangent_deterministic() {
         soundbox.process(0.0);
     }
     let decayed = soundbox.process(0.0);
-    assert!(decayed.abs() < init_resp.abs(), "Soundbox resonance must decay");
+    assert!(
+        decayed.abs() < init_resp.abs(),
+        "Soundbox resonance must decay"
+    );
 }
 
 #[test]
@@ -239,12 +251,26 @@ fn test_hurdy_gurdy_gesture_dispatch_and_param_bus_roundtrip() {
     let bus = HurdyGurdyBus::new();
 
     for pattern in [
-        HurdyGurdyGesturePattern::BourbonnaisClassicCoupDePoignet { phrase_length_beats: 4.0, pulse_intensity: 1.5 },
-        HurdyGurdyGesturePattern::MedievalMonasticDrone { phrase_length_beats: 4.0 },
-        HurdyGurdyGesturePattern::BaroqueVirtuosoChanterelle { phrase_length_beats: 4.0 },
-        HurdyGurdyGesturePattern::AuvergneHighSpeedBuzz { phrase_length_beats: 6.0, crank_speed_multiplier: 1.2 },
-        HurdyGurdyGesturePattern::GothicPaganDrone { phrase_length_beats: 4.0 },
-        HurdyGurdyGesturePattern::ElectroAcousticHybrid { phrase_length_beats: 4.0 },
+        HurdyGurdyGesturePattern::BourbonnaisClassicCoupDePoignet {
+            phrase_length_beats: 4.0,
+            pulse_intensity: 1.5,
+        },
+        HurdyGurdyGesturePattern::MedievalMonasticDrone {
+            phrase_length_beats: 4.0,
+        },
+        HurdyGurdyGesturePattern::BaroqueVirtuosoChanterelle {
+            phrase_length_beats: 4.0,
+        },
+        HurdyGurdyGesturePattern::AuvergneHighSpeedBuzz {
+            phrase_length_beats: 6.0,
+            crank_speed_multiplier: 1.2,
+        },
+        HurdyGurdyGesturePattern::GothicPaganDrone {
+            phrase_length_beats: 4.0,
+        },
+        HurdyGurdyGesturePattern::ElectroAcousticHybrid {
+            phrase_length_beats: 4.0,
+        },
     ] {
         let engine = HurdyGurdyGestureEngine::with_pattern(pattern);
 
@@ -259,7 +285,9 @@ fn test_hurdy_gurdy_gesture_dispatch_and_param_bus_roundtrip() {
             assert!(snap.body_wood_resonance > 0.0);
             assert!(snap.master_gain > 0.0);
 
-            let bus_speed = param_bus.get(summoner_core::param_bus::ParamId(HURDY_GURDY_BASE_PARAM_ID.0 + 1));
+            let bus_speed = param_bus.get(summoner_core::param_bus::ParamId(
+                HURDY_GURDY_BASE_PARAM_ID.0 + 1,
+            ));
             assert!(bus_speed.is_some());
             assert!((bus_speed.unwrap() - snap.crank_speed_rad_s).abs() < 1e-4);
         }
@@ -270,7 +298,9 @@ fn test_hurdy_gurdy_gesture_dispatch_and_param_bus_roundtrip() {
 #[cfg(feature = "gui")]
 fn test_hurdy_gurdy_gui_views_headless_snapshots() {
     let mut hg_view = HurdyGurdyView::new();
-    hg_view.set_preset(summoner_gui::views::hurdy_gurdy_view::HurdyGurdyHudPreset::BourbonnaisTraditional);
+    hg_view.set_preset(
+        summoner_gui::views::hurdy_gurdy_view::HurdyGurdyHudPreset::BourbonnaisTraditional,
+    );
 
     let hg_png_paths = [
         "scratch/renders/hurdy_gurdy_view.png",
@@ -279,11 +309,16 @@ fn test_hurdy_gurdy_gui_views_headless_snapshots() {
     ];
     for path in hg_png_paths {
         let res = hg_view.render_snapshot_png(path, 800, 520);
-        assert!(res.is_ok(), "Failed to render HurdyGurdyView PNG to {}", path);
+        assert!(
+            res.is_ok(),
+            "Failed to render HurdyGurdyView PNG to {}",
+            path
+        );
     }
 
     let mut chien_view = TrompetteBridgeView::new();
-    chien_view.set_profile(summoner_gui::views::trompette_bridge_view::ChienViewProfile::MapleOnBone);
+    chien_view
+        .set_profile(summoner_gui::views::trompette_bridge_view::ChienViewProfile::MapleOnBone);
 
     let chien_png_paths = [
         "scratch/renders/trompette_bridge_view.png",
@@ -292,6 +327,10 @@ fn test_hurdy_gurdy_gui_views_headless_snapshots() {
     ];
     for path in chien_png_paths {
         let res = chien_view.render_snapshot_png(path, 800, 520);
-        assert!(res.is_ok(), "Failed to render TrompetteBridgeView PNG to {}", path);
+        assert!(
+            res.is_ok(),
+            "Failed to render TrompetteBridgeView PNG to {}",
+            path
+        );
     }
 }

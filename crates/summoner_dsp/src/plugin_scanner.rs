@@ -33,10 +33,19 @@ pub fn default_vst3_search_paths() -> Vec<PathBuf> {
     #[cfg(target_os = "windows")]
     {
         if let Ok(program_files) = std::env::var("ProgramFiles") {
-            paths.push(PathBuf::from(program_files).join("Common Files").join("VST3"));
+            paths.push(
+                PathBuf::from(program_files)
+                    .join("Common Files")
+                    .join("VST3"),
+            );
         }
         if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-            paths.push(PathBuf::from(local_app_data).join("Programs").join("Common").join("VST3"));
+            paths.push(
+                PathBuf::from(local_app_data)
+                    .join("Programs")
+                    .join("Common")
+                    .join("VST3"),
+            );
         }
     }
 
@@ -67,10 +76,19 @@ pub fn default_clap_search_paths() -> Vec<PathBuf> {
     #[cfg(target_os = "windows")]
     {
         if let Ok(program_files) = std::env::var("ProgramFiles") {
-            paths.push(PathBuf::from(program_files).join("Common Files").join("CLAP"));
+            paths.push(
+                PathBuf::from(program_files)
+                    .join("Common Files")
+                    .join("CLAP"),
+            );
         }
         if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-            paths.push(PathBuf::from(local_app_data).join("Programs").join("Common").join("CLAP"));
+            paths.push(
+                PathBuf::from(local_app_data)
+                    .join("Programs")
+                    .join("Common")
+                    .join("CLAP"),
+            );
         }
     }
 
@@ -224,7 +242,9 @@ impl PluginProcessSandbox {
     /// Interpret OS exit code into human-readable crash description.
     pub fn interpret_crash_code(exit_code: i32) -> String {
         match exit_code as u32 {
-            0xC0000005 => "STATUS_ACCESS_VIOLATION (Null pointer dereference or memory corruption)".into(),
+            0xC0000005 => {
+                "STATUS_ACCESS_VIOLATION (Null pointer dereference or memory corruption)".into()
+            }
             0xC0000094 => "STATUS_INTEGER_DIVIDE_BY_ZERO".into(),
             0xC00000FD => "STATUS_STACK_OVERFLOW".into(),
             0xC0000025 => "STATUS_NONCONTINUABLE_EXCEPTION".into(),
@@ -309,8 +329,22 @@ mod tests {
     fn test_search_paths_sanity() {
         let vst3_paths = default_vst3_search_paths();
         let clap_paths = default_clap_search_paths();
-        assert!(!vst3_paths.is_empty() || cfg!(not(any(target_os = "windows", target_os = "macos", target_os = "linux"))));
-        assert!(!clap_paths.is_empty() || cfg!(not(any(target_os = "windows", target_os = "macos", target_os = "linux"))));
+        assert!(
+            !vst3_paths.is_empty()
+                || cfg!(not(any(
+                    target_os = "windows",
+                    target_os = "macos",
+                    target_os = "linux"
+                )))
+        );
+        assert!(
+            !clap_paths.is_empty()
+                || cfg!(not(any(
+                    target_os = "windows",
+                    target_os = "macos",
+                    target_os = "linux"
+                )))
+        );
     }
 
     #[test]
@@ -319,7 +353,11 @@ mod tests {
         let bad_path = PathBuf::from("C:/Program Files/Common Files/VST3/Crasher.vst3");
 
         assert!(!blacklist.is_blacklisted(&bad_path));
-        blacklist.add(&bad_path, "Fatal access violation during getFactoryInfo", "STATUS_ACCESS_VIOLATION");
+        blacklist.add(
+            &bad_path,
+            "Fatal access violation during getFactoryInfo",
+            "STATUS_ACCESS_VIOLATION",
+        );
         assert!(blacklist.is_blacklisted(&bad_path));
 
         let entry = blacklist.entries.get(&bad_path).unwrap();
@@ -357,7 +395,10 @@ mod tests {
         let json = cache.to_json().unwrap();
         let loaded = PluginScanCache::from_json(&json).unwrap();
         assert_eq!(loaded.plugins.len(), 1);
-        assert_eq!(loaded.plugins.get(&p_path).unwrap().descriptor.name, "ProReverb");
+        assert_eq!(
+            loaded.plugins.get(&p_path).unwrap().descriptor.name,
+            "ProReverb"
+        );
         assert_eq!(loaded.plugins.get(&p_path).unwrap().latency_samples, 64);
     }
 
@@ -381,4 +422,3 @@ mod tests {
         let _ = std::fs::remove_file(&p_path);
     }
 }
-

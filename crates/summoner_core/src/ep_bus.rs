@@ -90,15 +90,141 @@ impl EpArticulation {
     /// Returns nominal default (model_type, hammer_hardness, air_gap_mm, bark_drive, tonebar_coupling, damper_clunk, trem_en, trem_rate, trem_depth, trem_stereo, drive_db, bass_db, treble_db).
     pub fn nominal_parameters(&self) -> EpNominalParameters {
         match self {
-            Self::ClassicSuitcase => (EpModelType::RhodesTine, 0.50, 1.8, 0.55, 0.70, 0.35, true, 5.2, 0.65, true, 4.0, 1.5, 2.0),
-            Self::BarkingDyno => (EpModelType::RhodesTine, 0.85, 1.0, 0.90, 0.85, 0.40, false, 4.0, 0.0, false, 8.0, -1.0, 6.5),
-            Self::MellowStage => (EpModelType::RhodesTine, 0.30, 2.4, 0.30, 0.60, 0.25, false, 3.5, 0.0, false, 2.0, 3.0, -1.5),
-            Self::ClassicWurli => (EpModelType::WurlitzerReed, 0.60, 1.2, 0.75, 0.35, 0.45, true, 6.0, 0.50, false, 6.0, 0.0, 3.0),
-            Self::SoulOverdrive => (EpModelType::WurlitzerReed, 0.80, 0.9, 0.95, 0.40, 0.50, true, 7.2, 0.40, false, 14.0, 2.0, 5.0),
-            Self::BelledAmbient => (EpModelType::RhodesTine, 0.40, 2.0, 0.40, 0.95, 0.20, true, 2.8, 0.80, true, 2.0, 2.5, 3.5),
-            Self::BalladChime => (EpModelType::RhodesTine, 0.35, 2.2, 0.35, 0.80, 0.20, true, 3.8, 0.45, true, 3.0, 2.0, 1.0),
-            Self::FunkGroove => (EpModelType::WurlitzerReed, 0.75, 1.1, 0.85, 0.30, 0.55, false, 5.0, 0.0, false, 9.0, 1.0, 4.0),
-            Self::CustomSpline => (EpModelType::RhodesTine, 0.50, 1.8, 0.55, 0.70, 0.35, true, 5.2, 0.65, true, 4.0, 1.5, 2.0),
+            Self::ClassicSuitcase => (
+                EpModelType::RhodesTine,
+                0.50,
+                1.8,
+                0.55,
+                0.70,
+                0.35,
+                true,
+                5.2,
+                0.65,
+                true,
+                4.0,
+                1.5,
+                2.0,
+            ),
+            Self::BarkingDyno => (
+                EpModelType::RhodesTine,
+                0.85,
+                1.0,
+                0.90,
+                0.85,
+                0.40,
+                false,
+                4.0,
+                0.0,
+                false,
+                8.0,
+                -1.0,
+                6.5,
+            ),
+            Self::MellowStage => (
+                EpModelType::RhodesTine,
+                0.30,
+                2.4,
+                0.30,
+                0.60,
+                0.25,
+                false,
+                3.5,
+                0.0,
+                false,
+                2.0,
+                3.0,
+                -1.5,
+            ),
+            Self::ClassicWurli => (
+                EpModelType::WurlitzerReed,
+                0.60,
+                1.2,
+                0.75,
+                0.35,
+                0.45,
+                true,
+                6.0,
+                0.50,
+                false,
+                6.0,
+                0.0,
+                3.0,
+            ),
+            Self::SoulOverdrive => (
+                EpModelType::WurlitzerReed,
+                0.80,
+                0.9,
+                0.95,
+                0.40,
+                0.50,
+                true,
+                7.2,
+                0.40,
+                false,
+                14.0,
+                2.0,
+                5.0,
+            ),
+            Self::BelledAmbient => (
+                EpModelType::RhodesTine,
+                0.40,
+                2.0,
+                0.40,
+                0.95,
+                0.20,
+                true,
+                2.8,
+                0.80,
+                true,
+                2.0,
+                2.5,
+                3.5,
+            ),
+            Self::BalladChime => (
+                EpModelType::RhodesTine,
+                0.35,
+                2.2,
+                0.35,
+                0.80,
+                0.20,
+                true,
+                3.8,
+                0.45,
+                true,
+                3.0,
+                2.0,
+                1.0,
+            ),
+            Self::FunkGroove => (
+                EpModelType::WurlitzerReed,
+                0.75,
+                1.1,
+                0.85,
+                0.30,
+                0.55,
+                false,
+                5.0,
+                0.0,
+                false,
+                9.0,
+                1.0,
+                4.0,
+            ),
+            Self::CustomSpline => (
+                EpModelType::RhodesTine,
+                0.50,
+                1.8,
+                0.55,
+                0.70,
+                0.35,
+                true,
+                5.2,
+                0.65,
+                true,
+                4.0,
+                1.5,
+                2.0,
+            ),
         }
     }
 }
@@ -145,8 +271,21 @@ pub struct EpBusSnapshot {
 
 impl Default for EpBusSnapshot {
     fn default() -> Self {
-        let (model, hardness, air_gap, bark, tonebar, damper, trem_en, trem_rate, trem_depth, trem_stereo, drive, bass, treble) =
-            EpArticulation::ClassicSuitcase.nominal_parameters();
+        let (
+            model,
+            hardness,
+            air_gap,
+            bark,
+            tonebar,
+            damper,
+            trem_en,
+            trem_rate,
+            trem_depth,
+            trem_stereo,
+            drive,
+            bass,
+            treble,
+        ) = EpArticulation::ClassicSuitcase.nominal_parameters();
         Self {
             articulation: EpArticulation::ClassicSuitcase,
             model_type: model,
@@ -196,12 +335,29 @@ impl Default for EpBus {
 impl EpBus {
     /// Creates a new EpBus initialized to ClassicSuitcase defaults.
     pub fn new() -> Self {
-        let (model, hardness, air_gap, bark, tonebar, damper, trem_en, trem_rate, trem_depth, trem_stereo, drive, bass, treble) =
-            EpArticulation::ClassicSuitcase.nominal_parameters();
+        let (
+            model,
+            hardness,
+            air_gap,
+            bark,
+            tonebar,
+            damper,
+            trem_en,
+            trem_rate,
+            trem_depth,
+            trem_stereo,
+            drive,
+            bass,
+            treble,
+        ) = EpArticulation::ClassicSuitcase.nominal_parameters();
 
         let mut trem_flags = 0u32;
-        if trem_en { trem_flags |= 1; }
-        if trem_stereo { trem_flags |= 2; }
+        if trem_en {
+            trem_flags |= 1;
+        }
+        if trem_stereo {
+            trem_flags |= 2;
+        }
 
         Self {
             articulation_raw: AtomicU32::new(EpArticulation::ClassicSuitcase as u32),
@@ -224,25 +380,51 @@ impl EpBus {
 
     /// Sets active articulation and loads nominal parameters.
     pub fn set_articulation(&self, articulation: EpArticulation) {
-        self.articulation_raw.store(articulation as u32, Ordering::Release);
-        let (model, hardness, air_gap, bark, tonebar, damper, trem_en, trem_rate, trem_depth, trem_stereo, drive, bass, treble) =
-            articulation.nominal_parameters();
+        self.articulation_raw
+            .store(articulation as u32, Ordering::Release);
+        let (
+            model,
+            hardness,
+            air_gap,
+            bark,
+            tonebar,
+            damper,
+            trem_en,
+            trem_rate,
+            trem_depth,
+            trem_stereo,
+            drive,
+            bass,
+            treble,
+        ) = articulation.nominal_parameters();
 
         self.model_type_raw.store(model as u32, Ordering::Release);
-        self.hammer_hardness_bits.store(hardness.to_bits(), Ordering::Release);
-        self.air_gap_bits.store(air_gap.to_bits(), Ordering::Release);
-        self.bark_drive_bits.store(bark.to_bits(), Ordering::Release);
-        self.tonebar_coupling_bits.store(tonebar.to_bits(), Ordering::Release);
-        self.damper_clunk_bits.store(damper.to_bits(), Ordering::Release);
+        self.hammer_hardness_bits
+            .store(hardness.to_bits(), Ordering::Release);
+        self.air_gap_bits
+            .store(air_gap.to_bits(), Ordering::Release);
+        self.bark_drive_bits
+            .store(bark.to_bits(), Ordering::Release);
+        self.tonebar_coupling_bits
+            .store(tonebar.to_bits(), Ordering::Release);
+        self.damper_clunk_bits
+            .store(damper.to_bits(), Ordering::Release);
 
         let mut trem_flags = 0u32;
-        if trem_en { trem_flags |= 1; }
-        if trem_stereo { trem_flags |= 2; }
+        if trem_en {
+            trem_flags |= 1;
+        }
+        if trem_stereo {
+            trem_flags |= 2;
+        }
         self.tremolo_flags.store(trem_flags, Ordering::Release);
 
-        self.tremolo_rate_bits.store(trem_rate.to_bits(), Ordering::Release);
-        self.tremolo_depth_bits.store(trem_depth.to_bits(), Ordering::Release);
-        self.tube_drive_bits.store(drive.to_bits(), Ordering::Release);
+        self.tremolo_rate_bits
+            .store(trem_rate.to_bits(), Ordering::Release);
+        self.tremolo_depth_bits
+            .store(trem_depth.to_bits(), Ordering::Release);
+        self.tube_drive_bits
+            .store(drive.to_bits(), Ordering::Release);
         self.bass_bits.store(bass.to_bits(), Ordering::Release);
         self.treble_bits.store(treble.to_bits(), Ordering::Release);
     }
@@ -254,38 +436,56 @@ impl EpBus {
 
     /// Sets mechanical properties.
     pub fn set_mechanics(&self, hardness: f32, air_gap: f32, bark: f32, tonebar: f32, damper: f32) {
-        self.hammer_hardness_bits.store(hardness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.air_gap_bits.store(air_gap.clamp(0.4, 6.0).to_bits(), Ordering::Release);
-        self.bark_drive_bits.store(bark.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.tonebar_coupling_bits.store(tonebar.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.damper_clunk_bits.store(damper.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.hammer_hardness_bits
+            .store(hardness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.air_gap_bits
+            .store(air_gap.clamp(0.4, 6.0).to_bits(), Ordering::Release);
+        self.bark_drive_bits
+            .store(bark.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.tonebar_coupling_bits
+            .store(tonebar.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.damper_clunk_bits
+            .store(damper.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Sets tremolo properties.
     pub fn set_tremolo(&self, enabled: bool, rate_hz: f32, depth: f32, stereo: bool) {
         let mut flags = 0u32;
-        if enabled { flags |= 1; }
-        if stereo { flags |= 2; }
+        if enabled {
+            flags |= 1;
+        }
+        if stereo {
+            flags |= 2;
+        }
         self.tremolo_flags.store(flags, Ordering::Release);
-        self.tremolo_rate_bits.store(rate_hz.clamp(0.2, 20.0).to_bits(), Ordering::Release);
-        self.tremolo_depth_bits.store(depth.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.tremolo_rate_bits
+            .store(rate_hz.clamp(0.2, 20.0).to_bits(), Ordering::Release);
+        self.tremolo_depth_bits
+            .store(depth.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Sets tone properties.
     pub fn set_tone(&self, drive_db: f32, bass_db: f32, treble_db: f32) {
-        self.tube_drive_bits.store(drive_db.clamp(0.0, 24.0).to_bits(), Ordering::Release);
-        self.bass_bits.store(bass_db.clamp(-12.0, 12.0).to_bits(), Ordering::Release);
-        self.treble_bits.store(treble_db.clamp(-12.0, 12.0).to_bits(), Ordering::Release);
+        self.tube_drive_bits
+            .store(drive_db.clamp(0.0, 24.0).to_bits(), Ordering::Release);
+        self.bass_bits
+            .store(bass_db.clamp(-12.0, 12.0).to_bits(), Ordering::Release);
+        self.treble_bits
+            .store(treble_db.clamp(-12.0, 12.0).to_bits(), Ordering::Release);
     }
 
     /// Sets gesture progress $[0.0 ..= 1.0]$.
     pub fn set_progress(&self, progress: f32, is_active: bool) {
-        self.progress_bits.store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
 
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if is_active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -332,26 +532,44 @@ impl EpBus {
 
     /// Applies a complete snapshot into this bus.
     pub fn apply_snapshot(&self, snap: &EpBusSnapshot) {
-        self.articulation_raw.store(snap.articulation as u32, Ordering::Release);
-        self.model_type_raw.store(snap.model_type as u32, Ordering::Release);
-        self.hammer_hardness_bits.store(snap.hammer_hardness.to_bits(), Ordering::Release);
-        self.air_gap_bits.store(snap.air_gap_mm.to_bits(), Ordering::Release);
-        self.bark_drive_bits.store(snap.bark_drive.to_bits(), Ordering::Release);
-        self.tonebar_coupling_bits.store(snap.tonebar_coupling.to_bits(), Ordering::Release);
-        self.damper_clunk_bits.store(snap.damper_clunk_volume.to_bits(), Ordering::Release);
+        self.articulation_raw
+            .store(snap.articulation as u32, Ordering::Release);
+        self.model_type_raw
+            .store(snap.model_type as u32, Ordering::Release);
+        self.hammer_hardness_bits
+            .store(snap.hammer_hardness.to_bits(), Ordering::Release);
+        self.air_gap_bits
+            .store(snap.air_gap_mm.to_bits(), Ordering::Release);
+        self.bark_drive_bits
+            .store(snap.bark_drive.to_bits(), Ordering::Release);
+        self.tonebar_coupling_bits
+            .store(snap.tonebar_coupling.to_bits(), Ordering::Release);
+        self.damper_clunk_bits
+            .store(snap.damper_clunk_volume.to_bits(), Ordering::Release);
 
         let mut trem_flags = 0u32;
-        if snap.tremolo_enabled { trem_flags |= 1; }
-        if snap.tremolo_stereo { trem_flags |= 2; }
+        if snap.tremolo_enabled {
+            trem_flags |= 1;
+        }
+        if snap.tremolo_stereo {
+            trem_flags |= 2;
+        }
         self.tremolo_flags.store(trem_flags, Ordering::Release);
 
-        self.tremolo_rate_bits.store(snap.tremolo_rate_hz.to_bits(), Ordering::Release);
-        self.tremolo_depth_bits.store(snap.tremolo_depth.to_bits(), Ordering::Release);
-        self.tube_drive_bits.store(snap.tube_drive_db.to_bits(), Ordering::Release);
-        self.bass_bits.store(snap.bass_db.to_bits(), Ordering::Release);
-        self.treble_bits.store(snap.treble_db.to_bits(), Ordering::Release);
-        self.progress_bits.store(snap.gesture_progress.to_bits(), Ordering::Release);
-        self.flags.store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
+        self.tremolo_rate_bits
+            .store(snap.tremolo_rate_hz.to_bits(), Ordering::Release);
+        self.tremolo_depth_bits
+            .store(snap.tremolo_depth.to_bits(), Ordering::Release);
+        self.tube_drive_bits
+            .store(snap.tube_drive_db.to_bits(), Ordering::Release);
+        self.bass_bits
+            .store(snap.bass_db.to_bits(), Ordering::Release);
+        self.treble_bits
+            .store(snap.treble_db.to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(snap.gesture_progress.to_bits(), Ordering::Release);
+        self.flags
+            .store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
     }
 
     /// Dispatches current electric piano bus snapshot values to central `ParamBus`.
@@ -364,10 +582,16 @@ impl EpBus {
         bus.set(ParamId(base_id.0 + 4), snap.bark_drive);
         bus.set(ParamId(base_id.0 + 5), snap.tonebar_coupling);
         bus.set(ParamId(base_id.0 + 6), snap.damper_clunk_volume);
-        bus.set(ParamId(base_id.0 + 7), if snap.tremolo_enabled { 1.0 } else { 0.0 });
+        bus.set(
+            ParamId(base_id.0 + 7),
+            if snap.tremolo_enabled { 1.0 } else { 0.0 },
+        );
         bus.set(ParamId(base_id.0 + 8), snap.tremolo_rate_hz);
         bus.set(ParamId(base_id.0 + 9), snap.tremolo_depth);
-        bus.set(ParamId(base_id.0 + 10), if snap.tremolo_stereo { 1.0 } else { 0.0 });
+        bus.set(
+            ParamId(base_id.0 + 10),
+            if snap.tremolo_stereo { 1.0 } else { 0.0 },
+        );
         bus.set(ParamId(base_id.0 + 11), snap.tube_drive_db);
         bus.set(ParamId(base_id.0 + 12), snap.bass_db);
         bus.set(ParamId(base_id.0 + 13), snap.treble_db);

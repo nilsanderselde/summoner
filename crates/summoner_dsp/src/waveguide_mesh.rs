@@ -10,10 +10,10 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
 
 /// Fixed dimension for the 2D waveguide mesh grid (16x16 = 256 nodes).
 pub const MESH_DIM: usize = 16;
@@ -198,7 +198,8 @@ impl WaveguideMesh2D {
                 };
 
                 let laplacian = left + right + top + bottom - 4.0 * self.u_curr[y][x];
-                let next_val = (2.0 * self.u_curr[y][x] - self.u_prev[y][x] + c2 * laplacian) * decay;
+                let next_val =
+                    (2.0 * self.u_curr[y][x] - self.u_prev[y][x] + c2 * laplacian) * decay;
                 self.u_next[y][x] = next_val.clamp(-10.0, 10.0);
             }
         }
@@ -211,8 +212,10 @@ impl WaveguideMesh2D {
     /// Reads output sample via bilinear interpolation at normalized position (px, py).
     #[inline]
     pub fn sample_pickup(&self, px_norm: f32, py_norm: f32) -> f32 {
-        let gx = (px_norm.clamp(0.0, 1.0) * (MESH_DIM - 1) as f32).clamp(0.0, (MESH_DIM - 1) as f32);
-        let gy = (py_norm.clamp(0.0, 1.0) * (MESH_DIM - 1) as f32).clamp(0.0, (MESH_DIM - 1) as f32);
+        let gx =
+            (px_norm.clamp(0.0, 1.0) * (MESH_DIM - 1) as f32).clamp(0.0, (MESH_DIM - 1) as f32);
+        let gy =
+            (py_norm.clamp(0.0, 1.0) * (MESH_DIM - 1) as f32).clamp(0.0, (MESH_DIM - 1) as f32);
 
         let x0 = (gx.floor() as usize).min(MESH_DIM - 1);
         let x1 = (x0 + 1).min(MESH_DIM - 1);
@@ -314,12 +317,7 @@ impl AudioNode for WaveguideMeshNode {
         "WaveguideMeshNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.mesh.process_block(input, output, ctx);
     }
 }
@@ -363,11 +361,7 @@ mod tests {
 
         {
             let _guard = AllocGuard::new();
-            mesh.process_block(
-                &[&in_buf[..]],
-                &mut [&mut out_l[..], &mut out_r[..]],
-                &ctx,
-            );
+            mesh.process_block(&[&in_buf[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
         }
 
         assert!(out_l.iter().any(|s| *s != 0.0));

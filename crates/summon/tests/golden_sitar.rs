@@ -7,9 +7,7 @@ use std::path::Path;
 use summoner_core::allocator::AllocGuard;
 use summoner_core::node::ProcessContext;
 use summoner_core::param_bus::ParamBus;
-use summoner_core::sitar_bus::{
-    register_sitar_params, SitarBus, SITAR_BASE_PARAM_ID,
-};
+use summoner_core::sitar_bus::{register_sitar_params, SitarBus, SITAR_BASE_PARAM_ID};
 use summoner_core::transport::Transport;
 use summoner_dsp::jawari_bridge::{
     JawariBridge, JawariProfile, RagaScale, SitarGourdBody, TarabResonatorBank,
@@ -20,9 +18,7 @@ use summoner_dsp::traits::SignalProcessor;
 use summoner_gui::views::jawari_bridge_view::JawariBridgeView;
 #[cfg(feature = "gui")]
 use summoner_gui::views::sitar_view::SitarView;
-use summoner_sequencer::sitar_gesture::{
-    SitarGestureEngine, SitarGesturePattern,
-};
+use summoner_sequencer::sitar_gesture::{SitarGestureEngine, SitarGesturePattern};
 
 const BLOCK_SIZE: usize = 64;
 
@@ -204,12 +200,10 @@ fn test_golden_sitar_jawari_and_tarab_deterministic() {
 
 #[test]
 fn test_golden_sitar_gesture_and_bus_deterministic() {
-    let mut engine = SitarGestureEngine::with_pattern(
-        SitarGesturePattern::RagaYamanAlap {
-            phrase_length_beats: 8.0,
-            max_meend_pull: 4.0,
-        },
-    );
+    let mut engine = SitarGestureEngine::with_pattern(SitarGesturePattern::RagaYamanAlap {
+        phrase_length_beats: 8.0,
+        max_meend_pull: 4.0,
+    });
     engine.is_looping = true;
 
     let bus = SitarBus::new();
@@ -277,11 +271,25 @@ fn test_golden_sitar_views_ascii_and_snapshots() {
     // Save PNG snapshots across the project render directories
     let _ = sitar_view.render_snapshot_png("scratch/renders/sitar_view.png", 800, 520);
     let _ = sitar_view.render_snapshot_png("../../scratch/renders/sitar_view.png", 800, 520);
-    let _ = sitar_view.render_snapshot_png("crates/summon/scratch/renders/sitar_view.png", 800, 520);
-    let _ = sitar_view.render_snapshot_png("crates/summoner_gui/scratch/renders/sitar_view.png", 800, 520);
+    let _ =
+        sitar_view.render_snapshot_png("crates/summon/scratch/renders/sitar_view.png", 800, 520);
+    let _ = sitar_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/sitar_view.png",
+        800,
+        520,
+    );
 
     let _ = jawari_view.render_snapshot_png("scratch/renders/jawari_bridge_view.png", 800, 520);
-    let _ = jawari_view.render_snapshot_png("../../scratch/renders/jawari_bridge_view.png", 800, 520);
-    let _ = jawari_view.render_snapshot_png("crates/summon/scratch/renders/jawari_bridge_view.png", 800, 520);
-    let _ = jawari_view.render_snapshot_png("crates/summoner_gui/scratch/renders/jawari_bridge_view.png", 800, 520);
+    let _ =
+        jawari_view.render_snapshot_png("../../scratch/renders/jawari_bridge_view.png", 800, 520);
+    let _ = jawari_view.render_snapshot_png(
+        "crates/summon/scratch/renders/jawari_bridge_view.png",
+        800,
+        520,
+    );
+    let _ = jawari_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/jawari_bridge_view.png",
+        800,
+        520,
+    );
 }

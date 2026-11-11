@@ -60,94 +60,94 @@ impl KotoTuningSchema {
     pub fn string_ratios(&self) -> [f32; NUM_KOTO_STRINGS] {
         match self {
             Self::Hirajoshi => [
-                1.0000,   // String 1: D4 (1.0)
-                0.6674,   // String 2: G3 (sub-fourth ~ 0.6674)
-                0.7492,   // String 3: A3
-                0.7937,   // String 4: Bb3
-                1.0000,   // String 5: D4
-                1.0595,   // String 6: Eb4
-                1.3348,   // String 7: G4
-                1.4983,   // String 8: A4
-                1.5874,   // String 9: Bb4
-                2.0000,   // String 10: D5
-                2.1189,   // String 11: Eb5
-                2.6697,   // String 12: G5
-                2.9966,   // String 13: A5
+                1.0000, // String 1: D4 (1.0)
+                0.6674, // String 2: G3 (sub-fourth ~ 0.6674)
+                0.7492, // String 3: A3
+                0.7937, // String 4: Bb3
+                1.0000, // String 5: D4
+                1.0595, // String 6: Eb4
+                1.3348, // String 7: G4
+                1.4983, // String 8: A4
+                1.5874, // String 9: Bb4
+                2.0000, // String 10: D5
+                2.1189, // String 11: Eb5
+                2.6697, // String 12: G5
+                2.9966, // String 13: A5
             ],
             Self::KokinJoshi => [
-                1.0000,   // String 1: D4
-                0.6674,   // String 2: G3
+                1.0000,        // String 1: D4
+                0.6674,        // String 2: G3
                 FRAC_1_SQRT_2, // String 3: Ab3
-                0.8909,   // String 4: C4
-                1.0000,   // String 5: D4
-                1.0595,   // String 6: Eb4
-                1.3348,   // String 7: G4
-                SQRT_2,   // String 8: Ab4
-                1.7818,   // String 9: C5
-                2.0000,   // String 10: D5
-                2.1189,   // String 11: Eb5
-                2.6697,   // String 12: G5
-                2.8284,   // String 13: Ab5
+                0.8909,        // String 4: C4
+                1.0000,        // String 5: D4
+                1.0595,        // String 6: Eb4
+                1.3348,        // String 7: G4
+                SQRT_2,        // String 8: Ab4
+                1.7818,        // String 9: C5
+                2.0000,        // String 10: D5
+                2.1189,        // String 11: Eb5
+                2.6697,        // String 12: G5
+                2.8284,        // String 13: Ab5
             ],
             Self::InSen => [
-                1.0000,   // String 1: D4
-                0.6674,   // String 2: G3
+                1.0000,        // String 1: D4
+                0.6674,        // String 2: G3
                 FRAC_1_SQRT_2, // String 3: Ab3
-                0.8909,   // String 4: C4
-                1.0000,   // String 5: D4
-                1.1892,   // String 6: F4
-                1.3348,   // String 7: G4
-                SQRT_2,   // String 8: Ab4
-                1.7818,   // String 9: C5
-                2.0000,   // String 10: D5
-                2.3784,   // String 11: F5
-                2.6697,   // String 12: G5
-                2.8284,   // String 13: Ab5
+                0.8909,        // String 4: C4
+                1.0000,        // String 5: D4
+                1.1892,        // String 6: F4
+                1.3348,        // String 7: G4
+                SQRT_2,        // String 8: Ab4
+                1.7818,        // String 9: C5
+                2.0000,        // String 10: D5
+                2.3784,        // String 11: F5
+                2.6697,        // String 12: G5
+                2.8284,        // String 13: Ab5
             ],
             Self::KumoiJoshi => [
-                1.0000,   // String 1: D4
-                0.6674,   // String 2: G3
+                1.0000,        // String 1: D4
+                0.6674,        // String 2: G3
                 FRAC_1_SQRT_2, // String 3: Ab3
-                0.7937,   // String 4: Bb3
-                1.0000,   // String 5: D4
-                1.0595,   // String 6: Eb4
-                1.3348,   // String 7: G4
-                SQRT_2,   // String 8: Ab4
-                1.5874,   // String 9: Bb4
-                2.0000,   // String 10: D5
-                2.1189,   // String 11: Eb5
-                2.6697,   // String 12: G5
-                2.8284,   // String 13: Ab5
+                0.7937,        // String 4: Bb3
+                1.0000,        // String 5: D4
+                1.0595,        // String 6: Eb4
+                1.3348,        // String 7: G4
+                SQRT_2,        // String 8: Ab4
+                1.5874,        // String 9: Bb4
+                2.0000,        // String 10: D5
+                2.1189,        // String 11: Eb5
+                2.6697,        // String 12: G5
+                2.8284,        // String 13: Ab5
             ],
             Self::Ryukyu => [
-                1.0000,   // String 1: D4
-                0.6674,   // String 2: G3
-                0.8409,   // String 3: B3
-                0.8909,   // String 4: C4
-                1.0000,   // String 5: D4
-                1.1225,   // String 6: E4
-                1.3348,   // String 7: G4
-                1.6818,   // String 8: B4
-                1.7818,   // String 9: C5
-                2.0000,   // String 10: D5
-                2.2449,   // String 11: E5
-                2.6697,   // String 12: G5
-                3.3636,   // String 13: B5
+                1.0000, // String 1: D4
+                0.6674, // String 2: G3
+                0.8409, // String 3: B3
+                0.8909, // String 4: C4
+                1.0000, // String 5: D4
+                1.1225, // String 6: E4
+                1.3348, // String 7: G4
+                1.6818, // String 8: B4
+                1.7818, // String 9: C5
+                2.0000, // String 10: D5
+                2.2449, // String 11: E5
+                2.6697, // String 12: G5
+                3.3636, // String 13: B5
             ],
             Self::GuzhengPentatonic => [
-                1.0000,   // String 1: D4
-                0.6674,   // String 2: G3
-                0.7492,   // String 3: A3
-                0.8909,   // String 4: C4
-                1.0000,   // String 5: D4
-                1.1225,   // String 6: E4
-                1.3348,   // String 7: G4
-                1.4983,   // String 8: A4
-                1.7818,   // String 9: C5
-                2.0000,   // String 10: D5
-                2.2449,   // String 11: E5
-                2.6697,   // String 12: G5
-                2.9966,   // String 13: A5
+                1.0000, // String 1: D4
+                0.6674, // String 2: G3
+                0.7492, // String 3: A3
+                0.8909, // String 4: C4
+                1.0000, // String 5: D4
+                1.1225, // String 6: E4
+                1.3348, // String 7: G4
+                1.4983, // String 8: A4
+                1.7818, // String 9: C5
+                2.0000, // String 10: D5
+                2.2449, // String 11: E5
+                2.6697, // String 12: G5
+                2.9966, // String 13: A5
             ],
         }
     }
@@ -274,15 +274,22 @@ impl JiBridgeJunction {
     /// Process incident traveling wave at bridge boundary.
     /// Returns `(reflected_playing_wave, transmitted_behind_bridge_wave, body_excitation)`.
     #[inline]
-    pub fn process_scattering(&mut self, incident_playing: f32, incident_behind: f32) -> (f32, f32, f32) {
+    pub fn process_scattering(
+        &mut self,
+        incident_playing: f32,
+        incident_behind: f32,
+    ) -> (f32, f32, f32) {
         // Lowpass filtering on reflection representing soft boundary damping
         let filtered_playing = 0.85 * incident_playing + 0.15 * self.prev_sample;
         self.prev_sample = incident_playing;
 
         // Reflection is inverting (fixed boundary with small transmission)
-        let reflected_playing = -self.reflection * filtered_playing + self.transmission * incident_behind;
-        let transmitted_behind = self.transmission * filtered_playing - self.reflection * 0.95 * incident_behind;
-        let body_excitation = self.body_coupling * (incident_playing.abs() + incident_behind.abs() * 0.5);
+        let reflected_playing =
+            -self.reflection * filtered_playing + self.transmission * incident_behind;
+        let transmitted_behind =
+            self.transmission * filtered_playing - self.reflection * 0.95 * incident_behind;
+        let body_excitation =
+            self.body_coupling * (incident_playing.abs() + incident_behind.abs() * 0.5);
 
         (reflected_playing, transmitted_behind, body_excitation)
     }
@@ -353,7 +360,9 @@ impl PaulowniaBodyMode {
 
     #[inline]
     pub fn step(&mut self, input: f32) -> f32 {
-        let y = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2 - self.a1 * self.y1 - self.a2 * self.y2;
+        let y = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2
+            - self.a1 * self.y1
+            - self.a2 * self.y2;
         self.x2 = self.x1;
         self.x1 = input;
         self.y2 = self.y1;
@@ -386,11 +395,12 @@ impl PaulowniaSoundboardBody {
             (420.0, 22.0, 0.85), // Mode 4: Second longitudinal soundboard mode
             (580.0, 25.0, 0.70), // Mode 5: Transverse arched plate flexure
             (820.0, 28.0, 0.60), // Mode 6: Upper soundboard harmonic mode
-            (1150.0, 30.0, 0.45),// Mode 7: High frequency bridge radiation peak
-            (1600.0, 35.0, 0.35),// Mode 8: Tsume pick snap transient color
+            (1150.0, 30.0, 0.45), // Mode 7: High frequency bridge radiation peak
+            (1600.0, 35.0, 0.35), // Mode 8: Tsume pick snap transient color
         ];
 
-        let mut modes = [PaulowniaBodyMode::new(100.0, 10.0, 1.0, sample_rate); NUM_PAULOWNIA_MODES];
+        let mut modes =
+            [PaulowniaBodyMode::new(100.0, 10.0, 1.0, sample_rate); NUM_PAULOWNIA_MODES];
         for (i, &(f, q, g)) in modal_specs.iter().enumerate() {
             modes[i] = PaulowniaBodyMode::new(f, q, g, sample_rate);
         }
@@ -440,12 +450,19 @@ mod tests {
             let ratios = schema.string_ratios();
             assert_eq!(ratios.len(), NUM_KOTO_STRINGS);
             assert_eq!(ratios[0], 1.0); // String 1 is reference D4
-            // Monotonicity check across octaves
-            assert!(ratios[12] > ratios[0], "String 13 must be higher than String 1");
+                                        // Monotonicity check across octaves
+            assert!(
+                ratios[12] > ratios[0],
+                "String 13 must be higher than String 1"
+            );
 
             let positions = schema.default_bridge_positions();
             for &pos in &positions {
-                assert!((0.15..=0.90).contains(&pos), "Bridge position {} out of range", pos);
+                assert!(
+                    (0.15..=0.90).contains(&pos),
+                    "Bridge position {} out of range",
+                    pos
+                );
             }
         }
     }
@@ -458,13 +475,20 @@ mod tests {
         // Maximum force 30 N -> ~400 cents (multiplier ~ 1.2599)
         let max_mult = oshi_ite_pitch_multiplier(30.0);
         let cents = 1200.0 * max_mult.log2();
-        assert!((cents - 400.0).abs() < 1.0, "Expected ~400 cents, got {}", cents);
+        assert!(
+            (cents - 400.0).abs() < 1.0,
+            "Expected ~400 cents, got {}",
+            cents
+        );
 
         // Monotonic growth
         let mut prev = 1.0;
         for f in [2.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0] {
             let mult = oshi_ite_pitch_multiplier(f);
-            assert!(mult > prev, "Multiplier should increase monotonically with force");
+            assert!(
+                mult > prev,
+                "Multiplier should increase monotonically with force"
+            );
             prev = mult;
         }
     }
@@ -481,7 +505,11 @@ mod tests {
 
         // Total energy out should not explode
         let energy_out = refl * refl + trans * trans;
-        assert!(energy_out <= 1.05, "Scattering energy out exploded: {}", energy_out);
+        assert!(
+            energy_out <= 1.05,
+            "Scattering energy out exploded: {}",
+            energy_out
+        );
     }
 
     #[test]
@@ -496,6 +524,9 @@ mod tests {
         }
 
         let decayed = body.process(0.0);
-        assert!(decayed.abs() < impulse_resp.abs(), "Modal body resonance must decay");
+        assert!(
+            decayed.abs() < impulse_resp.abs(),
+            "Modal body resonance must decay"
+        );
     }
 }

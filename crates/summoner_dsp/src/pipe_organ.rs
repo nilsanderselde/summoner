@@ -11,11 +11,11 @@
 //!
 //! Enforces zero heap allocations in audio render loops under `AllocGuard`.
 
+use crate::windchest::Windchest;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::{PI, TAU};
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::windchest::Windchest;
 
 /// Maximum number of polyphonic Pipe Organ voices.
 pub const MAX_ORGAN_VOICES: usize = 32;
@@ -24,14 +24,14 @@ pub const MAX_ORGAN_VOICES: usize = 32;
 pub const NUM_RANKS: usize = 8;
 
 /// Stop registration bitmask definitions.
-pub const STOP_PRINCIPAL_8: u32 = 1 << 0;   // Open metal flue (8')
-pub const STOP_BOURDON_16: u32 = 1 << 1;    // Stopped wooden flue (16')
-pub const STOP_OCTAVE_4: u32 = 1 << 2;      // Open metal flue (4')
-pub const STOP_FLUTE_4: u32 = 1 << 3;       // Stopped wooden flute (4')
-pub const STOP_SUPER_OCTAVE_2: u32 = 1 << 4;// Open metal flue (2')
-pub const STOP_MIXTURE_IV: u32 = 1 << 5;    // Compound 4-rank chorus (1-1/3', 1', 2/3', 1/2')
-pub const STOP_TROMPETTE_8: u32 = 1 << 6;   // Beating brass reed (8')
-pub const STOP_VOX_HUMANA_8: u32 = 1 << 7;  // Short cylindrical reed with formant (8')
+pub const STOP_PRINCIPAL_8: u32 = 1 << 0; // Open metal flue (8')
+pub const STOP_BOURDON_16: u32 = 1 << 1; // Stopped wooden flue (16')
+pub const STOP_OCTAVE_4: u32 = 1 << 2; // Open metal flue (4')
+pub const STOP_FLUTE_4: u32 = 1 << 3; // Stopped wooden flute (4')
+pub const STOP_SUPER_OCTAVE_2: u32 = 1 << 4; // Open metal flue (2')
+pub const STOP_MIXTURE_IV: u32 = 1 << 5; // Compound 4-rank chorus (1-1/3', 1', 2/3', 1/2')
+pub const STOP_TROMPETTE_8: u32 = 1 << 6; // Beating brass reed (8')
+pub const STOP_VOX_HUMANA_8: u32 = 1 << 7; // Short cylindrical reed with formant (8')
 
 /// 8-stop mechanical registration drawknobs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,14 +65,30 @@ impl PipeOrganStops {
     /// Encode active stops to 32-bit bitmask.
     pub fn to_bitmask(&self) -> u32 {
         let mut mask = 0u32;
-        if self.principal_8 { mask |= STOP_PRINCIPAL_8; }
-        if self.bourdon_16 { mask |= STOP_BOURDON_16; }
-        if self.octave_4 { mask |= STOP_OCTAVE_4; }
-        if self.flute_4 { mask |= STOP_FLUTE_4; }
-        if self.super_octave_2 { mask |= STOP_SUPER_OCTAVE_2; }
-        if self.mixture_iv { mask |= STOP_MIXTURE_IV; }
-        if self.trompette_8 { mask |= STOP_TROMPETTE_8; }
-        if self.vox_humana_8 { mask |= STOP_VOX_HUMANA_8; }
+        if self.principal_8 {
+            mask |= STOP_PRINCIPAL_8;
+        }
+        if self.bourdon_16 {
+            mask |= STOP_BOURDON_16;
+        }
+        if self.octave_4 {
+            mask |= STOP_OCTAVE_4;
+        }
+        if self.flute_4 {
+            mask |= STOP_FLUTE_4;
+        }
+        if self.super_octave_2 {
+            mask |= STOP_SUPER_OCTAVE_2;
+        }
+        if self.mixture_iv {
+            mask |= STOP_MIXTURE_IV;
+        }
+        if self.trompette_8 {
+            mask |= STOP_TROMPETTE_8;
+        }
+        if self.vox_humana_8 {
+            mask |= STOP_VOX_HUMANA_8;
+        }
         mask
     }
 
@@ -93,14 +109,30 @@ impl PipeOrganStops {
     /// Count number of active ranks.
     pub fn active_rank_count(&self) -> usize {
         let mut count = 0;
-        if self.principal_8 { count += 1; }
-        if self.bourdon_16 { count += 1; }
-        if self.octave_4 { count += 1; }
-        if self.flute_4 { count += 1; }
-        if self.super_octave_2 { count += 1; }
-        if self.mixture_iv { count += 4; } // Compound rank has 4 pipes
-        if self.trompette_8 { count += 1; }
-        if self.vox_humana_8 { count += 1; }
+        if self.principal_8 {
+            count += 1;
+        }
+        if self.bourdon_16 {
+            count += 1;
+        }
+        if self.octave_4 {
+            count += 1;
+        }
+        if self.flute_4 {
+            count += 1;
+        }
+        if self.super_octave_2 {
+            count += 1;
+        }
+        if self.mixture_iv {
+            count += 4;
+        } // Compound rank has 4 pipes
+        if self.trompette_8 {
+            count += 1;
+        }
+        if self.vox_humana_8 {
+            count += 1;
+        }
         count
     }
 }
@@ -274,7 +306,10 @@ impl OrganVoice {
     /// PRNG step for chiff acoustic turbulence.
     #[inline]
     fn next_noise(&mut self) -> f32 {
-        self.chiff_noise_seed = self.chiff_noise_seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        self.chiff_noise_seed = self
+            .chiff_noise_seed
+            .wrapping_mul(1664525)
+            .wrapping_add(1013904223);
         ((self.chiff_noise_seed >> 9) as f32 / 8388607.0) - 1.0
     }
 }
@@ -355,7 +390,8 @@ impl PipeOrgan {
                 voice.base_freq = freq;
                 voice.pallet_target = 1.0;
                 voice.chiff_time_samples = 0;
-                voice.chiff_duration_samples = ((self.chiff_duration_ms * 0.001 * self.sample_rate as f32) as u32).max(10);
+                voice.chiff_duration_samples =
+                    ((self.chiff_duration_ms * 0.001 * self.sample_rate as f32) as u32).max(10);
                 voice.age = self.voice_age_counter;
                 self.voice_age_counter += 1;
                 return;
@@ -384,7 +420,8 @@ impl PipeOrgan {
         voice.pallet_envelope = 0.0;
         voice.pallet_target = 1.0;
         voice.chiff_time_samples = 0;
-        voice.chiff_duration_samples = ((self.chiff_duration_ms * 0.001 * self.sample_rate as f32) as u32).max(10);
+        voice.chiff_duration_samples =
+            ((self.chiff_duration_ms * 0.001 * self.sample_rate as f32) as u32).max(10);
         voice.chiff_noise_seed = 123456789 + (note as u32 * 7919) + (best_slot as u32 * 997);
         voice.chiff_filter_state = 0.0;
         voice.age = self.voice_age_counter;
@@ -456,14 +493,16 @@ impl PipeOrgan {
             // Chiff vortex attack transient
             let mut chiff_signal = 0.0f32;
             if voice.chiff_time_samples < voice.chiff_duration_samples {
-                let progress = voice.chiff_time_samples as f32 / voice.chiff_duration_samples as f32;
+                let progress =
+                    voice.chiff_time_samples as f32 / voice.chiff_duration_samples as f32;
                 let chiff_decay = (-4.5 * progress).exp();
                 let raw_noise = voice.next_noise();
                 // Resonant bandpass filter tuned to pipe upper mouth frequency (~3.5 * fundamental)
                 let mouth_freq = (note_freq * 3.5).min(self.sample_rate as f32 * 0.45);
                 let w = (TAU * mouth_freq / self.sample_rate as f32).min(1.5);
                 voice.chiff_filter_state += w * (raw_noise - voice.chiff_filter_state);
-                chiff_signal = voice.chiff_filter_state * chiff_decay * (0.35 + 0.25 * self.cutup_ratio) * vel;
+                chiff_signal =
+                    voice.chiff_filter_state * chiff_decay * (0.35 + 0.25 * self.cutup_ratio) * vel;
                 voice.chiff_time_samples += 1;
             }
 
@@ -476,7 +515,11 @@ impl PipeOrgan {
                 voice.phase_principal_8 = (voice.phase_principal_8 + inc) % TAU;
                 let p = voice.phase_principal_8;
                 // Additive harmonic series with non-linear saturation
-                let raw = p.sin() + 0.55 * (2.0 * p).sin() + 0.35 * (3.0 * p).sin() + 0.20 * (4.0 * p).sin() + 0.10 * (5.0 * p).sin();
+                let raw = p.sin()
+                    + 0.55 * (2.0 * p).sin()
+                    + 0.35 * (3.0 * p).sin()
+                    + 0.20 * (4.0 * p).sin()
+                    + 0.10 * (5.0 * p).sin();
                 let jet_sat = (raw * (air_vel / 35.0)).tanh();
                 voice_out += jet_sat * 0.45;
             }
@@ -488,7 +531,11 @@ impl PipeOrgan {
                 voice.phase_bourdon_16 = (voice.phase_bourdon_16 + inc) % TAU;
                 let p = voice.phase_bourdon_16;
                 // Stopped pipes produce odd harmonics (1, 3, 5, 7) with negligible even harmonics
-                let raw_odd = p.sin() + 0.38 * (3.0 * p).sin() + 0.15 * (5.0 * p).sin() + 0.06 * (7.0 * p).sin() + 0.02 * (2.0 * p).sin();
+                let raw_odd = p.sin()
+                    + 0.38 * (3.0 * p).sin()
+                    + 0.15 * (5.0 * p).sin()
+                    + 0.06 * (7.0 * p).sin()
+                    + 0.02 * (2.0 * p).sin();
                 let wood_sat = (raw_odd * 1.1).tanh();
                 voice_out += wood_sat * 0.55;
             }
@@ -499,7 +546,10 @@ impl PipeOrgan {
                 let inc = (TAU * f) / self.sample_rate as f32;
                 voice.phase_octave_4 = (voice.phase_octave_4 + inc) % TAU;
                 let p = voice.phase_octave_4;
-                let raw = p.sin() + 0.48 * (2.0 * p).sin() + 0.25 * (3.0 * p).sin() + 0.12 * (4.0 * p).sin();
+                let raw = p.sin()
+                    + 0.48 * (2.0 * p).sin()
+                    + 0.25 * (3.0 * p).sin()
+                    + 0.12 * (4.0 * p).sin();
                 voice_out += raw * 0.35;
             }
 
@@ -534,10 +584,14 @@ impl PipeOrgan {
                     (1.5, 2.0, 3.0, 4.0) // 2-2/3', 2', 1-1/3', 1'
                 };
 
-                let inc1 = (TAU * (note_freq * m1_mult).min(self.sample_rate as f32 * 0.48)) / self.sample_rate as f32;
-                let inc2 = (TAU * (note_freq * m2_mult).min(self.sample_rate as f32 * 0.48)) / self.sample_rate as f32;
-                let inc3 = (TAU * (note_freq * m3_mult).min(self.sample_rate as f32 * 0.48)) / self.sample_rate as f32;
-                let inc4 = (TAU * (note_freq * m4_mult).min(self.sample_rate as f32 * 0.48)) / self.sample_rate as f32;
+                let inc1 = (TAU * (note_freq * m1_mult).min(self.sample_rate as f32 * 0.48))
+                    / self.sample_rate as f32;
+                let inc2 = (TAU * (note_freq * m2_mult).min(self.sample_rate as f32 * 0.48))
+                    / self.sample_rate as f32;
+                let inc3 = (TAU * (note_freq * m3_mult).min(self.sample_rate as f32 * 0.48))
+                    / self.sample_rate as f32;
+                let inc4 = (TAU * (note_freq * m4_mult).min(self.sample_rate as f32 * 0.48))
+                    / self.sample_rate as f32;
 
                 voice.phase_mixture_1 = (voice.phase_mixture_1 + inc1) % TAU;
                 voice.phase_mixture_2 = (voice.phase_mixture_2 + inc2) % TAU;
@@ -563,7 +617,8 @@ impl PipeOrgan {
                 } else {
                     -((p - PI) / PI).powf(0.6)
                 };
-                let brass_horn = (reed_pulse * 1.8).tanh() + 0.4 * (3.0 * p).sin() + 0.3 * (5.0 * p).sin();
+                let brass_horn =
+                    (reed_pulse * 1.8).tanh() + 0.4 * (3.0 * p).sin() + 0.3 * (5.0 * p).sin();
                 voice_out += brass_horn * 0.42;
             }
 
@@ -581,7 +636,8 @@ impl PipeOrgan {
                 let w2 = (TAU * f2 / self.sample_rate as f32).min(1.0);
                 voice.formant_vox_bpf1.0 += w1 * (reed_raw - voice.formant_vox_bpf1.0);
                 voice.formant_vox_bpf2.0 += w2 * (reed_raw - voice.formant_vox_bpf2.0);
-                let vox_sig = (voice.formant_vox_bpf1.0 * 0.6 + voice.formant_vox_bpf2.0 * 0.4) * 1.5;
+                let vox_sig =
+                    (voice.formant_vox_bpf1.0 * 0.6 + voice.formant_vox_bpf2.0 * 0.4) * 1.5;
                 voice_out += vox_sig * 0.40;
             }
 
@@ -747,8 +803,21 @@ mod tests {
         let mag_f2 = compute_dft_mag(f2); // Even (2nd harmonic)
         let mag_f3 = compute_dft_mag(f3); // Odd (3rd harmonic)
 
-        assert!(mag_f1 > 0.1, "Bourdon fundamental must be strong, mag_f1={}", mag_f1);
-        assert!(mag_f3 > 0.01, "Bourdon 3rd harmonic must be present, mag_f3={}", mag_f3);
-        assert!(mag_f1 > mag_f2 * 3.0, "Stopped pipe odd harmonics must dominate even harmonics! mag_f1={}, mag_f2={}", mag_f1, mag_f2);
+        assert!(
+            mag_f1 > 0.1,
+            "Bourdon fundamental must be strong, mag_f1={}",
+            mag_f1
+        );
+        assert!(
+            mag_f3 > 0.01,
+            "Bourdon 3rd harmonic must be present, mag_f3={}",
+            mag_f3
+        );
+        assert!(
+            mag_f1 > mag_f2 * 3.0,
+            "Stopped pipe odd harmonics must dominate even harmonics! mag_f1={}, mag_f2={}",
+            mag_f1,
+            mag_f2
+        );
     }
 }

@@ -174,38 +174,40 @@ impl FrictionModel {
         let f_stick_max = fn_clamped * mu_s;
         let f_req = z2 * v_diff;
 
-        let (v_string, v_rel, friction_force, is_sticking) = if f_req.abs() <= f_stick_max || fn_clamped < 1e-6 {
-            // --- STICK STATE ---
-            // The string is locked to the bow hair velocity.
-            let v_str = if fn_clamped < 1e-6 { v_h } else { v_bow };
-            let f_fric = z2 * (v_h - v_str);
-            (v_str, 0.0f32, f_fric, true)
-        } else {
-            // --- SLIP STATE ---
-            // Solve 2*Z_0*(v_rel - v_diff) + F_N * sign(v_rel) * (mu_d + (mu_s - mu_d)/(1 + alpha*|v_rel|)) = 0
-            let sign_d = if v_diff >= 0.0 { 1.0f32 } else { -1.0f32 };
-            let d_mag = v_diff.abs();
+        let (v_string, v_rel, friction_force, is_sticking) =
+            if f_req.abs() <= f_stick_max || fn_clamped < 1e-6 {
+                // --- STICK STATE ---
+                // The string is locked to the bow hair velocity.
+                let v_str = if fn_clamped < 1e-6 { v_h } else { v_bow };
+                let f_fric = z2 * (v_h - v_str);
+                (v_str, 0.0f32, f_fric, true)
+            } else {
+                // --- SLIP STATE ---
+                // Solve 2*Z_0*(v_rel - v_diff) + F_N * sign(v_rel) * (mu_d + (mu_s - mu_d)/(1 + alpha*|v_rel|)) = 0
+                let sign_d = if v_diff >= 0.0 { 1.0f32 } else { -1.0f32 };
+                let d_mag = v_diff.abs();
 
-            let a_coeff = z2 * alpha;
-            let b_coeff = z2 - z2 * alpha * d_mag + fn_clamped * mu_d * alpha;
-            let c_coeff = fn_clamped * mu_s - z2 * d_mag; // Strictly negative because |f_req| > f_stick_max
+                let a_coeff = z2 * alpha;
+                let b_coeff = z2 - z2 * alpha * d_mag + fn_clamped * mu_d * alpha;
+                let c_coeff = fn_clamped * mu_s - z2 * d_mag; // Strictly negative because |f_req| > f_stick_max
 
-            let disc = (b_coeff * b_coeff - 4.0 * a_coeff * c_coeff).max(0.0);
-            let u = (-b_coeff + disc.sqrt()) / (2.0 * a_coeff);
-            let u_clamped = u.max(0.0);
+                let disc = (b_coeff * b_coeff - 4.0 * a_coeff * c_coeff).max(0.0);
+                let u = (-b_coeff + disc.sqrt()) / (2.0 * a_coeff);
+                let u_clamped = u.max(0.0);
 
-            let rel_v = sign_d * u_clamped;
-            let v_str = v_bow + rel_v;
-            let f_fric = z2 * (v_h - v_str);
-            (v_str, rel_v, f_fric, false)
-        };
+                let rel_v = sign_d * u_clamped;
+                let v_str = v_bow + rel_v;
+                let f_fric = z2 * (v_h - v_str);
+                (v_str, rel_v, f_fric, false)
+            };
 
         // Update thermal state: friction power dissipation heats rosin; ambient cools it.
         let power = (friction_force * v_rel).abs();
         let dt = 1.0 / (self.sample_rate as f32);
         let heat_rate = 0.08 * power;
         let cool_rate = 1.5 * self.rosin_temperature;
-        self.rosin_temperature = (self.rosin_temperature + (heat_rate - cool_rate) * dt).clamp(0.0, 1.0);
+        self.rosin_temperature =
+            (self.rosin_temperature + (heat_rate - cool_rate) * dt).clamp(0.0, 1.0);
 
         // Update hysteresis adhesion memory
         let target_adhesion = if is_sticking { 1.0 } else { 0.35 };

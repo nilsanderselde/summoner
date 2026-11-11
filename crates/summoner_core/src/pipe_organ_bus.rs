@@ -113,7 +113,10 @@ pub fn register_pipe_organ_params(param_bus: &mut ParamBus, base_id: ParamId) {
     let (mask, p, cutup, chiff, tracker, trem_en, trem_rate, trem_depth, gain) =
         PipeOrganArticulation::ToccataPlenum.nominal_parameters();
 
-    param_bus.register(ParamId(base_id.0), PipeOrganArticulation::ToccataPlenum as u32 as f32);
+    param_bus.register(
+        ParamId(base_id.0),
+        PipeOrganArticulation::ToccataPlenum as u32 as f32,
+    );
     param_bus.register(ParamId(base_id.0 + 1), mask as f32);
     param_bus.register(ParamId(base_id.0 + 2), p);
     param_bus.register(ParamId(base_id.0 + 3), cutup);
@@ -178,22 +181,35 @@ impl PipeOrganBus {
             tremulant_rate_hz: f32::from_bits(self.tremulant_rate.load(Ordering::Acquire)),
             tremulant_depth: f32::from_bits(self.tremulant_depth.load(Ordering::Acquire)),
             master_gain: f32::from_bits(self.master_gain.load(Ordering::Acquire)),
-            articulation: PipeOrganArticulation::from_u32(self.articulation.load(Ordering::Acquire)),
+            articulation: PipeOrganArticulation::from_u32(
+                self.articulation.load(Ordering::Acquire),
+            ),
         }
     }
 
     /// Write a full snapshot atomically into the bus.
     pub fn write_snapshot(&self, snap: &PipeOrganBusSnapshot) {
         self.stops_mask.store(snap.stops_mask, Ordering::Release);
-        self.wind_pressure.store(snap.wind_pressure_mmh2o.to_bits(), Ordering::Release);
-        self.cutup_ratio.store(snap.cutup_ratio.to_bits(), Ordering::Release);
-        self.chiff_duration_ms.store(snap.chiff_duration_ms.to_bits(), Ordering::Release);
-        self.tracker_velocity.store(snap.tracker_velocity.to_bits(), Ordering::Release);
-        self.tremulant_enabled.store(if snap.tremulant_enabled { 1 } else { 0 }, Ordering::Release);
-        self.tremulant_rate.store(snap.tremulant_rate_hz.to_bits(), Ordering::Release);
-        self.tremulant_depth.store(snap.tremulant_depth.to_bits(), Ordering::Release);
-        self.master_gain.store(snap.master_gain.to_bits(), Ordering::Release);
-        self.articulation.store(snap.articulation as u32, Ordering::Release);
+        self.wind_pressure
+            .store(snap.wind_pressure_mmh2o.to_bits(), Ordering::Release);
+        self.cutup_ratio
+            .store(snap.cutup_ratio.to_bits(), Ordering::Release);
+        self.chiff_duration_ms
+            .store(snap.chiff_duration_ms.to_bits(), Ordering::Release);
+        self.tracker_velocity
+            .store(snap.tracker_velocity.to_bits(), Ordering::Release);
+        self.tremulant_enabled.store(
+            if snap.tremulant_enabled { 1 } else { 0 },
+            Ordering::Release,
+        );
+        self.tremulant_rate
+            .store(snap.tremulant_rate_hz.to_bits(), Ordering::Release);
+        self.tremulant_depth
+            .store(snap.tremulant_depth.to_bits(), Ordering::Release);
+        self.master_gain
+            .store(snap.master_gain.to_bits(), Ordering::Release);
+        self.articulation
+            .store(snap.articulation as u32, Ordering::Release);
     }
 
     /// Set articulation and load nominal parameters.
@@ -204,11 +220,16 @@ impl PipeOrganBus {
         self.stops_mask.store(mask, Ordering::Release);
         self.wind_pressure.store(p.to_bits(), Ordering::Release);
         self.cutup_ratio.store(cutup.to_bits(), Ordering::Release);
-        self.chiff_duration_ms.store(chiff.to_bits(), Ordering::Release);
-        self.tracker_velocity.store(tracker.to_bits(), Ordering::Release);
-        self.tremulant_enabled.store(if trem_en { 1 } else { 0 }, Ordering::Release);
-        self.tremulant_rate.store(trem_rate.to_bits(), Ordering::Release);
-        self.tremulant_depth.store(trem_depth.to_bits(), Ordering::Release);
+        self.chiff_duration_ms
+            .store(chiff.to_bits(), Ordering::Release);
+        self.tracker_velocity
+            .store(tracker.to_bits(), Ordering::Release);
+        self.tremulant_enabled
+            .store(if trem_en { 1 } else { 0 }, Ordering::Release);
+        self.tremulant_rate
+            .store(trem_rate.to_bits(), Ordering::Release);
+        self.tremulant_depth
+            .store(trem_depth.to_bits(), Ordering::Release);
         self.master_gain.store(gain.to_bits(), Ordering::Release);
         self.articulation.store(art as u32, Ordering::Release);
     }
@@ -248,11 +269,16 @@ impl PipeOrganBus {
         self.stops_mask.store(mask, Ordering::Release);
         self.wind_pressure.store(p.to_bits(), Ordering::Release);
         self.cutup_ratio.store(cutup.to_bits(), Ordering::Release);
-        self.chiff_duration_ms.store(chiff.to_bits(), Ordering::Release);
-        self.tracker_velocity.store(tracker.to_bits(), Ordering::Release);
-        self.tremulant_enabled.store(if trem_en { 1 } else { 0 }, Ordering::Release);
-        self.tremulant_rate.store(trem_rate.to_bits(), Ordering::Release);
-        self.tremulant_depth.store(trem_depth.to_bits(), Ordering::Release);
+        self.chiff_duration_ms
+            .store(chiff.to_bits(), Ordering::Release);
+        self.tracker_velocity
+            .store(tracker.to_bits(), Ordering::Release);
+        self.tremulant_enabled
+            .store(if trem_en { 1 } else { 0 }, Ordering::Release);
+        self.tremulant_rate
+            .store(trem_rate.to_bits(), Ordering::Release);
+        self.tremulant_depth
+            .store(trem_depth.to_bits(), Ordering::Release);
         self.master_gain.store(gain.to_bits(), Ordering::Release);
     }
 }

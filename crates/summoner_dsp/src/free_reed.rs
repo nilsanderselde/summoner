@@ -13,12 +13,12 @@
 //!
 //! Enforces zero heap allocations in audio render loops under `AllocGuard`.
 
+use crate::cassotto_chamber::{CassottoChamber, CassottoProfile};
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::TAU;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::cassotto_chamber::{CassottoChamber, CassottoProfile};
-use crate::traits::SignalProcessor;
 
 /// Maximum number of polyphonic Free-Reed voices.
 pub const MAX_FREE_REED_VOICES: usize = 16;
@@ -27,20 +27,22 @@ pub const MAX_FREE_REED_VOICES: usize = 16;
 pub const NUM_REED_RANKS: usize = 5;
 
 // Rank Indices
-pub const RANK_BASSOON_16: usize = 0;   // 16' Sub-octave (in Cassotto)
-pub const RANK_CLARINET_8: usize = 1;   // 8' Master pitch (in Cassotto)
+pub const RANK_BASSOON_16: usize = 0; // 16' Sub-octave (in Cassotto)
+pub const RANK_CLARINET_8: usize = 1; // 8' Master pitch (in Cassotto)
 pub const RANK_MUSETTE_PLUS_8: usize = 2; // 8'+ Sharp detuned (+8 to +25 cents, direct)
-pub const RANK_MUSETTE_MINUS_8: usize = 3;// 8'- Flat detuned (-8 to -25 cents, direct)
-pub const RANK_PICCOLO_4: usize = 4;    // 4' High octave (direct)
+pub const RANK_MUSETTE_MINUS_8: usize = 3; // 8'- Flat detuned (-8 to -25 cents, direct)
+pub const RANK_PICCOLO_4: usize = 4; // 4' High octave (direct)
 
 // Register Switch Bitmasks
-pub const REGISTER_MASTER: u32 = 0b11111;     // All 5 ranks active
+pub const REGISTER_MASTER: u32 = 0b11111; // All 5 ranks active
 pub const REGISTER_BANDONEON: u32 = (1 << RANK_BASSOON_16) | (1 << RANK_CLARINET_8); // 16' + 8' (Pure Cassotto)
-pub const REGISTER_ACCORDION: u32 = (1 << RANK_BASSOON_16) | (1 << RANK_CLARINET_8) | (1 << RANK_MUSETTE_PLUS_8); // 16' + 8' + 8'+
-pub const REGISTER_MUSETTE: u32 = (1 << RANK_CLARINET_8) | (1 << RANK_MUSETTE_PLUS_8) | (1 << RANK_MUSETTE_MINUS_8); // 8' + 8'+ + 8'-
+pub const REGISTER_ACCORDION: u32 =
+    (1 << RANK_BASSOON_16) | (1 << RANK_CLARINET_8) | (1 << RANK_MUSETTE_PLUS_8); // 16' + 8' + 8'+
+pub const REGISTER_MUSETTE: u32 =
+    (1 << RANK_CLARINET_8) | (1 << RANK_MUSETTE_PLUS_8) | (1 << RANK_MUSETTE_MINUS_8); // 8' + 8'+ + 8'-
 pub const REGISTER_CLARINET: u32 = 1 << RANK_CLARINET_8; // 8' Solo Cassotto
-pub const REGISTER_BASSOON: u32 = 1 << RANK_BASSOON_16;  // 16' Deep Cassotto
-pub const REGISTER_PICCOLO: u32 = 1 << RANK_PICCOLO_4;   // 4' Solo High
+pub const REGISTER_BASSOON: u32 = 1 << RANK_BASSOON_16; // 16' Deep Cassotto
+pub const REGISTER_PICCOLO: u32 = 1 << RANK_PICCOLO_4; // 4' Solo High
 pub const REGISTER_HARMONICON: u32 = (1 << RANK_CLARINET_8) | (1 << RANK_MUSETTE_PLUS_8); // 8' + 8'+ subtle beating
 
 /// Free-Reed aerophone sound preset profiles.
@@ -170,12 +172,12 @@ impl FreeReedOscillator {
         // y'' + 2*gamma*y' + omega^2 * (y + alpha*y^3) = F_aero(t)
         let natural_displacement = self.phase.sin();
         let target_disp = natural_displacement * driving_force.min(1.2);
-        
+
         let damping = 0.08 * omega;
         let non_lin_k = 1.0 + 0.3 * (self.displacement * self.displacement) * reed_stiffness;
         let spring_accel = -(omega * omega) * non_lin_k * (self.displacement - target_disp);
         let damp_accel = -damping * self.velocity;
-        
+
         let total_accel = spring_accel + damp_accel;
         self.velocity += total_accel * dt;
         self.velocity = self.velocity.clamp(-1200.0, 1200.0);
@@ -389,7 +391,8 @@ impl FreeReed {
     pub fn process_sample(&mut self) -> (f32, f32) {
         // Slew bellows pressure dynamically (smooth bellows inertia)
         let pressure_slew = 0.005;
-        self.current_bellows_pressure_pa += (self.target_bellows_pressure_pa - self.current_bellows_pressure_pa) * pressure_slew;
+        self.current_bellows_pressure_pa +=
+            (self.target_bellows_pressure_pa - self.current_bellows_pressure_pa) * pressure_slew;
 
         let p_bellows = self.current_bellows_pressure_pa;
         let is_push = p_bellows >= 0.0;
@@ -433,41 +436,72 @@ impl FreeReed {
             // 1. Rank 0: Bassoon 16' (Cassotto)
             if (self.register_mask & (1 << RANK_BASSOON_16)) != 0 {
                 let freq_16 = base_freq * 0.5;
-                let s = voice.ranks[RANK_BASSOON_16].process_step(freq_16, abs_p, sr, self.reed_stiffness * 1.15, is_push);
+                let s = voice.ranks[RANK_BASSOON_16].process_step(
+                    freq_16,
+                    abs_p,
+                    sr,
+                    self.reed_stiffness * 1.15,
+                    is_push,
+                );
                 cassotto_sum += s * valve_gain * 1.10;
             }
 
             // 2. Rank 1: Clarinet 8' (Cassotto)
             if (self.register_mask & (1 << RANK_CLARINET_8)) != 0 {
                 let freq_8 = base_freq;
-                let s = voice.ranks[RANK_CLARINET_8].process_step(freq_8, abs_p, sr, self.reed_stiffness, is_push);
+                let s = voice.ranks[RANK_CLARINET_8].process_step(
+                    freq_8,
+                    abs_p,
+                    sr,
+                    self.reed_stiffness,
+                    is_push,
+                );
                 cassotto_sum += s * valve_gain * 1.00;
             }
 
             // 3. Rank 2: Musette+ 8' (Direct)
             if (self.register_mask & (1 << RANK_MUSETTE_PLUS_8)) != 0 {
                 let freq_musette_p = base_freq * musette_mult_plus;
-                let s = voice.ranks[RANK_MUSETTE_PLUS_8].process_step(freq_musette_p, abs_p, sr, self.reed_stiffness * 0.98, is_push);
+                let s = voice.ranks[RANK_MUSETTE_PLUS_8].process_step(
+                    freq_musette_p,
+                    abs_p,
+                    sr,
+                    self.reed_stiffness * 0.98,
+                    is_push,
+                );
                 direct_sum += s * valve_gain * 0.90;
             }
 
             // 4. Rank 3: Musette- 8' (Direct)
             if (self.register_mask & (1 << RANK_MUSETTE_MINUS_8)) != 0 {
                 let freq_musette_m = base_freq * musette_mult_minus;
-                let s = voice.ranks[RANK_MUSETTE_MINUS_8].process_step(freq_musette_m, abs_p, sr, self.reed_stiffness * 0.98, is_push);
+                let s = voice.ranks[RANK_MUSETTE_MINUS_8].process_step(
+                    freq_musette_m,
+                    abs_p,
+                    sr,
+                    self.reed_stiffness * 0.98,
+                    is_push,
+                );
                 direct_sum += s * valve_gain * 0.90;
             }
 
             // 5. Rank 4: Piccolo 4' (Direct)
             if (self.register_mask & (1 << RANK_PICCOLO_4)) != 0 {
                 let freq_4 = base_freq * 2.0;
-                let s = voice.ranks[RANK_PICCOLO_4].process_step(freq_4, abs_p, sr, self.reed_stiffness * 0.90, is_push);
+                let s = voice.ranks[RANK_PICCOLO_4].process_step(
+                    freq_4,
+                    abs_p,
+                    sr,
+                    self.reed_stiffness * 0.90,
+                    is_push,
+                );
                 direct_sum += s * valve_gain * 0.75;
             }
         }
 
         // Process cassotto & direct through soundbox chamber
-        let acoustic_mono = self.cassotto.process_sample(cassotto_sum, direct_sum) * self.master_gain;
+        let acoustic_mono =
+            self.cassotto.process_sample(cassotto_sum, direct_sum) * self.master_gain;
 
         // Slight spatial stereo spread from left/right soundbox radiation
         let left = (acoustic_mono * 1.02 + cassotto_sum * 0.05).clamp(-1.0, 1.0);
@@ -570,7 +604,11 @@ mod tests {
                     non_zero = true;
                 }
             }
-            assert!(non_zero, "Free reed must produce audio for profile {}", prof.name());
+            assert!(
+                non_zero,
+                "Free reed must produce audio for profile {}",
+                prof.name()
+            );
 
             reed.note_off(60);
             for _ in 0..1000 {

@@ -16,23 +16,23 @@
 //! - Real-time safety guarantees: zero heap allocations during audio processing, NaN/Inf protection.
 //! - Lock-free atomic hot-recompilation without audio dropouts.
 
+use crate::traits::SignalProcessor;
 use std::collections::HashMap;
 use std::sync::Arc;
-use summoner_core::node::{AudioNode, NodeEvent, ProcessContext};
 use summoner_core::audio::Sample;
-use crate::traits::SignalProcessor;
+use summoner_core::node::{AudioNode, NodeEvent, ProcessContext};
 
 /// Opcodes for the Gen~ bytecode virtual machine.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GenOp {
     PushConst(f32),
-    LoadIn(u8),       // 0 = in1, 1 = in2
-    LoadHist(u8),     // 0..7 = hist1..hist8
-    StoreHist(u8),    // 0..7
-    LoadParam(u8),    // 0..7 = p1..p8
-    StoreVar(u8),     // temporary scratch variable 0..7
-    LoadVar(u8),      // temporary scratch variable 0..7
-    StoreOut(u8),     // 0 = out1, 1 = out2
+    LoadIn(u8),    // 0 = in1, 1 = in2
+    LoadHist(u8),  // 0..7 = hist1..hist8
+    StoreHist(u8), // 0..7
+    LoadParam(u8), // 0..7 = p1..p8
+    StoreVar(u8),  // temporary scratch variable 0..7
+    LoadVar(u8),   // temporary scratch variable 0..7
+    StoreOut(u8),  // 0 = out1, 1 = out2
     Add,
     Sub,
     Mul,
@@ -105,7 +105,12 @@ impl GenCompiler {
                     let expr = expr.trim();
 
                     // Compile RHS expression onto stack
-                    Self::compile_expression(expr, &mut ops, &mut param_names, &mut next_param_idx)?;
+                    Self::compile_expression(
+                        expr,
+                        &mut ops,
+                        &mut param_names,
+                        &mut next_param_idx,
+                    )?;
 
                     // Store into target
                     if target.eq_ignore_ascii_case("out1") {
@@ -114,10 +119,16 @@ impl GenCompiler {
                         ops.push(GenOp::StoreOut(1));
                     } else if target.to_ascii_lowercase().starts_with("hist") {
                         let idx_str = &target[4..];
-                        let idx: u8 = idx_str.parse().map_err(|_| format!("Invalid history register: {}", target))?;
+                        let idx: u8 = idx_str
+                            .parse()
+                            .map_err(|_| format!("Invalid history register: {}", target))?;
                         ops.push(GenOp::StoreHist(idx.saturating_sub(1).min(7)));
                     } else if target.eq_ignore_ascii_case("y") || target.eq_ignore_ascii_case("x") {
-                        let var_idx = if target.eq_ignore_ascii_case("y") { 0 } else { 1 };
+                        let var_idx = if target.eq_ignore_ascii_case("y") {
+                            0
+                        } else {
+                            1
+                        };
                         ops.push(GenOp::StoreVar(var_idx));
                     }
                 }
@@ -190,7 +201,9 @@ impl GenCompiler {
             } else if token.to_ascii_lowercase().starts_with("hist") {
                 let idx: u8 = token[4..].parse().unwrap_or(1);
                 output_queue.push(GenOp::LoadHist(idx.saturating_sub(1).min(7)));
-            } else if token.to_ascii_lowercase().starts_with("p") && token[1..].chars().all(|c| c.is_ascii_digit()) {
+            } else if token.to_ascii_lowercase().starts_with("p")
+                && token[1..].chars().all(|c| c.is_ascii_digit())
+            {
                 let idx: u8 = token[1..].parse().unwrap_or(1);
                 output_queue.push(GenOp::LoadParam(idx.saturating_sub(1).min(7)));
             } else if token.eq_ignore_ascii_case("y") {
@@ -525,7 +538,11 @@ impl SignalProcessor for GenCodeNode {
 
         for i in 0..num_frames {
             let l_in = if i < in_left.len() { in_left[i] } else { 0.0 };
-            let r_in = if i < in_right.len() { in_right[i] } else { l_in };
+            let r_in = if i < in_right.len() {
+                in_right[i]
+            } else {
+                l_in
+            };
 
             let (out_l, out_r) = self.process_stereo(l_in, r_in);
 
@@ -596,7 +613,8 @@ mod tests {
     #[test]
     fn test_code_node_zero_allocation_audio_loop() {
         let mut node = GenCodeNode::new(44100.0);
-        node.set_code("out1 = in1 * 0.5; out2 = in2 * 0.5;").unwrap();
+        node.set_code("out1 = in1 * 0.5; out2 = in2 * 0.5;")
+            .unwrap();
 
         let in_buf = vec![0.8f32; 512];
         let mut out_l = vec![0.0f32; 512];
@@ -623,4 +641,3 @@ mod tests {
         }
     }
 }
-

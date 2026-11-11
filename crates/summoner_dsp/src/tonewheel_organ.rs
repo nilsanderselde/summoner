@@ -10,11 +10,11 @@
 //!
 //! Enforces zero heap allocations in real-time audio render loops under `AllocGuard`.
 
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::TAU;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
 
 fn default_active_keys() -> [bool; 128] {
     [false; 128]
@@ -369,7 +369,9 @@ impl TonewheelOrgan {
                 for d in 0..NUM_DRAWBARS {
                     let gain = drawbar_gains[d];
                     if gain > 0.0 {
-                        if let Some(wheel) = Self::note_to_tonewheel(note as i32, DRAWBAR_SEMITONE_OFFSETS[d]) {
+                        if let Some(wheel) =
+                            Self::note_to_tonewheel(note as i32, DRAWBAR_SEMITONE_OFFSETS[d])
+                        {
                             let ph = self.tonewheel_phases[wheel];
                             // Pure fundamental sine plus subtle magnetic tooth saturation
                             let sine = ph.sin();
@@ -384,7 +386,9 @@ impl TonewheelOrgan {
             if self.key_click_timers[note] > 0.0 {
                 self.key_click_timers[note] -= dt;
                 // High-frequency pseudo-random contact noise burst
-                let hash = ((note as u32).wrapping_mul(2654435761) ^ (self.scanner_write_pos as u32).wrapping_mul(805306457)) as f32;
+                let hash = ((note as u32).wrapping_mul(2654435761)
+                    ^ (self.scanner_write_pos as u32).wrapping_mul(805306457))
+                    as f32;
                 let noise = ((hash % 1000.0) / 500.0) - 1.0;
                 key_click_signal += noise * self.key_click_amount * 0.15;
             }
@@ -423,19 +427,24 @@ impl TonewheelOrgan {
                     let f = self.tonewheel_freqs[wheel];
                     self.percussion_phase = (self.percussion_phase + TAU * f * dt) % TAU;
                     let perc_gain = if self.percussion_soft { 0.45 } else { 0.90 };
-                    percussion_signal = self.percussion_phase.sin() * self.percussion_envelope * perc_gain;
+                    percussion_signal =
+                        self.percussion_phase.sin() * self.percussion_envelope * perc_gain;
                 }
             }
         }
 
         // Combine organ drawbars, percussion, and key click
-        let organ_mix_gain = if self.percussion_enabled && !self.percussion_soft && self.percussion_envelope > 0.01 {
+        let organ_mix_gain = if self.percussion_enabled
+            && !self.percussion_soft
+            && self.percussion_envelope > 0.01
+        {
             0.70 // Vintage circuit attenuates drawbars when normal percussion is active
         } else {
             1.0
         };
 
-        let combined = (raw_organ_signal * organ_mix_gain + percussion_signal + key_click_signal) * 0.15;
+        let combined =
+            (raw_organ_signal * organ_mix_gain + percussion_signal + key_click_signal) * 0.15;
 
         // 5. Scanner Vibrato / Chorus delay-line modulation
         let modulated = if self.vibrato_mode != VibratoChorusMode::Off {
@@ -454,17 +463,21 @@ impl TonewheelOrgan {
             };
 
             let delay_samples = (3.0 + lfo * depth_ms) * (self.sample_rate as f32 / 1000.0);
-            let read_pos = (self.scanner_write_pos as f32 + buf_len as f32 - delay_samples) % (buf_len as f32);
+            let read_pos =
+                (self.scanner_write_pos as f32 + buf_len as f32 - delay_samples) % (buf_len as f32);
 
             let idx0 = read_pos.floor() as usize % buf_len;
             let idx1 = (idx0 + 1) % buf_len;
             let frac = read_pos.fract();
-            let delayed_sample = self.scanner_buffer[idx0] * (1.0 - frac) + self.scanner_buffer[idx1] * frac;
+            let delayed_sample =
+                self.scanner_buffer[idx0] * (1.0 - frac) + self.scanner_buffer[idx1] * frac;
 
             self.scanner_write_pos = (self.scanner_write_pos + 1) % buf_len;
 
             match self.vibrato_mode {
-                VibratoChorusMode::V1 | VibratoChorusMode::V2 | VibratoChorusMode::V3 => delayed_sample,
+                VibratoChorusMode::V1 | VibratoChorusMode::V2 | VibratoChorusMode::V3 => {
+                    delayed_sample
+                }
                 VibratoChorusMode::C1 | VibratoChorusMode::C2 | VibratoChorusMode::C3 => {
                     0.55 * combined + 0.45 * delayed_sample // Chorus mix (dry + wet)
                 }

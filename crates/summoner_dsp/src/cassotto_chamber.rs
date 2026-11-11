@@ -138,7 +138,9 @@ impl CassottoBiquad {
 
     #[inline(always)]
     pub fn process_sample(&mut self, input: f32) -> f32 {
-        let out = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2 - self.a1 * self.y1 - self.a2 * self.y2;
+        let out = self.b0 * input + self.b1 * self.x1 + self.b2 * self.x2
+            - self.a1 * self.y1
+            - self.a2 * self.y2;
         self.x2 = self.x1;
         self.x1 = input;
         self.y2 = self.y1;
@@ -217,8 +219,10 @@ impl CassottoChamber {
         self.chamber_modes[3].set_peak(sr, 3400.0, -4.0 * (1.0 - self.aperture), 2.0);
 
         // Cassotto low-pass filter tracking aperture opening
-        let effective_cutoff = (fc_base * (0.35 + 0.65 * self.aperture)).clamp(100.0, sr as f32 * 0.45);
-        self.cassotto_lowpass.set_lowpass(sr, effective_cutoff, 0.707);
+        let effective_cutoff =
+            (fc_base * (0.35 + 0.65 * self.aperture)).clamp(100.0, sr as f32 * 0.45);
+        self.cassotto_lowpass
+            .set_lowpass(sr, effective_cutoff, 0.707);
 
         // Soundbox body resonance (birch/spruce cavity)
         self.body_resonance.set_bandpass(sr, 580.0, 1.8);

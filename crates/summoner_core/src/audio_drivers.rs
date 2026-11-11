@@ -463,9 +463,18 @@ pub struct CoreAudioAggregateConfig {
 /// macOS CoreAudio hardware notification event types (Task A4).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CoreAudioNotificationEvent {
-    SampleRateChanged { old_rate: u32, new_rate: u32 },
-    DefaultDeviceChanged { device_uid: String, direction: DeviceDirection },
-    DeviceAliveStateChanged { device_uid: String, is_alive: bool },
+    SampleRateChanged {
+        old_rate: u32,
+        new_rate: u32,
+    },
+    DefaultDeviceChanged {
+        device_uid: String,
+        direction: DeviceDirection,
+    },
+    DeviceAliveStateChanged {
+        device_uid: String,
+        is_alive: bool,
+    },
     HardwareOverload,
 }
 
@@ -478,7 +487,10 @@ impl CoreAudioAggregateManager {
         if config.sub_device_uids.is_empty() {
             return Err("Aggregate device requires at least one sub-device".to_string());
         }
-        if !config.sub_device_uids.contains(&config.master_clock_device_uid) {
+        if !config
+            .sub_device_uids
+            .contains(&config.master_clock_device_uid)
+        {
             return Err("Master clock device UID must be one of the sub-devices".to_string());
         }
         if config.sample_rate == 0 {
@@ -488,7 +500,10 @@ impl CoreAudioAggregateManager {
     }
 
     /// Construct an AudioDeviceDescriptor representing the synthesized aggregate device.
-    pub fn build_descriptor(config: &CoreAudioAggregateConfig, total_channels: usize) -> AudioDeviceDescriptor {
+    pub fn build_descriptor(
+        config: &CoreAudioAggregateConfig,
+        total_channels: usize,
+    ) -> AudioDeviceDescriptor {
         AudioDeviceDescriptor {
             name: config.name.clone(),
             backend: AudioDriverBackendType::CoreAudio,

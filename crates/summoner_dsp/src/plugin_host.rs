@@ -419,7 +419,10 @@ mod tests {
             );
         }));
 
-        assert!(result.is_ok(), "PluginAudioNode::process triggered heap allocation!");
+        assert!(
+            result.is_ok(),
+            "PluginAudioNode::process triggered heap allocation!"
+        );
         assert_eq!(plugin_node.get_parameter(0), Some(0.75));
         assert_eq!(out_l[0], 0.75);
     }

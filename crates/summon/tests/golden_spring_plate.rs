@@ -108,12 +108,36 @@ fn test_golden_spring_lattice_deterministic() {
 
         {
             let _guard = AllocGuard::new();
-            accutronics.process_block(&[&in_dummy[..]], &mut [&mut out_acc_l[..], &mut out_acc_r[..]], &ctx);
-            studio_plate.process_block(&[&in_dummy[..]], &mut [&mut out_stu_l[..], &mut out_stu_r[..]], &ctx);
-            dual_helical.process_block(&[&in_dummy[..]], &mut [&mut out_dual_l[..], &mut out_dual_r[..]], &ctx);
-            resonant_coil.process_block(&[&in_dummy[..]], &mut [&mut out_res_l[..], &mut out_res_r[..]], &ctx);
-            shaker.process_block(&[&in_dummy[..]], &mut [&mut out_shk_l[..], &mut out_shk_r[..]], &ctx);
-            multi_axis.process_block(&[&in_dummy[..]], &mut [&mut out_max_l[..], &mut out_max_r[..]], &ctx);
+            accutronics.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_acc_l[..], &mut out_acc_r[..]],
+                &ctx,
+            );
+            studio_plate.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_stu_l[..], &mut out_stu_r[..]],
+                &ctx,
+            );
+            dual_helical.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_dual_l[..], &mut out_dual_r[..]],
+                &ctx,
+            );
+            resonant_coil.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_res_l[..], &mut out_res_r[..]],
+                &ctx,
+            );
+            shaker.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_shk_l[..], &mut out_shk_r[..]],
+                &ctx,
+            );
+            multi_axis.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_max_l[..], &mut out_max_r[..]],
+                &ctx,
+            );
         }
 
         for i in 0..BLOCK_SIZE {
@@ -208,11 +232,31 @@ fn test_golden_plate_tank_dispersion_deterministic() {
 
         {
             let _guard = AllocGuard::new();
-            emt140.process_block(&[&in_dummy[..]], &mut [&mut out_emt_l[..], &mut out_emt_r[..]], &ctx);
-            studio_plate.process_block(&[&in_dummy[..]], &mut [&mut out_stu_l[..], &mut out_stu_r[..]], &ctx);
-            gold_foil.process_block(&[&in_dummy[..]], &mut [&mut out_gold_l[..], &mut out_gold_r[..]], &ctx);
-            compact.process_block(&[&in_dummy[..]], &mut [&mut out_cmp_l[..], &mut out_cmp_r[..]], &ctx);
-            high_tension.process_block(&[&in_dummy[..]], &mut [&mut out_ht_l[..], &mut out_ht_r[..]], &ctx);
+            emt140.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_emt_l[..], &mut out_emt_r[..]],
+                &ctx,
+            );
+            studio_plate.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_stu_l[..], &mut out_stu_r[..]],
+                &ctx,
+            );
+            gold_foil.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_gold_l[..], &mut out_gold_r[..]],
+                &ctx,
+            );
+            compact.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_cmp_l[..], &mut out_cmp_r[..]],
+                &ctx,
+            );
+            high_tension.process_block(
+                &[&in_dummy[..]],
+                &mut [&mut out_ht_l[..], &mut out_ht_r[..]],
+                &ctx,
+            );
         }
 
         for i in 0..BLOCK_SIZE {
@@ -368,10 +412,26 @@ fn test_golden_spring_plate_views_ascii_and_snapshots() {
 
     // Save PNG snapshots across the project render directories
     let _ = spring_view.render_snapshot_png("scratch/renders/spring_lattice_view.png", 800, 520);
-    let _ = spring_view.render_snapshot_png("crates/summon/scratch/renders/spring_lattice_view.png", 800, 520);
-    let _ = spring_view.render_snapshot_png("crates/summoner_gui/scratch/renders/spring_lattice_view.png", 800, 520);
+    let _ = spring_view.render_snapshot_png(
+        "crates/summon/scratch/renders/spring_lattice_view.png",
+        800,
+        520,
+    );
+    let _ = spring_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/spring_lattice_view.png",
+        800,
+        520,
+    );
 
     let _ = plate_view.render_snapshot_png("scratch/renders/plate_dispersion_view.png", 800, 520);
-    let _ = plate_view.render_snapshot_png("crates/summon/scratch/renders/plate_dispersion_view.png", 800, 520);
-    let _ = plate_view.render_snapshot_png("crates/summoner_gui/scratch/renders/plate_dispersion_view.png", 800, 520);
+    let _ = plate_view.render_snapshot_png(
+        "crates/summon/scratch/renders/plate_dispersion_view.png",
+        800,
+        520,
+    );
+    let _ = plate_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/plate_dispersion_view.png",
+        800,
+        520,
+    );
 }

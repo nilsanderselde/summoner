@@ -38,9 +38,9 @@ impl Default for ToneholeParams {
     fn default() -> Self {
         Self {
             position_ratio: 0.5,
-            hole_radius_m: 0.0045,      // 4.5 mm
-            chimney_height_m: 0.0025,   // 2.5 mm wall thickness
-            bore_radius_m: 0.0095,      // 9.5 mm bore radius (Flute C)
+            hole_radius_m: 0.0045,    // 4.5 mm
+            chimney_height_m: 0.0025, // 2.5 mm wall thickness
+            bore_radius_m: 0.0095,    // 9.5 mm bore radius (Flute C)
         }
     }
 }
@@ -89,7 +89,12 @@ impl Default for ToneholeJunction {
 
 impl ToneholeJunction {
     /// Creates a new tonehole junction with specified geometry and position.
-    pub fn new(position_ratio: f32, hole_radius_m: f32, chimney_height_m: f32, bore_radius_m: f32) -> Self {
+    pub fn new(
+        position_ratio: f32,
+        hole_radius_m: f32,
+        chimney_height_m: f32,
+        bore_radius_m: f32,
+    ) -> Self {
         Self {
             params: ToneholeParams {
                 position_ratio: position_ratio.clamp(0.05, 0.95),
@@ -129,7 +134,8 @@ impl ToneholeJunction {
             // Open tonehole: impedance proportional to chimney length and inversely proportional to open area
             let area_ratio = (self.params.hole_radius_m / self.params.bore_radius_m).powi(2);
             let effective_chimney = self.params.chimney_height_m + 0.8 * self.params.hole_radius_m;
-            let z_open = (effective_chimney / (self.params.hole_radius_m * 2.0 * area_ratio.max(0.05)))
+            let z_open = (effective_chimney
+                / (self.params.hole_radius_m * 2.0 * area_ratio.max(0.05)))
                 / self.open_fraction.max(0.01);
             z_open.clamp(0.05, 50.0)
         }
@@ -137,7 +143,12 @@ impl ToneholeJunction {
 
     /// Evaluates 3-port acoustic scattering for incoming forward wave $p_1^+$ and backward wave $p_2^+$.
     #[inline]
-    pub fn process_scattering(&mut self, p1_fwd_in: f32, p2_rev_in: f32, damping: f32) -> ToneholeScatteringResult {
+    pub fn process_scattering(
+        &mut self,
+        p1_fwd_in: f32,
+        p2_rev_in: f32,
+        damping: f32,
+    ) -> ToneholeScatteringResult {
         let z_ratio = self.compute_shunt_impedance_ratio();
 
         // 3-port acoustic scattering matrix coefficients:
@@ -286,8 +297,18 @@ impl ToneholeLattice {
     pub fn recalculate_lattice_cutoff(&mut self) {
         // Lattice cutoff formula: f_c = (c / 2pi) * sqrt( (2 * b / (a^2 * 2s * t_e)) )
         // Typical woodwind cutoff ranges from 1.5 kHz to 4.5 kHz
-        let avg_hole_r = self.toneholes.iter().map(|h| h.params.hole_radius_m).sum::<f32>() / NUM_TONEHOLES as f32;
-        let avg_chimney = self.toneholes.iter().map(|h| h.params.chimney_height_m).sum::<f32>() / NUM_TONEHOLES as f32;
+        let avg_hole_r = self
+            .toneholes
+            .iter()
+            .map(|h| h.params.hole_radius_m)
+            .sum::<f32>()
+            / NUM_TONEHOLES as f32;
+        let avg_chimney = self
+            .toneholes
+            .iter()
+            .map(|h| h.params.chimney_height_m)
+            .sum::<f32>()
+            / NUM_TONEHOLES as f32;
         let s_spacing = (self.total_bore_length_m * 0.4) / (NUM_TONEHOLES as f32);
 
         let t_e = avg_chimney + 0.8 * avg_hole_r;

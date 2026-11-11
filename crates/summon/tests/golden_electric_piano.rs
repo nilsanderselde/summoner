@@ -370,13 +370,30 @@ fn test_golden_electric_piano_views_ascii_and_snapshots() {
     // Save PNG snapshots across the project render directories
     let _ = ep_view.render_snapshot_png("scratch/renders/electric_piano_view.png", 800, 520);
     let _ = ep_view.render_snapshot_png("../../scratch/renders/electric_piano_view.png", 800, 520);
-    let _ = ep_view.render_snapshot_png("crates/summon/scratch/renders/electric_piano_view.png", 800, 520);
-    let _ = ep_view.render_snapshot_png("crates/summoner_gui/scratch/renders/electric_piano_view.png", 800, 520);
+    let _ = ep_view.render_snapshot_png(
+        "crates/summon/scratch/renders/electric_piano_view.png",
+        800,
+        520,
+    );
+    let _ = ep_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/electric_piano_view.png",
+        800,
+        520,
+    );
 
     let _ = tine_view.render_snapshot_png("scratch/renders/tine_resonator_view.png", 800, 520);
-    let _ = tine_view.render_snapshot_png("../../scratch/renders/tine_resonator_view.png", 800, 520);
-    let _ = tine_view.render_snapshot_png("crates/summon/scratch/renders/tine_resonator_view.png", 800, 520);
-    let _ = tine_view.render_snapshot_png("crates/summoner_gui/scratch/renders/tine_resonator_view.png", 800, 520);
+    let _ =
+        tine_view.render_snapshot_png("../../scratch/renders/tine_resonator_view.png", 800, 520);
+    let _ = tine_view.render_snapshot_png(
+        "crates/summon/scratch/renders/tine_resonator_view.png",
+        800,
+        520,
+    );
+    let _ = tine_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/tine_resonator_view.png",
+        800,
+        520,
+    );
 }
 
 fn check_or_save(filename: &str, digest: &str) {

@@ -130,7 +130,13 @@ mod voice_tests {
     fn test_voice_node_gates_and_tunes() {
         let ctx = ProcessContext::new(48000, 120.0, 0);
         let mut v = VoiceNode::new(OscSaw::new(100.0));
-        v.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 1.0 }, &ctx);
+        v.handle_event(
+            &NodeEvent::NoteOn {
+                note: 69,
+                velocity: 1.0,
+            },
+            &ctx,
+        );
         assert!((v.processor.frequency - 440.0).abs() < 1e-3);
         let mut buf = vec![0.0f32; 256];
         v.process(&[], &mut [&mut buf[..]], &ctx);

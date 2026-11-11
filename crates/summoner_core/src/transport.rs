@@ -187,7 +187,8 @@ impl TapTempoCalculator {
         if self.intervals_sec.is_empty() {
             None
         } else {
-            let avg_interval: f64 = self.intervals_sec.iter().sum::<f64>() / self.intervals_sec.len() as f64;
+            let avg_interval: f64 =
+                self.intervals_sec.iter().sum::<f64>() / self.intervals_sec.len() as f64;
             let bpm = (60.0 / avg_interval).clamp(30.0, 300.0);
             Some(bpm)
         }
@@ -209,7 +210,9 @@ mod tests {
     fn test_transport_with_tempo_changes() {
         let mut transport = Transport::new(44100, 120.0);
         // Add tempo change at beat 4 to 60 BPM
-        transport.tempo_map.add_tempo_point(TempoPoint::jump(4.0, 60.0));
+        transport
+            .tempo_map
+            .add_tempo_point(TempoPoint::jump(4.0, 60.0));
         transport.play();
 
         // Advance 2 seconds (44100 * 2 frames = 88200) -> should be at beat 4.0

@@ -18,18 +18,18 @@ use std::sync::atomic::{AtomicU32, Ordering};
 #[repr(u32)]
 pub enum IpaVowel {
     #[default]
-    CloseFrontI = 0,    // /i/ (beet)
-    CloseMidFrontE = 1, // /e/ (bait)
-    OpenMidFrontEps = 2,// /ɛ/ (bet)
-    NearOpenFrontAsh = 3,// /æ/ (bat)
-    OpenFrontA = 4,     // /a/ (father)
-    OpenBackA = 5,      // /ɑ/ (palm)
-    OpenMidBackO = 6,   // /ɔ/ (bought)
-    CloseMidBackO = 7,  // /o/ (boat)
-    CloseBackU = 8,     // /u/ (boot)
-    MidCentralSchwa = 9,// /ə/ (sofa)
-    CloseFrontY = 10,   // /y/ (French "tu")
-    CloseMidFrontOe = 11,// /ø/ (French "feu")
+    CloseFrontI = 0, // /i/ (beet)
+    CloseMidFrontE = 1,   // /e/ (bait)
+    OpenMidFrontEps = 2,  // /ɛ/ (bet)
+    NearOpenFrontAsh = 3, // /æ/ (bat)
+    OpenFrontA = 4,       // /a/ (father)
+    OpenBackA = 5,        // /ɑ/ (palm)
+    OpenMidBackO = 6,     // /ɔ/ (bought)
+    CloseMidBackO = 7,    // /o/ (boat)
+    CloseBackU = 8,       // /u/ (boot)
+    MidCentralSchwa = 9,  // /ə/ (sofa)
+    CloseFrontY = 10,     // /y/ (French "tu")
+    CloseMidFrontOe = 11, // /ø/ (French "feu")
 }
 
 impl IpaVowel {
@@ -199,11 +199,21 @@ impl FormantBus {
     }
 
     /// Sets articulatory parameters: tongue position $[0..1]$, tongue height $[0..1]$, lip opening $[0.1..2.5]$, velum $[0..1]$.
-    pub fn set_articulators(&self, tongue_pos: f32, tongue_height: f32, lip_opening: f32, velum: f32) {
-        self.tongue_pos_bits.store(tongue_pos.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.tongue_height_bits.store(tongue_height.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.lip_opening_bits.store(lip_opening.clamp(0.1, 2.5).to_bits(), Ordering::Release);
-        self.velum_opening_bits.store(velum.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+    pub fn set_articulators(
+        &self,
+        tongue_pos: f32,
+        tongue_height: f32,
+        lip_opening: f32,
+        velum: f32,
+    ) {
+        self.tongue_pos_bits
+            .store(tongue_pos.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.tongue_height_bits
+            .store(tongue_height.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.lip_opening_bits
+            .store(lip_opening.clamp(0.1, 2.5).to_bits(), Ordering::Release);
+        self.velum_opening_bits
+            .store(velum.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Gets articulatory parameters $(pos, height, lip, velum)$.
@@ -218,8 +228,10 @@ impl FormantBus {
 
     /// Sets glottal fundamental frequency ($F_0$) in Hz and turbulent aspiration noise level.
     pub fn set_glottal_source(&self, f0_hz: f32, aspiration: f32) {
-        self.glottal_f0_bits.store(f0_hz.clamp(20.0, 2000.0).to_bits(), Ordering::Release);
-        self.aspiration_bits.store(aspiration.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.glottal_f0_bits
+            .store(f0_hz.clamp(20.0, 2000.0).to_bits(), Ordering::Release);
+        self.aspiration_bits
+            .store(aspiration.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Sets trajectory morph progress $[0.0 ..= 1.0]$.
@@ -230,7 +242,10 @@ impl FormantBus {
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if morph_active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -278,7 +293,11 @@ impl FormantBus {
 
     /// Synchronizes formant bus states from `ParamBus` handles.
     pub fn sync_from_param_bus(&self, bus: &ParamBus, base_param_id: ParamId) {
-        let vowel_idx = bus.get(ParamId(base_param_id.0)).unwrap_or(0.0).max(0.0).round() as u32;
+        let vowel_idx = bus
+            .get(ParamId(base_param_id.0))
+            .unwrap_or(0.0)
+            .max(0.0)
+            .round() as u32;
         let f1 = bus.get(ParamId(base_param_id.0 + 1)).unwrap_or(270.0);
         let f2 = bus.get(ParamId(base_param_id.0 + 2)).unwrap_or(2290.0);
         let f3 = bus.get(ParamId(base_param_id.0 + 3)).unwrap_or(3010.0);

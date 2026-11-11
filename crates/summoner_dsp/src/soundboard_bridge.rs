@@ -70,10 +70,14 @@ impl SoundboardProfile {
     pub fn modal_frequencies_hz(&self) -> [f32; NUM_SOUNDBOARD_MODES] {
         match self {
             Self::SteinwayD9Foot => [62.0, 125.0, 240.0, 380.0, 680.0, 1200.0, 2100.0, 3300.0],
-            Self::BösendorferImperial => [52.0, 108.0, 210.0, 340.0, 610.0, 1080.0, 1950.0, 3050.0],
+            Self::BösendorferImperial => {
+                [52.0, 108.0, 210.0, 340.0, 610.0, 1080.0, 1950.0, 3050.0]
+            }
             Self::YamahaCFX => [68.0, 138.0, 265.0, 420.0, 740.0, 1320.0, 2350.0, 3600.0],
             Self::IntimateStudio => [58.0, 118.0, 225.0, 360.0, 640.0, 1150.0, 1980.0, 2900.0],
-            Self::ImpressionistUnaCorda => [60.0, 120.0, 235.0, 370.0, 660.0, 1180.0, 2050.0, 3200.0],
+            Self::ImpressionistUnaCorda => {
+                [60.0, 120.0, 235.0, 370.0, 660.0, 1180.0, 2050.0, 3200.0]
+            }
             Self::PreparedAvantGarde => [75.0, 155.0, 290.0, 480.0, 820.0, 1480.0, 2600.0, 4100.0],
         }
     }
@@ -381,7 +385,9 @@ impl BridgeWaveCoupler {
         for i in 0..count {
             let f_in = string_forces_in[i];
             // Reflected wave with phase inversion at bridge plus bridge motion admittance
-            let f_refl = -f_in + (2.0 * self.bridge_impedance * self.bridge_velocity * (1.0 - bleed)) + avg_bleed_force;
+            let f_refl = -f_in
+                + (2.0 * self.bridge_impedance * self.bridge_velocity * (1.0 - bleed))
+                + avg_bleed_force;
             reflected_forces_out[i] = f_refl;
         }
 
@@ -496,7 +502,8 @@ impl GrandPianoFeltHammer {
             };
 
             let static_force = eff_k * compression.powf(eff_p);
-            let dynamic_damping = (1.0 + self.hysteresis_loss * comp_dot.clamp(-50.0, 50.0)).max(0.0);
+            let dynamic_damping =
+                (1.0 + self.hysteresis_loss * comp_dot.clamp(-50.0, 50.0)).max(0.0);
             let contact_force = (static_force * dynamic_damping).max(0.0);
 
             // Newton's 2nd law for hammer mass: m_h * a_h = -F_h

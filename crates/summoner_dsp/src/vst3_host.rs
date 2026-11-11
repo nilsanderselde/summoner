@@ -47,40 +47,31 @@ pub const K_NOT_INITIALIZED: TResult = 5;
 
 // Standard VST3 Interface Identifiers (IIDs)
 pub const IID_FUNKNOWN: TUID = [
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x46,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46,
 ];
 pub const IID_IPLUGIN_FACTORY: TUID = [
-    0x7A, 0x4E, 0x86, 0x49, 0xED, 0x8A, 0x4F, 0xEB, 0x84, 0x44, 0x49, 0x82, 0x58, 0x16, 0xE9,
-    0x49,
+    0x7A, 0x4E, 0x86, 0x49, 0xED, 0x8A, 0x4F, 0xEB, 0x84, 0x44, 0x49, 0x82, 0x58, 0x16, 0xE9, 0x49,
 ];
 pub const IID_ICOMPONENT: TUID = [
-    0xE8, 0x31, 0xFF, 0x31, 0xF2, 0xD5, 0x47, 0x48, 0x92, 0x8E, 0xBB, 0xEE, 0x25, 0x69, 0x6E,
-    0x80,
+    0xE8, 0x31, 0xFF, 0x31, 0xF2, 0xD5, 0x47, 0x48, 0x92, 0x8E, 0xBB, 0xEE, 0x25, 0x69, 0x6E, 0x80,
 ];
 pub const IID_IAUDIO_PROCESSOR: TUID = [
-    0x42, 0x42, 0x20, 0x02, 0xDE, 0xD8, 0x42, 0x80, 0xA0, 0x41, 0x0E, 0xA2, 0xD4, 0x27, 0x5B,
-    0x2D,
+    0x42, 0x42, 0x20, 0x02, 0xDE, 0xD8, 0x42, 0x80, 0xA0, 0x41, 0x0E, 0xA2, 0xD4, 0x27, 0x5B, 0x2D,
 ];
 pub const IID_IEDIT_CONTROLLER: TUID = [
-    0xDC, 0xC5, 0x9B, 0x20, 0xA4, 0x87, 0x41, 0xBE, 0xA1, 0x4B, 0x10, 0x7E, 0x6A, 0x99, 0x54,
-    0x6E,
+    0xDC, 0xC5, 0x9B, 0x20, 0xA4, 0x87, 0x41, 0xBE, 0xA1, 0x4B, 0x10, 0x7E, 0x6A, 0x99, 0x54, 0x6E,
 ];
 pub const IID_IPLUG_VIEW: TUID = [
-    0x5B, 0xE3, 0x47, 0x60, 0x8F, 0x4B, 0x42, 0xB8, 0xB7, 0xDE, 0xD5, 0xDB, 0x9D, 0xEB, 0xBE,
-    0xFA,
+    0x5B, 0xE3, 0x47, 0x60, 0x8F, 0x4B, 0x42, 0xB8, 0xB7, 0xDE, 0xD5, 0xDB, 0x9D, 0xEB, 0xBE, 0xFA,
 ];
 pub const IID_IBSTREAM: TUID = [
-    0xC3, 0x5D, 0x27, 0x2E, 0x2C, 0x94, 0x41, 0xEF, 0x8E, 0x70, 0xDC, 0xB0, 0x99, 0xBF, 0x1A,
-    0x43,
+    0xC3, 0x5D, 0x27, 0x2E, 0x2C, 0x94, 0x41, 0xEF, 0x8E, 0x70, 0xDC, 0xB0, 0x99, 0xBF, 0x1A, 0x43,
 ];
 pub const IID_IPARAMETER_CHANGES: TUID = [
-    0xA4, 0x77, 0x96, 0x63, 0xEE, 0xBB, 0x4A, 0x1E, 0x82, 0x7E, 0x59, 0x02, 0x82, 0x9D, 0x7A,
-    0x14,
+    0xA4, 0x77, 0x96, 0x63, 0xEE, 0xBB, 0x4A, 0x1E, 0x82, 0x7E, 0x59, 0x02, 0x82, 0x9D, 0x7A, 0x14,
 ];
 pub const IID_IEVENT_LIST: TUID = [
-    0x3A, 0xEC, 0xD6, 0xBD, 0xA7, 0x67, 0x04, 0x88, 0x49, 0x0E, 0xC1, 0xF8, 0xD8, 0x2F, 0x39,
-    0xF8,
+    0x3A, 0xEC, 0xD6, 0xBD, 0xA7, 0x67, 0x04, 0x88, 0x49, 0x0E, 0xC1, 0xF8, 0xD8, 0x2F, 0x39, 0xF8,
 ];
 
 // Media Types and Directions
@@ -202,11 +193,8 @@ pub struct IPluginFactoryVtbl {
     pub get_factory_info:
         unsafe extern "system" fn(this: *mut c_void, info: *mut PFactoryInfo) -> TResult,
     pub count_classes: unsafe extern "system" fn(this: *mut c_void) -> i32,
-    pub get_class_info: unsafe extern "system" fn(
-        this: *mut c_void,
-        index: i32,
-        info: *mut PClassInfo,
-    ) -> TResult,
+    pub get_class_info:
+        unsafe extern "system" fn(this: *mut c_void, index: i32, info: *mut PClassInfo) -> TResult,
     pub create_instance: unsafe extern "system" fn(
         this: *mut c_void,
         cid: *const TUID,
@@ -497,9 +485,9 @@ unsafe extern "system" fn rust_bstream_seek(
 ) -> TResult {
     let stream = &mut *(this as *mut RustBStream);
     let new_pos = match mode {
-        0 => pos,                                        // SeekSet
-        1 => stream.position as i64 + pos,               // SeekCur
-        2 => stream.data.len() as i64 + pos,             // SeekEnd
+        0 => pos,                            // SeekSet
+        1 => stream.position as i64 + pos,   // SeekCur
+        2 => stream.data.len() as i64 + pos, // SeekEnd
         _ => return K_INVALID_ARGUMENT,
     };
     if new_pos < 0 {
@@ -542,11 +530,17 @@ pub fn resolve_vst3_binary_path(bundle_path: &Path) -> Result<PathBuf, String> {
     // Check platform-specific locations within the VST3 bundle:
     #[cfg(target_os = "windows")]
     {
-        let win_64 = bundle_path.join("Contents").join("x86_64-win").join(format!("{}.vst3", stem));
+        let win_64 = bundle_path
+            .join("Contents")
+            .join("x86_64-win")
+            .join(format!("{}.vst3", stem));
         if win_64.exists() {
             return Ok(win_64);
         }
-        let win_arm64 = bundle_path.join("Contents").join("arm64-win").join(format!("{}.vst3", stem));
+        let win_arm64 = bundle_path
+            .join("Contents")
+            .join("arm64-win")
+            .join(format!("{}.vst3", stem));
         if win_arm64.exists() {
             return Ok(win_arm64);
         }
@@ -562,11 +556,17 @@ pub fn resolve_vst3_binary_path(bundle_path: &Path) -> Result<PathBuf, String> {
 
     #[cfg(target_os = "linux")]
     {
-        let linux_x86_64 = bundle_path.join("Contents").join("x86_64-linux").join(format!("{}.so", stem));
+        let linux_x86_64 = bundle_path
+            .join("Contents")
+            .join("x86_64-linux")
+            .join(format!("{}.so", stem));
         if linux_x86_64.exists() {
             return Ok(linux_x86_64);
         }
-        let linux_vst3 = bundle_path.join("Contents").join("x86_64-linux").join(format!("{}.vst3", stem));
+        let linux_vst3 = bundle_path
+            .join("Contents")
+            .join("x86_64-linux")
+            .join(format!("{}.vst3", stem));
         if linux_vst3.exists() {
             return Ok(linux_vst3);
         }
@@ -711,10 +711,25 @@ impl Vst3PluginInstance {
         let count = self.parameters.len() as i32;
         let mut written = 0i32;
         unsafe {
-            rust_bstream_write(stream_ptr, &count as *const _ as *const c_void, 4, &mut written);
+            rust_bstream_write(
+                stream_ptr,
+                &count as *const _ as *const c_void,
+                4,
+                &mut written,
+            );
             for (&id, param) in &self.parameters {
-                rust_bstream_write(stream_ptr, &id as *const _ as *const c_void, 4, &mut written);
-                rust_bstream_write(stream_ptr, &param.value as *const _ as *const c_void, 4, &mut written);
+                rust_bstream_write(
+                    stream_ptr,
+                    &id as *const _ as *const c_void,
+                    4,
+                    &mut written,
+                );
+                rust_bstream_write(
+                    stream_ptr,
+                    &param.value as *const _ as *const c_void,
+                    4,
+                    &mut written,
+                );
             }
         }
 
@@ -747,12 +762,27 @@ impl Vst3PluginInstance {
                 let mut count = 0i32;
                 let mut read = 0i32;
                 unsafe {
-                    rust_bstream_read(stream_ptr, &mut count as *mut _ as *mut c_void, 4, &mut read);
+                    rust_bstream_read(
+                        stream_ptr,
+                        &mut count as *mut _ as *mut c_void,
+                        4,
+                        &mut read,
+                    );
                     for _ in 0..count {
                         let mut id = 0u32;
                         let mut val = 0.0f32;
-                        rust_bstream_read(stream_ptr, &mut id as *mut _ as *mut c_void, 4, &mut read);
-                        rust_bstream_read(stream_ptr, &mut val as *mut _ as *mut c_void, 4, &mut read);
+                        rust_bstream_read(
+                            stream_ptr,
+                            &mut id as *mut _ as *mut c_void,
+                            4,
+                            &mut read,
+                        );
+                        rust_bstream_read(
+                            stream_ptr,
+                            &mut val as *mut _ as *mut c_void,
+                            4,
+                            &mut read,
+                        );
                         self.set_parameter(id, val);
                     }
                 }
@@ -821,12 +851,7 @@ impl AudioNode for Vst3PluginInstance {
         "Vst3PluginInstance"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         // Automation bus synchronization (Task F7)
         if let Some(ref bus) = ctx.param_bus {
             for (&param_id, param) in self.parameters.iter_mut() {
@@ -979,14 +1004,22 @@ mod tests {
         let mut out_r = vec![0.0f32; 64];
         let ctx = ProcessContext::new(44100, 120.0, 0);
 
-        instance.process(&[&in_l[..], &in_r[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+        instance.process(
+            &[&in_l[..], &in_r[..]],
+            &mut [&mut out_l[..], &mut out_r[..]],
+            &ctx,
+        );
         assert_eq!(out_l[0], 0.5);
         assert_eq!(out_r[0], 0.5);
 
         // Test bypass crossfade
         instance.set_bypass(true);
         // Process next block - it will crossfade from wet (0.5) to dry (1.0)
-        instance.process(&[&in_l[..], &in_r[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+        instance.process(
+            &[&in_l[..], &in_r[..]],
+            &mut [&mut out_l[..], &mut out_r[..]],
+            &ctx,
+        );
         assert!(out_l[63] > 0.9); // By end of 64 samples, almost fully bypassed to dry (1.0)
     }
 
@@ -1017,4 +1050,3 @@ mod tests {
         assert_eq!(instance2.get_parameter(1), Some(5000.0));
     }
 }
-

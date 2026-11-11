@@ -316,12 +316,34 @@ fn test_golden_shakuhachi_views_ascii_and_snapshots() {
 
     // Save PNG snapshots across the project render directories
     let _ = shakuhachi_view.render_snapshot_png("scratch/renders/shakuhachi_view.png", 800, 520);
-    let _ = shakuhachi_view.render_snapshot_png("../../scratch/renders/shakuhachi_view.png", 800, 520);
-    let _ = shakuhachi_view.render_snapshot_png("crates/summon/scratch/renders/shakuhachi_view.png", 800, 520);
-    let _ = shakuhachi_view.render_snapshot_png("crates/summoner_gui/scratch/renders/shakuhachi_view.png", 800, 520);
+    let _ =
+        shakuhachi_view.render_snapshot_png("../../scratch/renders/shakuhachi_view.png", 800, 520);
+    let _ = shakuhachi_view.render_snapshot_png(
+        "crates/summon/scratch/renders/shakuhachi_view.png",
+        800,
+        520,
+    );
+    let _ = shakuhachi_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/shakuhachi_view.png",
+        800,
+        520,
+    );
 
-    let _ = embouchure_view.render_snapshot_png("scratch/renders/embouchure_angle_view.png", 800, 520);
-    let _ = embouchure_view.render_snapshot_png("../../scratch/renders/embouchure_angle_view.png", 800, 520);
-    let _ = embouchure_view.render_snapshot_png("crates/summon/scratch/renders/embouchure_angle_view.png", 800, 520);
-    let _ = embouchure_view.render_snapshot_png("crates/summoner_gui/scratch/renders/embouchure_angle_view.png", 800, 520);
+    let _ =
+        embouchure_view.render_snapshot_png("scratch/renders/embouchure_angle_view.png", 800, 520);
+    let _ = embouchure_view.render_snapshot_png(
+        "../../scratch/renders/embouchure_angle_view.png",
+        800,
+        520,
+    );
+    let _ = embouchure_view.render_snapshot_png(
+        "crates/summon/scratch/renders/embouchure_angle_view.png",
+        800,
+        520,
+    );
+    let _ = embouchure_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/embouchure_angle_view.png",
+        800,
+        520,
+    );
 }

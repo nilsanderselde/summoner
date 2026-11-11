@@ -86,14 +86,30 @@ impl GrandPianoArticulation {
     /// Returns nominal default parameters tuple.
     pub fn nominal_parameters(&self) -> GrandPianoNominalParameters {
         match self {
-            Self::ConcertRecital => (0.75, 0.0, 0.0, 0, 0, 0, 0.35, 0.75, 0.65, 0.00018, 1.0, 0.85),
-            Self::BösendorferWarmth => (0.70, 0.0, 0.0, 0, 0, 0, 0.45, 0.60, 0.50, 0.00012, 1.35, 0.82),
-            Self::YamahaPopTreble => (0.85, 0.0, 0.0, 0, 0, 0, 0.28, 0.90, 0.80, 0.00025, 0.85, 0.88),
-            Self::ImpressionistUnaCorda => (0.50, 0.80, 1.0, 0, 0, 0, 0.50, 1.10, 0.30, 0.00015, 1.20, 0.80),
-            Self::HalfPedalSostenutoStudy => (0.65, 0.50, 0.0, 0xFF, 0, 0, 0.35, 0.75, 0.60, 0.00018, 1.0, 0.85),
-            Self::IntimateFelted => (0.55, 0.0, 0.4, 0, 0, 0, 0.20, 0.50, 0.35, 0.00010, 0.75, 0.80),
-            Self::PreparedAvantGarde => (0.90, 0.0, 0.0, 0, 0, 0, 0.15, 2.50, 0.90, 0.00060, 0.40, 0.90),
-            Self::CustomSpline => (0.75, 0.0, 0.0, 0, 0, 0, 0.35, 0.75, 0.65, 0.00018, 1.0, 0.85),
+            Self::ConcertRecital => (
+                0.75, 0.0, 0.0, 0, 0, 0, 0.35, 0.75, 0.65, 0.00018, 1.0, 0.85,
+            ),
+            Self::BösendorferWarmth => (
+                0.70, 0.0, 0.0, 0, 0, 0, 0.45, 0.60, 0.50, 0.00012, 1.35, 0.82,
+            ),
+            Self::YamahaPopTreble => (
+                0.85, 0.0, 0.0, 0, 0, 0, 0.28, 0.90, 0.80, 0.00025, 0.85, 0.88,
+            ),
+            Self::ImpressionistUnaCorda => (
+                0.50, 0.80, 1.0, 0, 0, 0, 0.50, 1.10, 0.30, 0.00015, 1.20, 0.80,
+            ),
+            Self::HalfPedalSostenutoStudy => (
+                0.65, 0.50, 0.0, 0xFF, 0, 0, 0.35, 0.75, 0.60, 0.00018, 1.0, 0.85,
+            ),
+            Self::IntimateFelted => (
+                0.55, 0.0, 0.4, 0, 0, 0, 0.20, 0.50, 0.35, 0.00010, 0.75, 0.80,
+            ),
+            Self::PreparedAvantGarde => (
+                0.90, 0.0, 0.0, 0, 0, 0, 0.15, 2.50, 0.90, 0.00060, 0.40, 0.90,
+            ),
+            Self::CustomSpline => (
+                0.75, 0.0, 0.0, 0, 0, 0, 0.35, 0.75, 0.65, 0.00018, 1.0, 0.85,
+            ),
         }
     }
 }
@@ -124,7 +140,10 @@ pub fn register_grand_piano_params(param_bus: &mut ParamBus, base_id: ParamId) {
     let (vel, damp, una, s_low, s_mid, s_high, bleed, detune, hard, b, decay, gain) =
         GrandPianoArticulation::ConcertRecital.nominal_parameters();
 
-    param_bus.register(ParamId(base_id.0), GrandPianoArticulation::ConcertRecital as u32 as f32);
+    param_bus.register(
+        ParamId(base_id.0),
+        GrandPianoArticulation::ConcertRecital as u32 as f32,
+    );
     param_bus.register(ParamId(base_id.0 + 1), vel);
     param_bus.register(ParamId(base_id.0 + 2), damp);
     param_bus.register(ParamId(base_id.0 + 3), una);
@@ -227,16 +246,20 @@ impl GrandPianoBus {
 
         self.articulation.store(art as u32, Ordering::Relaxed);
         self.strike_velocity.store(vel.to_bits(), Ordering::Relaxed);
-        self.damper_lift_pos.store(damp.to_bits(), Ordering::Relaxed);
+        self.damper_lift_pos
+            .store(damp.to_bits(), Ordering::Relaxed);
         self.una_corda_shift.store(una.to_bits(), Ordering::Relaxed);
         self.sostenuto_latch_low.store(s_low, Ordering::Relaxed);
         self.sostenuto_latch_mid.store(s_mid, Ordering::Relaxed);
         self.sostenuto_latch_high.store(s_high, Ordering::Relaxed);
         self.bridge_bleed.store(bleed.to_bits(), Ordering::Relaxed);
-        self.unison_detune_cents.store(detune.to_bits(), Ordering::Relaxed);
-        self.hammer_hardness.store(hard.to_bits(), Ordering::Relaxed);
+        self.unison_detune_cents
+            .store(detune.to_bits(), Ordering::Relaxed);
+        self.hammer_hardness
+            .store(hard.to_bits(), Ordering::Relaxed);
         self.inharmonicity_b.store(b.to_bits(), Ordering::Relaxed);
-        self.soundboard_decay.store(decay.to_bits(), Ordering::Relaxed);
+        self.soundboard_decay
+            .store(decay.to_bits(), Ordering::Relaxed);
         self.master_gain.store(gain.to_bits(), Ordering::Relaxed);
     }
 
@@ -252,7 +275,8 @@ impl GrandPianoBus {
 
     #[inline]
     pub fn set_una_corda_shift(&self, shift: f32) {
-        self.una_corda_shift.store(shift.to_bits(), Ordering::Relaxed);
+        self.una_corda_shift
+            .store(shift.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
@@ -269,12 +293,14 @@ impl GrandPianoBus {
 
     #[inline]
     pub fn set_unison_detune_cents(&self, cents: f32) {
-        self.unison_detune_cents.store(cents.to_bits(), Ordering::Relaxed);
+        self.unison_detune_cents
+            .store(cents.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_hammer_hardness(&self, hardness: f32) {
-        self.hammer_hardness.store(hardness.to_bits(), Ordering::Relaxed);
+        self.hammer_hardness
+            .store(hardness.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
@@ -284,7 +310,8 @@ impl GrandPianoBus {
 
     #[inline]
     pub fn set_soundboard_decay(&self, decay: f32) {
-        self.soundboard_decay.store(decay.to_bits(), Ordering::Relaxed);
+        self.soundboard_decay
+            .store(decay.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
@@ -306,7 +333,10 @@ mod tests {
 
         bus.set_articulation(GrandPianoArticulation::ImpressionistUnaCorda);
         let snap2 = bus.snapshot();
-        assert_eq!(snap2.articulation, GrandPianoArticulation::ImpressionistUnaCorda);
+        assert_eq!(
+            snap2.articulation,
+            GrandPianoArticulation::ImpressionistUnaCorda
+        );
         assert!((snap2.una_corda_shift - 1.0).abs() < 1e-4);
     }
 }

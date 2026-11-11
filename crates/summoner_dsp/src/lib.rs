@@ -24,8 +24,8 @@ pub mod biquad;
 pub mod bitcrusher;
 pub mod bowed_string;
 pub mod cassotto_chamber;
-pub mod clavinet;
 pub mod clap_host;
+pub mod clavinet;
 pub mod code_node;
 pub mod composites;
 pub mod compressor;
@@ -58,8 +58,8 @@ pub mod jawari_bridge;
 pub mod ji_bridge;
 pub mod koto;
 pub mod limiter;
-pub mod lv2_host;
 pub mod live_session_recorder;
+pub mod lv2_host;
 pub mod math;
 pub mod meter;
 pub mod midside;
@@ -77,9 +77,9 @@ pub mod oscillators;
 pub mod oversampling;
 pub mod parametric_eq;
 pub mod percussion_membrane;
+pub mod pipe_organ;
 pub mod pitch_shift;
 pub mod pitch_shifter;
-pub mod pipe_organ;
 pub mod plate_tank;
 pub mod plucked_string;
 pub mod plugin_editor;
@@ -89,8 +89,8 @@ pub mod plugin_scanner;
 pub mod quantum_audio;
 pub mod reverb;
 pub mod ring_mod;
-pub mod sample_editor;
 pub mod rotary_speaker;
+pub mod sample_editor;
 pub mod sampler;
 pub mod sf2_parser;
 pub mod shakuhachi;
@@ -139,8 +139,8 @@ pub use bowed_string::*;
 pub use cassotto_chamber::*;
 pub use clavinet::*;
 pub use code_node::*;
-pub use control_io::*;
 pub use console_emulation::{ConsoleEmulationNode, ConsoleMode};
+pub use control_io::*;
 pub use crystal_resonator::*;
 pub use dither::*;
 pub use ecosystem_hardware::*;
@@ -154,6 +154,7 @@ pub use granular_cloud::*;
 pub use hammer_strike::*;
 pub use horn_reflection::*;
 pub use hurdy_gurdy::*;
+pub use immersive_downmix::*;
 pub use jawari_bridge::*;
 pub use ji_bridge::*;
 pub use koto::*;
@@ -175,7 +176,6 @@ pub use sitar::*;
 pub use soundboard_bridge::*;
 pub use spatial_audio::*;
 pub use spatial_multichannel::*;
-pub use immersive_downmix::*;
 pub use spatial_room::*;
 pub mod spectral_eq_alias {
     pub use crate::spectral_eq::*;
@@ -200,12 +200,12 @@ pub use windchest::*;
 pub use woodwind_jet::*;
 pub use zero_gravity_fluid::*;
 
+pub use audio_to_midi::*;
 pub use plugin_host::{
     scan_plugin_directory, PluginAudioNode, PluginDescriptor, PluginFormat, PluginParamInfo,
     PluginStateConfig,
 };
 pub use sf2_parser::*;
-pub use audio_to_midi::*;
 pub use stock_instruments::*;
 pub use streaming_sampler::*;
 
@@ -239,12 +239,12 @@ pub use meter::{
 pub use midside::{MidSideNode, StereoImager};
 pub use mod_fx::{EffectChorus, EffectFlanger, EffectPhaser};
 pub use modal::ModalResonator;
-pub use neural_separator::*;
-pub use neural_timbre::*;
 pub use modulators::{
     EnvADSR, EnvState, LfoShape, MacroKnob, MacroModulationMatrix, ModulationAssignment,
     ModulationCurve, ModulationSourceId, ModulationTarget, ModulationTargetId, LFO,
 };
+pub use neural_separator::*;
+pub use neural_timbre::*;
 pub use oscillators::{
     render_buffer_to_wavetable, NoiseGen, NoiseType, OscPulse, OscSaw, OscSine, OscTriangle,
     OscWavetable, SimdPolyVoice, SimdPolyWavetableOscillator, DEFAULT_MAX_VOICES, WAVETABLE_SIZE,

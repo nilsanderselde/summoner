@@ -157,7 +157,8 @@ impl PlectrumBus {
 
     /// Sets the active plucking articulation and loads nominal default parameters.
     pub fn set_articulation(&self, articulation: PluckArticulation) {
-        self.articulation_raw.store(articulation as u32, Ordering::Release);
+        self.articulation_raw
+            .store(articulation as u32, Ordering::Release);
         let (beta, vel, hard, mute, bleed) = articulation.nominal_parameters();
         self.set_gesture_vector(beta, vel, hard, 0.0, mute, bleed);
     }
@@ -177,12 +178,26 @@ impl PlectrumBus {
         palm_mute_damping: f32,
         sympathetic_bleed: f32,
     ) {
-        self.beta_bits.store(pluck_position_beta.clamp(0.05, 0.95).to_bits(), Ordering::Release);
-        self.velocity_bits.store(strike_velocity.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.hardness_bits.store(hammer_hardness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.angle_bits.store(plectrum_angle_rad.clamp(-0.5, 0.5).to_bits(), Ordering::Release);
-        self.mute_bits.store(palm_mute_damping.clamp(0.0, 1.0).to_bits(), Ordering::Release);
-        self.bleed_bits.store(sympathetic_bleed.clamp(0.0, 0.50).to_bits(), Ordering::Release);
+        self.beta_bits.store(
+            pluck_position_beta.clamp(0.05, 0.95).to_bits(),
+            Ordering::Release,
+        );
+        self.velocity_bits
+            .store(strike_velocity.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.hardness_bits
+            .store(hammer_hardness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.angle_bits.store(
+            plectrum_angle_rad.clamp(-0.5, 0.5).to_bits(),
+            Ordering::Release,
+        );
+        self.mute_bits.store(
+            palm_mute_damping.clamp(0.0, 1.0).to_bits(),
+            Ordering::Release,
+        );
+        self.bleed_bits.store(
+            sympathetic_bleed.clamp(0.0, 0.50).to_bits(),
+            Ordering::Release,
+        );
     }
 
     /// Gets continuous pluck gesture vector $(\beta, v_s, \text{hardness}, \theta_p, \text{mute}, \text{bleed})$.
@@ -199,7 +214,8 @@ impl PlectrumBus {
 
     /// Sets string stiffness dispersion parameter $[0.0 ..= 1.0]$.
     pub fn set_string_stiffness(&self, stiffness: f32) {
-        self.stiffness_bits.store(stiffness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.stiffness_bits
+            .store(stiffness.clamp(0.0, 1.0).to_bits(), Ordering::Release);
     }
 
     /// Gets string stiffness dispersion parameter.
@@ -209,12 +225,16 @@ impl PlectrumBus {
 
     /// Sets gesture trajectory progress $[0.0 ..= 1.0]$.
     pub fn set_progress(&self, progress: f32, is_active: bool) {
-        self.progress_bits.store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
 
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if is_active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -245,16 +265,26 @@ impl PlectrumBus {
 
     /// Applies a complete snapshot into this bus.
     pub fn apply_snapshot(&self, snap: &PlectrumBusSnapshot) {
-        self.articulation_raw.store(snap.articulation as u32, Ordering::Release);
-        self.beta_bits.store(snap.pluck_position_beta.to_bits(), Ordering::Release);
-        self.velocity_bits.store(snap.strike_velocity.to_bits(), Ordering::Release);
-        self.hardness_bits.store(snap.hammer_hardness.to_bits(), Ordering::Release);
-        self.angle_bits.store(snap.plectrum_angle_rad.to_bits(), Ordering::Release);
-        self.mute_bits.store(snap.palm_mute_damping.to_bits(), Ordering::Release);
-        self.bleed_bits.store(snap.sympathetic_bleed.to_bits(), Ordering::Release);
-        self.stiffness_bits.store(snap.string_stiffness.to_bits(), Ordering::Release);
-        self.progress_bits.store(snap.gesture_progress.to_bits(), Ordering::Release);
-        self.flags.store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
+        self.articulation_raw
+            .store(snap.articulation as u32, Ordering::Release);
+        self.beta_bits
+            .store(snap.pluck_position_beta.to_bits(), Ordering::Release);
+        self.velocity_bits
+            .store(snap.strike_velocity.to_bits(), Ordering::Release);
+        self.hardness_bits
+            .store(snap.hammer_hardness.to_bits(), Ordering::Release);
+        self.angle_bits
+            .store(snap.plectrum_angle_rad.to_bits(), Ordering::Release);
+        self.mute_bits
+            .store(snap.palm_mute_damping.to_bits(), Ordering::Release);
+        self.bleed_bits
+            .store(snap.sympathetic_bleed.to_bits(), Ordering::Release);
+        self.stiffness_bits
+            .store(snap.string_stiffness.to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(snap.gesture_progress.to_bits(), Ordering::Release);
+        self.flags
+            .store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
     }
 
     /// Dispatches plectrum bus values into `ParamBus` handles.
@@ -273,7 +303,11 @@ impl PlectrumBus {
 
     /// Synchronizes plectrum bus values from `ParamBus` handles.
     pub fn sync_from_param_bus(&self, bus: &ParamBus, base_param_id: ParamId) {
-        let art_idx = bus.get(ParamId(base_param_id.0)).unwrap_or(0.0).max(0.0).round() as u32;
+        let art_idx = bus
+            .get(ParamId(base_param_id.0))
+            .unwrap_or(0.0)
+            .max(0.0)
+            .round() as u32;
         let beta = bus.get(ParamId(base_param_id.0 + 1)).unwrap_or(0.15);
         let vel = bus.get(ParamId(base_param_id.0 + 2)).unwrap_or(0.75);
         let hard = bus.get(ParamId(base_param_id.0 + 3)).unwrap_or(0.50);

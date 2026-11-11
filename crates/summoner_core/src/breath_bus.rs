@@ -160,7 +160,8 @@ impl BreathBus {
 
     /// Sets the active woodwind articulation and loads nominal defaults.
     pub fn set_articulation(&self, articulation: WoodwindArticulation) {
-        self.articulation_raw.store(articulation as u32, Ordering::Release);
+        self.articulation_raw
+            .store(articulation as u32, Ordering::Release);
         let (p, d, a, n) = articulation.nominal_parameters();
         self.set_breath_vector(p, d, a, n);
     }
@@ -178,10 +179,20 @@ impl BreathBus {
         embouchure_angle_rad: f32,
         breath_noise_mix: f32,
     ) {
-        self.pressure_bits.store(pressure_kpa.clamp(0.05, 4.0).to_bits(), Ordering::Release);
-        self.jet_dist_bits.store(jet_distance_mm.clamp(1.5, 15.0).to_bits(), Ordering::Release);
-        self.angle_bits.store(embouchure_angle_rad.clamp(-0.5, 0.5).to_bits(), Ordering::Release);
-        self.noise_bits.store(breath_noise_mix.clamp(0.0, 0.50).to_bits(), Ordering::Release);
+        self.pressure_bits
+            .store(pressure_kpa.clamp(0.05, 4.0).to_bits(), Ordering::Release);
+        self.jet_dist_bits.store(
+            jet_distance_mm.clamp(1.5, 15.0).to_bits(),
+            Ordering::Release,
+        );
+        self.angle_bits.store(
+            embouchure_angle_rad.clamp(-0.5, 0.5).to_bits(),
+            Ordering::Release,
+        );
+        self.noise_bits.store(
+            breath_noise_mix.clamp(0.0, 0.50).to_bits(),
+            Ordering::Release,
+        );
     }
 
     /// Gets continuous breath gesture vector $(P_m, d_{jet}, \theta_{jet}, \text{noise})$.
@@ -196,7 +207,8 @@ impl BreathBus {
 
     /// Sets 6-tonehole fingering bitmask (lower 6 bits).
     pub fn set_fingering_mask(&self, mask: u8) {
-        self.fingering_mask_raw.store((mask & 0x3F) as u32, Ordering::Release);
+        self.fingering_mask_raw
+            .store((mask & 0x3F) as u32, Ordering::Release);
     }
 
     /// Gets 6-tonehole fingering bitmask.
@@ -206,8 +218,10 @@ impl BreathBus {
 
     /// Sets vibrato depth (semitones) and rate (Hz).
     pub fn set_vibrato(&self, depth_semitones: f32, rate_hz: f32) {
-        self.vib_depth_bits.store(depth_semitones.clamp(0.0, 2.0).to_bits(), Ordering::Release);
-        self.vib_rate_bits.store(rate_hz.clamp(0.5, 15.0).to_bits(), Ordering::Release);
+        self.vib_depth_bits
+            .store(depth_semitones.clamp(0.0, 2.0).to_bits(), Ordering::Release);
+        self.vib_rate_bits
+            .store(rate_hz.clamp(0.5, 15.0).to_bits(), Ordering::Release);
     }
 
     /// Gets vibrato depth and rate.
@@ -220,7 +234,10 @@ impl BreathBus {
 
     /// Sets flutter tongue modulation frequency in Hz.
     pub fn set_flutter_tongue(&self, flutter_rate_hz: f32) {
-        self.flutter_rate_bits.store(flutter_rate_hz.clamp(0.0, 50.0).to_bits(), Ordering::Release);
+        self.flutter_rate_bits.store(
+            flutter_rate_hz.clamp(0.0, 50.0).to_bits(),
+            Ordering::Release,
+        );
     }
 
     /// Gets flutter tongue modulation frequency in Hz.
@@ -230,12 +247,16 @@ impl BreathBus {
 
     /// Sets gesture trajectory progress $[0.0 ..= 1.0]$.
     pub fn set_progress(&self, progress: f32, is_active: bool) {
-        self.progress_bits.store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
 
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if is_active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -270,17 +291,28 @@ impl BreathBus {
 
     /// Applies a complete snapshot into this bus.
     pub fn apply_snapshot(&self, snap: &BreathBusSnapshot) {
-        self.articulation_raw.store(snap.articulation as u32, Ordering::Release);
-        self.pressure_bits.store(snap.blowing_pressure_kpa.to_bits(), Ordering::Release);
-        self.jet_dist_bits.store(snap.jet_distance_mm.to_bits(), Ordering::Release);
-        self.angle_bits.store(snap.embouchure_angle_rad.to_bits(), Ordering::Release);
-        self.fingering_mask_raw.store(snap.fingering_mask as u32, Ordering::Release);
-        self.vib_depth_bits.store(snap.vibrato_depth.to_bits(), Ordering::Release);
-        self.vib_rate_bits.store(snap.vibrato_rate_hz.to_bits(), Ordering::Release);
-        self.flutter_rate_bits.store(snap.flutter_rate_hz.to_bits(), Ordering::Release);
-        self.noise_bits.store(snap.breath_noise_mix.to_bits(), Ordering::Release);
-        self.progress_bits.store(snap.gesture_progress.to_bits(), Ordering::Release);
-        self.flags.store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
+        self.articulation_raw
+            .store(snap.articulation as u32, Ordering::Release);
+        self.pressure_bits
+            .store(snap.blowing_pressure_kpa.to_bits(), Ordering::Release);
+        self.jet_dist_bits
+            .store(snap.jet_distance_mm.to_bits(), Ordering::Release);
+        self.angle_bits
+            .store(snap.embouchure_angle_rad.to_bits(), Ordering::Release);
+        self.fingering_mask_raw
+            .store(snap.fingering_mask as u32, Ordering::Release);
+        self.vib_depth_bits
+            .store(snap.vibrato_depth.to_bits(), Ordering::Release);
+        self.vib_rate_bits
+            .store(snap.vibrato_rate_hz.to_bits(), Ordering::Release);
+        self.flutter_rate_bits
+            .store(snap.flutter_rate_hz.to_bits(), Ordering::Release);
+        self.noise_bits
+            .store(snap.breath_noise_mix.to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(snap.gesture_progress.to_bits(), Ordering::Release);
+        self.flags
+            .store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
     }
 
     /// Dispatches breath bus values into `ParamBus` handles.
@@ -300,11 +332,19 @@ impl BreathBus {
 
     /// Synchronizes breath bus values from `ParamBus` handles.
     pub fn sync_from_param_bus(&self, bus: &ParamBus, base_param_id: ParamId) {
-        let art_idx = bus.get(ParamId(base_param_id.0)).unwrap_or(0.0).max(0.0).round() as u32;
+        let art_idx = bus
+            .get(ParamId(base_param_id.0))
+            .unwrap_or(0.0)
+            .max(0.0)
+            .round() as u32;
         let pressure = bus.get(ParamId(base_param_id.0 + 1)).unwrap_or(1.25);
         let distance = bus.get(ParamId(base_param_id.0 + 2)).unwrap_or(7.0);
         let angle = bus.get(ParamId(base_param_id.0 + 3)).unwrap_or(0.0);
-        let fingering = bus.get(ParamId(base_param_id.0 + 4)).unwrap_or(63.0).max(0.0).round() as u8;
+        let fingering = bus
+            .get(ParamId(base_param_id.0 + 4))
+            .unwrap_or(63.0)
+            .max(0.0)
+            .round() as u8;
         let vib_d = bus.get(ParamId(base_param_id.0 + 5)).unwrap_or(0.0);
         let vib_r = bus.get(ParamId(base_param_id.0 + 6)).unwrap_or(5.5);
         let flutter = bus.get(ParamId(base_param_id.0 + 7)).unwrap_or(0.0);

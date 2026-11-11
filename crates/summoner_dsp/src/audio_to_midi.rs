@@ -23,8 +23,8 @@ use summoner_core::midi::MidiEvent;
 /// Audio-to-MIDI transcription engine for monophonic and percussive audio.
 pub struct AudioToMidiConverter {
     pub sample_rate: u32,
-    pub min_freq_hz: f32, // e.g. 50.0 Hz
-    pub max_freq_hz: f32, // e.g. 1200.0 Hz
+    pub min_freq_hz: f32,          // e.g. 50.0 Hz
+    pub max_freq_hz: f32,          // e.g. 1200.0 Hz
     pub silence_threshold_db: f32, // e.g. -40.0 dB
 }
 
@@ -57,8 +57,15 @@ impl AudioToMidiConverter {
             let rms: f32 = (window.iter().map(|&s| s * s).sum::<f32>() / frame_size as f32).sqrt();
 
             if rms > threshold_amp {
-                if let Some(freq) = detect_pitch_autocorr(window, self.sample_rate, self.min_freq_hz, self.max_freq_hz) {
-                    let midi_pitch = (69.0 + 12.0 * (freq / 440.0).log2()).round().clamp(12.0, 120.0) as u8;
+                if let Some(freq) = detect_pitch_autocorr(
+                    window,
+                    self.sample_rate,
+                    self.min_freq_hz,
+                    self.max_freq_hz,
+                ) {
+                    let midi_pitch = (69.0 + 12.0 * (freq / 440.0).log2())
+                        .round()
+                        .clamp(12.0, 120.0) as u8;
                     let vel = (rms * 2.0).clamp(0.1, 1.0) * 127.0;
                     let vel_u8 = vel.round() as u8;
 
@@ -97,7 +104,12 @@ impl AudioToMidiConverter {
 }
 
 /// Squared-difference pitch estimator.
-fn detect_pitch_autocorr(window: &[f32], sample_rate: u32, min_hz: f32, max_hz: f32) -> Option<f32> {
+fn detect_pitch_autocorr(
+    window: &[f32],
+    sample_rate: u32,
+    min_hz: f32,
+    max_hz: f32,
+) -> Option<f32> {
     let min_period = (sample_rate as f32 / max_hz).floor() as usize;
     let max_period = (sample_rate as f32 / min_hz).ceil() as usize;
 
@@ -152,11 +164,7 @@ pub struct SlicedDrumKit {
 }
 
 /// Slices an audio loop at transient boundaries into a `DrumMachineDevice` with trigger MIDI.
-pub fn slice_to_drum_pad(
-    audio: &[Sample],
-    sample_rate: u32,
-    sensitivity: f32,
-) -> SlicedDrumKit {
+pub fn slice_to_drum_pad(audio: &[Sample], sample_rate: u32, sensitivity: f32) -> SlicedDrumKit {
     let transients = detect_transients(audio, sample_rate, sensitivity);
     let mut boundaries = Vec::new();
 
@@ -177,7 +185,11 @@ pub fn slice_to_drum_pad(
     // GM Standard starts at note 36 (C1)
     let base_note = 36u8;
 
-    for (i, &(src_start, src_end)) in boundaries.iter().take(crate::drum_machine::MAX_PADS).enumerate() {
+    for (i, &(src_start, src_end)) in boundaries
+        .iter()
+        .take(crate::drum_machine::MAX_PADS)
+        .enumerate()
+    {
         let note = base_note + i as u8;
         let slice_samples = audio[src_start..src_end].to_vec();
         let buf = Arc::new(SampleBuffer::new(slice_samples, sample_rate, 1));
@@ -191,7 +203,14 @@ pub fn slice_to_drum_pad(
             0.05,
             1.0,
         );
-        pad.add_sample(note, note, note, format!("slice_{}.wav", i), Some(buf), LoopMode::NoLoop);
+        pad.add_sample(
+            note,
+            note,
+            note,
+            format!("slice_{}.wav", i),
+            Some(buf),
+            LoopMode::NoLoop,
+        );
         kit.add_pad(pad);
 
         // Add a trigger event
@@ -239,7 +258,8 @@ pub fn quantize_audio(
         let target_grid_frame = grid_index * grid_samples;
 
         // Apply quantization strength interpolation
-        let final_target_frame = (src_frame as f64 + (target_grid_frame - src_frame as f64) * (strength as f64))
+        let final_target_frame = (src_frame as f64
+            + (target_grid_frame - src_frame as f64) * (strength as f64))
             .round() as usize;
 
         warp.add_marker(src_frame, final_target_frame);

@@ -133,7 +133,8 @@ impl MultiBusEventRouter {
         let count = self.event_count.load(Ordering::Relaxed) as usize;
         if count < MAX_EVENTS_PER_BLOCK {
             self.events[count] = event;
-            self.event_count.store((count + 1) as u32, Ordering::Release);
+            self.event_count
+                .store((count + 1) as u32, Ordering::Release);
             true
         } else {
             false
@@ -270,7 +271,10 @@ impl SidechainMatrix {
 
         // 3. Accumulate routed audio from source tracks to destination aux buses
         for route in config.routes.iter() {
-            if route.muted || route.source_track >= track_outputs.len() || route.aux_bus_index >= MAX_AUX_BUSES {
+            if route.muted
+                || route.source_track >= track_outputs.len()
+                || route.aux_bus_index >= MAX_AUX_BUSES
+            {
                 continue;
             }
 
@@ -295,11 +299,14 @@ impl SidechainMatrix {
                 }
 
                 // Simple 1-pole lowpass detector filter if configured
-                if route.detector_lpf_hz > 10.0 && route.detector_lpf_hz < (sample_rate as f32 * 0.49) {
+                if route.detector_lpf_hz > 10.0
+                    && route.detector_lpf_hz < (sample_rate as f32 * 0.49)
+                {
                     let dt = 1.0 / (sample_rate as f32);
                     let rc = 1.0 / (2.0 * std::f32::consts::PI * route.detector_lpf_hz);
                     let alpha = dt / (rc + dt);
-                    self.lpf_states[route.aux_bus_index] += alpha * (sample - self.lpf_states[route.aux_bus_index]);
+                    self.lpf_states[route.aux_bus_index] +=
+                        alpha * (sample - self.lpf_states[route.aux_bus_index]);
                     sample = self.lpf_states[route.aux_bus_index];
                 }
 

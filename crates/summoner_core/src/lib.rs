@@ -41,8 +41,8 @@ pub mod mpe;
 pub mod node;
 pub mod panner;
 pub mod param_bus;
-pub mod pipeline;
 pub mod pipe_organ_bus;
+pub mod pipeline;
 pub mod plectrum_bus;
 pub mod rotary_bus;
 pub mod sample;
@@ -68,8 +68,8 @@ pub use audio::{
 };
 pub use audio_drivers::{
     AAudioDriver, AlsaDriver, AsapiDriver, AudioDeviceDescriptor, AudioDriverBackendType,
-    AudioUnitDriver, DeviceDirection, LiveAudioTelemetry, NativeAudioDriver, NativeAudioDriverTuner,
-    WasapiDriver,
+    AudioUnitDriver, DeviceDirection, LiveAudioTelemetry, NativeAudioDriver,
+    NativeAudioDriverTuner, WasapiDriver,
 };
 pub use bellows_bus::*;
 pub use ble_midi::*;

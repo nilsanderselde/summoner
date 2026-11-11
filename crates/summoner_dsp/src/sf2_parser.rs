@@ -118,7 +118,8 @@ impl Sf2SoundFont {
 
         while pos + 8 <= bytes.len() {
             let chunk_id = &bytes[pos..pos + 4];
-            let chunk_size = u32::from_le_bytes(bytes[pos + 4..pos + 8].try_into().unwrap()) as usize;
+            let chunk_size =
+                u32::from_le_bytes(bytes[pos + 4..pos + 8].try_into().unwrap()) as usize;
             pos += 8;
 
             let chunk_end = (pos + chunk_size).min(bytes.len());
@@ -178,9 +179,8 @@ impl Sf2SoundFont {
                                 let hivel = pzone.vel_range.1.min(izone.vel_range.1);
 
                                 if lokey <= hikey && lovel <= hivel {
-                                    let root_key = izone
-                                        .overriding_root_key
-                                        .unwrap_or(sample.original_pitch);
+                                    let root_key =
+                                        izone.overriding_root_key.unwrap_or(sample.original_pitch);
 
                                     let mut region = SampleRegion::new(
                                         lokey,
@@ -326,14 +326,22 @@ fn parse_pdta_list(
                 break;
             }
 
-            let start = u32::from_le_bytes(shdr_bytes[offset + 20..offset + 24].try_into().unwrap()) as usize;
-            let end = u32::from_le_bytes(shdr_bytes[offset + 24..offset + 28].try_into().unwrap()) as usize;
-            let loop_start = u32::from_le_bytes(shdr_bytes[offset + 28..offset + 32].try_into().unwrap()) as usize;
-            let loop_end = u32::from_le_bytes(shdr_bytes[offset + 32..offset + 36].try_into().unwrap()) as usize;
-            let sample_rate = u32::from_le_bytes(shdr_bytes[offset + 36..offset + 40].try_into().unwrap());
+            let start = u32::from_le_bytes(shdr_bytes[offset + 20..offset + 24].try_into().unwrap())
+                as usize;
+            let end = u32::from_le_bytes(shdr_bytes[offset + 24..offset + 28].try_into().unwrap())
+                as usize;
+            let loop_start =
+                u32::from_le_bytes(shdr_bytes[offset + 28..offset + 32].try_into().unwrap())
+                    as usize;
+            let loop_end =
+                u32::from_le_bytes(shdr_bytes[offset + 32..offset + 36].try_into().unwrap())
+                    as usize;
+            let sample_rate =
+                u32::from_le_bytes(shdr_bytes[offset + 36..offset + 40].try_into().unwrap());
             let original_pitch = shdr_bytes[offset + 40];
             let pitch_correction = shdr_bytes[offset + 41] as i8;
-            let sample_type = u16::from_le_bytes(shdr_bytes[offset + 44..offset + 46].try_into().unwrap());
+            let sample_type =
+                u16::from_le_bytes(shdr_bytes[offset + 44..offset + 46].try_into().unwrap());
 
             // Extract audio frames
             let pcm_slice = if start < raw_pcm.len() && end <= raw_pcm.len() && start < end {
@@ -376,7 +384,8 @@ fn parse_pdta_list(
     if let Some(&ibag_bytes) = chunks.get(b"ibag") {
         for i in 0..(ibag_bytes.len() / 4) {
             let offset = i * 4;
-            let gen_ndx = u16::from_le_bytes(ibag_bytes[offset..offset + 2].try_into().unwrap()) as usize;
+            let gen_ndx =
+                u16::from_le_bytes(ibag_bytes[offset..offset + 2].try_into().unwrap()) as usize;
             ibags.push(gen_ndx);
         }
     }
@@ -393,7 +402,9 @@ fn parse_pdta_list(
                 .trim_end_matches('\0')
                 .trim()
                 .to_string();
-            let bag_ndx = u16::from_le_bytes(inst_bytes[offset + 20..offset + 22].try_into().unwrap()) as usize;
+            let bag_ndx =
+                u16::from_le_bytes(inst_bytes[offset + 20..offset + 22].try_into().unwrap())
+                    as usize;
             raw_insts.push((name, bag_ndx));
         }
 
@@ -405,7 +416,11 @@ fn parse_pdta_list(
             let mut zones = Vec::new();
             for b in bag_start..bag_end {
                 let gen_start = ibags[b];
-                let gen_end = if b + 1 < ibags.len() { ibags[b + 1] } else { igens.len() };
+                let gen_end = if b + 1 < ibags.len() {
+                    ibags[b + 1]
+                } else {
+                    igens.len()
+                };
 
                 let mut accum = ZoneAccumulator {
                     key_range: (0, 127),
@@ -418,27 +433,32 @@ fn parse_pdta_list(
                 for g in gen_start..gen_end.min(igens.len()) {
                     let gen = &igens[g];
                     match gen.oper {
-                        43 => { // keyRange
+                        43 => {
+                            // keyRange
                             let lo = (gen.amount & 0xFF) as u8;
                             let hi = ((gen.amount >> 8) & 0xFF) as u8;
                             accum.key_range = (lo, hi);
                         }
-                        44 => { // velRange
+                        44 => {
+                            // velRange
                             let lo = (gen.amount & 0xFF) as u8;
                             let hi = ((gen.amount >> 8) & 0xFF) as u8;
                             accum.vel_range = (lo, hi);
                         }
-                        53 => { // sampleID
+                        53 => {
+                            // sampleID
                             accum.sample_id = Some(gen.amount as usize);
                         }
-                        54 => { // sampleModes
+                        54 => {
+                            // sampleModes
                             accum.loop_mode = match gen.amount & 0x03 {
                                 1 => LoopMode::LoopContinuous,
                                 3 => LoopMode::LoopRelease,
                                 _ => LoopMode::NoLoop,
                             };
                         }
-                        58 => { // overridingRootKey
+                        58 => {
+                            // overridingRootKey
                             accum.root_key = Some((gen.amount & 0x7F) as u8);
                         }
                         _ => {}
@@ -478,7 +498,8 @@ fn parse_pdta_list(
     if let Some(&pbag_bytes) = chunks.get(b"pbag") {
         for i in 0..(pbag_bytes.len() / 4) {
             let offset = i * 4;
-            let gen_ndx = u16::from_le_bytes(pbag_bytes[offset..offset + 2].try_into().unwrap()) as usize;
+            let gen_ndx =
+                u16::from_le_bytes(pbag_bytes[offset..offset + 2].try_into().unwrap()) as usize;
             pbags.push(gen_ndx);
         }
     }
@@ -496,9 +517,13 @@ fn parse_pdta_list(
                 .trim_end_matches('\0')
                 .trim()
                 .to_string();
-            let preset_num = u16::from_le_bytes(phdr_bytes[offset + 20..offset + 22].try_into().unwrap());
-            let bank_num = u16::from_le_bytes(phdr_bytes[offset + 22..offset + 24].try_into().unwrap());
-            let bag_ndx = u16::from_le_bytes(phdr_bytes[offset + 24..offset + 26].try_into().unwrap()) as usize;
+            let preset_num =
+                u16::from_le_bytes(phdr_bytes[offset + 20..offset + 22].try_into().unwrap());
+            let bank_num =
+                u16::from_le_bytes(phdr_bytes[offset + 22..offset + 24].try_into().unwrap());
+            let bag_ndx =
+                u16::from_le_bytes(phdr_bytes[offset + 24..offset + 26].try_into().unwrap())
+                    as usize;
 
             raw_presets.push((name, preset_num, bank_num, bag_ndx));
         }
@@ -510,7 +535,11 @@ fn parse_pdta_list(
             let mut zones = Vec::new();
             for b in bag_start..bag_end {
                 let gen_start = pbags[b];
-                let gen_end = if b + 1 < pbags.len() { pbags[b + 1] } else { pgens.len() };
+                let gen_end = if b + 1 < pbags.len() {
+                    pbags[b + 1]
+                } else {
+                    pgens.len()
+                };
 
                 let mut key_range = (0u8, 127u8);
                 let mut vel_range = (0u8, 127u8);
@@ -519,15 +548,18 @@ fn parse_pdta_list(
                 for g in gen_start..gen_end.min(pgens.len()) {
                     let gen = &pgens[g];
                     match gen.oper {
-                        41 => { // instrument
+                        41 => {
+                            // instrument
                             instrument_index = Some(gen.amount as usize);
                         }
-                        43 => { // keyRange
+                        43 => {
+                            // keyRange
                             let lo = (gen.amount & 0xFF) as u8;
                             let hi = ((gen.amount >> 8) & 0xFF) as u8;
                             key_range = (lo, hi);
                         }
-                        44 => { // velRange
+                        44 => {
+                            // velRange
                             let lo = (gen.amount & 0xFF) as u8;
                             let hi = ((gen.amount >> 8) & 0xFF) as u8;
                             vel_range = (lo, hi);
@@ -639,7 +671,7 @@ mod tests {
         // pgen (1 entry: instrument 0)
         let mut pgen = Vec::new();
         pgen.extend_from_slice(&41u16.to_le_bytes()); // oper: instrument
-        pgen.extend_from_slice(&0u16.to_le_bytes());  // inst 0
+        pgen.extend_from_slice(&0u16.to_le_bytes()); // inst 0
         pdta_body.extend_from_slice(b"pgen");
         pdta_body.extend_from_slice(&(pgen.len() as u32).to_le_bytes());
         pdta_body.extend_from_slice(&pgen);
@@ -672,7 +704,7 @@ mod tests {
         // igen (1 entry: sampleID 0)
         let mut igen = Vec::new();
         igen.extend_from_slice(&53u16.to_le_bytes()); // oper: sampleID
-        igen.extend_from_slice(&0u16.to_le_bytes());  // sample 0
+        igen.extend_from_slice(&0u16.to_le_bytes()); // sample 0
         pdta_body.extend_from_slice(b"igen");
         pdta_body.extend_from_slice(&(igen.len() as u32).to_le_bytes());
         pdta_body.extend_from_slice(&igen);
@@ -681,13 +713,13 @@ mod tests {
         let mut shdr = Vec::new();
         let mut s0 = vec![0u8; 46];
         s0[0..10].copy_from_slice(b"TestSample");
-        s0[20..24].copy_from_slice(&0u32.to_le_bytes());   // start 0
+        s0[20..24].copy_from_slice(&0u32.to_le_bytes()); // start 0
         s0[24..28].copy_from_slice(&100u32.to_le_bytes()); // end 100
-        s0[28..32].copy_from_slice(&10u32.to_le_bytes());  // loop_start 10
-        s0[32..36].copy_from_slice(&90u32.to_le_bytes());  // loop_end 90
+        s0[28..32].copy_from_slice(&10u32.to_le_bytes()); // loop_start 10
+        s0[32..36].copy_from_slice(&90u32.to_le_bytes()); // loop_end 90
         s0[36..40].copy_from_slice(&44100u32.to_le_bytes()); // sample_rate 44100
         s0[40] = 60; // original pitch C4
-        s0[41] = 0;  // correction
+        s0[41] = 0; // correction
         s0[44..46].copy_from_slice(&1u16.to_le_bytes()); // mono sample
         shdr.extend_from_slice(&s0);
 

@@ -13,16 +13,12 @@ use summoner_dsp::modal_synthesis::{
     ModalExcitationType, ModalMaterialPreset, ModalSynthesisEngine,
 };
 use summoner_dsp::traits::SignalProcessor;
-use summoner_dsp::waveguide_mesh::{
-    MeshBoundaryType, MeshMaterialProfile, WaveguideMesh2D,
-};
+use summoner_dsp::waveguide_mesh::{MeshBoundaryType, MeshMaterialProfile, WaveguideMesh2D};
 #[cfg(feature = "gui")]
 use summoner_gui::views::isomorphic_lattice_view::IsomorphicLatticeView;
 #[cfg(feature = "gui")]
 use summoner_gui::views::waveguide_mesh_view::WaveguideMeshView;
-use summoner_harmony::isomorphic_router::{
-    HexCoordinate, IsomorphicLayoutType, IsomorphicRouter,
-};
+use summoner_harmony::isomorphic_router::{HexCoordinate, IsomorphicLayoutType, IsomorphicRouter};
 
 const BLOCK_SIZE: usize = 64;
 
@@ -267,9 +263,18 @@ fn test_golden_isomorphic_lattice_and_waveguide_views_snapshot() {
     assert!(!ascii_lat.is_empty());
     assert!(ascii_lat[0].contains("ISOMORPHIC LATTICE"));
 
-    let res_lat = lattice_view.render_snapshot_png("scratch/renders/isomorphic_lattice_view.png", 800, 520);
-    let _ = lattice_view.render_snapshot_png("../../scratch/renders/isomorphic_lattice_view.png", 800, 520);
-    assert!(res_lat.is_ok(), "Lattice snapshot render failed: {:?}", res_lat);
+    let res_lat =
+        lattice_view.render_snapshot_png("scratch/renders/isomorphic_lattice_view.png", 800, 520);
+    let _ = lattice_view.render_snapshot_png(
+        "../../scratch/renders/isomorphic_lattice_view.png",
+        800,
+        520,
+    );
+    assert!(
+        res_lat.is_ok(),
+        "Lattice snapshot render failed: {:?}",
+        res_lat
+    );
 
     let mut mesh_view = WaveguideMeshView::new();
     mesh_view.trigger_strike(0.9);
@@ -281,9 +286,15 @@ fn test_golden_isomorphic_lattice_and_waveguide_views_snapshot() {
     assert!(!ascii_mesh.is_empty());
     assert!(ascii_mesh[0].contains("WAVEGUIDE 3D MESH"));
 
-    let res_mesh = mesh_view.render_snapshot_png("scratch/renders/waveguide_mesh_view.png", 800, 520);
-    let _ = mesh_view.render_snapshot_png("../../scratch/renders/waveguide_mesh_view.png", 800, 520);
-    assert!(res_mesh.is_ok(), "Mesh snapshot render failed: {:?}", res_mesh);
+    let res_mesh =
+        mesh_view.render_snapshot_png("scratch/renders/waveguide_mesh_view.png", 800, 520);
+    let _ =
+        mesh_view.render_snapshot_png("../../scratch/renders/waveguide_mesh_view.png", 800, 520);
+    assert!(
+        res_mesh.is_ok(),
+        "Mesh snapshot render failed: {:?}",
+        res_mesh
+    );
 
     let mut hasher = Hasher::new();
     for line in &ascii_lat {

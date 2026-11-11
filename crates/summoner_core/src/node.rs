@@ -283,7 +283,13 @@ mod tests {
     fn test_sine_note_events_drive_pitch_and_gate() {
         let ctx = ProcessContext::new(48000, 120.0, 0);
         let mut osc = SineOscillatorNode::new(100.0);
-        osc.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 0.5 }, &ctx);
+        osc.handle_event(
+            &NodeEvent::NoteOn {
+                note: 69,
+                velocity: 0.5,
+            },
+            &ctx,
+        );
         assert!((osc.frequency - 440.0).abs() < 1e-3);
         let mut buf = vec![0.0f32; 256];
         osc.process(&[], &mut [&mut buf[..]], &ctx);

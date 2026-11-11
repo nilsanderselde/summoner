@@ -11,10 +11,10 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
 
 /// Number of cascaded allpass dispersion stages in the all-pass dispersion network (APDN).
 pub const NUM_DISPERSION_STAGES: usize = 4;
@@ -427,8 +427,14 @@ mod tests {
             late_amp = late_amp.max(l.abs().max(r.abs()));
         }
 
-        assert!(peak_amp > 0.01, "Plate reverb impulse must produce reverberation");
-        assert!(late_amp < peak_amp, "Plate reverberation must naturally decay over time");
+        assert!(
+            peak_amp > 0.01,
+            "Plate reverb impulse must produce reverberation"
+        );
+        assert!(
+            late_amp < peak_amp,
+            "Plate reverberation must naturally decay over time"
+        );
     }
 
     #[test]

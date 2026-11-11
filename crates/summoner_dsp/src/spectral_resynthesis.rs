@@ -7,8 +7,8 @@
 //! cross-timbre spectral morphing, inharmonicity dispersion, and stochastic noise residual modeling.
 //! Zero heap allocations in audio processing paths, strictly enforced under `AllocGuard`.
 
-use std::f32::consts::PI;
 use crate::traits::SignalProcessor;
+use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
 
@@ -186,8 +186,8 @@ impl HarmonicProfile {
         let mut amplitudes = [0.0f32; MAX_PARTIALS];
         let mut ratio_multipliers = [1.0f32; MAX_PARTIALS];
         let ratios = [
-            1.0, 2.756, 5.404, 8.933, 11.23, 15.67, 18.21, 22.45,
-            26.12, 30.5, 35.8, 41.2, 48.0, 55.3, 62.1, 70.0,
+            1.0, 2.756, 5.404, 8.933, 11.23, 15.67, 18.21, 22.45, 26.12, 30.5, 35.8, 41.2, 48.0,
+            55.3, 62.1, 70.0,
         ];
         for k in 0..MAX_PARTIALS {
             if k < ratios.len() {
@@ -237,7 +237,8 @@ impl HarmonicProfile {
             let a1 = self.amplitudes[k];
             let a2 = other.amplitudes[k];
             amplitudes[k] = ((1.0 - t) * a1.powi(2) + t * a2.powi(2)).sqrt();
-            ratio_multipliers[k] = (1.0 - t) * self.ratio_multipliers[k] + t * other.ratio_multipliers[k];
+            ratio_multipliers[k] =
+                (1.0 - t) * self.ratio_multipliers[k] + t * other.ratio_multipliers[k];
         }
 
         let spectral_centroid = (1.0 - t) * self.spectral_centroid + t * other.spectral_centroid;
@@ -395,7 +396,10 @@ impl SpectralResynthesisEngine {
     /// Zero-allocation lightweight PRNG for stochastic noise synthesis.
     #[inline(always)]
     fn next_noise(&mut self) -> f32 {
-        self.noise_rng_state = self.noise_rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
+        self.noise_rng_state = self
+            .noise_rng_state
+            .wrapping_mul(1664525)
+            .wrapping_add(1013904223);
         ((self.noise_rng_state as f32 / u32::MAX as f32) * 2.0) - 1.0
     }
 
@@ -429,7 +433,7 @@ impl SpectralResynthesisEngine {
 
         for k in 0..MAX_PARTIALS {
             let partial = &mut self.partials[k];
-            
+
             // Smooth amplitude transitions
             partial.amplitude += smooth_coeff * (partial.target_amplitude - partial.amplitude);
 
@@ -466,7 +470,8 @@ impl SpectralResynthesisEngine {
         let raw_noise = self.next_noise();
         let noise_filter_coeff = 0.15;
         self.noise_lp_state += noise_filter_coeff * (raw_noise - self.noise_lp_state);
-        let noise_out = self.noise_lp_state * self.noise_residual_gain * self.current_profile.noise_ratio;
+        let noise_out =
+            self.noise_lp_state * self.noise_residual_gain * self.current_profile.noise_ratio;
 
         let out_l = ((sum_left + noise_out) * self.amplitude_envelope * 0.25).clamp(-1.0, 1.0);
         let out_r = ((sum_right + noise_out) * self.amplitude_envelope * 0.25).clamp(-1.0, 1.0);
@@ -523,12 +528,7 @@ impl AudioNode for SpectralResynthesisEngine {
         "SpectralResynthesisEngine"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -566,8 +566,12 @@ mod tests {
 
         assert!(out_l.iter().any(|&s| s.abs() > 0.0));
         assert!(out_r.iter().any(|&s| s.abs() > 0.0));
-        assert!(out_l.iter().all(|&s| s.is_finite() && (-1.0..=1.0).contains(&s)));
-        assert!(out_r.iter().all(|&s| s.is_finite() && (-1.0..=1.0).contains(&s)));
+        assert!(out_l
+            .iter()
+            .all(|&s| s.is_finite() && (-1.0..=1.0).contains(&s)));
+        assert!(out_r
+            .iter()
+            .all(|&s| s.is_finite() && (-1.0..=1.0).contains(&s)));
     }
 
     #[test]

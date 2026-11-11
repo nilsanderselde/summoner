@@ -10,12 +10,12 @@
 //!
 //! Enforces zero heap allocations in real-time audio render loops under `AllocGuard`.
 
+use crate::tine_resonator::{ElectricPianoModel, TineResonator};
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::tine_resonator::{ElectricPianoModel, TineResonator};
-use crate::traits::SignalProcessor;
 
 /// Maximum number of polyphonic electric piano voices.
 pub const MAX_EP_VOICES: usize = 32;
@@ -46,7 +46,9 @@ impl ElectricPianoProfile {
             | Self::BarkingDynoRhodes
             | Self::MellowRhodesStage
             | Self::BelledAmbientRhodes => ElectricPianoModel::RhodesTine,
-            Self::ClassicWurlitzer200A | Self::SoulOverdrivenWurli => ElectricPianoModel::WurlitzerReed,
+            Self::ClassicWurlitzer200A | Self::SoulOverdrivenWurli => {
+                ElectricPianoModel::WurlitzerReed
+            }
         }
     }
 
@@ -302,7 +304,11 @@ impl ElectricPiano {
         let sr = sample_rate.max(8000);
         let mut voices = Vec::with_capacity(MAX_EP_VOICES);
         for _ in 0..MAX_EP_VOICES {
-            voices.push(TineResonator::new(ElectricPianoModel::RhodesTine, 261.63, sr));
+            voices.push(TineResonator::new(
+                ElectricPianoModel::RhodesTine,
+                261.63,
+                sr,
+            ));
         }
 
         let mut ep = Self {
@@ -367,7 +373,9 @@ impl ElectricPiano {
             voice.pickup.bark_drive = self.bark_drive;
             voice.tonebar.coupling_stiffness = self.tonebar_coupling;
             voice.damper.clunk_volume = self.damper_clunk_volume;
-            voice.tonebar.recompute_coefficients(voice.frequency, self.sample_rate);
+            voice
+                .tonebar
+                .recompute_coefficients(voice.frequency, self.sample_rate);
         }
     }
 
@@ -442,7 +450,9 @@ impl ElectricPiano {
         }
 
         // Preamp & Tone Control
-        let (sat_l, sat_r) = self.tone_control.process(raw_mono, raw_mono, self.sample_rate);
+        let (sat_l, sat_r) = self
+            .tone_control
+            .process(raw_mono, raw_mono, self.sample_rate);
 
         // Stereo Optical Tremolo / Panner
         let (trem_l, trem_r) = self.tremolo.process(sat_l, sat_r, self.sample_rate);

@@ -14,8 +14,8 @@
 //! Native plugin GUI window host bridge supporting HWND (Windows), NSView (macOS),
 //! and X11 (Linux) child window embedding (Task F6).
 
-use serde::{Deserialize, Serialize};
 use crate::vst3_host::ViewRect;
+use serde::{Deserialize, Serialize};
 
 /// Target operating system windowing platform type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -199,4 +199,3 @@ mod tests {
         assert_eq!(host.parent_handle, 0);
     }
 }
-

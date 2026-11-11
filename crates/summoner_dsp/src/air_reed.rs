@@ -54,7 +54,11 @@ pub fn meri_kari_to_pitch_multiplier(cents: f32) -> f32 {
 ///
 /// f(eta, theta) = tanh(eta * k_sharp + offset(theta)) - 0.22 * (eta * k_sharp)^3
 #[inline]
-pub fn utaguchi_splitting_function(jet_displacement: f32, angle_offset: f32, sharpness: f32) -> f32 {
+pub fn utaguchi_splitting_function(
+    jet_displacement: f32,
+    angle_offset: f32,
+    sharpness: f32,
+) -> f32 {
     let scaled_disp = jet_displacement * sharpness + angle_offset;
     let sat = scaled_disp.tanh();
     let cubic = 0.22 * (scaled_disp.clamp(-2.0, 2.0)).powi(3);
@@ -123,7 +127,10 @@ impl Default for AirReedConfig {
 }
 
 fn default_jet_buffer() -> Box<[f32; MAX_JET_DELAY]> {
-    vec![0.0; MAX_JET_DELAY].into_boxed_slice().try_into().unwrap()
+    vec![0.0; MAX_JET_DELAY]
+        .into_boxed_slice()
+        .try_into()
+        .unwrap()
 }
 
 /// Physical modeling Japanese Shakuhachi air-jet reed and utaguchi flue vortex generator.
@@ -255,7 +262,7 @@ impl AirReed {
 
         // 1. Generate stochastic vortex breath noise
         let raw_noise = self.prng.next_f32();
-        
+
         // Lowpass filter baseline breath turbulence (subtle airy hiss)
         let turb_coeff = 0.35;
         self.turbulence_filter_state += turb_coeff * (raw_noise - self.turbulence_filter_state);
@@ -271,8 +278,12 @@ impl AirReed {
         let a1 = -2.0 * w0.cos();
         let a2 = 1.0 - alpha;
 
-        let formant_in = raw_noise * self.config.murai_iki_intensity * (self.blowing_pressure_pa / DEFAULT_PRESSURE_PA).sqrt();
-        let formant_out = (b0 * formant_in - a1 * self.formant_filter_state1 - a2 * self.formant_filter_state2) / a0;
+        let formant_in = raw_noise
+            * self.config.murai_iki_intensity
+            * (self.blowing_pressure_pa / DEFAULT_PRESSURE_PA).sqrt();
+        let formant_out =
+            (b0 * formant_in - a1 * self.formant_filter_state1 - a2 * self.formant_filter_state2)
+                / a0;
         self.formant_filter_state2 = self.formant_filter_state1;
         self.formant_filter_state1 = formant_out;
 
@@ -295,11 +306,8 @@ impl AirReed {
         let angle_offset = (current_angle - nominal_angle).sin() * 0.45;
 
         // 5. Non-linear splitting at sharp utaguchi edge
-        let split_output = utaguchi_splitting_function(
-            delayed_jet,
-            angle_offset,
-            self.config.edge_sharpness,
-        );
+        let split_output =
+            utaguchi_splitting_function(delayed_jet, angle_offset, self.config.edge_sharpness);
 
         // 6. Scale by dynamic Bernoulli blowing pressure
         let pressure_scale = (self.blowing_pressure_pa / DEFAULT_PRESSURE_PA).sqrt();

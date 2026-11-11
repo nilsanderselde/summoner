@@ -10,12 +10,12 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::tonehole_grid::{ToneholeLattice, AIR_DENSITY_KG_M3, NUM_TONEHOLES, SPEED_OF_SOUND_MPS};
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::tonehole_grid::{NUM_TONEHOLES, ToneholeLattice, SPEED_OF_SOUND_MPS, AIR_DENSITY_KG_M3};
-use crate::traits::SignalProcessor;
 
 /// Maximum delay line capacity in samples (~20 Hz at 192 kHz).
 pub const MAX_WOODWIND_DELAY: usize = 8192;
@@ -213,7 +213,11 @@ impl WoodwindJet {
         self.jet_distance_mm = instrument.nominal_jet_distance_mm();
         self.breath_noise_mix = instrument.breath_noise_fraction();
         self.lattice = ToneholeLattice::new_standard_flute(instrument.nominal_bore_length_m());
-        self.bell_reflection_coeff = if instrument.is_stopped_pipe() { 0.95 } else { -0.92 };
+        self.bell_reflection_coeff = if instrument.is_stopped_pipe() {
+            0.95
+        } else {
+            -0.92
+        };
         self.update_frequency_tuning();
     }
 
@@ -319,14 +323,22 @@ impl WoodwindJet {
     /// Non-allocating fast pseudo-random number generator for breath turbulence noise.
     #[inline]
     fn next_noise_sample(&mut self) -> f32 {
-        self.prng_state = self.prng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.prng_state = self
+            .prng_state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         let bits = (self.prng_state >> 32) as u32;
         (bits as f32 / u32::MAX as f32) * 2.0 - 1.0
     }
 
     /// Reads fractional delay using 4-point Hermite cubic interpolation.
     #[inline]
-    fn read_fractional_delay(buffer: &[f32], max_cap: usize, write_idx: usize, delay_samples: f32) -> f32 {
+    fn read_fractional_delay(
+        buffer: &[f32],
+        max_cap: usize,
+        write_idx: usize,
+        delay_samples: f32,
+    ) -> f32 {
         let int_delay = delay_samples.floor() as usize;
         let frac = delay_samples - int_delay as f32;
 
@@ -336,7 +348,11 @@ impl WoodwindJet {
             max_cap + write_idx - int_delay
         };
 
-        let i0 = if base_idx == 0 { max_cap - 1 } else { base_idx - 1 };
+        let i0 = if base_idx == 0 {
+            max_cap - 1
+        } else {
+            base_idx - 1
+        };
         let i1 = base_idx;
         let i2 = (base_idx + 1) % max_cap;
         let i3 = (base_idx + 2) % max_cap;
@@ -370,7 +386,8 @@ impl WoodwindJet {
         // 1. Advance vibrato and flutter tongue phase accumulators
         let vibrato_mod = if self.vibrato_depth > 0.001 {
             let mod_val = (self.vibrato_phase).sin() * (self.vibrato_depth / 12.0);
-            self.vibrato_phase = (self.vibrato_phase + 2.0 * PI * self.vibrato_rate_hz / sr) % (2.0 * PI);
+            self.vibrato_phase =
+                (self.vibrato_phase + 2.0 * PI * self.vibrato_rate_hz / sr) % (2.0 * PI);
             2.0f32.powf(mod_val)
         } else {
             1.0
@@ -378,7 +395,8 @@ impl WoodwindJet {
 
         let flutter_mod = if self.flutter_rate_hz > 1.0 {
             let f_val = 0.5 * (1.0 + (self.flutter_phase).sin());
-            self.flutter_phase = (self.flutter_phase + 2.0 * PI * self.flutter_rate_hz / sr) % (2.0 * PI);
+            self.flutter_phase =
+                (self.flutter_phase + 2.0 * PI * self.flutter_rate_hz / sr) % (2.0 * PI);
             0.6 + 0.4 * f_val
         } else {
             1.0
@@ -387,7 +405,8 @@ impl WoodwindJet {
         // 2. Modulate blowing pressure with excitation, flutter, and breath noise
         let noise = self.next_noise_sample();
         let noise_term = noise * self.breath_noise_mix * 0.35;
-        let eff_pressure = ((self.blowing_pressure_kpa * flutter_mod + excitation + noise_term) * vibrato_mod)
+        let eff_pressure = ((self.blowing_pressure_kpa * flutter_mod + excitation + noise_term)
+            * vibrato_mod)
             .clamp(0.02, 5.0);
 
         // 3. Calculate aerodynamic jet velocity and propagation delay
@@ -396,7 +415,12 @@ impl WoodwindJet {
 
         // 4. Read backward acoustic wave emerging from bore back to embouchure
         let bore_delay_len = self.compute_bore_delay_samples();
-        let bore_back_wave = Self::read_fractional_delay(&self.rev_delay, MAX_WOODWIND_DELAY, self.rev_write_idx, bore_delay_len);
+        let bore_back_wave = Self::read_fractional_delay(
+            &self.rev_delay,
+            MAX_WOODWIND_DELAY,
+            self.rev_write_idx,
+            bore_delay_len,
+        );
 
         // 5. Air-jet excitation: coupling between mouth pressure, acoustic feedback, and jet delay
         // Perturbation injected into the jet is proportional to acoustic feedback wave
@@ -404,19 +428,30 @@ impl WoodwindJet {
         self.jet_delay[self.jet_write_idx] = jet_input;
         self.jet_write_idx = (self.jet_write_idx + 1) % MAX_JET_DELAY;
 
-        let delayed_jet = Self::read_fractional_delay(&self.jet_delay, MAX_JET_DELAY, self.jet_write_idx, jet_delay_len);
+        let delayed_jet = Self::read_fractional_delay(
+            &self.jet_delay,
+            MAX_JET_DELAY,
+            self.jet_write_idx,
+            jet_delay_len,
+        );
 
         // Non-linear amplification at labium edge
         let jet_flow = self.step_jet_nonlinearity(delayed_jet);
 
         // Forward wave injected into bore: superposition of acoustic feedback and non-linear jet volume flow
-        let fwd_bore_in = (-bore_back_wave * 0.65 + jet_flow * (eff_pressure * 0.45).min(1.5)).clamp(-2.0, 2.0);
+        let fwd_bore_in =
+            (-bore_back_wave * 0.65 + jet_flow * (eff_pressure * 0.45).min(1.5)).clamp(-2.0, 2.0);
 
         self.fwd_delay[self.fwd_write_idx] = fwd_bore_in;
         self.fwd_write_idx = (self.fwd_write_idx + 1) % MAX_WOODWIND_DELAY;
 
         // 6. Forward wave propagates down the bore to tonehole lattice
-        let fwd_bell_wave = Self::read_fractional_delay(&self.fwd_delay, MAX_WOODWIND_DELAY, self.fwd_write_idx, bore_delay_len);
+        let fwd_bell_wave = Self::read_fractional_delay(
+            &self.fwd_delay,
+            MAX_WOODWIND_DELAY,
+            self.fwd_write_idx,
+            bore_delay_len,
+        );
 
         // Apply thermal-viscous wall loss damping (one-pole lowpass)
         let loss = self.bore_loss.clamp(0.92, 0.999);

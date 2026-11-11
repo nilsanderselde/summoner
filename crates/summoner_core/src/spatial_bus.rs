@@ -46,7 +46,12 @@ impl Default for SpatialVector3D {
 
 impl SpatialVector3D {
     /// Creates a new spatial vector from spherical parameters.
-    pub fn new_spherical(azimuth_rad: f32, elevation_rad: f32, distance_m: f32, spread: f32) -> Self {
+    pub fn new_spherical(
+        azimuth_rad: f32,
+        elevation_rad: f32,
+        distance_m: f32,
+        spread: f32,
+    ) -> Self {
         let az = (azimuth_rad + PI).rem_euclid(TAU) - PI;
         let el = elevation_rad.clamp(-PI / 2.0, PI / 2.0);
         let dist = distance_m.max(0.1);
@@ -142,10 +147,14 @@ impl AtomicSpatialSlot {
 
     #[inline]
     pub fn store(&self, vec: &SpatialVector3D) {
-        self.azimuth_bits.store(vec.azimuth_rad.to_bits(), Ordering::Release);
-        self.elevation_bits.store(vec.elevation_rad.to_bits(), Ordering::Release);
-        self.distance_bits.store(vec.distance_m.to_bits(), Ordering::Release);
-        self.spread_bits.store(vec.spread.to_bits(), Ordering::Release);
+        self.azimuth_bits
+            .store(vec.azimuth_rad.to_bits(), Ordering::Release);
+        self.elevation_bits
+            .store(vec.elevation_rad.to_bits(), Ordering::Release);
+        self.distance_bits
+            .store(vec.distance_m.to_bits(), Ordering::Release);
+        self.spread_bits
+            .store(vec.spread.to_bits(), Ordering::Release);
         self.gain_bits.store(vec.gain.to_bits(), Ordering::Release);
     }
 }
@@ -169,7 +178,8 @@ impl SpatialBus {
             slots.push(AtomicSpatialSlot::default());
         }
         let boxed_slice = slots.into_boxed_slice();
-        let array_box: Box<[AtomicSpatialSlot; MAX_SPATIAL_OBJECTS]> = match boxed_slice.try_into() {
+        let array_box: Box<[AtomicSpatialSlot; MAX_SPATIAL_OBJECTS]> = match boxed_slice.try_into()
+        {
             Ok(arr) => arr,
             Err(_) => unreachable!(),
         };
@@ -187,7 +197,8 @@ impl SpatialBus {
         spread: f32,
     ) {
         if object_id < MAX_SPATIAL_OBJECTS {
-            let vec = SpatialVector3D::new_spherical(azimuth_rad, elevation_rad, distance_m, spread);
+            let vec =
+                SpatialVector3D::new_spherical(azimuth_rad, elevation_rad, distance_m, spread);
             self.slots[object_id].store(&vec);
         }
     }

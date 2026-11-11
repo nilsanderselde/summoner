@@ -51,19 +51,19 @@ impl DspNodeCategory {
 
     pub fn color_rgb(&self) -> (u8, u8, u8) {
         match self {
-            Self::Oscillator => (56, 189, 248),         // Vibrant Cyan
+            Self::Oscillator => (56, 189, 248),            // Vibrant Cyan
             Self::AcousticPhysicalModel => (245, 158, 11), // Warm Amber
-            Self::FilterEq => (168, 85, 247),           // Violet / Purple
-            Self::DynamicsMaster => (239, 68, 68),       // Crimson / Coral
-            Self::DistortionSaturation => (249, 115, 22),// Bright Orange
-            Self::Modulation => (34, 197, 94),          // Emerald Green
-            Self::TimeSpace => (99, 102, 241),          // Indigo Blue
-            Self::SpatialSurround => (14, 165, 233),    // Sky Blue
-            Self::SpectralResynthesis => (217, 70, 239),// Magenta / Pink
-            Self::NeuralAi => (236, 72, 153),           // Neon Rose
-            Self::SamplerSlicer => (16, 185, 129),      // Mint Green
-            Self::CompositeSynth => (59, 130, 246),     // Electric Blue
-            Self::Utility => (148, 163, 184),           // Slate Gray
+            Self::FilterEq => (168, 85, 247),              // Violet / Purple
+            Self::DynamicsMaster => (239, 68, 68),         // Crimson / Coral
+            Self::DistortionSaturation => (249, 115, 22),  // Bright Orange
+            Self::Modulation => (34, 197, 94),             // Emerald Green
+            Self::TimeSpace => (99, 102, 241),             // Indigo Blue
+            Self::SpatialSurround => (14, 165, 233),       // Sky Blue
+            Self::SpectralResynthesis => (217, 70, 239),   // Magenta / Pink
+            Self::NeuralAi => (236, 72, 153),              // Neon Rose
+            Self::SamplerSlicer => (16, 185, 129),         // Mint Green
+            Self::CompositeSynth => (59, 130, 246),        // Electric Blue
+            Self::Utility => (148, 163, 184),              // Slate Gray
         }
     }
 
@@ -329,24 +329,46 @@ impl DspNodeDescriptor {
         );
         for p in &self.params {
             let (default_val, unit) = match &p.widget {
-                DspWidgetKind::RotaryKnob { default, unit, min, max, .. } => {
+                DspWidgetKind::RotaryKnob {
+                    default,
+                    unit,
+                    min,
+                    max,
+                    ..
+                } => {
                     let norm = ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0);
                     (norm, unit.clone())
                 }
-                DspWidgetKind::VerticalFader { default, unit, min, max } => {
+                DspWidgetKind::VerticalFader {
+                    default,
+                    unit,
+                    min,
+                    max,
+                } => {
                     let norm = ((*default - *min) / (*max - *min).max(1e-5)).clamp(0.0, 1.0);
                     (norm, unit.clone())
                 }
                 DspWidgetKind::Toggle { default } => {
                     (if *default { 1.0 } else { 0.0 }, "".to_string())
                 }
-                DspWidgetKind::EnumChoice { default_idx, choices } => {
-                    let norm = if choices.is_empty() { 0.0 } else { *default_idx as f32 / choices.len() as f32 };
+                DspWidgetKind::EnumChoice {
+                    default_idx,
+                    choices,
+                } => {
+                    let norm = if choices.is_empty() {
+                        0.0
+                    } else {
+                        *default_idx as f32 / choices.len() as f32
+                    };
                     (norm, "".to_string())
                 }
                 _ => (0.5, "".to_string()),
             };
-            module = module.with_param(crate::views::dsp_rack_dock::DspModuleParam::new(&p.name, default_val, &unit));
+            module = module.with_param(crate::views::dsp_rack_dock::DspModuleParam::new(
+                &p.name,
+                default_val,
+                &unit,
+            ));
         }
         module
     }
@@ -518,7 +540,8 @@ impl DspParamDescriptor {
 
     pub fn format_value(&self) -> String {
         match &self.param_type {
-            DspParamType::FloatLinear { unit, .. } | DspParamType::FloatLogarithmic { unit, .. } => {
+            DspParamType::FloatLinear { unit, .. }
+            | DspParamType::FloatLogarithmic { unit, .. } => {
                 if unit.is_empty() {
                     format!("{:.2}", self.current_value)
                 } else if unit == "%" {
@@ -529,7 +552,12 @@ impl DspParamDescriptor {
                     } else {
                         format!("{:.1} Hz", self.current_value)
                     }
-                } else if unit == "dB" || unit == "dBFS" || unit == "dBTP" || unit == "LUFS" || unit == "dB/oct" {
+                } else if unit == "dB"
+                    || unit == "dBFS"
+                    || unit == "dBTP"
+                    || unit == "LUFS"
+                    || unit == "dB/oct"
+                {
                     format!("{:.1} {}", self.current_value, unit)
                 } else if unit == "ms" {
                     format!("{:.1} ms", self.current_value)
@@ -539,7 +567,10 @@ impl DspParamDescriptor {
             }
             DspParamType::Enum { variants, .. } => {
                 let idx = self.current_value.round() as usize;
-                variants.get(idx).cloned().unwrap_or_else(|| "Unknown".to_string())
+                variants
+                    .get(idx)
+                    .cloned()
+                    .unwrap_or_else(|| "Unknown".to_string())
             }
             DspParamType::Bool { .. } => {
                 if self.current_value >= 0.5 {
@@ -630,4 +661,3 @@ impl DspParamDescriptor {
         }
     }
 }
-

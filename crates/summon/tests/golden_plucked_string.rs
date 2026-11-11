@@ -9,7 +9,9 @@ use summoner_core::node::ProcessContext;
 use summoner_core::param_bus::{ParamBus, ParamId};
 use summoner_core::plectrum_bus::{PlectrumBus, PluckArticulation};
 use summoner_core::transport::Transport;
-use summoner_dsp::hammer_strike::{ExcitationType, HammerStrike, SympatheticResonatorMatrix, NUM_SYMPATHETIC_STRINGS};
+use summoner_dsp::hammer_strike::{
+    ExcitationType, HammerStrike, SympatheticResonatorMatrix, NUM_SYMPATHETIC_STRINGS,
+};
 use summoner_dsp::plucked_string::{CommutedPluckedString, PluckedInstrumentProfile};
 use summoner_dsp::traits::SignalProcessor;
 #[cfg(feature = "gui")]

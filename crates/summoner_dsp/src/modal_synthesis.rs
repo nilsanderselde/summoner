@@ -10,12 +10,12 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::modal::ModalResonator;
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::modal::ModalResonator;
-use crate::traits::SignalProcessor;
 
 /// Maximum number of concurrent resonant modes in the modal filter bank.
 pub const MAX_MODAL_BANK_SIZE: usize = 16;
@@ -53,24 +53,24 @@ impl ModalMaterialPreset {
     pub fn frequency_ratios(&self) -> [f32; MAX_MODAL_BANK_SIZE] {
         match self {
             Self::MetalBar => [
-                1.000, 2.756, 5.404, 8.933, 13.344, 18.636, 24.810, 31.865,
-                39.802, 48.621, 58.321, 68.903, 80.366, 92.711, 105.938, 120.046,
+                1.000, 2.756, 5.404, 8.933, 13.344, 18.636, 24.810, 31.865, 39.802, 48.621, 58.321,
+                68.903, 80.366, 92.711, 105.938, 120.046,
             ],
             Self::MarimbaWood => [
-                1.000, 3.980, 9.870, 14.500, 19.800, 25.400, 31.900, 38.600,
-                46.100, 54.200, 62.900, 72.100, 81.900, 92.300, 103.200, 114.700,
+                1.000, 3.980, 9.870, 14.500, 19.800, 25.400, 31.900, 38.600, 46.100, 54.200,
+                62.900, 72.100, 81.900, 92.300, 103.200, 114.700,
             ],
             Self::GlassBowl => [
-                1.000, 2.320, 4.150, 6.480, 9.250, 12.450, 16.100, 20.200,
-                24.700, 29.600, 34.900, 40.600, 46.700, 53.200, 60.100, 67.400,
+                1.000, 2.320, 4.150, 6.480, 9.250, 12.450, 16.100, 20.200, 24.700, 29.600, 34.900,
+                40.600, 46.700, 53.200, 60.100, 67.400,
             ],
             Self::MembraneDrum => [
-                1.000, 1.593, 2.135, 2.295, 2.653, 2.917, 3.156, 3.500,
-                3.650, 4.060, 4.150, 4.540, 4.600, 4.900, 5.000, 5.350,
+                1.000, 1.593, 2.135, 2.295, 2.653, 2.917, 3.156, 3.500, 3.650, 4.060, 4.150, 4.540,
+                4.600, 4.900, 5.000, 5.350,
             ],
             Self::TibetanSingingBowl => [
-                1.000, 2.780, 5.120, 7.890, 11.230, 14.950, 19.100, 23.700,
-                28.650, 34.100, 39.900, 46.200, 52.800, 59.900, 67.400, 75.300,
+                1.000, 2.780, 5.120, 7.890, 11.230, 14.950, 19.100, 23.700, 28.650, 34.100, 39.900,
+                46.200, 52.800, 59.900, 67.400, 75.300,
             ],
         }
     }
@@ -178,7 +178,12 @@ impl ModalSynthesisEngine {
         let hardness = self.mallet_hardness.clamp(0.05, 1.0);
         let amp = velocity.clamp(0.0, 1.0) * hardness;
 
-        for (i, res) in self.resonators.iter_mut().enumerate().take(self.num_active_modes) {
+        for (i, res) in self
+            .resonators
+            .iter_mut()
+            .enumerate()
+            .take(self.num_active_modes)
+        {
             let mode_pos = (i + 1) as f32 * self.strike_position * PI;
             let spatial_gain = mode_pos.sin().abs().clamp(0.05, 1.0);
             let impulse = amp * spatial_gain;
@@ -209,7 +214,12 @@ impl ModalSynthesisEngine {
             ModalExcitationType::Pluck => external_input,
         };
 
-        for (i, res) in self.resonators.iter_mut().enumerate().take(self.num_active_modes) {
+        for (i, res) in self
+            .resonators
+            .iter_mut()
+            .enumerate()
+            .take(self.num_active_modes)
+        {
             let mode_pos = (i + 1) as f32 * self.strike_position * PI;
             let spatial_coupling = mode_pos.sin().abs().clamp(0.05, 1.0);
 
@@ -284,12 +294,7 @@ impl AudioNode for ModalSynthesisNode {
         "ModalSynthesisNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.engine.process_block(input, output, ctx);
     }
 }
@@ -335,11 +340,7 @@ mod tests {
 
         {
             let _guard = AllocGuard::new();
-            engine.process_block(
-                &[&in_buf[..]],
-                &mut [&mut out_l[..], &mut out_r[..]],
-                &ctx,
-            );
+            engine.process_block(&[&in_buf[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
         }
 
         assert!(out_l.iter().any(|s| *s != 0.0));

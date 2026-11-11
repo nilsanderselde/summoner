@@ -167,7 +167,12 @@ impl NeuralAudioSeparator {
     }
 
     /// Inverse STFT synthesizing time-domain signal from magnitude and phase.
-    pub fn compute_istft(&self, magnitudes: &[Vec<f32>], phases: &[Vec<f32>], total_length: usize) -> Vec<f32> {
+    pub fn compute_istft(
+        &self,
+        magnitudes: &[Vec<f32>],
+        phases: &[Vec<f32>],
+        total_length: usize,
+    ) -> Vec<f32> {
         let n_fft = self.config.fft_size;
         let hop = self.config.hop_size;
         let mut output = vec![0.0f32; total_length];
@@ -177,7 +182,9 @@ impl NeuralAudioSeparator {
             .map(|i| 0.5 * (1.0 - (2.0 * std::f32::consts::PI * i as f32 / n_fft as f32).cos()))
             .collect();
 
-        for (frame_idx, (mag_frame, phase_frame)) in magnitudes.iter().zip(phases.iter()).enumerate() {
+        for (frame_idx, (mag_frame, phase_frame)) in
+            magnitudes.iter().zip(phases.iter()).enumerate()
+        {
             let start = frame_idx * hop;
             if start + n_fft > total_length {
                 break;
@@ -249,7 +256,8 @@ impl NeuralAudioSeparator {
                 // Vocals: mid frequency presence (300Hz - 4kHz band)
                 let vocal_weight = (-(norm_pos - 0.4).powi(2) / 0.05).exp() * 0.8;
                 // Other: harmonic residue
-                let other_weight = (1.0 - (bass_weight + drums_weight + vocal_weight)).clamp(0.05, 0.6);
+                let other_weight =
+                    (1.0 - (bass_weight + drums_weight + vocal_weight)).clamp(0.05, 0.6);
 
                 let sum = (bass_weight + drums_weight + vocal_weight + other_weight).max(1e-6);
 
@@ -303,9 +311,7 @@ mod tests {
     #[test]
     fn test_stem_separation_and_progress_callback() {
         let mut separator = NeuralAudioSeparator::default();
-        let input: Vec<f32> = (0..1024)
-            .map(|i| (i as f32 * 0.1).sin() * 0.5)
-            .collect();
+        let input: Vec<f32> = (0..1024).map(|i| (i as f32 * 0.1).sin() * 0.5).collect();
 
         let mut progress_calls = 0;
         let stems = separator.separate_stems_with_progress(&input, |p| {
@@ -330,4 +336,3 @@ mod tests {
         }
     }
 }
-

@@ -84,11 +84,11 @@ impl BellowsArticulation {
     pub fn nominal_parameters(&self) -> BellowsNominalParameters {
         match self {
             Self::TangoMarcatoAccented => (680.0, 1.0, 0.90, 0.70, 2.0, 0b00011, 1.25, 0.90), // 16'+8' Bandoneon
-            Self::MusetteWaltzSwell => (420.0, 1.0, 0.75, 0.85, 18.0, 0b01110, 1.00, 0.85),    // 8'+8'+8'- Musette
-            Self::BayanVirtuosoBellowsShake => (850.0, 1.0, 0.95, 1.00, 4.0, 0b11111, 1.40, 0.95),// Full Master
+            Self::MusetteWaltzSwell => (420.0, 1.0, 0.75, 0.85, 18.0, 0b01110, 1.00, 0.85), // 8'+8'+8'- Musette
+            Self::BayanVirtuosoBellowsShake => (850.0, 1.0, 0.95, 1.00, 4.0, 0b11111, 1.40, 0.95), // Full Master
             Self::HarmoniumMeditativeDrone => (280.0, -1.0, 0.60, 0.50, 8.0, 0b00111, 0.85, 0.80), // Suction pull
-            Self::ConcertinaFastStaccato => (520.0, 1.0, 0.85, 0.90, 0.0, 0b00010, 1.15, 0.88),  // 8' Solo
-            Self::CassottoIntimateSolo => (360.0, 1.0, 0.70, 0.35, 1.0, 0b00010, 1.10, 0.85),    // 8' Deep Cassotto
+            Self::ConcertinaFastStaccato => (520.0, 1.0, 0.85, 0.90, 0.0, 0b00010, 1.15, 0.88), // 8' Solo
+            Self::CassottoIntimateSolo => (360.0, 1.0, 0.70, 0.35, 1.0, 0b00010, 1.10, 0.85), // 8' Deep Cassotto
             Self::TuttiFortissimoClimax => (1100.0, 1.0, 1.00, 1.00, 16.0, 0b11111, 1.30, 1.00), // Maximum Tutti
             Self::CustomSpline => (550.0, 1.0, 0.80, 0.80, 8.0, 0b11111, 1.10, 0.85),
         }
@@ -117,7 +117,10 @@ pub fn register_bellows_params(param_bus: &mut ParamBus, base_id: ParamId) {
     let (p_pa, dir, vel, cassotto, musette, mask, stiff, mgain) =
         BellowsArticulation::TangoMarcatoAccented.nominal_parameters();
 
-    param_bus.register(ParamId(base_id.0), BellowsArticulation::TangoMarcatoAccented as u32 as f32);
+    param_bus.register(
+        ParamId(base_id.0),
+        BellowsArticulation::TangoMarcatoAccented as u32 as f32,
+    );
     param_bus.register(ParamId(base_id.0 + 1), p_pa);
     param_bus.register(ParamId(base_id.0 + 2), dir);
     param_bus.register(ParamId(base_id.0 + 3), vel);
@@ -195,23 +198,27 @@ impl BellowsBus {
 
     /// Update articulation and set nominal parameters atomically.
     pub fn set_articulation(&self, art: BellowsArticulation) {
-        let (p_pa, dir, vel, cassotto, musette, mask, stiff, mgain) =
-            art.nominal_parameters();
+        let (p_pa, dir, vel, cassotto, musette, mask, stiff, mgain) = art.nominal_parameters();
 
         self.articulation.store(art as u32, Ordering::Relaxed);
-        self.bellows_pressure_pa.store(p_pa.to_bits(), Ordering::Relaxed);
+        self.bellows_pressure_pa
+            .store(p_pa.to_bits(), Ordering::Relaxed);
         self.push_direction.store(dir.to_bits(), Ordering::Relaxed);
         self.valve_velocity.store(vel.to_bits(), Ordering::Relaxed);
-        self.cassotto_aperture.store(cassotto.to_bits(), Ordering::Relaxed);
-        self.musette_detune_cents.store(musette.to_bits(), Ordering::Relaxed);
+        self.cassotto_aperture
+            .store(cassotto.to_bits(), Ordering::Relaxed);
+        self.musette_detune_cents
+            .store(musette.to_bits(), Ordering::Relaxed);
         self.register_mask.store(mask, Ordering::Relaxed);
-        self.reed_stiffness.store(stiff.to_bits(), Ordering::Relaxed);
+        self.reed_stiffness
+            .store(stiff.to_bits(), Ordering::Relaxed);
         self.master_gain.store(mgain.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_bellows_pressure(&self, pressure_pa: f32) {
-        self.bellows_pressure_pa.store(pressure_pa.to_bits(), Ordering::Relaxed);
+        self.bellows_pressure_pa
+            .store(pressure_pa.to_bits(), Ordering::Relaxed);
         let dir = if pressure_pa >= 0.0 { 1.0f32 } else { -1.0f32 };
         self.push_direction.store(dir.to_bits(), Ordering::Relaxed);
     }
@@ -223,12 +230,14 @@ impl BellowsBus {
 
     #[inline]
     pub fn set_cassotto_aperture(&self, aperture: f32) {
-        self.cassotto_aperture.store(aperture.to_bits(), Ordering::Relaxed);
+        self.cassotto_aperture
+            .store(aperture.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_musette_detune(&self, cents: f32) {
-        self.musette_detune_cents.store(cents.to_bits(), Ordering::Relaxed);
+        self.musette_detune_cents
+            .store(cents.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
@@ -238,7 +247,8 @@ impl BellowsBus {
 
     #[inline]
     pub fn set_reed_stiffness(&self, stiff: f32) {
-        self.reed_stiffness.store(stiff.to_bits(), Ordering::Relaxed);
+        self.reed_stiffness
+            .store(stiff.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]

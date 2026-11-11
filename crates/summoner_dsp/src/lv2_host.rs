@@ -243,7 +243,11 @@ impl Lv2PluginInstance {
         output: &mut [&mut [Sample]],
         _ctx: &ProcessContext,
     ) {
-        let num_samples = if output.is_empty() { 0 } else { output[0].len() };
+        let num_samples = if output.is_empty() {
+            0
+        } else {
+            output[0].len()
+        };
         if num_samples == 0 {
             return;
         }
@@ -281,12 +285,7 @@ impl AudioNode for Lv2PluginInstance {
         "Lv2PluginInstance"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         if let Some(ref bus) = ctx.param_bus {
             for (&param_id, param) in self.parameters.iter_mut() {
                 if let Some(val) = bus.get(ParamId(param_id)) {
@@ -306,8 +305,8 @@ impl AudioNode for Lv2PluginInstance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use crate::plugin_host::PluginFormat;
+    use std::path::PathBuf;
 
     #[test]
     fn test_lv2_descriptor_abi_layout() {
@@ -338,7 +337,11 @@ mod tests {
         let mut out_r = vec![0.0f32; 64];
         let ctx = ProcessContext::new(48000, 120.0, 0);
 
-        instance.process(&[&in_l[..], &in_r[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+        instance.process(
+            &[&in_l[..], &in_r[..]],
+            &mut [&mut out_l[..], &mut out_r[..]],
+            &ctx,
+        );
         assert_eq!(out_l[0], 1.5);
         assert_eq!(out_r[0], 1.5);
 

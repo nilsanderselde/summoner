@@ -602,4 +602,3 @@ mod tests {
         assert_eq!(captured.steps[4].note, 65.0);
     }
 }
-

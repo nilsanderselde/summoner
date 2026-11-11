@@ -57,38 +57,34 @@ impl RagaScale {
         match self {
             Self::Yaman => [
                 // Octave 1 (Tonic to Leading tone)
-                1.0, 1.125, 1.25, 1.40625, 1.5, 1.6875, 1.875,
-                // Octave 2
+                1.0, 1.125, 1.25, 1.40625, 1.5, 1.6875, 1.875, // Octave 2
                 2.0, 2.25, 2.5, 2.8125, 3.0, 3.75,
             ],
             Self::Bhairav => [
                 // Sa, komal Re, Ga, Ma, Pa, komal Dha, Ni
-                1.0, 1.06667, 1.25, 1.33333, 1.5, 1.60, 1.875,
-                2.0, 2.13333, 2.5, 2.66667, 3.0, 3.20,
+                1.0, 1.06667, 1.25, 1.33333, 1.5, 1.60, 1.875, 2.0, 2.13333, 2.5, 2.66667, 3.0, 3.20,
             ],
             Self::Bilawal => [
-                1.0, 1.125, 1.25, 1.33333, 1.5, 1.66667, 1.875,
-                2.0, 2.25, 2.5, 2.66667, 3.0, 3.33333,
+                1.0, 1.125, 1.25, 1.33333, 1.5, 1.66667, 1.875, 2.0, 2.25, 2.5, 2.66667, 3.0,
+                3.33333,
             ],
             Self::DarbariKanhada => [
                 // Sa, Re, komal Ga, Ma, Pa, komal Dha, komal Ni
-                1.0, 1.125, 1.20, 1.33333, 1.5, 1.60, 1.77778,
-                2.0, 2.25, 2.40, 2.66667, 3.0, 3.20,
+                1.0, 1.125, 1.20, 1.33333, 1.5, 1.60, 1.77778, 2.0, 2.25, 2.40, 2.66667, 3.0, 3.20,
             ],
             Self::Todi => [
                 // Sa, komal Re, komal Ga, tivra Ma, Pa, komal Dha, Ni
-                1.0, 1.06667, 1.20, 1.40625, 1.5, 1.60, 1.875,
-                2.0, 2.13333, 2.40, 2.8125, 3.0, 3.20,
+                1.0, 1.06667, 1.20, 1.40625, 1.5, 1.60, 1.875, 2.0, 2.13333, 2.40, 2.8125, 3.0, 3.20,
             ],
             Self::Kafi => [
                 // Sa, Re, komal Ga, Ma, Pa, Dha, komal Ni
-                1.0, 1.125, 1.20, 1.33333, 1.5, 1.66667, 1.77778,
-                2.0, 2.25, 2.40, 2.66667, 3.0, 3.33333,
+                1.0, 1.125, 1.20, 1.33333, 1.5, 1.66667, 1.77778, 2.0, 2.25, 2.40, 2.66667, 3.0,
+                3.33333,
             ],
             Self::Bhairavi => [
                 // Sa, komal Re, komal Ga, Ma, Pa, komal Dha, komal Ni
-                1.0, 1.06667, 1.20, 1.33333, 1.5, 1.60, 1.77778,
-                2.0, 2.13333, 2.40, 2.66667, 3.0, 3.20,
+                1.0, 1.06667, 1.20, 1.33333, 1.5, 1.60, 1.77778, 2.0, 2.13333, 2.40, 2.66667, 3.0,
+                3.20,
             ],
         }
     }
@@ -225,7 +221,8 @@ impl JawariBridge {
             // Non-linear power-law contact force (p ≈ 2.0..2.4 for curved bone/horn surface)
             let p = 2.2;
             let static_f = self.contact_stiffness_k * penetration.powf(p);
-            let dynamic_mu = (1.0 + self.jiva_damping * (-string_vel * 0.02).clamp(-10.0, 10.0)).max(0.0);
+            let dynamic_mu =
+                (1.0 + self.jiva_damping * (-string_vel * 0.02).clamp(-10.0, 10.0)).max(0.0);
             let force = (static_f * dynamic_mu).clamp(0.0, 50.0);
 
             // Effective string length shortening due to rolling contact on curved surface

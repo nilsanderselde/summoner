@@ -135,21 +135,37 @@ impl TempoMap {
 
     /// Add a tempo change point, maintaining sort order by beat.
     pub fn add_tempo_point(&mut self, point: TempoPoint) {
-        if let Some(pos) = self.tempo_points.iter().position(|p| (p.beat - point.beat).abs() < 1e-6) {
+        if let Some(pos) = self
+            .tempo_points
+            .iter()
+            .position(|p| (p.beat - point.beat).abs() < 1e-6)
+        {
             self.tempo_points[pos] = point;
         } else {
             self.tempo_points.push(point);
-            self.tempo_points.sort_by(|a, b| a.beat.partial_cmp(&b.beat).unwrap_or(std::cmp::Ordering::Equal));
+            self.tempo_points.sort_by(|a, b| {
+                a.beat
+                    .partial_cmp(&b.beat)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
         }
     }
 
     /// Add a meter change point, maintaining sort order by beat.
     pub fn add_meter_point(&mut self, point: MeterPoint) {
-        if let Some(pos) = self.meter_points.iter().position(|p| (p.beat() - point.beat()).abs() < 1e-6) {
+        if let Some(pos) = self
+            .meter_points
+            .iter()
+            .position(|p| (p.beat() - point.beat()).abs() < 1e-6)
+        {
             self.meter_points[pos] = point;
         } else {
             self.meter_points.push(point);
-            self.meter_points.sort_by(|a, b| a.beat().partial_cmp(&b.beat()).unwrap_or(std::cmp::Ordering::Equal));
+            self.meter_points.sort_by(|a, b| {
+                a.beat()
+                    .partial_cmp(&b.beat())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
         }
     }
 
@@ -203,7 +219,10 @@ impl TempoMap {
             }
         }
 
-        (self.meter_points[idx].numerator, self.meter_points[idx].denominator)
+        (
+            self.meter_points[idx].numerator,
+            self.meter_points[idx].denominator,
+        )
     }
 
     /// Convert timeline beats into elapsed seconds from project start.
@@ -242,12 +261,7 @@ impl TempoMap {
                     // 1. Portion within the ramp
                     if seg_end <= ramp_end_beat {
                         current_sec += Self::integrate_ramp_seconds(
-                            seg_start,
-                            seg_end,
-                            seg_start,
-                            ramp_len,
-                            pt.bpm,
-                            target_bpm,
+                            seg_start, seg_end, seg_start, ramp_len, pt.bpm, target_bpm,
                         );
                     } else {
                         // Traversed the entire ramp

@@ -35,7 +35,7 @@ impl ExcitationType {
             Self::HammerStrike => (0.003, 1.2e8, 2.4, 0.12), // Piano hammer: m_h=3g, p=2.4
             Self::PlectrumPluck => (0.0005, 5.0e7, 1.8, 0.15), // Plectrum pick: fast snap
             Self::FingerNylon => (0.0015, 2.0e7, 1.5, 0.20), // Finger flesh: soft contact
-            Self::SlapBass => (0.008, 3.0e8, 3.2, 0.08),    // Hard thumb slap: high stiffness
+            Self::SlapBass => (0.008, 3.0e8, 3.2, 0.08),     // Hard thumb slap: high stiffness
         }
     }
 }
@@ -191,7 +191,8 @@ impl HammerStrike {
 
             // Non-linear felt contact force: F = K_h * delta^p * (1 + mu_h * delta_dot)
             let base_force = self.params.stiffness_k * compression.powf(self.params.exponent_p);
-            let hysteretic_force = base_force * (1.0 + self.params.hysteresis_loss * delta_dot.clamp(-10.0, 10.0));
+            let hysteretic_force =
+                base_force * (1.0 + self.params.hysteresis_loss * delta_dot.clamp(-10.0, 10.0));
             hysteretic_force.max(0.0).clamp(0.0, 500.0)
         } else {
             self.prev_compression = 0.0;
@@ -285,7 +286,8 @@ impl SympatheticResonatorMatrix {
     ) {
         // 1. Calculate common bridge velocity: v_bridge = (2 / Z_total) * sum(Z_i * v_in_i)
         let total_force: f32 = string_inputs.iter().sum();
-        let raw_bridge_v = (2.0 * total_force) / (self.bridge_impedance * NUM_SYMPATHETIC_STRINGS as f32 + 1.0);
+        let raw_bridge_v =
+            (2.0 * total_force) / (self.bridge_impedance * NUM_SYMPATHETIC_STRINGS as f32 + 1.0);
 
         // Lowpass bridge smoothing
         let bridge_v = 0.80 * raw_bridge_v + 0.20 * self.prev_bridge_velocity;
@@ -359,9 +361,15 @@ mod tests {
         let in_energy: f32 = inputs.iter().map(|&x| x * x).sum();
         let out_energy: f32 = outputs.iter().map(|&x| x * x).sum();
 
-        assert!(out_energy <= in_energy * 1.01, "Sympathetic matrix must conserve energy");
+        assert!(
+            out_energy <= in_energy * 1.01,
+            "Sympathetic matrix must conserve energy"
+        );
         // Open strings should receive sympathetic bleed energy
-        assert!(outputs[1].abs() > 0.0, "Neighboring string should receive energy");
+        assert!(
+            outputs[1].abs() > 0.0,
+            "Neighboring string should receive energy"
+        );
     }
 
     #[test]

@@ -15,11 +15,11 @@ use serde::{Deserialize, Serialize};
 /// Auditory critical frequency bands for masking collision analysis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CriticalMixBand {
-    SubBass,    // 20 - 60 Hz
-    LowBass,    // 60 - 250 Hz
-    LowMid,     // 250 - 1000 Hz
-    HighMid,    // 1000 - 4000 Hz
-    HighAir,    // 4000 - 20000 Hz
+    SubBass, // 20 - 60 Hz
+    LowBass, // 60 - 250 Hz
+    LowMid,  // 250 - 1000 Hz
+    HighMid, // 1000 - 4000 Hz
+    HighAir, // 4000 - 20000 Hz
 }
 
 impl CriticalMixBand {
@@ -293,4 +293,3 @@ mod tests {
         assert!(report.suggested_master_gain_trim_db.abs() < 10.0);
     }
 }
-

@@ -9,12 +9,12 @@
 //!
 //! Enforces zero heap allocations in audio processing loops under `AllocGuard`.
 
+use crate::horn_reflection::{HornFlarePreset, HornMuteType, HornReflectionFilter};
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::horn_reflection::{HornFlarePreset, HornMuteType, HornReflectionFilter};
-use crate::traits::SignalProcessor;
 
 /// Maximum delay buffer capacity in samples (~20 Hz at 192 kHz).
 pub const MAX_BRASS_DELAY: usize = 8192;
@@ -37,10 +37,10 @@ impl BrassInstrumentType {
     /// Returns default fundamental frequency in Hz.
     pub fn default_fundamental_hz(&self) -> f32 {
         match self {
-            Self::Trumpet => 233.08,   // Bb3
+            Self::Trumpet => 233.08,    // Bb3
             Self::FrenchHorn => 174.61, // F3
             Self::Trombone => 116.54,   // Bb2
-            Self::Tuba => 58.27,       // Bb1
+            Self::Tuba => 58.27,        // Bb1
         }
     }
 
@@ -238,7 +238,11 @@ impl WaveguideBrass {
 
     /// Reads sample from delay buffer with 4-point Hermite fractional interpolation.
     #[inline]
-    fn read_fractional_delay(buffer: &[f32; MAX_BRASS_DELAY], write_idx: usize, delay_samples: f32) -> f32 {
+    fn read_fractional_delay(
+        buffer: &[f32; MAX_BRASS_DELAY],
+        write_idx: usize,
+        delay_samples: f32,
+    ) -> f32 {
         let int_delay = delay_samples.floor() as usize;
         let frac = delay_samples - int_delay as f32;
 
@@ -248,7 +252,11 @@ impl WaveguideBrass {
             MAX_BRASS_DELAY + write_idx - int_delay
         };
 
-        let i0 = if base_idx == 0 { MAX_BRASS_DELAY - 1 } else { base_idx - 1 };
+        let i0 = if base_idx == 0 {
+            MAX_BRASS_DELAY - 1
+        } else {
+            base_idx - 1
+        };
         let i1 = base_idx;
         let i2 = (base_idx + 1) % MAX_BRASS_DELAY;
         let i3 = (base_idx + 2) % MAX_BRASS_DELAY;
@@ -319,7 +327,8 @@ impl WaveguideBrass {
         let delay_len = self.compute_bore_delay_samples();
 
         // 1. Read backward wave emerging from bore back to mouthpiece
-        let bore_back_wave = Self::read_fractional_delay(&self.rev_delay, self.rev_write_idx, delay_len);
+        let bore_back_wave =
+            Self::read_fractional_delay(&self.rev_delay, self.rev_write_idx, delay_len);
 
         // 2. Modulate mouth pressure with external excitation / tonguing
         let eff_mouth_pressure = (self.blowing_pressure + excitation).clamp(0.0, 2.0);
@@ -332,7 +341,8 @@ impl WaveguideBrass {
         self.fwd_write_idx = (self.fwd_write_idx + 1) % MAX_BRASS_DELAY;
 
         // 4. Read forward wave emerging at the flared horn bell
-        let fwd_bell_wave = Self::read_fractional_delay(&self.fwd_delay, self.fwd_write_idx, delay_len);
+        let fwd_bell_wave =
+            Self::read_fractional_delay(&self.fwd_delay, self.fwd_write_idx, delay_len);
 
         // Apply bore wall damping loss (one-pole lowpass)
         let loss = self.bore_loss.clamp(0.90, 0.999);
@@ -403,12 +413,7 @@ impl AudioNode for WaveguideBrassNode {
         "WaveguideBrassNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.brass.process_block(input, output, ctx);
     }
 }
@@ -435,7 +440,10 @@ mod tests {
                 has_oscillated = true;
             }
         }
-        assert!(has_oscillated, "Brass lip-reed should self-oscillate under blowing pressure");
+        assert!(
+            has_oscillated,
+            "Brass lip-reed should self-oscillate under blowing pressure"
+        );
     }
 
     #[test]
@@ -468,11 +476,7 @@ mod tests {
 
         {
             let _guard = AllocGuard::new();
-            brass.process_block(
-                &[&in_buf[..]],
-                &mut [&mut out_l[..], &mut out_r[..]],
-                &ctx,
-            );
+            brass.process_block(&[&in_buf[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
         }
 
         assert!(out_l.iter().all(|s| s.is_finite()));

@@ -70,11 +70,26 @@ impl Default for HardwareCvCalibration {
             dc_offset_volts: 0.0,
             volts_per_octave: 1.0,
             calibration_points: vec![
-                CalibrationPoint { target_volts: -5.0, measured_dac_scale: -0.5 },
-                CalibrationPoint { target_volts: -2.5, measured_dac_scale: -0.25 },
-                CalibrationPoint { target_volts: 0.0, measured_dac_scale: 0.0 },
-                CalibrationPoint { target_volts: 2.5, measured_dac_scale: 0.25 },
-                CalibrationPoint { target_volts: 5.0, measured_dac_scale: 0.5 },
+                CalibrationPoint {
+                    target_volts: -5.0,
+                    measured_dac_scale: -0.5,
+                },
+                CalibrationPoint {
+                    target_volts: -2.5,
+                    measured_dac_scale: -0.25,
+                },
+                CalibrationPoint {
+                    target_volts: 0.0,
+                    measured_dac_scale: 0.0,
+                },
+                CalibrationPoint {
+                    target_volts: 2.5,
+                    measured_dac_scale: 0.25,
+                },
+                CalibrationPoint {
+                    target_volts: 5.0,
+                    measured_dac_scale: 0.5,
+                },
             ],
         }
     }
@@ -106,7 +121,8 @@ impl HardwareCvCalibration {
                     return p0.measured_dac_scale;
                 }
                 let t = (corrected_volts - p0.target_volts) / range;
-                let interp = p0.measured_dac_scale + t * (p1.measured_dac_scale - p0.measured_dac_scale);
+                let interp =
+                    p0.measured_dac_scale + t * (p1.measured_dac_scale - p0.measured_dac_scale);
                 return interp.clamp(-1.0, 1.0);
             }
         }
@@ -166,7 +182,8 @@ impl DcCoupledCvNode {
 
     /// Set trigger duration in milliseconds.
     pub fn set_trigger_duration_ms(&mut self, duration_ms: f32) {
-        self.trigger_pulse_samples = ((duration_ms / 1000.0) * self.sample_rate).round().max(1.0) as usize;
+        self.trigger_pulse_samples =
+            ((duration_ms / 1000.0) * self.sample_rate).round().max(1.0) as usize;
     }
 }
 
@@ -204,10 +221,18 @@ impl AudioNode for DcCoupledCvNode {
                 }
                 *sample = match self.trigger_mode {
                     TriggerMode::VTrig => {
-                        if active { 1.0 } else { 0.0 }
+                        if active {
+                            1.0
+                        } else {
+                            0.0
+                        }
                     }
                     TriggerMode::STrig => {
-                        if active { 0.0 } else { 1.0 }
+                        if active {
+                            0.0
+                        } else {
+                            1.0
+                        }
                     }
                 };
             }
@@ -259,7 +284,11 @@ mod tests {
 
         // Process inactive
         {
-            let mut out = [cv_buf.as_mut_slice(), gate_buf.as_mut_slice(), aux_buf.as_mut_slice()];
+            let mut out = [
+                cv_buf.as_mut_slice(),
+                gate_buf.as_mut_slice(),
+                aux_buf.as_mut_slice(),
+            ];
             node.process(&[], &mut out, &ctx);
         }
         assert_eq!(gate_buf[0], 0.0); // VTrig inactive is 0V
@@ -267,7 +296,11 @@ mod tests {
         // Note On
         node.note_on(72.0, 0.8);
         {
-            let mut out = [cv_buf.as_mut_slice(), gate_buf.as_mut_slice(), aux_buf.as_mut_slice()];
+            let mut out = [
+                cv_buf.as_mut_slice(),
+                gate_buf.as_mut_slice(),
+                aux_buf.as_mut_slice(),
+            ];
             node.process(&[], &mut out, &ctx);
         }
         assert_eq!(gate_buf[0], 1.0); // VTrig active is 1.0
@@ -278,10 +311,13 @@ mod tests {
         node.trigger_mode = TriggerMode::STrig;
         node.note_off();
         {
-            let mut out = [cv_buf.as_mut_slice(), gate_buf.as_mut_slice(), aux_buf.as_mut_slice()];
+            let mut out = [
+                cv_buf.as_mut_slice(),
+                gate_buf.as_mut_slice(),
+                aux_buf.as_mut_slice(),
+            ];
             node.process(&[], &mut out, &ctx);
         }
         assert_eq!(gate_buf[0], 1.0); // STrig inactive rests high at 1.0
     }
 }
-

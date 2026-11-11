@@ -45,4 +45,3 @@ pub use recorder::{
 pub use virtual_midi::{
     VirtualMidiDirection, VirtualMidiManager, VirtualMidiPort, VirtualMidiPortInfo,
 };
-

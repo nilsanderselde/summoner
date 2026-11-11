@@ -115,7 +115,12 @@ pub struct RecordedTakeResult {
 
 impl RecordedTakeResult {
     /// Convert this recorded take into an `AudioClipConfig` ready for insertion into `TrackConfig`.
-    pub fn to_audio_clip_config(&self, clip_id: &str, clip_name: &str, bpm: f64) -> AudioClipConfig {
+    pub fn to_audio_clip_config(
+        &self,
+        clip_id: &str,
+        clip_name: &str,
+        bpm: f64,
+    ) -> AudioClipConfig {
         let frames_per_beat = (self.sample_rate as f64 * 60.0) / bpm.max(1.0);
         let duration_beats = (self.total_frames as f64) / frames_per_beat.max(1.0);
 
@@ -312,7 +317,8 @@ impl DiskRecordingWorker {
                             track.active_buf_idx = 1 - track.active_buf_idx;
                             track.current_take += 1;
                             track.start_frame = timeline_frame;
-                            let frames_per_beat = (track.sample_rate as f64 * 60.0) / global_bpm.max(1.0);
+                            let frames_per_beat =
+                                (track.sample_rate as f64 * 60.0) / global_bpm.max(1.0);
                             track.start_beat = (timeline_frame as f64) / frames_per_beat;
                             track.open_take_file();
                         }
@@ -517,7 +523,8 @@ impl AudioRecorder {
 
         if count_in_bars > 0 {
             let beats_per_bar = 4.0;
-            let count_in_frames = (count_in_bars as f64 * beats_per_bar * frames_per_beat).round() as u64;
+            let count_in_frames =
+                (count_in_bars as f64 * beats_per_bar * frames_per_beat).round() as u64;
             self.state = RecordState::CountIn {
                 remaining_frames: count_in_frames,
                 total_bars: count_in_bars,
@@ -654,7 +661,8 @@ mod tests {
 
     #[test]
     fn test_audio_recorder_multitrack_and_zero_alloc() {
-        let temp_dir = std::env::temp_dir().join(format!("summoner_rec_test_{}", std::process::id()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("summoner_rec_test_{}", std::process::id()));
         fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
 
         let mut recorder = AudioRecorder::new(44100, 120.0);
@@ -705,7 +713,8 @@ mod tests {
 
     #[test]
     fn test_audio_recorder_count_in_and_punch() {
-        let temp_dir = std::env::temp_dir().join(format!("summoner_rec_punch_{}", std::process::id()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("summoner_rec_punch_{}", std::process::id()));
         fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
 
         let mut recorder = AudioRecorder::new(48000, 120.0);
@@ -759,7 +768,8 @@ mod tests {
 
     #[test]
     fn test_audio_recorder_loop_takes() {
-        let temp_dir = std::env::temp_dir().join(format!("summoner_rec_loop_{}", std::process::id()));
+        let temp_dir =
+            std::env::temp_dir().join(format!("summoner_rec_loop_{}", std::process::id()));
         fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
 
         let mut recorder = AudioRecorder::new(48000, 120.0);

@@ -172,7 +172,11 @@ impl TubeSaturationNode {
         let abs_x = x.abs() * drive;
         let att_coeff = 1.0 - (-1.0 / (sr * 0.015)).exp(); // ~15ms attack
         let rel_coeff = 1.0 - (-1.0 / (sr * 0.200)).exp(); // ~200ms release
-        let coeff = if abs_x > state.sag_env { att_coeff } else { rel_coeff };
+        let coeff = if abs_x > state.sag_env {
+            att_coeff
+        } else {
+            rel_coeff
+        };
         state.sag_env += coeff * (abs_x - state.sag_env);
 
         // Effective plate voltage decreases dynamically under heavy signal demand (Power Sag)
@@ -382,12 +386,7 @@ impl AudioNode for TubeSaturationNode {
         "TubeSaturationNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }
@@ -423,9 +422,12 @@ mod tests {
     #[test]
     fn test_tube_saturation_topologies_and_asymmetry() {
         let ctx = ProcessContext::new(48000, 120.0, 0);
-        let mut tube_triode = TubeSaturationNode::new(3.5, -1.85).with_topology(TubeTopology::Triode12AX7);
-        let mut tube_pentode = TubeSaturationNode::new(3.5, -1.85).with_topology(TubeTopology::PentodeEL34);
-        let mut tube_tetrode = TubeSaturationNode::new(3.5, -1.85).with_topology(TubeTopology::BeamTetrode6L6);
+        let mut tube_triode =
+            TubeSaturationNode::new(3.5, -1.85).with_topology(TubeTopology::Triode12AX7);
+        let mut tube_pentode =
+            TubeSaturationNode::new(3.5, -1.85).with_topology(TubeTopology::PentodeEL34);
+        let mut tube_tetrode =
+            TubeSaturationNode::new(3.5, -1.85).with_topology(TubeTopology::BeamTetrode6L6);
 
         let pos_in = [0.6f32; 128];
         let neg_in = [-0.6f32; 128];

@@ -180,7 +180,8 @@ impl CadenceBus {
     /// Sets the active current chord root step and chord quality.
     pub fn set_current_chord(&self, root_step: i32, quality: ChordQuality) {
         self.current_root_step.store(root_step, Ordering::Release);
-        self.current_quality.store(quality as u32, Ordering::Release);
+        self.current_quality
+            .store(quality as u32, Ordering::Release);
     }
 
     /// Gets the current chord root step and quality.
@@ -206,7 +207,8 @@ impl CadenceBus {
     /// Sets the current harmonic tension score [0.0 ..= 1.0].
     pub fn set_harmonic_tension(&self, tension: f32) {
         let clamped = tension.clamp(0.0, 1.0);
-        self.harmonic_tension_bits.store(clamped.to_bits(), Ordering::Release);
+        self.harmonic_tension_bits
+            .store(clamped.to_bits(), Ordering::Release);
     }
 
     /// Gets the current harmonic tension score.
@@ -217,7 +219,8 @@ impl CadenceBus {
     /// Sets resolution urgency [0.0 ..= 1.0].
     pub fn set_resolution_urgency(&self, urgency: f32) {
         let clamped = urgency.clamp(0.0, 1.0);
-        self.resolution_urgency_bits.store(clamped.to_bits(), Ordering::Release);
+        self.resolution_urgency_bits
+            .store(clamped.to_bits(), Ordering::Release);
     }
 
     /// Gets resolution urgency.
@@ -228,7 +231,8 @@ impl CadenceBus {
     /// Sets voice-leading transition cost.
     pub fn set_voice_leading_cost(&self, cost: f32) {
         let non_neg = cost.max(0.0);
-        self.voice_leading_cost_bits.store(non_neg.to_bits(), Ordering::Release);
+        self.voice_leading_cost_bits
+            .store(non_neg.to_bits(), Ordering::Release);
     }
 
     /// Gets voice-leading transition cost.
@@ -238,7 +242,8 @@ impl CadenceBus {
 
     /// Sets predicted cadence resolution type.
     pub fn set_predicted_cadence(&self, cadence: CadenceResolutionType) {
-        self.predicted_cadence.store(cadence as u32, Ordering::Release);
+        self.predicted_cadence
+            .store(cadence as u32, Ordering::Release);
     }
 
     /// Gets predicted cadence resolution type.
@@ -249,7 +254,8 @@ impl CadenceBus {
     /// Sets path resolution progress [0.0 ..= 1.0] and total path length.
     pub fn set_path_status(&self, progress: f32, path_length: u32) {
         let p = progress.clamp(0.0, 1.0);
-        self.path_progress_bits.store(p.to_bits(), Ordering::Release);
+        self.path_progress_bits
+            .store(p.to_bits(), Ordering::Release);
         self.path_length.store(path_length, Ordering::Release);
     }
 
@@ -258,7 +264,10 @@ impl CadenceBus {
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -290,22 +299,36 @@ impl CadenceBus {
     pub fn dispatch_to_param_bus(&self, bus: &ParamBus, base_param_id: ParamId) {
         let snap = self.snapshot();
         bus.set(ParamId(base_param_id.0), snap.current_root_step as f32);
-        bus.set(ParamId(base_param_id.0 + 1), snap.current_quality as u32 as f32);
+        bus.set(
+            ParamId(base_param_id.0 + 1),
+            snap.current_quality as u32 as f32,
+        );
         bus.set(ParamId(base_param_id.0 + 2), snap.harmonic_tension);
         bus.set(ParamId(base_param_id.0 + 3), snap.resolution_urgency);
         bus.set(ParamId(base_param_id.0 + 4), snap.voice_leading_cost);
-        bus.set(ParamId(base_param_id.0 + 5), snap.predicted_cadence as u32 as f32);
+        bus.set(
+            ParamId(base_param_id.0 + 5),
+            snap.predicted_cadence as u32 as f32,
+        );
         bus.set(ParamId(base_param_id.0 + 6), snap.path_progress);
     }
 
     /// Synchronizes cadence bus states from `ParamBus` handles.
     pub fn sync_from_param_bus(&self, bus: &ParamBus, base_param_id: ParamId) {
         let root = bus.get(ParamId(base_param_id.0)).unwrap_or(0.0).round() as i32;
-        let quality_idx = bus.get(ParamId(base_param_id.0 + 1)).unwrap_or(0.0).max(0.0).round() as u32;
+        let quality_idx = bus
+            .get(ParamId(base_param_id.0 + 1))
+            .unwrap_or(0.0)
+            .max(0.0)
+            .round() as u32;
         let tension = bus.get(ParamId(base_param_id.0 + 2)).unwrap_or(0.0);
         let urgency = bus.get(ParamId(base_param_id.0 + 3)).unwrap_or(0.0);
         let cost = bus.get(ParamId(base_param_id.0 + 4)).unwrap_or(0.0);
-        let cadence_idx = bus.get(ParamId(base_param_id.0 + 5)).unwrap_or(0.0).max(0.0).round() as u32;
+        let cadence_idx = bus
+            .get(ParamId(base_param_id.0 + 5))
+            .unwrap_or(0.0)
+            .max(0.0)
+            .round() as u32;
         let progress = bus.get(ParamId(base_param_id.0 + 6)).unwrap_or(0.0);
 
         self.set_current_chord(root, ChordQuality::from_u32(quality_idx));

@@ -233,14 +233,23 @@ fn test_golden_cadence_path_resolver_and_voice_leading_deterministic() {
 
     // Resolve multiple cadential sequences
     let path_ii_v_i = resolver.resolve_cadence_path(2, ChordQuality::Minor, 0, ChordQuality::Major);
-    let path_neapolitan = resolver.resolve_cadence_path(1, ChordQuality::Major, 0, ChordQuality::Major);
-    let path_ger6 = resolver.resolve_cadence_path(8, ChordQuality::Dominant7, 0, ChordQuality::Major);
-    let path_deceptive = resolver.resolve_cadence_path(7, ChordQuality::Dominant7, 9, ChordQuality::Minor);
+    let path_neapolitan =
+        resolver.resolve_cadence_path(1, ChordQuality::Major, 0, ChordQuality::Major);
+    let path_ger6 =
+        resolver.resolve_cadence_path(8, ChordQuality::Dominant7, 0, ChordQuality::Major);
+    let path_deceptive =
+        resolver.resolve_cadence_path(7, ChordQuality::Dominant7, 9, ChordQuality::Minor);
     let path_plagal = resolver.resolve_cadence_path(5, ChordQuality::Major, 0, ChordQuality::Major);
 
     let mut hasher = Hasher::new();
 
-    let all_paths = [&path_ii_v_i, &path_neapolitan, &path_ger6, &path_deceptive, &path_plagal];
+    let all_paths = [
+        &path_ii_v_i,
+        &path_neapolitan,
+        &path_ger6,
+        &path_deceptive,
+        &path_plagal,
+    ];
     for path in all_paths {
         for (step_idx, step) in path.iter().enumerate() {
             hasher.update(&step.root_step.to_le_bytes());
@@ -254,7 +263,14 @@ fn test_golden_cadence_path_resolver_and_voice_leading_deterministic() {
 
             {
                 let _guard = AllocGuard::new();
-                resolver.dispatch_step(step, step_idx, path.len(), &cadence_bus, &param_bus, ParamId(300));
+                resolver.dispatch_step(
+                    step,
+                    step_idx,
+                    path.len(),
+                    &cadence_bus,
+                    &param_bus,
+                    ParamId(300),
+                );
             }
 
             let snap = cadence_bus.snapshot();
@@ -293,9 +309,15 @@ fn test_golden_brass_cadence_views_snapshot() {
     let ascii_brass = brass_view.render_ascii(80, 16);
     assert!(!ascii_brass.is_empty());
 
-    let res_brass = brass_view.render_snapshot_png("scratch/renders/waveguide_brass_view.png", 800, 520);
-    let _ = brass_view.render_snapshot_png("../../scratch/renders/waveguide_brass_view.png", 800, 520);
-    assert!(res_brass.is_ok(), "Brass snapshot render failed: {:?}", res_brass);
+    let res_brass =
+        brass_view.render_snapshot_png("scratch/renders/waveguide_brass_view.png", 800, 520);
+    let _ =
+        brass_view.render_snapshot_png("../../scratch/renders/waveguide_brass_view.png", 800, 520);
+    assert!(
+        res_brass.is_ok(),
+        "Brass snapshot render failed: {:?}",
+        res_brass
+    );
 
     let mut cadence_view = CadenceFlowView::new();
     cadence_view.set_start_chord(2, ChordQuality::Minor);
@@ -306,9 +328,15 @@ fn test_golden_brass_cadence_views_snapshot() {
     assert!(!ascii_cadence.is_empty());
     assert!(ascii_cadence[1].contains("HARMONIC CADENCE FLOW"));
 
-    let res_cadence = cadence_view.render_snapshot_png("scratch/renders/cadence_flow_view.png", 800, 520);
-    let _ = cadence_view.render_snapshot_png("../../scratch/renders/cadence_flow_view.png", 800, 520);
-    assert!(res_cadence.is_ok(), "Cadence snapshot render failed: {:?}", res_cadence);
+    let res_cadence =
+        cadence_view.render_snapshot_png("scratch/renders/cadence_flow_view.png", 800, 520);
+    let _ =
+        cadence_view.render_snapshot_png("../../scratch/renders/cadence_flow_view.png", 800, 520);
+    assert!(
+        res_cadence.is_ok(),
+        "Cadence snapshot render failed: {:?}",
+        res_cadence
+    );
 
     let mut hasher = Hasher::new();
     for line in &ascii_brass {

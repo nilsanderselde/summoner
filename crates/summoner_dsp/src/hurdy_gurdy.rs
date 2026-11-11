@@ -16,14 +16,14 @@
 //!
 //! Enforces zero heap allocations in audio render loops under `AllocGuard`.
 
-use serde::{Deserialize, Serialize};
-use std::f32::consts::PI;
-use summoner_core::audio::Sample;
-use summoner_core::node::{AudioNode, ProcessContext};
 use crate::traits::SignalProcessor;
 use crate::trompette_bridge::{
     ChienMaterialProfile, HurdyGurdySoundboxBody, TrompetteChienJunction,
 };
+use serde::{Deserialize, Serialize};
+use std::f32::consts::PI;
+use summoner_core::audio::Sample;
+use summoner_core::node::{AudioNode, ProcessContext};
 
 /// Maximum delay line buffer capacity in samples (~20 Hz at 192 kHz).
 pub const MAX_HURDY_GURDY_DELAY: usize = 16384;
@@ -218,7 +218,13 @@ pub struct HurdyGurdyStringVoice {
 }
 
 impl HurdyGurdyStringVoice {
-    pub fn new(name: &str, nominal_freq_hz: f32, sample_rate: u32, loop_damping: f32, pan: f32) -> Self {
+    pub fn new(
+        name: &str,
+        nominal_freq_hz: f32,
+        sample_rate: u32,
+        loop_damping: f32,
+        pan: f32,
+    ) -> Self {
         let mut voice = Self {
             name: name.to_string(),
             nominal_freq_hz,
@@ -256,7 +262,8 @@ impl HurdyGurdyStringVoice {
 
     #[inline]
     fn read_interpolated(buf: &[f32; MAX_HURDY_GURDY_DELAY], write_pos: usize, delay: f32) -> f32 {
-        let read_pos = (write_pos as f32 + MAX_HURDY_GURDY_DELAY as f32 - delay) % MAX_HURDY_GURDY_DELAY as f32;
+        let read_pos = (write_pos as f32 + MAX_HURDY_GURDY_DELAY as f32 - delay)
+            % MAX_HURDY_GURDY_DELAY as f32;
         let idx0 = read_pos.floor() as usize % MAX_HURDY_GURDY_DELAY;
         let idx1 = (idx0 + 1) % MAX_HURDY_GURDY_DELAY;
         let frac = read_pos - read_pos.floor();
@@ -266,11 +273,16 @@ impl HurdyGurdyStringVoice {
     /// Process a single sample step of the rosined string waveguide.
     /// Returns `(output_sample, string_displacement, string_velocity)`.
     #[inline]
-    pub fn process_sample(&mut self, exciter: &FrictionWheelExciter, sample_rate: u32) -> (f32, f32, f32) {
+    pub fn process_sample(
+        &mut self,
+        exciter: &FrictionWheelExciter,
+        sample_rate: u32,
+    ) -> (f32, f32, f32) {
         let dt = 1.0 / (sample_rate as f32).max(1000.0);
 
         // Read forward wave from delay line
-        let forward_wave = Self::read_interpolated(&self.delay_buffer, self.write_pos, self.delay_samples);
+        let forward_wave =
+            Self::read_interpolated(&self.delay_buffer, self.write_pos, self.delay_samples);
 
         // Compute string velocity and friction drive force
         self.string_velocity = (forward_wave - self.string_displacement) / dt.max(1e-6) * 0.005;
@@ -351,14 +363,40 @@ impl HurdyGurdy {
         let chien_prof = profile.chien_profile();
         let (_t60, pressure, drone_mix, buzz_lvl) = profile.nominal_physics();
 
-        let ch1 = HurdyGurdyStringVoice::new("Chanterelle 1", DEFAULT_CHANTERELLE_ROOT_HZ, sample_rate, 0.993, -0.30);
-        let ch2 = HurdyGurdyStringVoice::new("Chanterelle 2", DEFAULT_CHANTERELLE_ROOT_HZ, sample_rate, 0.993, 0.30);
+        let ch1 = HurdyGurdyStringVoice::new(
+            "Chanterelle 1",
+            DEFAULT_CHANTERELLE_ROOT_HZ,
+            sample_rate,
+            0.993,
+            -0.30,
+        );
+        let ch2 = HurdyGurdyStringVoice::new(
+            "Chanterelle 2",
+            DEFAULT_CHANTERELLE_ROOT_HZ,
+            sample_rate,
+            0.993,
+            0.30,
+        );
 
-        let gros = HurdyGurdyStringVoice::new("Gros Bourdon", DEFAULT_GROS_BOURDON_HZ, sample_rate, 0.996, -0.60);
-        let petit = HurdyGurdyStringVoice::new("Petit Bourdon", DEFAULT_PETIT_BOURDON_HZ, sample_rate, 0.995, -0.40);
-        let mouche = HurdyGurdyStringVoice::new("Mouche", DEFAULT_MOUCHE_HZ, sample_rate, 0.994, 0.40);
+        let gros = HurdyGurdyStringVoice::new(
+            "Gros Bourdon",
+            DEFAULT_GROS_BOURDON_HZ,
+            sample_rate,
+            0.996,
+            -0.60,
+        );
+        let petit = HurdyGurdyStringVoice::new(
+            "Petit Bourdon",
+            DEFAULT_PETIT_BOURDON_HZ,
+            sample_rate,
+            0.995,
+            -0.40,
+        );
+        let mouche =
+            HurdyGurdyStringVoice::new("Mouche", DEFAULT_MOUCHE_HZ, sample_rate, 0.994, 0.40);
 
-        let tromp = HurdyGurdyStringVoice::new("Trompette", DEFAULT_TROMPETTE_HZ, sample_rate, 0.992, 0.50);
+        let tromp =
+            HurdyGurdyStringVoice::new("Trompette", DEFAULT_TROMPETTE_HZ, sample_rate, 0.992, 0.50);
 
         let sym1 = HurdyGurdyStringVoice::new("Sympathetic G3", 196.0, sample_rate, 0.997, -0.20);
         let sym2 = HurdyGurdyStringVoice::new("Sympathetic C4", 261.63, sample_rate, 0.997, -0.10);
@@ -462,7 +500,9 @@ impl HurdyGurdy {
         }
 
         // 3. Process Trompette string & Chien buzzing dog bridge
-        let (_t_out, t_disp, t_vel) = self.trompette_string.process_sample(&self.exciter, self.sample_rate);
+        let (_t_out, t_disp, t_vel) = self
+            .trompette_string
+            .process_sample(&self.exciter, self.sample_rate);
         let (_force, buzz_out, chien_body_exc) = self.chien_junction.process_collision(
             t_disp,
             t_vel,
@@ -493,7 +533,9 @@ impl HurdyGurdy {
         let mut total_right = melody_right * mel_gain + drone_right * drn_gain;
 
         // 6. Resonant soundbox body modal filter
-        let body_out = self.body.process(total_body_excitation * self.body_coupling_gain);
+        let body_out = self
+            .body
+            .process(total_body_excitation * self.body_coupling_gain);
         total_left += body_out * 0.40;
         total_right += body_out * 0.40;
 
@@ -609,6 +651,9 @@ mod tests {
 
         hg.set_tangent_note(79); // G5 (+12 semitones / 1 octave up)
         let octave_freq = hg.chanterelles[0].active_freq_hz;
-        assert!((octave_freq / base_freq - 2.0).abs() < 1e-3, "Tangent should double pitch for octave");
+        assert!(
+            (octave_freq / base_freq - 2.0).abs() < 1e-3,
+            "Tangent should double pitch for octave"
+        );
     }
 }

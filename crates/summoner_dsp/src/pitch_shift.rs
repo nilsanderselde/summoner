@@ -205,7 +205,8 @@ impl WsolaTimeStretcher {
             // Find best matching grain near nominal in_pos
             let nominal_pos = prev_best_in_pos + s_a as isize;
             let delta = self.find_best_alignment(input, nominal_pos);
-            let best_in_pos = (nominal_pos + delta).clamp(0, (in_len.saturating_sub(win_sz)) as isize);
+            let best_in_pos =
+                (nominal_pos + delta).clamp(0, (in_len.saturating_sub(win_sz)) as isize);
             prev_best_in_pos = best_in_pos;
 
             // Overlap-add windowed grain
@@ -223,7 +224,8 @@ impl WsolaTimeStretcher {
             // Prepare target grain for next iteration from synthesized natural continuation
             let next_target_nominal = best_in_pos + s_s as isize;
             for k in 0..win_sz {
-                let idx = (next_target_nominal + k as isize).clamp(0, (in_len - 1) as isize) as usize;
+                let idx =
+                    (next_target_nominal + k as isize).clamp(0, (in_len - 1) as isize) as usize;
                 self.target_grain[k] = input[idx];
             }
 
@@ -298,7 +300,8 @@ impl ElasticWarpEngine {
     }
 
     pub fn add_marker(&mut self, source_frame: usize, target_frame: usize) {
-        self.markers.push(WarpMarker::new(source_frame, target_frame));
+        self.markers
+            .push(WarpMarker::new(source_frame, target_frame));
         self.markers.sort_by_key(|m| m.target_frame);
     }
 
@@ -335,10 +338,16 @@ impl ElasticWarpEngine {
 
         // Piecewise stretch across marker segments
         let mut sorted_markers = self.markers.clone();
-        if sorted_markers.first().is_none_or(|m| m.source_frame > 0 || m.target_frame > 0) {
+        if sorted_markers
+            .first()
+            .is_none_or(|m| m.source_frame > 0 || m.target_frame > 0)
+        {
             sorted_markers.insert(0, WarpMarker::new(0, 0));
         }
-        if sorted_markers.last().is_none_or(|m| m.target_frame < output_len) {
+        if sorted_markers
+            .last()
+            .is_none_or(|m| m.target_frame < output_len)
+        {
             sorted_markers.push(WarpMarker::new(input.len(), output_len));
         }
 
@@ -374,7 +383,12 @@ impl ElasticWarpEngine {
     }
 
     /// Warp a stereo pair of audio signals non-destructively according to warp markers.
-    pub fn warp_stereo(&self, in_l: &[f32], in_r: &[f32], output_len: usize) -> (Vec<f32>, Vec<f32>) {
+    pub fn warp_stereo(
+        &self,
+        in_l: &[f32],
+        in_r: &[f32],
+        output_len: usize,
+    ) -> (Vec<f32>, Vec<f32>) {
         let out_l = self.warp_audio(in_l, output_len);
         let out_r = self.warp_audio(in_r, output_len);
         (out_l, out_r)
@@ -426,7 +440,7 @@ mod tests {
         let mut audio = vec![0.0f32; 44100]; // 1 second of audio
 
         // Create sharp transient hits at 0.2s and 0.6s
-        let hit1 = 44100 / 5;   // 8820
+        let hit1 = 44100 / 5; // 8820
         let hit2 = 44100 * 3 / 5; // 26460
         for i in 0..1000 {
             audio[hit1 + i] = ((1000 - i) as f32 / 1000.0) * (i as f32 * 0.5).sin();

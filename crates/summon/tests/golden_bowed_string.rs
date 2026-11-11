@@ -311,10 +311,19 @@ fn test_golden_bowed_string_and_friction_orbit_views_snapshot() {
     let ascii_bowed = bowed_view.render_ascii(80, 16);
     assert!(!ascii_bowed.is_empty());
 
-    let res_bowed = bowed_view.render_snapshot_png("scratch/renders/bowed_string_view.png", 800, 520);
+    let res_bowed =
+        bowed_view.render_snapshot_png("scratch/renders/bowed_string_view.png", 800, 520);
     let _ = bowed_view.render_snapshot_png("../../scratch/renders/bowed_string_view.png", 800, 520);
-    let _ = bowed_view.render_snapshot_png("C:/Users/Nils/Code/Summoner/scratch/renders/bowed_string_view.png", 800, 520);
-    assert!(res_bowed.is_ok(), "Bowed string snapshot render failed: {:?}", res_bowed);
+    let _ = bowed_view.render_snapshot_png(
+        "C:/Users/Nils/Code/Summoner/scratch/renders/bowed_string_view.png",
+        800,
+        520,
+    );
+    assert!(
+        res_bowed.is_ok(),
+        "Bowed string snapshot render failed: {:?}",
+        res_bowed
+    );
 
     let mut orbit_view = FrictionOrbitView::new();
     orbit_view.bow_velocity_mps = 0.50;
@@ -324,10 +333,20 @@ fn test_golden_bowed_string_and_friction_orbit_views_snapshot() {
     let ascii_orbit = orbit_view.render_ascii(80, 16);
     assert!(!ascii_orbit.is_empty());
 
-    let res_orbit = orbit_view.render_snapshot_png("scratch/renders/friction_orbit_view.png", 800, 520);
-    let _ = orbit_view.render_snapshot_png("../../scratch/renders/friction_orbit_view.png", 800, 520);
-    let _ = orbit_view.render_snapshot_png("C:/Users/Nils/Code/Summoner/scratch/renders/friction_orbit_view.png", 800, 520);
-    assert!(res_orbit.is_ok(), "Friction orbit snapshot render failed: {:?}", res_orbit);
+    let res_orbit =
+        orbit_view.render_snapshot_png("scratch/renders/friction_orbit_view.png", 800, 520);
+    let _ =
+        orbit_view.render_snapshot_png("../../scratch/renders/friction_orbit_view.png", 800, 520);
+    let _ = orbit_view.render_snapshot_png(
+        "C:/Users/Nils/Code/Summoner/scratch/renders/friction_orbit_view.png",
+        800,
+        520,
+    );
+    assert!(
+        res_orbit.is_ok(),
+        "Friction orbit snapshot render failed: {:?}",
+        res_orbit
+    );
 
     let mut hasher = Hasher::new();
     for line in &ascii_bowed {

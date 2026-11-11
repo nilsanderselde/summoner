@@ -12,13 +12,13 @@
 //!
 //! Enforces zero heap allocations in audio render loops under `AllocGuard`.
 
-use serde::{Deserialize, Serialize};
-use summoner_core::audio::Sample;
-use summoner_core::node::{AudioNode, ProcessContext};
 use crate::jawari_bridge::{
     JawariBridge, JawariProfile, RagaScale, SitarGourdBody, TarabResonatorBank,
 };
 use crate::traits::SignalProcessor;
+use serde::{Deserialize, Serialize};
+use summoner_core::audio::Sample;
+use summoner_core::node::{AudioNode, ProcessContext};
 
 /// Maximum delay buffer capacity in samples (~30 Hz fundamental at 192 kHz).
 pub const MAX_SITAR_DELAY: usize = 16384;
@@ -79,10 +79,10 @@ impl SitarProfile {
         match self {
             Self::RaviShankarKharaj => (4.5, 138.59, 0.18, 0.40, 0.85), // C#3 root
             Self::VilayatKhanGayaki => (3.8, 146.83, 0.08, 0.35, 0.80), // D3 root
-            Self::SurbaharBass => (7.0, 69.30, 0.35, 0.50, 0.90),      // C#2 bass root
-            Self::ElectricSitar => (5.5, 130.81, 0.05, 0.20, 0.70),    // C3 root
-            Self::AntiqueGourd => (3.2, 138.59, 0.22, 0.45, 0.95),     // C#3 root
-            Self::AvantGardeSitar => (6.0, 130.81, 0.12, 0.30, 0.75),  // C3 root
+            Self::SurbaharBass => (7.0, 69.30, 0.35, 0.50, 0.90),       // C#2 bass root
+            Self::ElectricSitar => (5.5, 130.81, 0.05, 0.20, 0.70),     // C3 root
+            Self::AntiqueGourd => (3.2, 138.59, 0.22, 0.45, 0.95),      // C#3 root
+            Self::AvantGardeSitar => (6.0, 130.81, 0.12, 0.30, 0.75),   // C3 root
         }
     }
 }
@@ -280,7 +280,8 @@ impl ChikariDroneBank {
                 continue;
             }
 
-            let delay_len = (sr / self.frequencies_hz[i].clamp(50.0, sr * 0.45)).clamp(2.0, (MAX_SITAR_DELAY - 4) as f32);
+            let delay_len = (sr / self.frequencies_hz[i].clamp(50.0, sr * 0.45))
+                .clamp(2.0, (MAX_SITAR_DELAY - 4) as f32);
             let excitation = if self.strum_delay_counters[i] == 1 {
                 self.strum_delay_counters[i] = 0;
                 self.strum_amp[i]
@@ -377,7 +378,8 @@ impl SitarVoice {
         let sr = self.sample_rate as f32;
 
         // Meend lateral pull modulates effective frequency: f = f_base * 2^(meend / 12)
-        let eff_f0 = (self.base_freq_hz * 2.0_f32.powf(self.meend_semitones / 12.0)).clamp(40.0, sr * 0.45);
+        let eff_f0 =
+            (self.base_freq_hz * 2.0_f32.powf(self.meend_semitones / 12.0)).clamp(40.0, sr * 0.45);
         let delay_len = sr / eff_f0;
 
         let excitation = if self.excitation_samples_remaining > 0 {
@@ -388,7 +390,9 @@ impl SitarVoice {
             0.0
         };
 
-        let out = self.string.step(delay_len, excitation, jawari, self.sample_rate);
+        let out = self
+            .string
+            .step(delay_len, excitation, jawari, self.sample_rate);
 
         // Deactivation check
         if self.age_samples > (sr * 0.08) as u64 && !self.is_key_down && out.abs() < 1e-5 {
@@ -433,10 +437,14 @@ impl Sitar {
         let chikari = ChikariDroneBank::new(sample_rate, root_hz);
 
         let voices = [
-            SitarVoice::new(sample_rate), SitarVoice::new(sample_rate),
-            SitarVoice::new(sample_rate), SitarVoice::new(sample_rate),
-            SitarVoice::new(sample_rate), SitarVoice::new(sample_rate),
-            SitarVoice::new(sample_rate), SitarVoice::new(sample_rate),
+            SitarVoice::new(sample_rate),
+            SitarVoice::new(sample_rate),
+            SitarVoice::new(sample_rate),
+            SitarVoice::new(sample_rate),
+            SitarVoice::new(sample_rate),
+            SitarVoice::new(sample_rate),
+            SitarVoice::new(sample_rate),
+            SitarVoice::new(sample_rate),
         ];
 
         Self {
@@ -549,8 +557,10 @@ impl Sitar {
         let gain = self.master_gain;
         let body_gain = self.body_resonance_gain;
 
-        let out_l = (body_l * body_gain * 0.75 + total_string_force * 0.25 + tarab_out * 0.35) * gain;
-        let out_r = (body_r * body_gain * 0.75 + total_string_force * 0.25 + tarab_out * 0.35) * gain;
+        let out_l =
+            (body_l * body_gain * 0.75 + total_string_force * 0.25 + tarab_out * 0.35) * gain;
+        let out_r =
+            (body_r * body_gain * 0.75 + total_string_force * 0.25 + tarab_out * 0.35) * gain;
 
         (out_l.clamp(-1.0, 1.0), out_r.clamp(-1.0, 1.0))
     }

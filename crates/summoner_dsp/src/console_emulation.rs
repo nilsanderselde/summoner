@@ -154,7 +154,10 @@ impl ConsoleEmulationNode {
             crosstalk: 0.05,
             output_gain: 1.0,
             dry_wet: 1.0,
-            channels: [ConsoleChannelState::default(), ConsoleChannelState::default()],
+            channels: [
+                ConsoleChannelState::default(),
+                ConsoleChannelState::default(),
+            ],
             sample_rate: 44100.0,
         };
         node.update_filters();
@@ -197,14 +200,16 @@ impl ConsoleEmulationNode {
                 // SSL: +1.8 dB high sheen presence boost at 10 kHz (Q = 0.8)
                 let gain_db = 1.8 * self.warmth;
                 for ch in &mut self.channels {
-                    ch.transformer_filter.update_peaking(10000.0, gain_db, 0.8, sr);
+                    ch.transformer_filter
+                        .update_peaking(10000.0, gain_db, 0.8, sr);
                 }
             }
             ConsoleMode::API => {
                 // API: +2.2 dB midrange punch at 2.5 kHz (Q = 1.4)
                 let gain_db = 2.2 * self.warmth;
                 for ch in &mut self.channels {
-                    ch.transformer_filter.update_peaking(2500.0, gain_db, 1.4, sr);
+                    ch.transformer_filter
+                        .update_peaking(2500.0, gain_db, 1.4, sr);
                 }
             }
         }
@@ -357,12 +362,7 @@ impl AudioNode for ConsoleEmulationNode {
         "ConsoleEmulationNode"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         self.process_block(input, output, ctx);
     }
 }

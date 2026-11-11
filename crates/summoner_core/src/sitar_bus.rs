@@ -121,7 +121,10 @@ pub fn register_sitar_params(param_bus: &mut ParamBus, base_id: ParamId) {
     let (miz, meend, gap, jiva, bleed, chik, raga, decay, bgain, mgain) =
         SitarArticulation::RagaYamanAlap.nominal_parameters();
 
-    param_bus.register(ParamId(base_id.0), SitarArticulation::RagaYamanAlap as u32 as f32);
+    param_bus.register(
+        ParamId(base_id.0),
+        SitarArticulation::RagaYamanAlap as u32 as f32,
+    );
     param_bus.register(ParamId(base_id.0 + 1), miz);
     param_bus.register(ParamId(base_id.0 + 2), meend);
     param_bus.register(ParamId(base_id.0 + 3), gap);
@@ -214,11 +217,14 @@ impl SitarBus {
 
         self.articulation.store(art as u32, Ordering::Relaxed);
         self.mizrab_velocity.store(miz.to_bits(), Ordering::Relaxed);
-        self.meend_pull_semitones.store(meend.to_bits(), Ordering::Relaxed);
+        self.meend_pull_semitones
+            .store(meend.to_bits(), Ordering::Relaxed);
         self.jawari_gap_mm.store(gap.to_bits(), Ordering::Relaxed);
-        self.jiva_thread_pos.store(jiva.to_bits(), Ordering::Relaxed);
+        self.jiva_thread_pos
+            .store(jiva.to_bits(), Ordering::Relaxed);
         self.tarab_bleed.store(bleed.to_bits(), Ordering::Relaxed);
-        self.chikari_trigger.store(chik.to_bits(), Ordering::Relaxed);
+        self.chikari_trigger
+            .store(chik.to_bits(), Ordering::Relaxed);
         self.raga_scale_id.store(raga, Ordering::Relaxed);
         self.gourd_decay.store(decay.to_bits(), Ordering::Relaxed);
         self.body_gain.store(bgain.to_bits(), Ordering::Relaxed);
@@ -232,12 +238,14 @@ impl SitarBus {
 
     #[inline]
     pub fn set_meend_pull(&self, semitones: f32) {
-        self.meend_pull_semitones.store(semitones.to_bits(), Ordering::Relaxed);
+        self.meend_pull_semitones
+            .store(semitones.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
     pub fn set_jawari_gap(&self, gap_mm: f32) {
-        self.jawari_gap_mm.store(gap_mm.to_bits(), Ordering::Relaxed);
+        self.jawari_gap_mm
+            .store(gap_mm.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]
@@ -252,7 +260,8 @@ impl SitarBus {
 
     #[inline]
     pub fn set_chikari_trigger(&self, trig: f32) {
-        self.chikari_trigger.store(trig.to_bits(), Ordering::Relaxed);
+        self.chikari_trigger
+            .store(trig.to_bits(), Ordering::Relaxed);
     }
 
     #[inline]

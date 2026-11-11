@@ -57,7 +57,9 @@ impl DitherProcessor {
             DitherType::PowRAnalog => {
                 // Multi-order psychoacoustic curve (POW-r style):
                 // Concentrates dither energy in ultrasonic/HF (>15 kHz) and notches 2-4 kHz ear sensitivity
-                2.033 * self.error_history[0] - 2.165 * self.error_history[1] + 1.959 * self.error_history[2] - 0.778 * self.error_history[3]
+                2.033 * self.error_history[0] - 2.165 * self.error_history[1]
+                    + 1.959 * self.error_history[2]
+                    - 0.778 * self.error_history[3]
             }
         };
 

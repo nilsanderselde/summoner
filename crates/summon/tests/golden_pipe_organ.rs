@@ -7,9 +7,7 @@ use std::path::Path;
 use summoner_core::allocator::AllocGuard;
 use summoner_core::node::ProcessContext;
 use summoner_core::param_bus::{ParamBus, ParamId};
-use summoner_core::pipe_organ_bus::{
-    PipeOrganArticulation, PipeOrganBus,
-};
+use summoner_core::pipe_organ_bus::{PipeOrganArticulation, PipeOrganBus};
 use summoner_core::transport::Transport;
 use summoner_dsp::pipe_organ::{PipeOrgan, PipeOrganProfile};
 use summoner_dsp::traits::SignalProcessor;
@@ -138,7 +136,7 @@ fn test_golden_pipe_organ_deterministic() {
             chorale.note_off(67);
             chorale.note_on(66, 0.70); // F#4
             gothic.note_off(60);
-            gothic.note_on(59, 0.80);  // B3
+            gothic.note_on(59, 0.80); // B3
         }
 
         for i in 0..BLOCK_SIZE {
@@ -149,12 +147,24 @@ fn test_golden_pipe_organ_deterministic() {
             assert!(out_voxh_l[i].is_finite() && out_voxh_r[i].is_finite());
             assert!(out_flut_l[i].is_finite() && out_flut_r[i].is_finite());
 
-            assert!((-15.0..=15.0).contains(&out_tocc_l[i]) && (-15.0..=15.0).contains(&out_tocc_r[i]));
-            assert!((-15.0..=15.0).contains(&out_chor_l[i]) && (-15.0..=15.0).contains(&out_chor_r[i]));
-            assert!((-15.0..=15.0).contains(&out_goth_l[i]) && (-15.0..=15.0).contains(&out_goth_r[i]));
-            assert!((-15.0..=15.0).contains(&out_fren_l[i]) && (-15.0..=15.0).contains(&out_fren_r[i]));
-            assert!((-15.0..=15.0).contains(&out_voxh_l[i]) && (-15.0..=15.0).contains(&out_voxh_r[i]));
-            assert!((-15.0..=15.0).contains(&out_flut_l[i]) && (-15.0..=15.0).contains(&out_flut_r[i]));
+            assert!(
+                (-15.0..=15.0).contains(&out_tocc_l[i]) && (-15.0..=15.0).contains(&out_tocc_r[i])
+            );
+            assert!(
+                (-15.0..=15.0).contains(&out_chor_l[i]) && (-15.0..=15.0).contains(&out_chor_r[i])
+            );
+            assert!(
+                (-15.0..=15.0).contains(&out_goth_l[i]) && (-15.0..=15.0).contains(&out_goth_r[i])
+            );
+            assert!(
+                (-15.0..=15.0).contains(&out_fren_l[i]) && (-15.0..=15.0).contains(&out_fren_r[i])
+            );
+            assert!(
+                (-15.0..=15.0).contains(&out_voxh_l[i]) && (-15.0..=15.0).contains(&out_voxh_r[i])
+            );
+            assert!(
+                (-15.0..=15.0).contains(&out_flut_l[i]) && (-15.0..=15.0).contains(&out_flut_r[i])
+            );
 
             hasher.update(&out_tocc_l[i].to_le_bytes());
             hasher.update(&out_tocc_r[i].to_le_bytes());
@@ -199,7 +209,7 @@ fn test_golden_windchest_aerodynamics_deterministic() {
         let air_demand = if (0.02..0.06).contains(&t) {
             18.5 // Heavy tutti chord demand -> pressure sag
         } else if t > 0.06 {
-            2.0  // Decay / recovery
+            2.0 // Decay / recovery
         } else {
             0.0
         };
@@ -355,13 +365,30 @@ fn test_golden_pipe_organ_views_ascii_and_snapshots() {
     // Save PNG snapshots across the project render directories
     let _ = organ_view.render_snapshot_png("scratch/renders/pipe_organ_view.png", 800, 520);
     let _ = organ_view.render_snapshot_png("../../scratch/renders/pipe_organ_view.png", 800, 520);
-    let _ = organ_view.render_snapshot_png("crates/summon/scratch/renders/pipe_organ_view.png", 800, 520);
-    let _ = organ_view.render_snapshot_png("crates/summoner_gui/scratch/renders/pipe_organ_view.png", 800, 520);
+    let _ = organ_view.render_snapshot_png(
+        "crates/summon/scratch/renders/pipe_organ_view.png",
+        800,
+        520,
+    );
+    let _ = organ_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/pipe_organ_view.png",
+        800,
+        520,
+    );
 
     let _ = voicing_view.render_snapshot_png("scratch/renders/rank_voicing_view.png", 800, 520);
-    let _ = voicing_view.render_snapshot_png("../../scratch/renders/rank_voicing_view.png", 800, 520);
-    let _ = voicing_view.render_snapshot_png("crates/summon/scratch/renders/rank_voicing_view.png", 800, 520);
-    let _ = voicing_view.render_snapshot_png("crates/summoner_gui/scratch/renders/rank_voicing_view.png", 800, 520);
+    let _ =
+        voicing_view.render_snapshot_png("../../scratch/renders/rank_voicing_view.png", 800, 520);
+    let _ = voicing_view.render_snapshot_png(
+        "crates/summon/scratch/renders/rank_voicing_view.png",
+        800,
+        520,
+    );
+    let _ = voicing_view.render_snapshot_png(
+        "crates/summoner_gui/scratch/renders/rank_voicing_view.png",
+        800,
+        520,
+    );
 }
 
 fn check_or_save(filename: &str, digest: &str) {

@@ -199,10 +199,12 @@ impl RotaryBus {
 
     /// Sets active articulation and loads nominal parameters.
     pub fn set_articulation(&self, articulation: RotaryArticulation) {
-        self.articulation_raw.store(articulation as u32, Ordering::Release);
+        self.articulation_raw
+            .store(articulation as u32, Ordering::Release);
         let (speed, drive, bal, dbs) = articulation.nominal_parameters();
         self.speed_state_raw.store(speed, Ordering::Release);
-        self.tube_drive_bits.store(drive.to_bits(), Ordering::Release);
+        self.tube_drive_bits
+            .store(drive.to_bits(), Ordering::Release);
         self.balance_bits.store(bal.to_bits(), Ordering::Release);
         for (i, db_val) in dbs.iter().enumerate() {
             self.drawbar_bits[i].store(db_val.to_bits(), Ordering::Release);
@@ -232,18 +234,24 @@ impl RotaryBus {
 
     /// Sets speed mode (0=Stop, 1=Chorale, 2=Tremolo, 3=Brake) and drive dB.
     pub fn set_speed_and_drive(&self, speed: u32, drive_db: f32) {
-        self.speed_state_raw.store(speed.clamp(0, 3), Ordering::Release);
-        self.tube_drive_bits.store(drive_db.clamp(0.0, 24.0).to_bits(), Ordering::Release);
+        self.speed_state_raw
+            .store(speed.clamp(0, 3), Ordering::Release);
+        self.tube_drive_bits
+            .store(drive_db.clamp(0.0, 24.0).to_bits(), Ordering::Release);
     }
 
     /// Sets gesture progress $[0.0 ..= 1.0]$.
     pub fn set_progress(&self, progress: f32, is_active: bool) {
-        self.progress_bits.store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(progress.clamp(0.0, 1.0).to_bits(), Ordering::Release);
 
         let mut curr = self.flags.load(Ordering::Acquire);
         loop {
             let next = if is_active { curr | 1 } else { curr & !1 };
-            match self.flags.compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire) {
+            match self
+                .flags
+                .compare_exchange_weak(curr, next, Ordering::Release, Ordering::Acquire)
+            {
                 Ok(_) => break,
                 Err(actual) => curr = actual,
             }
@@ -292,28 +300,49 @@ impl RotaryBus {
 
     /// Applies a complete snapshot into this bus.
     pub fn apply_snapshot(&self, snap: &RotaryBusSnapshot) {
-        self.articulation_raw.store(snap.articulation as u32, Ordering::Release);
-        self.speed_state_raw.store(snap.speed_state, Ordering::Release);
-        self.horn_rpm_bits.store(snap.horn_rpm.to_bits(), Ordering::Release);
-        self.drum_rpm_bits.store(snap.drum_rpm.to_bits(), Ordering::Release);
+        self.articulation_raw
+            .store(snap.articulation as u32, Ordering::Release);
+        self.speed_state_raw
+            .store(snap.speed_state, Ordering::Release);
+        self.horn_rpm_bits
+            .store(snap.horn_rpm.to_bits(), Ordering::Release);
+        self.drum_rpm_bits
+            .store(snap.drum_rpm.to_bits(), Ordering::Release);
         self.set_drawbars(&snap.drawbars);
 
         let mut p_flags = 0u32;
-        if snap.percussion_enabled { p_flags |= 1; }
-        if snap.percussion_harmonic == 3 { p_flags |= 2; }
-        if snap.percussion_fast { p_flags |= 4; }
-        if snap.percussion_soft { p_flags |= 8; }
+        if snap.percussion_enabled {
+            p_flags |= 1;
+        }
+        if snap.percussion_harmonic == 3 {
+            p_flags |= 2;
+        }
+        if snap.percussion_fast {
+            p_flags |= 4;
+        }
+        if snap.percussion_soft {
+            p_flags |= 8;
+        }
         self.percussion_flags.store(p_flags, Ordering::Release);
 
-        self.tube_drive_bits.store(snap.tube_drive_db.to_bits(), Ordering::Release);
-        self.vibrato_mode_raw.store(snap.vibrato_mode, Ordering::Release);
-        self.key_click_bits.store(snap.key_click_amount.to_bits(), Ordering::Release);
-        self.crosstalk_bits.store(snap.crosstalk_amount.to_bits(), Ordering::Release);
-        self.balance_bits.store(snap.horn_drum_balance_pct.to_bits(), Ordering::Release);
-        self.mic_dist_bits.store(snap.mic_distance_m.to_bits(), Ordering::Release);
-        self.mic_spread_bits.store(snap.mic_spread_deg.to_bits(), Ordering::Release);
-        self.progress_bits.store(snap.gesture_progress.to_bits(), Ordering::Release);
-        self.flags.store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
+        self.tube_drive_bits
+            .store(snap.tube_drive_db.to_bits(), Ordering::Release);
+        self.vibrato_mode_raw
+            .store(snap.vibrato_mode, Ordering::Release);
+        self.key_click_bits
+            .store(snap.key_click_amount.to_bits(), Ordering::Release);
+        self.crosstalk_bits
+            .store(snap.crosstalk_amount.to_bits(), Ordering::Release);
+        self.balance_bits
+            .store(snap.horn_drum_balance_pct.to_bits(), Ordering::Release);
+        self.mic_dist_bits
+            .store(snap.mic_distance_m.to_bits(), Ordering::Release);
+        self.mic_spread_bits
+            .store(snap.mic_spread_deg.to_bits(), Ordering::Release);
+        self.progress_bits
+            .store(snap.gesture_progress.to_bits(), Ordering::Release);
+        self.flags
+            .store(if snap.is_active { 1 } else { 0 }, Ordering::Release);
     }
 
     /// Dispatches current rotary bus snapshot values to central `ParamBus`.
@@ -326,7 +355,10 @@ impl RotaryBus {
         for i in 0..9 {
             bus.set(ParamId(base_id.0 + 4 + i as u32), snap.drawbars[i]);
         }
-        bus.set(ParamId(base_id.0 + 13), if snap.percussion_enabled { 1.0 } else { 0.0 });
+        bus.set(
+            ParamId(base_id.0 + 13),
+            if snap.percussion_enabled { 1.0 } else { 0.0 },
+        );
         bus.set(ParamId(base_id.0 + 14), snap.percussion_harmonic as f32);
         bus.set(ParamId(base_id.0 + 15), snap.vibrato_mode as f32);
         bus.set(ParamId(base_id.0 + 16), snap.gesture_progress);
@@ -349,13 +381,18 @@ impl RotaryBus {
 
         self.articulation_raw.store(art_idx, Ordering::Release);
         self.speed_state_raw.store(speed, Ordering::Release);
-        self.tube_drive_bits.store(drive.to_bits(), Ordering::Release);
+        self.tube_drive_bits
+            .store(drive.to_bits(), Ordering::Release);
         self.balance_bits.store(bal.to_bits(), Ordering::Release);
         self.set_drawbars(&dbs);
 
         let mut p_flags = 0u32;
-        if perc_en { p_flags |= 1; }
-        if perc_harm == 3 { p_flags |= 2; }
+        if perc_en {
+            p_flags |= 1;
+        }
+        if perc_harm == 3 {
+            p_flags |= 2;
+        }
         p_flags |= 4; // fast
         self.percussion_flags.store(p_flags, Ordering::Release);
         self.vibrato_mode_raw.store(vib, Ordering::Release);

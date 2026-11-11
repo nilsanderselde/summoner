@@ -19,11 +19,11 @@
 //! - [`DownmixMatrixNode`]: Real-time audio node performing sample-accurate multichannel fold-down.
 //! - [`DownmixConfig`]: Center, surround, LFE and height blend configurations.
 
+use crate::spatial_multichannel::SpatialOutputFormat;
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, NodeEvent, ProcessContext};
-use crate::spatial_multichannel::SpatialOutputFormat;
-use crate::traits::SignalProcessor;
 
 /// Standard fold-down profiles for surround downmixing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -61,9 +61,9 @@ impl CenterDownmixGain {
 /// Surround speaker fold-down level attenuation.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum SurroundDownmixGain {
-    Minus3Db,   // 0.7071
-    Minus6Db,   // 0.5000
-    ZeroDb,     // 1.0000
+    Minus3Db, // 0.7071
+    Minus6Db, // 0.5000
+    ZeroDb,   // 1.0000
 }
 
 impl SurroundDownmixGain {
@@ -177,7 +177,9 @@ impl MultichannelDownmixer {
                 out_stereo[1] = in_6ch[1] + in_6ch[2] * cg + mono_surround + lfe;
             }
             DownmixProfile::MonoFold => {
-                let mono = (in_6ch[0] + in_6ch[1] + in_6ch[2] * cg + (in_6ch[4] + in_6ch[5]) * sg) * 0.5 + lfe;
+                let mono = (in_6ch[0] + in_6ch[1] + in_6ch[2] * cg + (in_6ch[4] + in_6ch[5]) * sg)
+                    * 0.5
+                    + lfe;
                 out_stereo[0] = mono;
                 out_stereo[1] = mono;
             }
@@ -240,23 +242,27 @@ impl DownmixMatrixNode {
         match (self.input_format, self.output_format) {
             (SpatialOutputFormat::DolbyAtmos7_1_4, SpatialOutputFormat::Stereo) => {
                 if inputs.len() >= 12 && outputs.len() >= 2 {
-                    self.downmixer.fold_7_1_4_to_stereo(&inputs[..12], &mut outputs[..2]);
+                    self.downmixer
+                        .fold_7_1_4_to_stereo(&inputs[..12], &mut outputs[..2]);
                 }
             }
             (SpatialOutputFormat::Surround7_1, SpatialOutputFormat::Surround5_1) => {
                 if inputs.len() >= 8 && outputs.len() >= 6 {
-                    self.downmixer.fold_7_1_to_5_1(&inputs[..8], &mut outputs[..6]);
+                    self.downmixer
+                        .fold_7_1_to_5_1(&inputs[..8], &mut outputs[..6]);
                 }
             }
             (SpatialOutputFormat::Surround5_1, SpatialOutputFormat::Stereo) => {
                 if inputs.len() >= 6 && outputs.len() >= 2 {
-                    self.downmixer.fold_5_1_to_stereo(&inputs[..6], &mut outputs[..2]);
+                    self.downmixer
+                        .fold_5_1_to_stereo(&inputs[..6], &mut outputs[..2]);
                 }
             }
             (SpatialOutputFormat::DolbyAtmos7_1_4, SpatialOutputFormat::Surround5_1) => {
                 if inputs.len() >= 12 && outputs.len() >= 6 {
                     let mut tmp_8ch = [0.0f32; 8];
-                    self.downmixer.fold_7_1_4_to_7_1(&inputs[..12], &mut tmp_8ch);
+                    self.downmixer
+                        .fold_7_1_4_to_7_1(&inputs[..12], &mut tmp_8ch);
                     self.downmixer.fold_7_1_to_5_1(&tmp_8ch, &mut outputs[..6]);
                 }
             }
@@ -353,7 +359,7 @@ mod tests {
         assert_eq!(out_5_1[1], 1.0); // R
         assert_eq!(out_5_1[2], 1.0); // C
         assert_eq!(out_5_1[3], 0.0); // LFE
-        // Ls = 0.5 + 0.5 * 0.7071
+                                     // Ls = 0.5 + 0.5 * 0.7071
         let expected_ls = 0.5 + 0.5 * 0.707_106_77;
         assert!((out_5_1[4] - expected_ls).abs() < 1e-4);
     }

@@ -1223,9 +1223,27 @@ mod tests {
         let mut pulse = OscPulse::new(100.0, 0.5);
         let mut tri = OscTriangle::new(100.0);
 
-        saw.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 0.5 }, &ctx);
-        pulse.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 0.5 }, &ctx);
-        tri.handle_event(&NodeEvent::NoteOn { note: 69, velocity: 0.5 }, &ctx);
+        saw.handle_event(
+            &NodeEvent::NoteOn {
+                note: 69,
+                velocity: 0.5,
+            },
+            &ctx,
+        );
+        pulse.handle_event(
+            &NodeEvent::NoteOn {
+                note: 69,
+                velocity: 0.5,
+            },
+            &ctx,
+        );
+        tri.handle_event(
+            &NodeEvent::NoteOn {
+                note: 69,
+                velocity: 0.5,
+            },
+            &ctx,
+        );
         assert!((saw.frequency - 440.0).abs() < 1e-3);
         assert!((pulse.frequency - 440.0).abs() < 1e-3);
         assert!((tri.frequency - 440.0).abs() < 1e-3);

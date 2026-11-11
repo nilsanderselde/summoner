@@ -10,11 +10,11 @@
 //!
 //! Enforces zero heap allocations in real-time audio render loops under `AllocGuard`.
 
+use crate::traits::SignalProcessor;
 use serde::{Deserialize, Serialize};
 use std::f32::consts::{PI, TAU};
 use summoner_core::audio::Sample;
 use summoner_core::node::{AudioNode, ProcessContext};
-use crate::traits::SignalProcessor;
 
 /// Speed of sound in air in meters per second.
 const SPEED_OF_SOUND_MPS: f32 = 343.0;
@@ -297,7 +297,9 @@ impl RotarySpeaker {
         let a2_lp = 1.0 - alpha;
 
         let lp_out = (b0_lp * input + b1_lp * self.lp_x1 + b2_lp * self.lp_x2
-            - a1_lp * self.lp_y1 - a2_lp * self.lp_y2) / a0_lp;
+            - a1_lp * self.lp_y1
+            - a2_lp * self.lp_y2)
+            / a0_lp;
         self.lp_x2 = self.lp_x1;
         self.lp_x1 = input;
         self.lp_y2 = self.lp_y1;
@@ -312,7 +314,9 @@ impl RotarySpeaker {
         let a2_hp = 1.0 - alpha;
 
         let hp_out = (b0_hp * input + b1_hp * self.hp_x1 + b2_hp * self.hp_x2
-            - a1_hp * self.hp_y1 - a2_hp * self.hp_y2) / a0_hp;
+            - a1_hp * self.hp_y1
+            - a2_hp * self.hp_y2)
+            / a0_hp;
         self.hp_x2 = self.hp_x1;
         self.hp_x1 = input;
         self.hp_y2 = self.hp_y1;
@@ -341,7 +345,8 @@ impl RotarySpeaker {
         let mic_angle_l = -mic_spread_rad;
         let mic_angle_r = mic_spread_rad;
 
-        let base_delay_samples = (self.mic_distance_m / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32) + 128.0;
+        let base_delay_samples =
+            (self.mic_distance_m / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32) + 128.0;
 
         // --- Horn Doppler & Polar Radiation ---
         let horn_rel_l = self.horn_angle_rad - mic_angle_l;
@@ -351,8 +356,10 @@ impl RotarySpeaker {
         let horn_delta_d_l = -self.horn_radius_m * horn_rel_l.cos();
         let horn_delta_d_r = -self.horn_radius_m * horn_rel_r.cos();
 
-        let horn_delay_l = base_delay_samples + (horn_delta_d_l / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32);
-        let horn_delay_r = base_delay_samples + (horn_delta_d_r / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32);
+        let horn_delay_l =
+            base_delay_samples + (horn_delta_d_l / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32);
+        let horn_delay_r =
+            base_delay_samples + (horn_delta_d_r / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32);
 
         let horn_sig_l = self.read_delay_interp(&self.horn_delay_buf, horn_delay_l);
         let horn_sig_r = self.read_delay_interp(&self.horn_delay_buf, horn_delay_r);
@@ -368,8 +375,10 @@ impl RotarySpeaker {
         let drum_delta_d_l = -self.drum_radius_m * drum_rel_l.cos();
         let drum_delta_d_r = -self.drum_radius_m * drum_rel_r.cos();
 
-        let drum_delay_l = base_delay_samples + (drum_delta_d_l / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32);
-        let drum_delay_r = base_delay_samples + (drum_delta_d_r / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32);
+        let drum_delay_l =
+            base_delay_samples + (drum_delta_d_l / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32);
+        let drum_delay_r =
+            base_delay_samples + (drum_delta_d_r / SPEED_OF_SOUND_MPS) * (self.sample_rate as f32);
 
         let drum_sig_l = self.read_delay_interp(&self.drum_delay_buf, drum_delay_l);
         let drum_sig_r = self.read_delay_interp(&self.drum_delay_buf, drum_delay_r);
@@ -384,8 +393,10 @@ impl RotarySpeaker {
         let horn_gain = (self.horn_drum_balance_pct / 50.0).clamp(0.1, 2.0);
         let drum_gain = ((100.0 - self.horn_drum_balance_pct) / 50.0).clamp(0.1, 2.0);
 
-        let mut out_wet_l = (horn_sig_l * horn_amp_l * horn_gain) + (drum_sig_l * drum_amp_l * drum_gain);
-        let mut out_wet_r = (horn_sig_r * horn_amp_r * horn_gain) + (drum_sig_r * drum_amp_r * drum_gain);
+        let mut out_wet_l =
+            (horn_sig_l * horn_amp_l * horn_gain) + (drum_sig_l * drum_amp_l * drum_gain);
+        let mut out_wet_r =
+            (horn_sig_r * horn_amp_r * horn_gain) + (drum_sig_r * drum_amp_r * drum_gain);
 
         // 5. Wooden Cabinet Cavity Reflections (multi-tap delay)
         let refl_idx = self.refl_write_pos;
@@ -421,7 +432,8 @@ impl RotarySpeaker {
     #[inline(always)]
     fn read_delay_interp(&self, buf: &[f32; MAX_DELAY_SAMPLES], delay_samples: f32) -> f32 {
         let d_clamped = delay_samples.clamp(1.0, (MAX_DELAY_SAMPLES - 2) as f32);
-        let read_pos = (self.delay_write_pos as f32 + MAX_DELAY_SAMPLES as f32 - d_clamped) % (MAX_DELAY_SAMPLES as f32);
+        let read_pos = (self.delay_write_pos as f32 + MAX_DELAY_SAMPLES as f32 - d_clamped)
+            % (MAX_DELAY_SAMPLES as f32);
         let idx0 = read_pos.floor() as usize % MAX_DELAY_SAMPLES;
         let idx1 = (idx0 + 1) % MAX_DELAY_SAMPLES;
         let frac = read_pos.fract();
@@ -520,7 +532,10 @@ mod tests {
         }
 
         assert!(peak_l > 0.05, "Rotary left channel must have active signal");
-        assert!(peak_r > 0.05, "Rotary right channel must have active signal");
+        assert!(
+            peak_r > 0.05,
+            "Rotary right channel must have active signal"
+        );
 
         // Test braking deceleration
         speaker.set_speed(RotarySpeed::Brake);

@@ -254,12 +254,8 @@ fn test_golden_multitrack_sidechain_and_modulation_master() {
         {
             let _guard = AllocGuard::new();
 
-            let track_outputs: [&[Sample]; 4] = [
-                &kick_buf[..],
-                &snare_buf[..],
-                &bass_buf[..],
-                &pad_out_l[..],
-            ];
+            let track_outputs: [&[Sample]; 4] =
+                [&kick_buf[..], &snare_buf[..], &bass_buf[..], &pad_out_l[..]];
             matrix.process_block(&track_outputs, BLOCK_SIZE, sample_rate);
 
             let aux0 = matrix.get_aux_bus_slice(0, BLOCK_SIZE);
@@ -269,8 +265,16 @@ fn test_golden_multitrack_sidechain_and_modulation_master() {
                 let ducking = (1.0 - aux0[i].abs() * 0.5).clamp(0.1, 1.0);
                 let gated_pad = (aux1[i].abs() * 0.8).clamp(0.0, 1.0);
 
-                master_l[i] = (kick_buf[i] * 0.5 + snare_buf[i] * 0.3 + bass_buf[i] * ducking * 0.4 + pad_out_l[i] * gated_pad * 0.3).clamp(-1.0, 1.0);
-                master_r[i] = (kick_buf[i] * 0.5 + snare_buf[i] * 0.3 + bass_buf[i] * ducking * 0.4 + pad_out_r[i] * gated_pad * 0.3).clamp(-1.0, 1.0);
+                master_l[i] = (kick_buf[i] * 0.5
+                    + snare_buf[i] * 0.3
+                    + bass_buf[i] * ducking * 0.4
+                    + pad_out_l[i] * gated_pad * 0.3)
+                    .clamp(-1.0, 1.0);
+                master_r[i] = (kick_buf[i] * 0.5
+                    + snare_buf[i] * 0.3
+                    + bass_buf[i] * ducking * 0.4
+                    + pad_out_r[i] * gated_pad * 0.3)
+                    .clamp(-1.0, 1.0);
             }
         }
 
@@ -284,5 +288,8 @@ fn test_golden_multitrack_sidechain_and_modulation_master() {
 
     let digest = hasher.finalize().to_hex().to_string();
     assert!(!digest.is_empty());
-    check_or_save_golden("golden_multitrack_sidechain_modulation_master.blake3", &digest);
+    check_or_save_golden(
+        "golden_multitrack_sidechain_modulation_master.blake3",
+        &digest,
+    );
 }

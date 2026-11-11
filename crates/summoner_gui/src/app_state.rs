@@ -115,4 +115,3 @@ pub enum GuiDisplayMode {
     SimpleMode,
     AdvancedMode,
 }
-

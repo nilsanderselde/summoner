@@ -313,7 +313,11 @@ impl ClapPluginInstance {
         output: &mut [&mut [Sample]],
         _ctx: &ProcessContext,
     ) {
-        let num_samples = if output.is_empty() { 0 } else { output[0].len() };
+        let num_samples = if output.is_empty() {
+            0
+        } else {
+            output[0].len()
+        };
         if num_samples == 0 {
             return;
         }
@@ -351,12 +355,7 @@ impl AudioNode for ClapPluginInstance {
         "ClapPluginInstance"
     }
 
-    fn process(
-        &mut self,
-        input: &[&[Sample]],
-        output: &mut [&mut [Sample]],
-        ctx: &ProcessContext,
-    ) {
+    fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
         if let Some(ref bus) = ctx.param_bus {
             for (&param_id, param) in self.parameters.iter_mut() {
                 if let Some(val) = bus.get(ParamId(param_id)) {
@@ -376,8 +375,8 @@ impl AudioNode for ClapPluginInstance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use crate::plugin_host::PluginFormat;
+    use std::path::PathBuf;
 
     #[test]
     fn test_clap_host_template_and_version() {
@@ -396,7 +395,11 @@ mod tests {
 
         let test_bytes = b"CLAP Stream Payload 2026";
         unsafe {
-            let written = clap_ostream_write(&ostream, test_bytes.as_ptr() as *const c_void, test_bytes.len() as u64);
+            let written = clap_ostream_write(
+                &ostream,
+                test_bytes.as_ptr() as *const c_void,
+                test_bytes.len() as u64,
+            );
             assert_eq!(written, test_bytes.len() as i64);
         }
 
@@ -406,7 +409,11 @@ mod tests {
 
         let mut read_buf = vec![0u8; test_bytes.len()];
         unsafe {
-            let read = clap_istream_read(&istream, read_buf.as_mut_ptr() as *mut c_void, test_bytes.len() as u64);
+            let read = clap_istream_read(
+                &istream,
+                read_buf.as_mut_ptr() as *mut c_void,
+                test_bytes.len() as u64,
+            );
             assert_eq!(read, test_bytes.len() as i64);
             assert_eq!(&read_buf[..], test_bytes);
         }
@@ -435,7 +442,11 @@ mod tests {
         let mut out_r = vec![0.0f32; 64];
         let ctx = ProcessContext::new(44100, 120.0, 0);
 
-        instance.process(&[&in_l[..], &in_r[..]], &mut [&mut out_l[..], &mut out_r[..]], &ctx);
+        instance.process(
+            &[&in_l[..], &in_r[..]],
+            &mut [&mut out_l[..], &mut out_r[..]],
+            &ctx,
+        );
         assert_eq!(out_l[0], 0.75);
         assert_eq!(out_r[0], 0.75);
 

@@ -123,7 +123,11 @@ impl DiskStreamHandle {
             for f in 0..actual_chunk_frames {
                 let out_idx = frames_done + f;
                 out_l[out_idx] = temp[f * ch];
-                out_r[out_idx] = if ch > 1 { temp[f * ch + 1] } else { temp[f * ch] };
+                out_r[out_idx] = if ch > 1 {
+                    temp[f * ch + 1]
+                } else {
+                    temp[f * ch]
+                };
             }
 
             frames_done += actual_chunk_frames;
@@ -146,7 +150,8 @@ impl DiskStreamHandle {
 
     /// Request a non-blocking seek to a new frame position. The I/O thread will flush and refill ahead.
     pub fn seek_frame(&self, frame: u64) {
-        self.seek_target_frame.store(frame | (1 << 63), Ordering::Release);
+        self.seek_target_frame
+            .store(frame | (1 << 63), Ordering::Release);
     }
 
     /// Total count of buffer underruns experienced by this stream.
@@ -304,12 +309,8 @@ impl DiskStreamManager {
                 file.read_exact(&mut fmt_data).map_err(|e| e.to_string())?;
                 if fmt_data.len() >= 16 {
                     channels = u16::from_le_bytes([fmt_data[2], fmt_data[3]]);
-                    sample_rate = u32::from_le_bytes([
-                        fmt_data[4],
-                        fmt_data[5],
-                        fmt_data[6],
-                        fmt_data[7],
-                    ]);
+                    sample_rate =
+                        u32::from_le_bytes([fmt_data[4], fmt_data[5], fmt_data[6], fmt_data[7]]);
                     bits = u16::from_le_bytes([fmt_data[14], fmt_data[15]]);
                 }
             } else if chunk_id == b"data" {
@@ -359,7 +360,9 @@ impl DiskStreamManager {
                 continue;
             }
 
-            for (path, ch, offset, bits, total_frames, ring, cursor, seek_target) in streams_snapshot {
+            for (path, ch, offset, bits, total_frames, ring, cursor, seek_target) in
+                streams_snapshot
+            {
                 // Check if seek was requested
                 let target_raw = seek_target.load(Ordering::Acquire);
                 let is_seek = (target_raw & (1 << 63)) != 0;
@@ -395,23 +398,32 @@ impl DiskStreamManager {
                             let to_read_bytes = needed_bytes.min(byte_buffer.len());
 
                             if let Ok(n_read) = f.read(&mut byte_buffer[..to_read_bytes]) {
-                                let frames_read = (n_read as u64).checked_div(bytes_per_frame).unwrap_or(0) as usize;
+                                let frames_read =
+                                    (n_read as u64).checked_div(bytes_per_frame).unwrap_or(0)
+                                        as usize;
 
                                 if frames_read > 0 {
                                     // Convert raw PCM to normalized float
                                     if bits == 16 {
                                         let sample_count = frames_read * ch_usize;
-                                        for (i, slot) in read_buffer.iter_mut().enumerate().take(sample_count) {
+                                        for (i, slot) in
+                                            read_buffer.iter_mut().enumerate().take(sample_count)
+                                        {
                                             let b_idx = i * 2;
                                             if b_idx + 1 < n_read {
-                                                let val = i16::from_le_bytes([byte_buffer[b_idx], byte_buffer[b_idx + 1]]);
+                                                let val = i16::from_le_bytes([
+                                                    byte_buffer[b_idx],
+                                                    byte_buffer[b_idx + 1],
+                                                ]);
                                                 *slot = val as f32 / i16::MAX as f32;
                                             }
                                         }
                                         let _ = ring.push_slice(&read_buffer[..sample_count]);
                                     } else if bits == 32 {
                                         let sample_count = frames_read * ch_usize;
-                                        for (i, slot) in read_buffer.iter_mut().enumerate().take(sample_count) {
+                                        for (i, slot) in
+                                            read_buffer.iter_mut().enumerate().take(sample_count)
+                                        {
                                             let b_idx = i * 4;
                                             if b_idx + 3 < n_read {
                                                 let val = f32::from_le_bytes([
@@ -484,7 +496,10 @@ mod tests {
 
         // Allow background thread to read ahead initial chunk
         thread::sleep(Duration::from_millis(50));
-        assert!(handle.available_frames() > 0, "Background I/O thread should buffer initial chunk");
+        assert!(
+            handle.available_frames() > 0,
+            "Background I/O thread should buffer initial chunk"
+        );
 
         // Read frames simulating real-time audio thread callback
         let mut out_l = [0.0f32; 512];
@@ -505,4 +520,3 @@ mod tests {
         let _ = fs::remove_dir(temp_dir);
     }
 }
-

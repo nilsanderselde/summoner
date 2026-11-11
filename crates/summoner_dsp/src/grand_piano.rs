@@ -12,14 +12,14 @@
 //!
 //! Enforces zero heap allocations in audio render loops under `AllocGuard`.
 
-use serde::{Deserialize, Serialize};
-use summoner_core::audio::Sample;
-use summoner_core::node::{AudioNode, ProcessContext};
 use crate::soundboard_bridge::{
     BridgeWaveCoupler, GrandPianoFeltHammer, SoundboardProfile, SpruceSoundboard,
     MAX_UNISONS_PER_NOTE,
 };
 use crate::traits::SignalProcessor;
+use serde::{Deserialize, Serialize};
+use summoner_core::audio::Sample;
+use summoner_core::node::{AudioNode, ProcessContext};
 
 /// Maximum delay buffer capacity in samples (~20 Hz fundamental at 192 kHz).
 pub const MAX_PIANO_DELAY: usize = 16384;
@@ -346,13 +346,8 @@ impl GrandPianoVoice {
         let hammer_p = 2.2 + 0.6 * (1.0 - norm_pitch);
         let strike_beta = 0.125 - 0.04 * norm_pitch; // 1/8 in bass to 1/12 in treble
 
-        self.hammer = GrandPianoFeltHammer::new(
-            hammer_mass,
-            hammer_stiffness,
-            hammer_p,
-            0.35,
-            strike_beta,
-        );
+        self.hammer =
+            GrandPianoFeltHammer::new(hammer_mass, hammer_stiffness, hammer_p, 0.35, strike_beta);
         self.hammer.una_corda_shift = una_corda_shift;
 
         // Strike velocity in m/s: 0.1 m/s (pianissimo) to 6.5 m/s (fortissimo)
@@ -377,7 +372,9 @@ impl GrandPianoVoice {
             let eff_f0 = self.frequency_hz * 2.0_f32.powf(self.detune_cents[i] / 1200.0);
             let period_sec = 1.0 / eff_f0.max(20.0);
             let atten_db_per_period = (60.0 / self.aftersound_t60.max(0.5)) * period_sec;
-            self.strings[i].loop_gain = 10.0_f32.powf(-atten_db_per_period / 20.0).clamp(0.90, 0.99995);
+            self.strings[i].loop_gain = 10.0_f32
+                .powf(-atten_db_per_period / 20.0)
+                .clamp(0.90, 0.99995);
             self.strings[i].loss_cutoff_coeff = (0.20 + 0.50 * norm_pitch).clamp(0.10, 0.85);
             self.strings[i].is_active = true;
         }
@@ -461,8 +458,8 @@ pub struct ConcertGrandPiano {
     pub soundboard: SpruceSoundboard,
     pub bridge: BridgeWaveCoupler,
     pub voices: [GrandPianoVoice; MAX_PIANO_VOICES],
-    pub sustain_pedal: f32, // [0.0 ..= 1.0] continuous damper lift
-    pub una_corda_pedal: f32, // [0.0 ..= 1.0] soft pedal shift
+    pub sustain_pedal: f32,    // [0.0 ..= 1.0] continuous damper lift
+    pub una_corda_pedal: f32,  // [0.0 ..= 1.0] soft pedal shift
     pub sostenuto_pedal: bool, // Sostenuto latch engaged
     #[serde(skip, default = "default_sostenuto_keys")]
     pub sostenuto_latch_keys: [bool; TOTAL_PIANO_KEYS],
@@ -481,22 +478,38 @@ impl ConcertGrandPiano {
         let bridge = BridgeWaveCoupler::new(zb, bleed);
 
         let voices = [
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
-            GrandPianoVoice::new(sample_rate), GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
+            GrandPianoVoice::new(sample_rate),
         ];
 
         Self {
@@ -546,7 +559,8 @@ impl ConcertGrandPiano {
             // Latch only currently active held keys
             for voice in &mut self.voices {
                 if voice.is_active && voice.is_key_down {
-                    let key_idx = (voice.note_number.saturating_sub(MIN_PIANO_NOTE) as usize).min(TOTAL_PIANO_KEYS - 1);
+                    let key_idx = (voice.note_number.saturating_sub(MIN_PIANO_NOTE) as usize)
+                        .min(TOTAL_PIANO_KEYS - 1);
                     self.sostenuto_latch_keys[key_idx] = true;
                     voice.is_sostenuto_held = true;
                 }
@@ -596,7 +610,8 @@ impl ConcertGrandPiano {
         );
 
         // Check if note is latched by sostenuto
-        let key_idx = (clamped_note.saturating_sub(MIN_PIANO_NOTE) as usize).min(TOTAL_PIANO_KEYS - 1);
+        let key_idx =
+            (clamped_note.saturating_sub(MIN_PIANO_NOTE) as usize).min(TOTAL_PIANO_KEYS - 1);
         if self.sostenuto_pedal && self.sostenuto_latch_keys[key_idx] {
             voice.is_sostenuto_held = true;
         }
@@ -633,7 +648,9 @@ impl ConcertGrandPiano {
         // Drive bridge and anisotropic spruce soundboard modal matrix
         let bridge_forces_in = [total_bridge_force];
         let mut reflected_out = [0.0];
-        let transmitted_force = self.bridge.process_scattering_junction(&bridge_forces_in, &mut reflected_out);
+        let transmitted_force = self
+            .bridge
+            .process_scattering_junction(&bridge_forces_in, &mut reflected_out);
 
         let (sb_l, sb_r) = self.soundboard.process_bridge_force(transmitted_force);
 

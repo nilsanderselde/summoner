@@ -264,7 +264,9 @@ impl TonebarCoupling {
 
     #[inline]
     pub fn process(&mut self, input: f32) -> f32 {
-        let out = self.b0 * input + self.b1 * self.y1 + self.b2 * self.y2 - self.a1 * self.y1 - self.a2 * self.y2;
+        let out = self.b0 * input + self.b1 * self.y1 + self.b2 * self.y2
+            - self.a1 * self.y1
+            - self.a2 * self.y2;
         self.y2 = self.y1;
         self.y1 = out;
         out
@@ -509,7 +511,8 @@ impl TineResonator {
                 self.feedback_gain = 0.993; // Shorter natural sustain
             }
         }
-        self.tonebar.recompute_coefficients(self.frequency, self.sample_rate);
+        self.tonebar
+            .recompute_coefficients(self.frequency, self.sample_rate);
     }
 
     /// Sets the fundamental frequency in Hz and updates delay line length.
@@ -519,7 +522,8 @@ impl TineResonator {
         // Compensate for allpass filter group delay (~4 samples) and damping filter (~1 sample)
         let delay = (period_samples - 5.0).clamp(2.0, (MAX_TINE_DELAY - 1) as f32);
         self.delay_len = delay;
-        self.tonebar.recompute_coefficients(self.frequency, self.sample_rate);
+        self.tonebar
+            .recompute_coefficients(self.frequency, self.sample_rate);
     }
 
     /// Triggers a note strike with velocity and hammer hardness.
@@ -535,7 +539,8 @@ impl TineResonator {
     pub fn note_off(&mut self) {
         if self.key_held {
             self.key_held = false;
-            self.damper.trigger_release(self.frequency, self.sample_rate);
+            self.damper
+                .trigger_release(self.frequency, self.sample_rate);
         }
     }
 
@@ -547,12 +552,14 @@ impl TineResonator {
         }
 
         // Read from delay line with linear interpolation
-        let read_pos = (self.write_pos as f32 - self.delay_len + MAX_TINE_DELAY as f32) % (MAX_TINE_DELAY as f32);
+        let read_pos = (self.write_pos as f32 - self.delay_len + MAX_TINE_DELAY as f32)
+            % (MAX_TINE_DELAY as f32);
         let read_idx0 = read_pos.floor() as usize % MAX_TINE_DELAY;
         let read_idx1 = (read_idx0 + 1) % MAX_TINE_DELAY;
         let frac = read_pos.fract();
 
-        let raw_delayed = self.delay_buffer[read_idx0] * (1.0 - frac) + self.delay_buffer[read_idx1] * frac;
+        let raw_delayed =
+            self.delay_buffer[read_idx0] * (1.0 - frac) + self.delay_buffer[read_idx1] * frac;
 
         // Dispersion allpass cascade for cantilever beam inharmonicity
         let dispersed = self.dispersion.process(raw_delayed);
@@ -587,7 +594,9 @@ impl TineResonator {
         self.write_pos = (self.write_pos + 1) % MAX_TINE_DELAY;
 
         // Inductive pickup electromagnetic conversion & asymmetric bark overdrive
-        let pickup_audio = self.pickup.process_displacement(new_tine_sample, self.sample_rate);
+        let pickup_audio = self
+            .pickup
+            .process_displacement(new_tine_sample, self.sample_rate);
 
         // Damper mechanical clunk thud
         let clunk_audio = self.damper.process_sample(self.sample_rate);

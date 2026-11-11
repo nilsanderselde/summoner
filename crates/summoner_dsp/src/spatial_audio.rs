@@ -8,8 +8,8 @@
 
 //! Immersive Audio, Spatial Panning & Multichannel Processing Engine (Tier 37).
 
-use std::f32::consts::PI;
 use crate::traits::SignalProcessor;
+use std::f32::consts::PI;
 use summoner_core::audio::{ChannelLayout, MultichannelAudioBuffer, Sample};
 use summoner_core::node::{AudioNode, ProcessContext};
 
@@ -1149,18 +1149,18 @@ impl AmbisonicsBinauralConvolver3D {
     pub fn new(sample_rate: u32, partition_size: usize) -> Self {
         // 12-point spherical virtual loudspeaker array (Lebedev / 7.1.4 cube)
         let speaker_positions = [
-            Position3D::new(-0.866, 0.5, 0.0),    // L (-30 deg)
-            Position3D::new(0.866, 0.5, 0.0),     // R (+30 deg)
-            Position3D::new(0.0, 1.0, 0.0),       // C (0 deg)
-            Position3D::new(-0.866, -0.5, 0.0),   // Ls (-110 deg)
-            Position3D::new(0.866, -0.5, 0.0),    // Rs (+110 deg)
-            Position3D::new(-0.866, -0.866, 0.0), // Lb (-150 deg)
-            Position3D::new(0.866, -0.866, 0.0),  // Rb (+150 deg)
-            Position3D::new(-0.707, 0.707, 0.707), // Top Front Left
-            Position3D::new(0.707, 0.707, 0.707), // Top Front Right
+            Position3D::new(-0.866, 0.5, 0.0),      // L (-30 deg)
+            Position3D::new(0.866, 0.5, 0.0),       // R (+30 deg)
+            Position3D::new(0.0, 1.0, 0.0),         // C (0 deg)
+            Position3D::new(-0.866, -0.5, 0.0),     // Ls (-110 deg)
+            Position3D::new(0.866, -0.5, 0.0),      // Rs (+110 deg)
+            Position3D::new(-0.866, -0.866, 0.0),   // Lb (-150 deg)
+            Position3D::new(0.866, -0.866, 0.0),    // Rb (+150 deg)
+            Position3D::new(-0.707, 0.707, 0.707),  // Top Front Left
+            Position3D::new(0.707, 0.707, 0.707),   // Top Front Right
             Position3D::new(-0.707, -0.707, 0.707), // Top Back Left
-            Position3D::new(0.707, -0.707, 0.707), // Top Back Right
-            Position3D::new(0.0, 0.0, 1.0),       // Top Center
+            Position3D::new(0.707, -0.707, 0.707),  // Top Back Right
+            Position3D::new(0.0, 0.0, 1.0),         // Top Center
         ];
 
         let p_size = partition_size.max(16);
@@ -1270,8 +1270,7 @@ impl AmbisonicsBinauralConvolver3D {
                     let p_r = &conv.partitions_right[p];
                     let p_offset = p * p_size;
                     for k in 0..p_size {
-                        let h_idx =
-                            (conv.history_head + total_hist - (p_offset + k)) % total_hist;
+                        let h_idx = (conv.history_head + total_hist - (p_offset + k)) % total_hist;
                         let x = conv.input_history[h_idx];
                         s_l += x * p_l[k];
                         s_r += x * p_r[k];
@@ -1733,11 +1732,7 @@ mod tests {
         {
             let _guard = AllocGuard::new();
             panner.process_block(&input, &mut out_l, &mut out_r);
-            ContinuousSpatialPannerDoppler3D::interleave_stereo(
-                &out_l,
-                &out_r,
-                &mut interleaved,
-            );
+            ContinuousSpatialPannerDoppler3D::interleave_stereo(&out_l, &out_r, &mut interleaved);
         }
 
         assert!(out_l.iter().all(|&s| (-1.0..=1.0).contains(&s)));
@@ -1746,4 +1741,3 @@ mod tests {
         assert!(interleaved.iter().any(|&s| s.abs() > 0.0));
     }
 }
-

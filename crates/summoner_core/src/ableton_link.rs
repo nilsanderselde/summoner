@@ -425,7 +425,9 @@ mod tests {
             send_time_micros: 10_000,
         };
 
-        let pong = engine2.handle_packet(ping, 10_500).expect("Should reply with Pong");
+        let pong = engine2
+            .handle_packet(ping, 10_500)
+            .expect("Should reply with Pong");
         assert!(matches!(pong, LinkPacket::Pong { .. }));
 
         // Engine 1 processes Pong

@@ -107,7 +107,9 @@ impl Track {
             return;
         }
         if ctx.frame_position < self.last_pos {
-            self.cursor = self.schedule.partition_point(|e| e.frame < ctx.frame_position);
+            self.cursor = self
+                .schedule
+                .partition_point(|e| e.frame < ctx.frame_position);
         }
         self.last_pos = ctx.frame_position;
         let end = ctx.frame_position + block_size as u64;
