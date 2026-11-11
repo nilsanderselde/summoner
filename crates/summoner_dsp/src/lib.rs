@@ -13,6 +13,7 @@
 
 //! SIMD synthesis primitives & DSP algorithms for Summoner DAW.
 
+pub mod ai_mix_assistant;
 pub mod ai_mixing;
 pub mod air_reed;
 pub mod audio_to_midi;
@@ -127,6 +128,7 @@ pub mod windchest;
 pub mod woodwind_jet;
 pub mod zero_gravity_fluid;
 
+pub use ai_mix_assistant::*;
 pub use ai_mixing::*;
 pub use air_reed::{
     jet_velocity_from_pressure, meri_kari_to_pitch_multiplier, utaguchi_splitting_function,
