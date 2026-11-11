@@ -24,6 +24,7 @@ pub mod bellows_bus;
 pub mod ble_midi;
 pub mod breath_bus;
 pub mod cadence_bus;
+pub mod capability;
 pub mod clavinet_bus;
 pub mod embedded_hardware;
 pub mod ep_bus;

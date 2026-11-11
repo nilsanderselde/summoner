@@ -9,8 +9,20 @@ permissions:
   contents: write
 
 jobs:
+  capability-gate:
+    name: Capability gate (no simulated paths in release)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Fail on simulated capabilities
+        run: cargo run -p summon -- capabilities --deny-simulated
+
   build-release:
     name: Build Release Asset (${{ matrix.target }})
+    needs: capability-gate
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

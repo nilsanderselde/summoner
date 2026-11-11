@@ -54,6 +54,7 @@ fn print_usage() {
     println!("  summon asset-verify [PROJECT_PATH]");
     println!("  summon tune [PROJECT_PATH] [SCL_PATH]");
     println!("  summon harmony-suggest [PROJECT_PATH]");
+    println!("  summon capabilities [--deny-simulated]");
     println!("  summon sfz-convert [SFZ_DIR] [OUTPUT_DIR]");
     println!("  summon auto-slice [ASSET_PATH] [OUTPUT_TOML] [--threshold 0.15] [--algorithm spectral_flux]");
     println!("  summon load-preset [PRESET_TOML] [SAMPLES_BASE_DIR]");
@@ -1806,6 +1807,18 @@ fn main() {
                 "Suggested Next Diatonic Chord MIDI Notes: {:?}",
                 suggestions
             );
+        }
+        "capabilities" => {
+            print!("{}", summoner_core::capability::render_table());
+            if args.iter().any(|a| a == "--deny-simulated") {
+                let sim: Vec<_> = summoner_core::capability::simulated().collect();
+                if !sim.is_empty() {
+                    for c in &sim {
+                        eprintln!("simulated capability: {} ({})", c.id, c.audit_item);
+                    }
+                    process::exit(2);
+                }
+            }
         }
         "sfz-convert" => {
             let sfz_dir = args
