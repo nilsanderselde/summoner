@@ -8,7 +8,6 @@ repository.workspace = true
 
 [dependencies]
 blake3.workspace = true
-rayon.workspace = true
 serde.workspace = true
 toml.workspace = true
 arc-swap = "1.7"
