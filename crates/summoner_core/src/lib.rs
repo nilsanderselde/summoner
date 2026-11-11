@@ -42,6 +42,7 @@ pub mod mpe;
 pub mod node;
 pub mod panner;
 pub mod param_bus;
+pub mod paths;
 pub mod pipe_organ_bus;
 pub mod pipeline;
 pub mod plectrum_bus;

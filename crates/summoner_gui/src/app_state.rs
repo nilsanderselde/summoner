@@ -96,7 +96,7 @@ impl GuiState {
     }
 
     pub fn load() -> Option<Self> {
-        Self::load_from_path(Path::new(Self::STATE_FILE))
+        Self::load_from_path(&summoner_core::paths::state_file(Self::STATE_FILE))
     }
 
     pub fn save_to_path(&self, path: &Path) {
@@ -106,7 +106,7 @@ impl GuiState {
     }
 
     pub fn save(&self) {
-        self.save_to_path(Path::new(Self::STATE_FILE));
+        self.save_to_path(&summoner_core::paths::state_file(Self::STATE_FILE));
     }
 }
 

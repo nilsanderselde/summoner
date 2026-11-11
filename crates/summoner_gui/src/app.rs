@@ -219,9 +219,9 @@ impl SummonerApp {
         let mut stage_view = StageView::new();
         stage_view.populate_from_project(&project);
 
-        let lock_file = std::path::Path::new(".summoner_dirty.lock");
+        let lock_file = summoner_core::paths::state_file(".summoner_dirty.lock");
         let show_crash_recovery_dialog = lock_file.exists();
-        let _ = std::fs::write(lock_file, "dirty");
+        let _ = std::fs::write(&lock_file, "dirty");
 
         let mut app = Self {
             project: project.clone(),
@@ -504,7 +504,7 @@ impl SummonerApp {
             preferences_state: Some(self.preferences_state.clone()),
         };
         state.save();
-        let _ = std::fs::remove_file(".summoner_dirty.lock");
+        let _ = std::fs::remove_file(summoner_core::paths::state_file(".summoner_dirty.lock"));
     }
 
     pub fn apply_audio_settings(&mut self) {
@@ -897,7 +897,7 @@ impl SummonerApp {
         {
             self.last_auto_save = std::time::Instant::now();
             if let Ok(content) = summoner_project::serialize_project_toml(&self.project) {
-                let path = std::path::Path::new(".summoner_autosave.toml");
+                let path = summoner_core::paths::state_file(".summoner_autosave.toml");
                 if std::fs::write(path, content).is_ok() {
                     self.status_message = Some("Auto-saved project".to_string());
                 }
@@ -3098,7 +3098,7 @@ impl eframe::App for SummonerApp {
                     ui.separator();
                     ui.horizontal(|ui| {
                         if ui.button("🔄 Restore Auto-Save").clicked() {
-                            let path = std::path::PathBuf::from(".summoner_autosave.toml");
+                            let path = summoner_core::paths::state_file(".summoner_autosave.toml");
                             if path.exists() {
                                 self.load_session_from_path(path);
                                 self.status_message =
@@ -3109,7 +3109,9 @@ impl eframe::App for SummonerApp {
                             self.show_crash_recovery_dialog = false;
                         }
                         if ui.button("❌ Discard").clicked() {
-                            let _ = std::fs::remove_file(".summoner_dirty.lock");
+                            let _ = std::fs::remove_file(summoner_core::paths::state_file(
+                                ".summoner_dirty.lock",
+                            ));
                             self.show_crash_recovery_dialog = false;
                         }
                     });
@@ -3802,8 +3804,8 @@ mod tests {
 
     #[test]
     fn test_tier20_crash_recovery_lock_file() {
-        let lock_path = std::path::Path::new(".summoner_dirty.lock");
-        let _ = std::fs::write(lock_path, "test");
+        let lock_path = summoner_core::paths::state_file(".summoner_dirty.lock");
+        let _ = std::fs::write(&lock_path, "test");
         let project = create_default_project("Lock Test");
         let param_bus = Arc::new(ParamBus::new());
         let app = SummonerApp::new(project, param_bus);
