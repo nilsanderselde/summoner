@@ -429,12 +429,18 @@ pub fn get_track_change_attribution(
     let mut entries = Vec::new();
     for hunk in blame.iter() {
         let sig = hunk.final_signature();
-        let author = sig.name().unwrap_or("Unknown").to_string();
+        let (author, timestamp) = match &sig {
+            Some(s) => (
+                s.name().unwrap_or("Unknown").to_string(),
+                s.when().seconds() as u64,
+            ),
+            None => ("Unknown".to_string(), 0),
+        };
         let commit_id = hunk.final_commit_id().to_string();
         entries.push(GitBlameEntry {
             author,
             commit_id,
-            timestamp: sig.when().seconds() as u64,
+            timestamp,
             line_content: format!("Track: {}", track_name),
         });
     }
@@ -1842,7 +1848,7 @@ pub fn backup_lua_scripts_to_zip(
     let file = std::fs::File::create(zip_path).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipWriter::new(file);
     let options =
-        zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
     let mut count = 0;
     for (name, content) in scripts {

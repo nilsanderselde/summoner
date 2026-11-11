@@ -10,7 +10,6 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
-use zip::write::FileOptions;
 use zip::{ZipArchive, ZipWriter};
 
 /// Step 721: Automatic update checker with notification tracking.
@@ -213,7 +212,8 @@ impl SystemSettings {
     pub fn export_backup_zip(&self, path: &Path) -> Result<(), String> {
         let file = File::create(path).map_err(|e| e.to_string())?;
         let mut zip = ZipWriter::new(file);
-        let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
 
         zip.start_file("settings.json", options)
             .map_err(|e| e.to_string())?;

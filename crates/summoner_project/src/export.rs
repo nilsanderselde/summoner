@@ -1020,8 +1020,8 @@ pub fn backup_project_zip(project_dir: &Path, zip_path: &Path) -> Result<(), Str
     use std::io::Write;
     let file = std::fs::File::create(zip_path).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipWriter::new(file);
-    let options =
-        zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
 
     let mut manifest = String::from("PROJECT BACKUP MANIFEST:\n");
     if project_dir.exists() {

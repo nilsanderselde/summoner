@@ -6,7 +6,6 @@ targets = []
 all-features = true
 
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -24,8 +23,16 @@ allow = [
     "Zlib",
     "ISC",
     "BSL-1.0",
+    "CDLA-Permissive-2.0",
+    "OFL-1.1",
+    "bzip2-1.0.6",
 ]
 confidence-threshold = 0.8
+
+# epaint bundles fonts (Ubuntu Font Licence, OFL); permit only for that crate.
+[[licenses.exceptions]]
+crate = "epaint"
+allow = ["LicenseRef-UFL-1.0"]
 
 [bans]
 multiple-versions = "warn"
@@ -33,7 +40,6 @@ wildcards = "allow"
 highlight = "all"
 
 [advisories]
-vulnerability = "deny"
-unmaintained = "warn"
-unsound = "warn"
-notice = "warn"
+unmaintained = "workspace"
+unsound = "workspace"
+yanked = "warn"

@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 use std::io::{Cursor, Read, Write};
-use zip::write::FileOptions;
 use zip::{ZipArchive, ZipWriter};
 
 /// Device category.
@@ -298,8 +297,8 @@ impl DevicePackage {
         let mut buffer = Vec::new();
         {
             let mut zip = ZipWriter::new(Cursor::new(&mut buffer));
-            let options =
-                FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+            let options = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated);
 
             // 1. Write manifest
             zip.start_file("manifest.json", options)
@@ -419,7 +418,10 @@ impl DevicePackage {
             let mut file = zip
                 .by_index(i)
                 .map_err(|e| DevicePackageError::Archive(e.to_string()))?;
-            let name = file.name().to_string();
+            let name = match file.name() {
+                Ok(n) => n.into_owned(),
+                Err(_) => continue,
+            };
             if name.starts_with("assets/") && !name.ends_with('/') {
                 let asset_name = name.trim_start_matches("assets/").to_string();
                 let mut data = Vec::new();

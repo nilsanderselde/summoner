@@ -140,8 +140,8 @@ pub fn long_path_safe(os: Os, p: &Path) -> PathBuf {
         return p.to_path_buf();
     }
     let bytes = s.as_bytes();
-    if s.starts_with(r"\\") {
-        PathBuf::from(format!(r"\\?\UNC\{}", &s[2..]))
+    if let Some(rest) = s.strip_prefix(r"\\") {
+        PathBuf::from(format!(r"\\?\UNC\{}", rest))
     } else if bytes.len() > 2 && bytes[1] == b':' && (bytes[2] == b'\\' || bytes[2] == b'/') {
         PathBuf::from(format!(r"\\?\{}", s.replace('/', "\\")))
     } else {
