@@ -234,6 +234,73 @@ impl MultiSampleBank {
         pool.into_iter()
             .min_by_key(|r| (note as i32 - r.pitch_keycenter as i32).abs())
     }
+
+    /// Build a zero-external-asset General MIDI fallback multi-sample bank spanning notes `0..=127`
+    /// across 4 harmonic keyzones (sub/bass, warm piano/e-piano, bright bell/lead, high crystal)
+    /// so `SamplerDevice`, `MultiSamplerNode`, and `Sf2SoundFont` produce rich playable audio immediately.
+    pub fn new_default_gm_bank(sample_rate: u32) -> Self {
+        let sr = sample_rate.max(8000);
+        let mut bank = Self::new();
+        let zones: [(u8, u8, u8, f32, usize, &str); 4] = [
+            (0, 47, 36, 0.35, 3, "builtin_gm_bass"),
+            (48, 71, 60, 0.55, 5, "builtin_gm_piano"),
+            (72, 95, 84, 0.70, 7, "builtin_gm_lead"),
+            (96, 127, 108, 0.45, 4, "builtin_gm_crystal"),
+        ];
+
+        for (lokey, hikey, root, brightness, harmonics, label) in zones {
+            let root_hz = 440.0 * 2.0f32.powf((root as f32 - 69.0) / 12.0);
+            // Compute integer period cycles inside 4096+ frames for clickless looping
+            let min_frames = (sr as f32 * 0.25).round() as usize;
+            let period = (sr as f32 / root_hz).max(8.0);
+            let cycles = ((min_frames as f32) / period).round().max(1.0);
+            let total_frames = (cycles * period).round().max(64.0) as usize;
+
+            let mut data = Vec::with_capacity(total_frames);
+            for i in 0..total_frames {
+                let phase = (i as f32 / sr as f32) * root_hz;
+                let mut samp = 0.0f32;
+                for h in 1..=harmonics {
+                    let h_f = h as f32;
+                    let amp = brightness.powf(h_f - 1.0) / h_f;
+                    samp += (2.0 * std::f32::consts::PI * phase * h_f).sin() * amp;
+                }
+                data.push((samp * 0.45).clamp(-1.0, 1.0));
+            }
+
+            let buf = Arc::new(SampleBuffer::new(data, sr, 1));
+            let mut region = SampleRegion::new(lokey, hikey, root, label);
+            region.loop_mode = LoopMode::LoopContinuous;
+            region.loop_start = 0;
+            region.loop_end = total_frames;
+            region.buffer = Some(buf);
+            bank.add_region(region);
+        }
+
+        bank
+    }
+
+    /// Ensure at least one keyzone has an active sample buffer loaded, populating the built-in
+    /// General MIDI fallback bank when `self.regions` has no loaded buffers.
+    pub fn ensure_default_fallback(&mut self, sample_rate: u32) {
+        let has_loaded = self.regions.iter().any(|r| r.buffer.is_some());
+        if !has_loaded {
+            let fallback = Self::new_default_gm_bank(sample_rate);
+            self.regions = fallback.regions;
+        }
+    }
+
+    /// Convert a parsed `Sf2SoundFont` (SoundFont 2.04) into a playable `MultiSampleBank`,
+    /// falling back to the built-in GM bank if the SF2 contains no valid presets or samples.
+    pub fn from_sf2(sf2: &crate::sf2_parser::Sf2SoundFont, sample_rate: u32) -> Self {
+        if !sf2.presets.is_empty() {
+            if let Ok(mut bank) = sf2.build_bank_for_preset(0) {
+                bank.ensure_default_fallback(sample_rate);
+                return bank;
+            }
+        }
+        Self::new_default_gm_bank(sample_rate)
+    }
 }
 
 pub fn load_flac(path: &std::path::Path) -> Result<SampleBuffer, String> {
@@ -850,5 +917,31 @@ mod tests {
         // Fourth trigger at hard velocity: counter is at 3 -> 3 % 2 = 1 -> hard_2
         let reg4 = bank.select_region(60, 100).unwrap();
         assert_eq!(reg4.sample_path, "snare_hard_2.wav");
+    }
+
+    #[test]
+    fn test_default_gm_bank_and_sf2_fallback() {
+        let bank = MultiSampleBank::new_default_gm_bank(44100);
+        assert_eq!(bank.regions.len(), 4);
+        assert!(bank.regions.iter().all(|r| r.buffer.is_some()));
+
+        let mut node = MultiSamplerNode::new(bank);
+        node.trigger_note(60, 100);
+        let inputs: [&[f32]; 0] = [];
+        let mut out_l = vec![0.0f32; 256];
+        let mut outputs = [&mut out_l[..]];
+        let ctx = ProcessContext::new(44100, 120.0, 0);
+        node.process_block(&inputs, &mut outputs, &ctx);
+        let energy: f32 = out_l.iter().map(|s| s * s).sum();
+        assert!(energy > 1e-4, "Default GM bank should produce audible waveform");
+
+        let empty_sf2 = crate::sf2_parser::Sf2SoundFont {
+            info: Default::default(),
+            samples: Vec::new(),
+            instruments: Vec::new(),
+            presets: Vec::new(),
+        };
+        let sf2_bank = MultiSampleBank::from_sf2(&empty_sf2, 44100);
+        assert_eq!(sf2_bank.regions.len(), 4);
     }
 }
