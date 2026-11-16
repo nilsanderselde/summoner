@@ -1,6 +1,6 @@
 # Summoner DAW Makefile
 
-.PHONY: help vibe vibe-py run build release test check clippy fmt fmt-fix generate presets clean
+.PHONY: help vibe vibe-py run build release test check clippy verify fmt fmt-fix generate presets clean
 
 # Default target
 .DEFAULT_GOAL := help
@@ -81,9 +81,14 @@ test:
 check:
 	cargo check --workspace
 
-## clippy: Run clippy linter across all workspace targets
+## clippy: Run clippy exactly as CI does (warnings are errors, GUI enabled)
 clippy:
-	cargo clippy --workspace --all-targets
+	cargo clippy --workspace --all-targets --features summon/gui -- -D warnings
+
+## verify: THE definition of done. Mirrors CI; must exit 0 before any commit.
+verify: fmt clippy
+	cargo test --workspace --all-targets --features summon/gui
+	cargo run -p summon -- capabilities --deny-simulated
 
 ## fmt: Check code formatting
 fmt:

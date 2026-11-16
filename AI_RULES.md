@@ -1,31 +1,9 @@
-Summoner AI Rules
-This project is a Rust DAW.
+# Summoner AI Rules
 
-Priorities:
+The authoritative agent rules live in [`.agents/AGENTS.md`](.agents/AGENTS.md). This file is a short summary kept for tools that look for `AI_RULES.md`.
 
-cargo check passes
-cargo test passes
-existing roadmap items work
-bugs are reduced
-
-Never:
-
-rename files unnecessarily
-move directories unnecessarily
-rewrite architecture without justification
-perform large cosmetic refactors
-
-Prefer:
-
-small localized fixes
-compiler-driven changes
-preserving existing public APIs
-Always explain major changes before applying them.
-
-{
-  "name": "read_file",
-  "arguments": {
-    "filepath": "Cargo.toml"
-  }
-}
-
+- This project is a Rust DAW. `make verify` is the single definition of done.
+- Respect the real-time audio contract (no allocation/locks/I/O in audio callbacks).
+- Prefer small, compiler-driven, API-preserving changes. Architecture changes are allowed when they unblock a roadmap item, after a short decision note in `local/`.
+- Avoid unnecessary renames, directory moves, and cosmetic refactors.
+- Explain major changes before applying them.
