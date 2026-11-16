@@ -330,6 +330,155 @@ impl ThumbnailFilmstripCache {
 
         strip
     }
+
+    /// Decode every frame inside a binary `SMVD` video container into the thumbnail cache (`M4.3`).
+    pub fn populate_from_container_bytes(
+        &mut self,
+        clip_id: &str,
+        container_bytes: &[u8],
+    ) -> Result<usize, String> {
+        if container_bytes.len() < 17 || &container_bytes[0..4] != b"SMVD" {
+            return Err("Invalid SMVD binary video container header".to_string());
+        }
+        let frame_count = u32::from_le_bytes([
+            container_bytes[13],
+            container_bytes[14],
+            container_bytes[15],
+            container_bytes[16],
+        ]) as usize;
+        for f in 0..frame_count {
+            let thumb = decode_video_frame_from_container(container_bytes, f as u64)?;
+            self.insert(clip_id, thumb);
+        }
+        Ok(frame_count)
+    }
+}
+
+fn rate_to_code(rate: TimecodeRate) -> u8 {
+    match rate {
+        TimecodeRate::Fps24 => 0,
+        TimecodeRate::Fps25 => 1,
+        TimecodeRate::Fps2997Df => 2,
+        TimecodeRate::Fps2997Ndf => 3,
+        TimecodeRate::Fps30Df => 4,
+        TimecodeRate::Fps30Ndf => 5,
+    }
+}
+
+fn code_to_rate(code: u8) -> Result<TimecodeRate, String> {
+    match code {
+        0 => Ok(TimecodeRate::Fps24),
+        1 => Ok(TimecodeRate::Fps25),
+        2 => Ok(TimecodeRate::Fps2997Df),
+        3 => Ok(TimecodeRate::Fps2997Ndf),
+        4 => Ok(TimecodeRate::Fps30Df),
+        5 => Ok(TimecodeRate::Fps30Ndf),
+        other => Err(format!("Unsupported SMVD timecode rate code: {}", other)),
+    }
+}
+
+/// Encode raw RGB video frames into a binary `SMVD` video stream container (`M4.3` / `IOX-5`).
+pub fn encode_raw_rgb_video_container(
+    width: u32,
+    height: u32,
+    fps: TimecodeRate,
+    frames_rgb: &[Vec<u8>],
+) -> Vec<u8> {
+    let frame_bytes = (width as usize) * (height as usize) * 3;
+    let mut out = Vec::with_capacity(17 + frames_rgb.len() * frame_bytes);
+    out.extend_from_slice(b"SMVD");
+    out.extend_from_slice(&width.to_le_bytes());
+    out.extend_from_slice(&height.to_le_bytes());
+    out.push(rate_to_code(fps));
+    out.extend_from_slice(&(frames_rgb.len() as u32).to_le_bytes());
+    for frame in frames_rgb {
+        if frame.len() >= frame_bytes {
+            out.extend_from_slice(&frame[..frame_bytes]);
+        } else {
+            out.extend_from_slice(frame);
+            out.resize(out.len() + (frame_bytes - frame.len()), 0);
+        }
+    }
+    out
+}
+
+/// Decode a single RGB video frame from a binary `SMVD` video stream container into RGBA (`M4.3`).
+pub fn decode_video_frame_from_container(
+    container_bytes: &[u8],
+    frame_index: u64,
+) -> Result<VideoThumbnail, String> {
+    if container_bytes.len() < 17 || &container_bytes[0..4] != b"SMVD" {
+        return Err("Invalid SMVD binary video container header".to_string());
+    }
+    let width = u32::from_le_bytes([
+        container_bytes[4],
+        container_bytes[5],
+        container_bytes[6],
+        container_bytes[7],
+    ]);
+    let height = u32::from_le_bytes([
+        container_bytes[8],
+        container_bytes[9],
+        container_bytes[10],
+        container_bytes[11],
+    ]);
+    let fps = code_to_rate(container_bytes[12])?;
+    let frame_count = u32::from_le_bytes([
+        container_bytes[13],
+        container_bytes[14],
+        container_bytes[15],
+        container_bytes[16],
+    ]);
+
+    if width == 0 || height == 0 {
+        return Err("Invalid zero video frame dimensions".to_string());
+    }
+    if frame_index >= frame_count as u64 {
+        return Err(format!(
+            "Requested frame {} out of range (frame_count={})",
+            frame_index, frame_count
+        ));
+    }
+
+    let pixels = (width as usize)
+        .checked_mul(height as usize)
+        .ok_or_else(|| "Video frame dimension overflow".to_string())?;
+    let frame_bytes = pixels
+        .checked_mul(3)
+        .ok_or_else(|| "Video frame byte size overflow".to_string())?;
+    let start = 17usize
+        .checked_add(
+            (frame_index as usize)
+                .checked_mul(frame_bytes)
+                .ok_or_else(|| "Video frame byte offset overflow".to_string())?,
+        )
+        .ok_or_else(|| "Video container offset overflow".to_string())?;
+    let end = start
+        .checked_add(frame_bytes)
+        .ok_or_else(|| "Video container end overflow".to_string())?;
+
+    if container_bytes.len() < end {
+        return Err("Truncated SMVD video frame payload".to_string());
+    }
+
+    let mut rgba_data = Vec::with_capacity(pixels * 4);
+    for rgb in container_bytes[start..end].chunks_exact(3) {
+        rgba_data.push(rgb[0]);
+        rgba_data.push(rgb[1]);
+        rgba_data.push(rgb[2]);
+        rgba_data.push(255);
+    }
+
+    let timestamp_seconds = frame_index as f64 / fps.frames_per_second();
+    let tc = timecode_from_seconds(timestamp_seconds, fps);
+    Ok(VideoThumbnail::new(
+        frame_index,
+        timestamp_seconds,
+        tc,
+        width,
+        height,
+        rgba_data,
+    ))
 }
 
 /// Scrubbing state returned when seeking or scrubbing across video.
@@ -600,5 +749,28 @@ mod tests {
             Some("video/interview.mov".to_string())
         );
         assert_eq!(audio_clips[0].duration_beats, 120.0);
+    }
+
+    #[test]
+    fn test_m4_real_binary_video_container_decode_and_filmstrip() {
+        let frames_rgb = vec![
+            vec![255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0],     // Frame 0: Red 2x2
+            vec![0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0],     // Frame 1: Green 2x2
+            vec![0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255],     // Frame 2: Blue 2x2
+        ];
+        let stream = encode_raw_rgb_video_container(2, 2, TimecodeRate::Fps24, &frames_rgb);
+
+        let f1 = decode_video_frame_from_container(&stream, 1).expect("frame 1 decode");
+        assert_eq!(f1.width, 2);
+        assert_eq!(f1.height, 2);
+        assert_eq!(&f1.rgba_data[0..4], &[0, 255, 0, 255]);
+
+        let mut cache = ThumbnailFilmstripCache::new(16);
+        let loaded = cache
+            .populate_from_container_bytes("vid_clip_1", &stream)
+            .expect("populate cache");
+        assert_eq!(loaded, 3);
+        assert_eq!(&cache.get("vid_clip_1", 2).unwrap().rgba_data[0..4], &[0, 0, 255, 255]);
+        assert!(decode_video_frame_from_container(&stream, 99).is_err());
     }
 }

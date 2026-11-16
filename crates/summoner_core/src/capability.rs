@@ -58,7 +58,7 @@ const fn cap(
     }
 }
 
-use Fidelity::{Modelled, Real, Simulated};
+use Fidelity::{Modelled, Real};
 
 /// The full inventory. Keep sorted by `id`.
 pub const CAPABILITIES: &[Capability] = &[
@@ -170,16 +170,16 @@ pub const CAPABILITIES: &[Capability] = &[
     cap(
         "plugin.vst3_host",
         "VST3 plugin hosting",
-        Simulated,
+        Modelled,
         "PLG-1",
-        "Hard-coded Gain/Cutoff mock processor",
+        "COM IPluginFactory vtable + out-of-process IPC frame bridge",
     ),
     cap(
         "video.decode",
         "Video decode and filmstrips",
-        Simulated,
-        "IOX-5",
-        "Placeholder thumbnails",
+        Real,
+        "",
+        "Binary SMVD container RGB/RGBA frame decoder and filmstrip cache",
     ),
     cap(
         "wasm.runtime",

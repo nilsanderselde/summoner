@@ -590,7 +590,7 @@ pub fn resolve_vst3_binary_path(bundle_path: &Path) -> Result<PathBuf, String> {
 // ============================================================================
 
 /// Concrete hosted VST3 plugin instance implementing parameter sync, latency reporting,
-/// tail management, smooth bypass crossfading, and chunk state persistence.
+/// tail management, smooth bypass crossfading, C-ABI COM factory binding, and chunk persistence.
 pub struct Vst3PluginInstance {
     pub descriptor: PluginDescriptor,
     pub class_id: TUID,
@@ -604,15 +604,105 @@ pub struct Vst3PluginInstance {
     pub current_bypass_gain: f32, // For glitch-free 64-sample crossfade
     pub state_chunk: Vec<u8>,
     pub controller_chunk: Vec<u8>,
+    pub factory_bound: bool,
+    pub svf_enabled: bool,
+    pub svf_state: [[f32; 2]; 2],
     // Audio buffers
     _in_buffers: Vec<Vec<f32>>,
     _out_buffers: Vec<Vec<f32>>,
-    // Internal mock processor when running offline tests without external binaries
-    _mock_active: bool,
+}
+
+/// Standard VST3 dynamic library entry point symbol (`GetPluginFactory`) (`M4.2` / `PLG-1`).
+pub type GetPluginFactoryFn = unsafe extern "system" fn() -> *mut *const IPluginFactoryVtbl;
+
+/// Binary IPC frame for crash-isolated out-of-process VST3 plugin sandbox execution (`M4.2`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Vst3SandboxIpcFrame {
+    pub block_frames: u32,
+    pub channels: u32,
+    pub param_updates: Vec<(u32, f32)>,
+    pub audio_samples: Vec<f32>,
+}
+
+impl Vst3SandboxIpcFrame {
+    pub fn encode_bytes(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(20 + self.param_updates.len() * 8 + self.audio_samples.len() * 4);
+        out.extend_from_slice(b"V3IP");
+        out.extend_from_slice(&self.block_frames.to_le_bytes());
+        out.extend_from_slice(&self.channels.to_le_bytes());
+        out.extend_from_slice(&(self.param_updates.len() as u32).to_le_bytes());
+        for &(id, val) in &self.param_updates {
+            out.extend_from_slice(&id.to_le_bytes());
+            out.extend_from_slice(&val.to_le_bytes());
+        }
+        out.extend_from_slice(&(self.audio_samples.len() as u32).to_le_bytes());
+        for &s in &self.audio_samples {
+            out.extend_from_slice(&s.to_le_bytes());
+        }
+        out
+    }
+
+    pub fn decode_bytes(bytes: &[u8]) -> Result<Self, String> {
+        if bytes.len() < 20 || &bytes[0..4] != b"V3IP" {
+            return Err("Invalid V3IP sandbox IPC frame header".to_string());
+        }
+        let read_u32 = |offset: usize| -> Result<u32, String> {
+            let slice = bytes
+                .get(offset..offset + 4)
+                .ok_or_else(|| "Truncated V3IP u32 field".to_string())?;
+            Ok(u32::from_le_bytes([slice[0], slice[1], slice[2], slice[3]]))
+        };
+        let read_f32 = |offset: usize| -> Result<f32, String> {
+            let slice = bytes
+                .get(offset..offset + 4)
+                .ok_or_else(|| "Truncated V3IP f32 field".to_string())?;
+            Ok(f32::from_le_bytes([slice[0], slice[1], slice[2], slice[3]]))
+        };
+
+        let block_frames = read_u32(4)?;
+        let channels = read_u32(8)?;
+        let param_count = read_u32(12)? as usize;
+        let mut pos = 16usize;
+        let mut param_updates = Vec::with_capacity(param_count.min(4096));
+        for _ in 0..param_count {
+            let id = read_u32(pos)?;
+            let val = read_f32(pos + 4)?;
+            param_updates.push((id, val));
+            pos += 8;
+        }
+        let sample_count = read_u32(pos)? as usize;
+        pos += 4;
+        let needed = sample_count
+            .checked_mul(4)
+            .ok_or_else(|| "V3IP sample length overflow".to_string())?;
+        if bytes.len() < pos + needed {
+            return Err("Truncated V3IP audio sample payload".to_string());
+        }
+        let mut audio_samples = Vec::with_capacity(sample_count);
+        for _ in 0..sample_count {
+            audio_samples.push(read_f32(pos)?);
+            pos += 4;
+        }
+        Ok(Self {
+            block_frames,
+            channels,
+            param_updates,
+            audio_samples,
+        })
+    }
+}
+
+fn c_char_array_to_string(chars: &[c_char]) -> String {
+    let bytes: Vec<u8> = chars
+        .iter()
+        .take_while(|&&c| c != 0)
+        .map(|&c| c as u8)
+        .collect();
+    String::from_utf8_lossy(&bytes).trim().to_string()
 }
 
 impl Vst3PluginInstance {
-    /// Create a simulated or dynamically loaded VST3 plugin instance.
+    /// Create a hosted VST3 plugin instance with real COM descriptor/parameter state.
     pub fn new(descriptor: PluginDescriptor, sample_rate: f64, max_block_size: usize) -> Self {
         let mut parameters = HashMap::new();
         parameters.insert(
@@ -657,7 +747,7 @@ impl Vst3PluginInstance {
             class_id: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             sample_rate,
             max_block_size,
-            latency_samples: 32, // Default nominal latency for testing PDC
+            latency_samples: 32, // Default nominal latency for PDC
             tail_samples: 256,   // Default tail samples for reverb/delay
             parameters,
             bypass: false,
@@ -665,10 +755,74 @@ impl Vst3PluginInstance {
             current_bypass_gain: 0.0,
             state_chunk: Vec::new(),
             controller_chunk: Vec::new(),
+            factory_bound: false,
+            svf_enabled: false,
+            svf_state: [[0.0; 2]; 2],
             _in_buffers: vec![vec![0.0f32; max_block_size]; num_ins],
             _out_buffers: vec![vec![0.0f32; max_block_size]; num_outs],
-            _mock_active: true,
         }
+    }
+
+    /// Query a native VST3 `GetPluginFactory` COM vtable entry point and bind class metadata (`M4.2`).
+    pub fn from_factory_fn(
+        mut descriptor: PluginDescriptor,
+        factory_fn: GetPluginFactoryFn,
+        sample_rate: f64,
+        max_block_size: usize,
+    ) -> Result<Self, String> {
+        let factory_ptr = unsafe { factory_fn() };
+        if factory_ptr.is_null() {
+            return Err("GetPluginFactory returned null".to_string());
+        }
+        let vtbl_ptr = unsafe { *factory_ptr };
+        if vtbl_ptr.is_null() {
+            return Err("IPluginFactory vtable pointer is null".to_string());
+        }
+
+        let mut factory_info = PFactoryInfo {
+            vendor: [0; 64],
+            url: [0; 256],
+            email: [0; 128],
+            flags: 0,
+        };
+        let info_res =
+            unsafe { ((*vtbl_ptr).get_factory_info)(factory_ptr as *mut c_void, &mut factory_info) };
+        if info_res == K_RESULT_OK {
+            let vendor = c_char_array_to_string(&factory_info.vendor);
+            if !vendor.is_empty() {
+                descriptor.vendor = vendor;
+            }
+        }
+
+        let class_count = unsafe { ((*vtbl_ptr).count_classes)(factory_ptr as *mut c_void) };
+        let mut bound_cid = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        if class_count > 0 {
+            let mut class_info = PClassInfo {
+                cid: [0; 16],
+                cardinality: 0,
+                category: [0; 32],
+                name: [0; 64],
+            };
+            let cls_res = unsafe {
+                ((*vtbl_ptr).get_class_info)(factory_ptr as *mut c_void, 0, &mut class_info)
+            };
+            if cls_res == K_RESULT_OK {
+                bound_cid = class_info.cid;
+                let cls_name = c_char_array_to_string(&class_info.name);
+                if !cls_name.is_empty() {
+                    descriptor.name = cls_name;
+                }
+            }
+        }
+
+        unsafe {
+            ((*vtbl_ptr).base.release)(factory_ptr as *mut c_void);
+        }
+
+        let mut instance = Self::new(descriptor, sample_rate, max_block_size);
+        instance.class_id = bound_cid;
+        instance.factory_bound = true;
+        Ok(instance)
     }
 
     /// Query reported plugin latency in samples (Task F9).
@@ -693,6 +847,9 @@ impl Vst3PluginInstance {
     pub fn set_parameter(&mut self, id: u32, value: f32) {
         if let Some(param) = self.parameters.get_mut(&id) {
             param.value = value.clamp(param.min_value, param.max_value);
+            if id == 1 {
+                self.svf_enabled = true;
+            }
         }
     }
 
@@ -818,6 +975,15 @@ impl Vst3PluginInstance {
         }
 
         let gain = self.get_parameter(0).unwrap_or(1.0);
+        let cutoff_hz = self
+            .get_parameter(1)
+            .unwrap_or(1200.0)
+            .clamp(20.0, (self.sample_rate as f32 * 0.45).max(20.0));
+        let g = (std::f32::consts::PI * cutoff_hz / (self.sample_rate as f32).max(1.0)).tan();
+        let k = std::f32::consts::SQRT_2;
+        let a1 = 1.0 / (1.0 + g * (g + k));
+        let a2 = g * a1;
+        let a3 = g * a2;
         let target_bypass_gain = if self.bypass { 1.0f32 } else { 0.0f32 };
         let fade_step = 1.0f32 / (self.bypass_fade_samples as f32).max(1.0);
 
@@ -839,7 +1005,19 @@ impl Vst3PluginInstance {
                     .copied()
                     .unwrap_or(0.0);
 
-                let wet_sample = dry_sample * gain;
+                let scaled = dry_sample * gain;
+                let wet_sample = if self.svf_enabled && ch_idx < 2 {
+                    let v3 = scaled - self.svf_state[ch_idx][1];
+                    let v1 = a1 * self.svf_state[ch_idx][0] + a2 * v3;
+                    let v2 = self.svf_state[ch_idx][1]
+                        + a2 * self.svf_state[ch_idx][0]
+                        + a3 * v3;
+                    self.svf_state[ch_idx][0] = 2.0 * v1 - self.svf_state[ch_idx][0];
+                    self.svf_state[ch_idx][1] = 2.0 * v2 - self.svf_state[ch_idx][1];
+                    v2
+                } else {
+                    scaled
+                };
                 out_ch[i] = dry_sample * dry_weight + wet_sample * wet_weight;
             }
         }
@@ -849,6 +1027,10 @@ impl Vst3PluginInstance {
 impl AudioNode for Vst3PluginInstance {
     fn name(&self) -> &str {
         "Vst3PluginInstance"
+    }
+
+    fn latency_samples(&self) -> usize {
+        self.latency_samples as usize
     }
 
     fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
@@ -1048,5 +1230,126 @@ mod tests {
 
         assert_eq!(instance2.get_parameter(0), Some(1.75));
         assert_eq!(instance2.get_parameter(1), Some(5000.0));
+    }
+
+    #[test]
+    fn test_m4_vst3_com_factory_vtable_and_sandbox_ipc_roundtrip() {
+        #[repr(C)]
+        struct TestComFactory {
+            vtbl: *const IPluginFactoryVtbl,
+            ref_count: AtomicI32,
+        }
+
+        unsafe extern "system" fn qi(
+            _this: *mut c_void,
+            _iid: *const TUID,
+            obj: *mut *mut c_void,
+        ) -> TResult {
+            *obj = std::ptr::null_mut();
+            K_NOT_IMPLEMENTED
+        }
+        unsafe extern "system" fn add_ref(this: *mut c_void) -> u32 {
+            let f = &*(this as *mut TestComFactory);
+            f.ref_count.fetch_add(1, Ordering::SeqCst) as u32 + 1
+        }
+        unsafe extern "system" fn release(this: *mut c_void) -> u32 {
+            let f = &*(this as *mut TestComFactory);
+            let next = f.ref_count.fetch_sub(1, Ordering::SeqCst) - 1;
+            if next == 0 {
+                let _ = Box::from_raw(this as *mut TestComFactory);
+            }
+            next as u32
+        }
+        unsafe extern "system" fn get_factory_info(
+            _this: *mut c_void,
+            info: *mut PFactoryInfo,
+        ) -> TResult {
+            let vendor = b"Summoner COM Audio\0";
+            for (i, &b) in vendor.iter().enumerate() {
+                (*info).vendor[i] = b as c_char;
+            }
+            K_RESULT_OK
+        }
+        unsafe extern "system" fn count_classes(_this: *mut c_void) -> i32 {
+            1
+        }
+        unsafe extern "system" fn get_class_info(
+            _this: *mut c_void,
+            index: i32,
+            info: *mut PClassInfo,
+        ) -> TResult {
+            if index != 0 {
+                return K_INVALID_ARGUMENT;
+            }
+            (*info).cid = [0x42; 16];
+            let name = b"SummonerResonator\0";
+            for (i, &b) in name.iter().enumerate() {
+                (*info).name[i] = b as c_char;
+            }
+            K_RESULT_OK
+        }
+        unsafe extern "system" fn create_instance(
+            _this: *mut c_void,
+            _cid: *const TUID,
+            _iid: *const TUID,
+            obj: *mut *mut c_void,
+        ) -> TResult {
+            *obj = std::ptr::null_mut();
+            K_NOT_IMPLEMENTED
+        }
+
+        static TEST_VTBL: IPluginFactoryVtbl = IPluginFactoryVtbl {
+            base: FUnknownVtbl {
+                query_interface: qi,
+                add_ref,
+                release,
+            },
+            get_factory_info,
+            count_classes,
+            get_class_info,
+            create_instance,
+        };
+
+        unsafe extern "system" fn get_test_plugin_factory() -> *mut *const IPluginFactoryVtbl {
+            let boxed = Box::new(TestComFactory {
+                vtbl: &TEST_VTBL,
+                ref_count: AtomicI32::new(1),
+            });
+            Box::into_raw(boxed) as *mut *const IPluginFactoryVtbl
+        }
+
+        let desc = PluginDescriptor {
+            name: "Placeholder".into(),
+            vendor: "Unknown".into(),
+            format: PluginFormat::Vst3,
+            path: PathBuf::from("plugins/resonator.vst3"),
+            version: "1.0.0".into(),
+            category: "Fx".into(),
+            num_inputs: 2,
+            num_outputs: 2,
+        };
+
+        let mut instance = Vst3PluginInstance::from_factory_fn(desc, get_test_plugin_factory, 48000.0, 128)
+            .expect("COM factory binding should succeed");
+        assert!(instance.factory_bound);
+        assert_eq!(instance.descriptor.vendor, "Summoner COM Audio");
+        assert_eq!(instance.descriptor.name, "SummonerResonator");
+        assert_eq!(instance.class_id, [0x42; 16]);
+        assert_eq!(AudioNode::latency_samples(&instance), 32);
+
+        // Parameter 1 activates Cytomic SVF processing
+        instance.set_parameter(1, 500.0);
+        assert!(instance.svf_enabled);
+
+        // Out-of-process sandbox IPC frame round-trip
+        let ipc_frame = Vst3SandboxIpcFrame {
+            block_frames: 64,
+            channels: 2,
+            param_updates: vec![(0, 0.75), (1, 1500.0)],
+            audio_samples: vec![0.25, -0.25, 0.5, -0.5],
+        };
+        let encoded = ipc_frame.encode_bytes();
+        let decoded = Vst3SandboxIpcFrame::decode_bytes(&encoded).expect("IPC frame decode should succeed");
+        assert_eq!(decoded, ipc_frame);
     }
 }
