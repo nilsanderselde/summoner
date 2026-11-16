@@ -53,6 +53,25 @@ impl TrackTemplate {
         }
     }
 
+    /// Capture a reusable preset from an existing project track (`HUM-4`).
+    pub fn from_track(track: &TrackConfig, category: &str) -> Self {
+        let color_rgba = track
+            .color
+            .map(|[r, g, b]| [r, g, b, 255])
+            .unwrap_or([80, 140, 220, 255]);
+        Self {
+            name: track.name.clone(),
+            category: category.to_string(),
+            color_rgba,
+            gain: track.gain,
+            pan: track.pan,
+            channels: track.channels,
+            nodes: track.nodes.clone(),
+            send_level: track.send_level,
+            bus_target: track.bus_target.clone(),
+        }
+    }
+
     /// Instantiate this template into a concrete `TrackConfig`.
     pub fn instantiate(&self, track_id: u64) -> TrackConfig {
         TrackConfig {
@@ -449,5 +468,40 @@ mod tests {
         assert_eq!(loaded_track.name, "Bass Guit");
 
         let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_track_template_from_existing_track() {
+        let mut src = TrackConfig {
+            id: 7,
+            name: "Acid Lead".to_string(),
+            channels: 2,
+            gain: 0.72,
+            pan: -0.25,
+            send_level: 0.4,
+            bus_target: Some("Synth Bus".to_string()),
+            color: Some([255, 110, 40]),
+            ..Default::default()
+        };
+        src.nodes.push(NodeConfig {
+            kind: "SvfFilterNode".to_string(),
+            params: HashMap::new(),
+            plugin_state: None,
+        });
+
+        let tpl = TrackTemplate::from_track(&src, "Synth");
+        assert_eq!(tpl.name, "Acid Lead");
+        assert_eq!(tpl.category, "Synth");
+        assert_eq!(tpl.color_rgba, [255, 110, 40, 255]);
+        assert_eq!(tpl.bus_target.as_deref(), Some("Synth Bus"));
+        assert_eq!(tpl.nodes.len(), 1);
+
+        let inst = tpl.instantiate(99);
+        assert_eq!(inst.id, 99);
+        assert_eq!(inst.gain, 0.72);
+        assert_eq!(inst.pan, -0.25);
+        assert_eq!(inst.send_level, 0.4);
+        assert_eq!(inst.bus_target.as_deref(), Some("Synth Bus"));
+        assert_eq!(inst.nodes.len(), 1);
     }
 }

@@ -1244,6 +1244,7 @@ mod tests {
             meta: None,
             scripts: Vec::new(),
             lua_state: None,
+            ..Default::default()
         };
 
         let mut playhead_beat = 12.0_f64;

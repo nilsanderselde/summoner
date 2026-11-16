@@ -56,6 +56,109 @@ pub struct ProjectConfig {
     pub scripts: Vec<LuaScriptConfig>,
     #[serde(default)]
     pub lua_state: Option<String>,
+    #[serde(default)]
+    pub sidechain_routes: Vec<SidechainRouteConfig>,
+    #[serde(default)]
+    pub reference_track_id: Option<u64>,
+    #[serde(default)]
+    pub reference_ab_active: bool,
+    #[serde(default)]
+    pub k_system_scale: Option<String>,
+}
+
+/// Solo listening mode for a mixer channel (MIX-4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum SoloMode {
+    #[default]
+    SoloInPlace,
+    Pfl,
+    Afl,
+}
+
+impl SoloMode {
+    /// Short badge label for channel strips.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::SoloInPlace => "SIP",
+            Self::Pfl => "PFL",
+            Self::Afl => "AFL",
+        }
+    }
+
+    /// Cycle through Solo-in-Place, PFL, and AFL modes.
+    pub fn next(self) -> Self {
+        match self {
+            Self::SoloInPlace => Self::Pfl,
+            Self::Pfl => Self::Afl,
+            Self::Afl => Self::SoloInPlace,
+        }
+    }
+}
+
+fn default_sc_threshold() -> f32 {
+    -18.0
+}
+
+fn default_sc_ratio() -> f32 {
+    4.0
+}
+
+fn default_sc_attack() -> f32 {
+    5.0
+}
+
+fn default_sc_release() -> f32 {
+    120.0
+}
+
+fn default_stereo_width() -> f32 {
+    1.0
+}
+
+/// Declarative sidechain route between tracks/devices (MIX-2).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SidechainRouteConfig {
+    pub source_track_id: u64,
+    pub dest_track_id: u64,
+    #[serde(default)]
+    pub dest_node_idx: Option<usize>,
+    #[serde(default = "default_gain")]
+    pub send_gain: f32,
+    #[serde(default)]
+    pub is_pre_fader: bool,
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub hpf_hz: f32,
+    #[serde(default)]
+    pub lpf_hz: f32,
+    #[serde(default = "default_sc_threshold")]
+    pub threshold_db: f32,
+    #[serde(default = "default_sc_ratio")]
+    pub ratio: f32,
+    #[serde(default = "default_sc_attack")]
+    pub attack_ms: f32,
+    #[serde(default = "default_sc_release")]
+    pub release_ms: f32,
+}
+
+impl Default for SidechainRouteConfig {
+    fn default() -> Self {
+        Self {
+            source_track_id: 1,
+            dest_track_id: 2,
+            dest_node_idx: None,
+            send_gain: 1.0,
+            is_pre_fader: false,
+            enabled: true,
+            hpf_hz: 80.0,
+            lpf_hz: 16000.0,
+            threshold_db: -18.0,
+            ratio: 4.0,
+            attack_ms: 5.0,
+            release_ms: 120.0,
+        }
+    }
 }
 
 /// Step 869: Persistent Lua script configuration stored in project TOML.
@@ -116,6 +219,10 @@ impl Default for ProjectConfig {
             meta: None,
             scripts: Vec::new(),
             lua_state: None,
+            sidechain_routes: Vec::new(),
+            reference_track_id: None,
+            reference_ab_active: false,
+            k_system_scale: None,
         }
     }
 }
@@ -256,6 +363,150 @@ impl ProjectConfig {
             k
         });
         original_len - lane.events.len()
+    }
+
+    /// Return the next unused numeric track ID (`max + 1`).
+    pub fn next_track_id(&self) -> u64 {
+        self.tracks.iter().map(|t| t.id).max().unwrap_or(0) + 1
+    }
+
+    /// Create and append a subgroup bus track (`MIX-1`), returning its assigned track ID.
+    pub fn create_bus_track(&mut self, name: &str) -> u64 {
+        let id = self.next_track_id();
+        self.tracks.push(TrackConfig {
+            id,
+            name: name.to_string(),
+            is_bus_track: true,
+            solo_safe: true,
+            ..Default::default()
+        });
+        id
+    }
+
+    /// Create and append an FX return track (`MIX-1`), returning its assigned track ID.
+    pub fn create_return_track(&mut self, name: &str) -> u64 {
+        let id = self.next_track_id();
+        self.tracks.push(TrackConfig {
+            id,
+            name: name.to_string(),
+            is_return_track: true,
+            solo_safe: true,
+            ..Default::default()
+        });
+        id
+    }
+
+    /// Create a folder stack track (`HUM-4`) and attach the specified child tracks to it.
+    pub fn create_folder_stack(&mut self, name: &str, child_track_ids: &[u64]) -> u64 {
+        let folder_id = self.next_track_id();
+        for tr in &mut self.tracks {
+            if child_track_ids.contains(&tr.id) {
+                tr.parent_folder_id = Some(folder_id);
+            }
+        }
+        self.tracks.push(TrackConfig {
+            id: folder_id,
+            name: name.to_string(),
+            is_folder_track: true,
+            ..Default::default()
+        });
+        folder_id
+    }
+
+    /// Create a VCA master fader track (`MIX-4`) controlling `target_track_ids`.
+    pub fn create_vca_track(&mut self, name: &str, target_track_ids: &[u64]) -> u64 {
+        let id = self.next_track_id();
+        self.tracks.push(TrackConfig {
+            id,
+            name: name.to_string(),
+            is_vca: true,
+            vca_target_ids: target_track_ids.to_vec(),
+            ..Default::default()
+        });
+        id
+    }
+
+    /// Add or update an auxiliary send on `source_track_id` targeting `target_return_id` (`MIX-1`).
+    pub fn add_track_send(
+        &mut self,
+        source_track_id: u64,
+        target_return_id: u64,
+        amount: f32,
+        is_pre_fader: bool,
+    ) -> bool {
+        let Some(track) = self.tracks.iter_mut().find(|t| t.id == source_track_id) else {
+            return false;
+        };
+        if let Some(existing) = track
+            .sends
+            .iter_mut()
+            .find(|s| s.target_track_id == target_return_id)
+        {
+            existing.amount = amount;
+            existing.is_pre_fader = is_pre_fader;
+            existing.muted = false;
+        } else {
+            track.sends.push(TrackSendConfig {
+                target_track_id: target_return_id,
+                amount,
+                is_pre_fader,
+                muted: false,
+            });
+        }
+        true
+    }
+
+    /// Insert or update a sidechain routing connection (`MIX-2`).
+    pub fn upsert_sidechain_route(&mut self, route: SidechainRouteConfig) {
+        if let Some(existing) = self.sidechain_routes.iter_mut().find(|r| {
+            r.source_track_id == route.source_track_id
+                && r.dest_track_id == route.dest_track_id
+                && r.dest_node_idx == route.dest_node_idx
+        }) {
+            *existing = route;
+        } else {
+            self.sidechain_routes.push(route);
+        }
+    }
+
+    /// Filter visible track IDs by folder collapse state (empty query) or search text (`HUM-4`).
+    pub fn filter_tracks(&self, query: &str) -> Vec<u64> {
+        let q = query.trim().to_lowercase();
+        if q.is_empty() {
+            let collapsed_folders: Vec<u64> = self
+                .tracks
+                .iter()
+                .filter(|t| t.is_folder_track && t.collapsed)
+                .map(|t| t.id)
+                .collect();
+            return self
+                .tracks
+                .iter()
+                .filter(|t| {
+                    t.parent_folder_id
+                        .is_none_or(|pid| !collapsed_folders.contains(&pid))
+                })
+                .map(|t| t.id)
+                .collect();
+        }
+        self.tracks
+            .iter()
+            .filter(|t| {
+                t.name.to_lowercase().contains(&q)
+                    || t.comments.to_lowercase().contains(&q)
+                    || t.icon
+                        .as_deref()
+                        .is_some_and(|i| i.to_lowercase().contains(&q))
+                    || t.bus_target
+                        .as_deref()
+                        .is_some_and(|b| b.to_lowercase().contains(&q))
+                    || t.group_bus
+                        .as_deref()
+                        .is_some_and(|g| g.to_lowercase().contains(&q))
+                    || t.nodes.iter().any(|n| n.kind.to_lowercase().contains(&q))
+            })
+            .map(|t| t.id)
+            .collect()
     }
 }
 
@@ -687,6 +938,20 @@ pub struct TrackConfig {
     pub follow_chord_track: bool,
     #[serde(default)]
     pub automation_mode: AutomationMode,
+    #[serde(default)]
+    pub is_folder_track: bool,
+    #[serde(default)]
+    pub parent_folder_id: Option<u64>,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub comments: String,
+    #[serde(default)]
+    pub pan_law: summoner_core::panner::PanLaw,
+    #[serde(default = "default_stereo_width")]
+    pub stereo_width: f32,
+    #[serde(default)]
+    pub solo_mode: SoloMode,
 }
 
 /// Auxiliary send routing configuration.
@@ -766,6 +1031,13 @@ impl Default for TrackConfig {
             scale_lock: false,
             follow_chord_track: false,
             automation_mode: AutomationMode::default(),
+            is_folder_track: false,
+            parent_folder_id: None,
+            icon: None,
+            comments: String::new(),
+            pan_law: summoner_core::panner::PanLaw::default(),
+            stereo_width: 1.0,
+            solo_mode: SoloMode::default(),
         }
     }
 }
@@ -1156,5 +1428,94 @@ name = "Audio 1"
         let removed = project.thin_automation_lane(1, "track.gain", 0.01);
         assert_eq!(removed, 1);
         assert_eq!(project.automation_lanes[0].events.len(), 4);
+    }
+
+    #[test]
+    fn test_bus_return_folder_sidechain_and_filter_helpers() {
+        let mut project = ProjectConfig::default();
+        project.tracks.push(TrackConfig {
+            id: 1,
+            name: "Kick".to_string(),
+            comments: "Punchy 909".to_string(),
+            ..Default::default()
+        });
+        project.tracks.push(TrackConfig {
+            id: 2,
+            name: "Bass".to_string(),
+            ..Default::default()
+        });
+
+        let bus_id = project.create_bus_track("Drum Bus");
+        let ret_id = project.create_return_track("Reverb");
+        let folder_id = project.create_folder_stack("Low End", &[1, 2]);
+        let vca_id = project.create_vca_track("All Drums", &[1]);
+
+        assert!(
+            project
+                .tracks
+                .iter()
+                .find(|t| t.id == bus_id)
+                .unwrap()
+                .is_bus_track
+        );
+        assert!(
+            project
+                .tracks
+                .iter()
+                .find(|t| t.id == ret_id)
+                .unwrap()
+                .is_return_track
+        );
+        assert!(
+            project
+                .tracks
+                .iter()
+                .find(|t| t.id == vca_id)
+                .unwrap()
+                .is_vca
+        );
+        assert_eq!(
+            project
+                .tracks
+                .iter()
+                .find(|t| t.id == 1)
+                .unwrap()
+                .parent_folder_id,
+            Some(folder_id)
+        );
+
+        assert!(project.add_track_send(1, ret_id, 0.4, true));
+        assert!(!project.add_track_send(999, ret_id, 0.4, false));
+
+        project.upsert_sidechain_route(SidechainRouteConfig {
+            source_track_id: 1,
+            dest_track_id: 2,
+            threshold_db: -24.0,
+            ..Default::default()
+        });
+        assert_eq!(project.sidechain_routes.len(), 1);
+        project.upsert_sidechain_route(SidechainRouteConfig {
+            source_track_id: 1,
+            dest_track_id: 2,
+            threshold_db: -12.0,
+            ..Default::default()
+        });
+        assert_eq!(project.sidechain_routes.len(), 1);
+        assert_eq!(project.sidechain_routes[0].threshold_db, -12.0);
+
+        // Collapse folder and verify filter_tracks hides children on empty query
+        project
+            .tracks
+            .iter_mut()
+            .find(|t| t.id == folder_id)
+            .unwrap()
+            .collapsed = true;
+        let visible = project.filter_tracks("");
+        assert!(!visible.contains(&1));
+        assert!(!visible.contains(&2));
+        assert!(visible.contains(&folder_id));
+
+        // Searching by comment finds Track 1 even when collapsed
+        assert_eq!(project.filter_tracks("909"), vec![1]);
     }
 }

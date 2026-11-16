@@ -174,6 +174,66 @@ impl SidechainMatrixView {
         lines
     }
 
+    /// Synchronize enabled sidechain matrix routes from a `ProjectConfig` (`MIX-2`).
+    pub fn sync_from_project(&mut self, project: &summoner_project::schema::ProjectConfig) {
+        for r in &mut self.routes {
+            r.enabled = false;
+        }
+        for sc in &project.sidechain_routes {
+            let src_idx = project
+                .tracks
+                .iter()
+                .position(|t| t.id == sc.source_track_id);
+            let dst_idx = project.tracks.iter().position(|t| t.id == sc.dest_track_id);
+            if let (Some(s), Some(d)) = (src_idx, dst_idx) {
+                if s < SIDECHAIN_NUM_BUSES && d < SIDECHAIN_NUM_BUSES {
+                    if let Some(cell) = self.get_route_mut(s, d) {
+                        cell.enabled = sc.enabled;
+                        cell.threshold_db = sc.threshold_db;
+                        cell.ratio = sc.ratio;
+                        cell.depth_pct = (sc.send_gain * 100.0).clamp(0.0, 100.0);
+                    }
+                    self.attack_ms = sc.attack_ms;
+                    self.release_ms = sc.release_ms;
+                    self.sidechain_hpf_hz = sc.hpf_hz;
+                    self.sidechain_lpf_hz = sc.lpf_hz;
+                }
+            }
+        }
+    }
+
+    /// Commit enabled sidechain matrix routes back into `ProjectConfig` (`MIX-2`).
+    pub fn apply_to_project(&self, project: &mut summoner_project::schema::ProjectConfig) {
+        project.sidechain_routes.clear();
+        for cell in &self.routes {
+            if !cell.enabled {
+                continue;
+            }
+            if let (Some(src), Some(dst)) = (
+                project.tracks.get(cell.source_idx),
+                project.tracks.get(cell.dest_idx),
+            ) {
+                if src.id == dst.id {
+                    continue;
+                }
+                project.upsert_sidechain_route(summoner_project::schema::SidechainRouteConfig {
+                    source_track_id: src.id,
+                    dest_track_id: dst.id,
+                    dest_node_idx: None,
+                    send_gain: (cell.depth_pct / 100.0).clamp(0.0, 2.0),
+                    is_pre_fader: false,
+                    enabled: true,
+                    hpf_hz: self.sidechain_hpf_hz,
+                    lpf_hz: self.sidechain_lpf_hz,
+                    threshold_db: cell.threshold_db,
+                    ratio: cell.ratio,
+                    attack_ms: self.attack_ms,
+                    release_ms: self.release_ms,
+                });
+            }
+        }
+    }
+
     #[cfg(feature = "gui")]
     pub fn show(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
@@ -386,5 +446,58 @@ impl SidechainMatrixView {
                 });
             });
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use summoner_project::create_default_project;
+    use summoner_project::schema::TrackConfig;
+
+    #[test]
+    fn test_sidechain_matrix_view_project_sync_roundtrip() {
+        let mut project = create_default_project("Sidechain Sync");
+        project.tracks = vec![
+            TrackConfig {
+                id: 10,
+                name: "Kick".to_string(),
+                ..Default::default()
+            },
+            TrackConfig {
+                id: 20,
+                name: "Bass".to_string(),
+                ..Default::default()
+            },
+        ];
+
+        let mut view = SidechainMatrixView::new();
+        for r in &mut view.routes {
+            r.enabled = false;
+        }
+        let cell = view.get_route_mut(0, 1).expect("route (0, 1) must exist");
+        cell.enabled = true;
+        cell.threshold_db = -22.0;
+        cell.ratio = 6.0;
+        cell.depth_pct = 85.0;
+        view.attack_ms = 3.5;
+        view.release_ms = 140.0;
+
+        view.apply_to_project(&mut project);
+        assert_eq!(project.sidechain_routes.len(), 1);
+        assert_eq!(project.sidechain_routes[0].source_track_id, 10);
+        assert_eq!(project.sidechain_routes[0].dest_track_id, 20);
+        assert_eq!(project.sidechain_routes[0].threshold_db, -22.0);
+        assert_eq!(project.sidechain_routes[0].ratio, 6.0);
+
+        let mut view2 = SidechainMatrixView::new();
+        view2.sync_from_project(&project);
+        let roundtrip = view2.get_route(0, 1).unwrap();
+        assert!(roundtrip.enabled);
+        assert_eq!(roundtrip.threshold_db, -22.0);
+        assert_eq!(roundtrip.ratio, 6.0);
+        assert!((roundtrip.depth_pct - 85.0).abs() < 1e-4);
+        assert_eq!(view2.attack_ms, 3.5);
+        assert_eq!(view2.release_ms, 140.0);
     }
 }

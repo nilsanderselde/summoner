@@ -14,6 +14,7 @@ pub struct MixerState {
     pub fx_search_query: String,
     pub selected_category: Option<crate::dsp_node_ui::DspCategory>,
     pub requested_navigation: Option<(u64, String)>,
+    pub track_filter_query: String,
 }
 
 impl Default for MixerState {
@@ -27,6 +28,7 @@ impl Default for MixerState {
             fx_search_query: String::new(),
             selected_category: None,
             requested_navigation: None,
+            track_filter_query: String::new(),
         }
     }
 }
@@ -71,13 +73,80 @@ pub fn show_mixer_impl(
     state: &mut MixerState,
 ) {
     ui.heading("Console Mixer");
+    ui.horizontal_wrapped(|ui| {
+        ui.label(egui::RichText::new("Filter:").size(11.0));
+        ui.add(egui::TextEdit::singleline(&mut state.track_filter_query).desired_width(110.0));
+        if !state.track_filter_query.is_empty() && ui.button("✕").clicked() {
+            state.track_filter_query.clear();
+        }
+        ui.separator();
+        if ui.button("+ Bus").clicked() {
+            project.create_bus_track("Bus");
+        }
+        if ui.button("+ Return").clicked() {
+            project.create_return_track("Return");
+        }
+        if ui.button("+ Folder").clicked() {
+            let children = selected_track_id.map(|id| vec![id]).unwrap_or_default();
+            project.create_folder_stack("Folder", &children);
+        }
+        if ui.button("+ VCA").clicked() {
+            let targets = selected_track_id.map(|id| vec![id]).unwrap_or_default();
+            project.create_vca_track("VCA", &targets);
+        }
+        ui.separator();
+        let ref_label = if project.reference_ab_active {
+            "A/B: REF"
+        } else {
+            "A/B: MIX"
+        };
+        ui.toggle_value(&mut project.reference_ab_active, ref_label)
+            .on_hover_text("Toggle Reference Track A/B comparison");
+        let k_cur = project.k_system_scale.as_deref().unwrap_or("K-14");
+        if ui
+            .button(format!("Scale: {}", k_cur))
+            .on_hover_text("Cycle K-System / RMS meter scale")
+            .clicked()
+        {
+            let next_k = match k_cur {
+                "K-12" => "K-14",
+                "K-14" => "K-20",
+                "K-20" => "RMS",
+                _ => "K-12",
+            };
+            project.k_system_scale = Some(next_k.to_string());
+        }
+    });
     ui.separator();
 
+    let visible_ids = project.filter_tracks(&state.track_filter_query);
+    let bus_names: Vec<String> = project
+        .tracks
+        .iter()
+        .filter(|t| t.is_bus_track)
+        .map(|t| t.name.clone())
+        .collect();
+    let folder_tracks: Vec<(u64, String)> = project
+        .tracks
+        .iter()
+        .filter(|t| t.is_folder_track)
+        .map(|t| (t.id, t.name.clone()))
+        .collect();
+    let return_tracks: Vec<(u64, String)> = project
+        .tracks
+        .iter()
+        .filter(|t| t.is_return_track)
+        .map(|t| (t.id, t.name.clone()))
+        .collect();
+    let mut set_ref_track_id = project.reference_track_id;
     let any_soloed = project.tracks.iter().any(|t| t.soloed);
 
     egui::ScrollArea::horizontal().show(ui, |ui| {
         ui.horizontal(|ui| {
             for track in &mut project.tracks {
+                if !visible_ids.contains(&track.id) {
+                    continue;
+                }
                 let is_selected = selected_track_id.is_some_and(|id| id == track.id);
                 let is_dimmed = any_soloed && !track.soloed && !track.solo_safe;
 
@@ -89,6 +158,8 @@ pub fn show_mixer_impl(
                     egui::Color32::from_rgb(32, 28, 24)
                 } else if track.is_return_track {
                     egui::Color32::from_rgb(20, 32, 34)
+                } else if track.is_folder_track {
+                    egui::Color32::from_rgb(22, 30, 42)
                 } else if track.is_vca {
                     egui::Color32::from_rgb(28, 20, 34)
                 } else {
@@ -108,8 +179,8 @@ pub fn show_mixer_impl(
 
                             ui.add_space(2.0);
 
-                            // Badges row (BUS, RET, VCA, SAFE)
-                            ui.horizontal(|ui| {
+                            // Badges row (BUS, RET, FLD, VCA, SAFE, REF)
+                            ui.horizontal_wrapped(|ui| {
                                 if track.is_bus_track {
                                     ui.label(
                                         egui::RichText::new("BUS")
@@ -125,6 +196,21 @@ pub fn show_mixer_impl(
                                             .color(egui::Color32::from_rgb(40, 220, 200))
                                             .strong(),
                                     );
+                                }
+                                if track.is_folder_track {
+                                    let fld_lbl = if track.collapsed { "FLD+" } else { "FLD-" };
+                                    if ui
+                                        .button(
+                                            egui::RichText::new(fld_lbl)
+                                                .size(9.0)
+                                                .color(egui::Color32::from_rgb(100, 180, 255))
+                                                .strong(),
+                                        )
+                                        .on_hover_text("Collapse/Expand Folder Stack")
+                                        .clicked()
+                                    {
+                                        track.collapsed = !track.collapsed;
+                                    }
                                 }
                                 if track.is_vca {
                                     ui.label(
@@ -142,6 +228,14 @@ pub fn show_mixer_impl(
                                             .strong(),
                                     );
                                 }
+                                let is_ref = set_ref_track_id == Some(track.id);
+                                if ui
+                                    .selectable_label(is_ref, egui::RichText::new("REF").size(9.0))
+                                    .on_hover_text("Set as Reference A/B Track")
+                                    .clicked()
+                                {
+                                    set_ref_track_id = if is_ref { None } else { Some(track.id) };
+                                }
                             });
 
                             // Track header button
@@ -155,7 +249,7 @@ pub fn show_mixer_impl(
 
                             ui.separator();
 
-                            // Mute, Solo, and Solo-Safe toggles
+                            // Mute, Solo, Solo-Safe, Phase Flip, and Solo Mode toggles
                             ui.horizontal(|ui| {
                                 let mut mute = track.muted;
                                 if ui
@@ -173,7 +267,7 @@ pub fn show_mixer_impl(
                                 }
                                 let mut ss = track.solo_safe;
                                 if ui
-                                    .toggle_value(&mut ss, egui::RichText::new("SS").size(10.0))
+                                    .toggle_value(&mut ss, egui::RichText::new("SS").size(9.0))
                                     .on_hover_text(
                                         "Solo-Safe: unmuted when other tracks are soloed",
                                     )
@@ -182,24 +276,119 @@ pub fn show_mixer_impl(
                                     track.solo_safe = ss;
                                 }
                             });
+                            ui.horizontal(|ui| {
+                                let mut pf = track.phase_flip;
+                                if ui
+                                    .toggle_value(&mut pf, egui::RichText::new("Ø").size(9.0))
+                                    .on_hover_text("Polarity / Phase Invert")
+                                    .changed()
+                                {
+                                    track.phase_flip = pf;
+                                }
+                                if ui
+                                    .button(egui::RichText::new(track.solo_mode.label()).size(9.0))
+                                    .on_hover_text("Cycle Solo Mode (SIP / PFL / AFL)")
+                                    .clicked()
+                                {
+                                    track.solo_mode = track.solo_mode.next();
+                                }
+                            });
 
                             ui.add_space(2.0);
 
-                            // Send Controls & Pre/Post Toggle
+                            // Subgroup Bus & Folder Routing Selectors
+                            if !track.is_bus_track {
+                                let bus_lbl = track.bus_target.as_deref().unwrap_or("Master");
+                                if ui
+                                    .button(
+                                        egui::RichText::new(format!("Out: {}", bus_lbl)).size(9.0),
+                                    )
+                                    .on_hover_text("Cycle Subgroup Bus / Master Output")
+                                    .clicked()
+                                {
+                                    let next_bus = if bus_names.is_empty() {
+                                        None
+                                    } else if let Some(ref cur) = track.bus_target {
+                                        let pos = bus_names.iter().position(|b| b == cur);
+                                        pos.and_then(|idx| bus_names.get(idx + 1).cloned())
+                                    } else {
+                                        Some(bus_names[0].clone())
+                                    };
+                                    track.bus_target = next_bus;
+                                }
+                            }
+                            if !track.is_folder_track && !folder_tracks.is_empty() {
+                                let fld_name = track
+                                    .parent_folder_id
+                                    .and_then(|fid| folder_tracks.iter().find(|(id, _)| *id == fid))
+                                    .map(|(_, n)| n.as_str())
+                                    .unwrap_or("None");
+                                if ui
+                                    .button(
+                                        egui::RichText::new(format!("Fld: {}", fld_name)).size(9.0),
+                                    )
+                                    .on_hover_text("Assign Parent Folder Stack")
+                                    .clicked()
+                                {
+                                    let next_f = if let Some(cur) = track.parent_folder_id {
+                                        let pos =
+                                            folder_tracks.iter().position(|(id, _)| *id == cur);
+                                        pos.and_then(|idx| {
+                                            folder_tracks.get(idx + 1).map(|(id, _)| *id)
+                                        })
+                                    } else {
+                                        Some(folder_tracks[0].0)
+                                    };
+                                    track.parent_folder_id = next_f;
+                                }
+                            }
+
+                            // Multi-Send Controls & Pre/Post Toggle
                             ui.horizontal(|ui| {
-                                ui.label(egui::RichText::new("Send").size(11.0));
-                                if !track.sends.is_empty() {
-                                    let pre = track.sends[0].is_pre_fader;
-                                    let label = if pre { "PRE" } else { "PST" };
-                                    if ui
-                                        .button(egui::RichText::new(label).size(9.0))
-                                        .on_hover_text("Toggle Pre/Post fader send")
+                                ui.label(egui::RichText::new("Sends").size(10.0));
+                                if !return_tracks.is_empty()
+                                    && ui
+                                        .button(egui::RichText::new("+").size(9.0))
+                                        .on_hover_text("Add Aux Send to Return Track")
                                         .clicked()
+                                {
+                                    if let Some((ret_id, _)) = return_tracks
+                                        .iter()
+                                        .find(|(rid, _)| {
+                                            !track.sends.iter().any(|s| s.target_track_id == *rid)
+                                        })
+                                        .or_else(|| return_tracks.first())
                                     {
-                                        track.sends[0].is_pre_fader = !pre;
+                                        track.sends.push(
+                                            summoner_project::schema::TrackSendConfig {
+                                                target_track_id: *ret_id,
+                                                amount: 0.25,
+                                                is_pre_fader: false,
+                                                muted: false,
+                                            },
+                                        );
                                     }
                                 }
                             });
+                            for send in &mut track.sends {
+                                let tgt_name = return_tracks
+                                    .iter()
+                                    .find(|(id, _)| *id == send.target_track_id)
+                                    .map(|(_, n)| n.as_str())
+                                    .unwrap_or("Ret");
+                                ui.horizontal(|ui| {
+                                    ui.label(egui::RichText::new(tgt_name).size(8.5));
+                                    let lbl = if send.is_pre_fader { "PRE" } else { "PST" };
+                                    if ui.button(egui::RichText::new(lbl).size(8.5)).clicked() {
+                                        send.is_pre_fader = !send.is_pre_fader;
+                                    }
+                                    ui.toggle_value(
+                                        &mut send.muted,
+                                        egui::RichText::new("M").size(8.5),
+                                    );
+                                });
+                                ui.add(egui::Slider::new(&mut send.amount, 0.0..=1.0).text(""));
+                            }
                             ui.add(egui::Slider::new(&mut track.send_level, 0.0..=1.0).text(""));
 
                             ui.add_space(6.0);
@@ -276,9 +465,20 @@ pub fn show_mixer_impl(
 
                             ui.add_space(4.0);
 
-                            // Pan Knob / Slider
-                            ui.label(egui::RichText::new("Pan").size(11.0));
+                            // Pan Knob / Slider + Pan Law + Stereo Width
+                            ui.horizontal(|ui| {
+                                ui.label(egui::RichText::new("Pan").size(10.0));
+                                if ui
+                                    .button(egui::RichText::new(track.pan_law.label()).size(8.5))
+                                    .on_hover_text("Cycle Stereo Pan Law")
+                                    .clicked()
+                                {
+                                    track.pan_law = track.pan_law.next();
+                                }
+                            });
                             ui.add(egui::Slider::new(&mut track.pan, -1.0..=1.0).text(""));
+                            ui.label(egui::RichText::new("Width").size(10.0));
+                            ui.add(egui::Slider::new(&mut track.stereo_width, 0.0..=2.0).text(""));
 
                             ui.separator();
 
@@ -387,7 +587,10 @@ pub fn show_mixer_impl(
                             let g_slider = egui::Slider::new(&mut state.master_gain, 0.0..=2.0)
                                 .orientation(egui::SliderOrientation::Vertical)
                                 .text("");
-                            ui.add(g_slider);
+                            if ui.add(g_slider).changed() {
+                                project.transport.master_trim_db =
+                                    20.0 * state.master_gain.max(0.0001).log10();
+                            }
 
                             let (meter_rect, _) = ui
                                 .allocate_exact_size(egui::vec2(12.0, 100.0), egui::Sense::hover());
@@ -502,6 +705,8 @@ pub fn show_mixer_impl(
                 });
         });
     });
+
+    project.reference_track_id = set_ref_track_id;
 
     // Universal DSP Effect selector popup window (Zero CLI Left Behind)
     if let Some(target_tid) = state.fx_popup_track_id {
@@ -733,5 +938,40 @@ mod tests {
 
         assert_eq!(tr.nodes.len(), initial_count + 1);
         assert_eq!(tr.nodes.last().unwrap().kind, first.kind_id);
+    }
+
+    #[test]
+    fn test_mixer_bus_return_folder_creation_and_multi_send_routing() {
+        let mut project = create_default_project("Bus Routing Test");
+        let base_id = project.tracks[0].id;
+        let bus_id = project.create_bus_track("Drum Bus");
+        let ret_id = project.create_return_track("Plate");
+        let folder_id = project.create_folder_stack("Drums", &[base_id]);
+        assert!(project.add_track_send(base_id, ret_id, 0.5, true));
+        project.reference_track_id = Some(bus_id);
+        project.reference_ab_active = true;
+
+        let mut selected_track_id = Some(base_id);
+        let mut state = MixerState {
+            track_filter_query: "".to_string(),
+            ..Default::default()
+        };
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                show_mixer_impl(ui, &mut project, &mut selected_track_id, None, &mut state);
+            });
+        });
+
+        assert!(project
+            .tracks
+            .iter()
+            .any(|t| t.id == bus_id && t.is_bus_track));
+        assert!(project
+            .tracks
+            .iter()
+            .any(|t| t.id == folder_id && t.is_folder_track));
+        assert_eq!(project.tracks[0].sends.len(), 1);
+        assert!(project.tracks[0].sends[0].is_pre_fader);
     }
 }

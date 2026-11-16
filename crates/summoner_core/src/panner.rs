@@ -6,6 +6,67 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
+/// Selectable stereo panning law for channel strips (MIX-7).
+/// `Linear0dB` matches the legacy linear center law as default so existing renders stay deterministic.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum PanLaw {
+    #[default]
+    Linear0dB,
+    EqualPower3dB,
+    Compensated3dB,
+    EqualPower4_5dB,
+    Linear6dB,
+}
+
+impl PanLaw {
+    /// Human-readable short badge label for mixer UIs.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Linear0dB => "0dB",
+            Self::EqualPower3dB => "-3dB",
+            Self::Compensated3dB => "C-3",
+            Self::EqualPower4_5dB => "-4.5",
+            Self::Linear6dB => "-6dB",
+        }
+    }
+
+    /// Cycle through available pan laws for compact UI controls.
+    pub fn next(self) -> Self {
+        match self {
+            Self::Linear0dB => Self::EqualPower3dB,
+            Self::EqualPower3dB => Self::Compensated3dB,
+            Self::Compensated3dB => Self::EqualPower4_5dB,
+            Self::EqualPower4_5dB => Self::Linear6dB,
+            Self::Linear6dB => Self::Linear0dB,
+        }
+    }
+
+    /// Compute left/right channel gain multipliers for normalized pan in `[-1.0, 1.0]`.
+    #[inline]
+    pub fn gains(self, pan: f32) -> (f32, f32) {
+        let p = pan.clamp(-1.0, 1.0);
+        match self {
+            Self::Linear0dB => ((1.0 - p).min(1.0), (1.0 + p).min(1.0)),
+            Self::EqualPower3dB => {
+                let theta = (p + 1.0) * 0.5 * std::f32::consts::FRAC_PI_2;
+                (theta.cos(), theta.sin())
+            }
+            Self::Compensated3dB => {
+                let theta = (p + 1.0) * 0.5 * std::f32::consts::FRAC_PI_2;
+                (
+                    std::f32::consts::SQRT_2 * theta.cos(),
+                    std::f32::consts::SQRT_2 * theta.sin(),
+                )
+            }
+            Self::EqualPower4_5dB => {
+                let theta = (p + 1.0) * 0.5 * std::f32::consts::FRAC_PI_2;
+                (theta.cos().powf(1.5), theta.sin().powf(1.5))
+            }
+            Self::Linear6dB => (0.5 * (1.0 - p), 0.5 * (1.0 + p)),
+        }
+    }
+}
+
 /// Stereo panner using equal power panning law.
 pub struct StereoPanner {
     pan: f32, // -1.0 to 1.0

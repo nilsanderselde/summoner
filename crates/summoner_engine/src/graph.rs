@@ -1063,6 +1063,31 @@ pub struct TrackMeta {
     pub hardware_input_channels: Option<(usize, usize)>,
     pub hardware_output_channels: Option<(usize, usize)>,
     pub automation_enabled: bool,
+    pub is_folder_track: bool,
+    pub parent_folder_id: Option<u64>,
+    pub pan_law: summoner_core::panner::PanLaw,
+    pub stereo_width: f32,
+    pub solo_mode: summoner_project::schema::SoloMode,
+}
+
+/// Pre-resolved sidechain dynamic ducking route for zero-allocation RT evaluation (`MIX-2`).
+#[derive(Debug, Clone)]
+pub struct CompiledSidechainRoute {
+    pub source_idx: usize,
+    pub dest_idx: usize,
+    pub dest_node_idx: Option<usize>,
+    pub send_gain: f32,
+    pub is_pre_fader: bool,
+    pub hpf_hz: f32,
+    pub lpf_hz: f32,
+    pub threshold_db: f32,
+    pub ratio: f32,
+    pub attack_ms: f32,
+    pub release_ms: f32,
+    pub env_state: f32,
+    pub hpf_state: f32,
+    pub lpf_state: f32,
+    pub current_gr_db: f32,
 }
 
 /// Pre-decoded, sample-rate-aligned audio clip ready for zero-allocation RT playback.
@@ -1153,6 +1178,10 @@ pub struct GraphRunner {
     pub track_audio_clips: Vec<Vec<CompiledAudioClip>>,
     pub frozen_buffers: Vec<Option<Vec<f32>>>,
     pub track_mixer_lanes: Vec<Vec<summoner_project::schema::AutomationLaneConfig>>,
+    pub sidechain_routes: Vec<CompiledSidechainRoute>,
+    pub track_telemetry: Vec<[ChannelMeter; 2]>,
+    pub reference_track_idx: Option<usize>,
+    pub reference_ab_active: bool,
     pub master_trim_db: f32,
     pub telemetry: MasterMeterTelemetry,
     pub true_peak_meter: summoner_dsp::TruePeakMeter,
@@ -1202,6 +1231,11 @@ impl GraphRunner {
                 hardware_output_channels: tc.hardware_output_channels,
                 automation_enabled: tc.automation_mode
                     != summoner_project::schema::AutomationMode::Off,
+                is_folder_track: tc.is_folder_track,
+                parent_folder_id: tc.parent_folder_id,
+                pan_law: tc.pan_law,
+                stereo_width: tc.stereo_width,
+                solo_mode: tc.solo_mode,
             });
 
             if !tc.connections.is_empty() {
@@ -1426,6 +1460,45 @@ impl GraphRunner {
             track_audio_clips.push(compiled_clips);
         }
 
+        let mut sidechain_routes = Vec::new();
+        for r in &project.sidechain_routes {
+            if !r.enabled {
+                continue;
+            }
+            if let (Some(src_idx), Some(dest_idx)) = (
+                project
+                    .tracks
+                    .iter()
+                    .position(|t| t.id == r.source_track_id),
+                project.tracks.iter().position(|t| t.id == r.dest_track_id),
+            ) {
+                if src_idx != dest_idx {
+                    sidechain_routes.push(CompiledSidechainRoute {
+                        source_idx: src_idx,
+                        dest_idx,
+                        dest_node_idx: r.dest_node_idx,
+                        send_gain: r.send_gain,
+                        is_pre_fader: r.is_pre_fader,
+                        hpf_hz: r.hpf_hz,
+                        lpf_hz: r.lpf_hz,
+                        threshold_db: r.threshold_db,
+                        ratio: r.ratio,
+                        attack_ms: r.attack_ms,
+                        release_ms: r.release_ms,
+                        env_state: 0.0,
+                        hpf_state: 0.0,
+                        lpf_state: 0.0,
+                        current_gr_db: 0.0,
+                    });
+                }
+            }
+        }
+        let track_telemetry = vec![[ChannelMeter::default(); 2]; tracks.len()];
+        let reference_track_idx = project
+            .reference_track_id
+            .and_then(|id| project.tracks.iter().position(|t| t.id == id));
+        let reference_ab_active = project.reference_ab_active;
+
         Self {
             tracks,
             track_meta,
@@ -1434,6 +1507,10 @@ impl GraphRunner {
             track_audio_clips,
             frozen_buffers,
             track_mixer_lanes,
+            sidechain_routes,
+            track_telemetry,
+            reference_track_idx,
+            reference_ab_active,
             master_trim_db: project.transport.master_trim_db,
             telemetry: MasterMeterTelemetry::default(),
             true_peak_meter: summoner_dsp::TruePeakMeter::new(),
@@ -1494,10 +1571,13 @@ impl GraphRunner {
             }
         }
 
-        // VCA evaluation
+        // VCA evaluation, Folder mute inheritance, and solo routing propagation (all stack-only / zero-alloc)
         let num_tracks = self.tracks.len();
         let mut vca_gains = [1.0f32; 128];
         let mut vca_muted = [false; 128];
+        let mut folder_muted = [false; 128];
+        let mut implicit_solo_safe = [false; 128];
+
         for (vca_idx, vca_meta) in self.track_meta.iter().enumerate() {
             if vca_meta.is_vca && vca_idx < 128 {
                 let vca_gain = self.tracks[vca_idx].gain;
@@ -1519,35 +1599,149 @@ impl GraphRunner {
             }
         }
 
-        // Process in 3 stages:
-        // Stage 1: Regular audio/synth tracks
+        for idx in 0..num_tracks.min(128) {
+            if let Some(fid) = self.track_meta[idx].parent_folder_id {
+                if let Some(f_idx) = self.track_meta.iter().position(|m| m.id == fid) {
+                    if self.tracks[f_idx].muted {
+                        folder_muted[idx] = true;
+                    }
+                }
+            }
+        }
+
+        if any_soloed {
+            // Downward propagation: soloing a folder or subgroup bus keeps its direct child tracks audible
+            for idx in 0..num_tracks.min(128) {
+                if self.tracks[idx].soloed
+                    && (self.track_meta[idx].is_folder_track || self.track_meta[idx].is_bus_track)
+                {
+                    let parent_id = self.track_meta[idx].id;
+                    let parent_name = &self.track_meta[idx].name;
+                    for c_idx in 0..num_tracks.min(128) {
+                        if c_idx == idx {
+                            continue;
+                        }
+                        let c_meta = &self.track_meta[c_idx];
+                        let in_folder = self.track_meta[idx].is_folder_track
+                            && c_meta.parent_folder_id == Some(parent_id);
+                        let in_bus = self.track_meta[idx].is_bus_track
+                            && c_meta.bus_target.as_deref().is_some_and(|b| {
+                                b == parent_name || b.parse::<u64>().ok() == Some(parent_id)
+                            });
+                        if in_folder || in_bus {
+                            implicit_solo_safe[c_idx] = true;
+                        }
+                    }
+                }
+            }
+            // Upward propagation: soloed/active tracks keep parent folders, buses, and targeted returns audible
+            for _ in 0..3 {
+                for idx in 0..num_tracks.min(128) {
+                    if !(self.tracks[idx].soloed || implicit_solo_safe[idx]) {
+                        continue;
+                    }
+                    if let Some(fid) = self.track_meta[idx].parent_folder_id {
+                        if let Some(f_idx) = self.track_meta.iter().position(|m| m.id == fid) {
+                            if f_idx < 128 {
+                                implicit_solo_safe[f_idx] = true;
+                            }
+                        }
+                    }
+                    if let Some(ref bus_name) = self.track_meta[idx].bus_target {
+                        if let Some(b_idx) = self.track_meta.iter().position(|m| {
+                            m.name == *bus_name || bus_name.parse::<u64>().ok() == Some(m.id)
+                        }) {
+                            if b_idx < 128 {
+                                implicit_solo_safe[b_idx] = true;
+                            }
+                        }
+                    }
+                    for send in &self.track_meta[idx].sends {
+                        if !send.muted && send.amount > 0.0 {
+                            if let Some(r_idx) = self
+                                .track_meta
+                                .iter()
+                                .position(|m| m.id == send.target_track_id)
+                            {
+                                if r_idx < 128 {
+                                    implicit_solo_safe[r_idx] = true;
+                                }
+                            }
+                        }
+                    }
+                    if self.track_meta[idx].legacy_send_level > 0.0 {
+                        if let Some(r_idx) = self.track_meta.iter().position(|m| m.is_return_track)
+                        {
+                            if r_idx < 128 {
+                                implicit_solo_safe[r_idx] = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let ref_ab_idx = if self.reference_ab_active {
+            self.reference_track_idx.filter(|&i| i < num_tracks)
+        } else {
+            None
+        };
+        let any_pfl = any_soloed
+            && ref_ab_idx.is_none()
+            && (0..num_tracks).any(|i| {
+                self.tracks[i].soloed
+                    && self.track_meta[i].solo_mode == summoner_project::schema::SoloMode::Pfl
+            });
+
+        // Process in 4 topological stages:
+        // Stage 0: Regular audio/synth tracks
+        // Stage 1: Folder stack tracks (receive children)
         // Stage 2: Return tracks (receive aux sends)
-        // Stage 3: Subgroup bus tracks (receive subgroup routing)
-        for stage in 0..3 {
+        // Stage 3: Subgroup bus tracks (receive subgroup routing / folders)
+        for stage in 0..4 {
             for track_idx in 0..num_tracks {
+                if let Some(r_idx) = ref_ab_idx {
+                    if stage != 0 || track_idx != r_idx {
+                        continue;
+                    }
+                }
                 let meta = &self.track_meta[track_idx];
-                let is_stage_match = match stage {
-                    0 => !meta.is_return_track && !meta.is_bus_track && !meta.is_vca,
-                    1 => meta.is_return_track && !meta.is_vca,
-                    2 => meta.is_bus_track && !meta.is_vca,
-                    _ => false,
-                };
-                if !is_stage_match {
-                    continue;
+                if ref_ab_idx.is_none() {
+                    let is_stage_match = match stage {
+                        0 => {
+                            !meta.is_return_track
+                                && !meta.is_bus_track
+                                && !meta.is_folder_track
+                                && !meta.is_vca
+                        }
+                        1 => meta.is_folder_track && !meta.is_vca,
+                        2 => meta.is_return_track && !meta.is_vca,
+                        3 => meta.is_bus_track && !meta.is_vca,
+                        _ => false,
+                    };
+                    if !is_stage_match {
+                        continue;
+                    }
                 }
 
                 let track = &mut self.tracks[track_idx];
                 let is_mute_grouped = meta
                     .mute_group
                     .is_some_and(|g| muted_groups[(g as usize) % 32]);
-                let is_muted =
-                    track.muted || is_mute_grouped || (track_idx < 128 && vca_muted[track_idx]);
+                let is_folder_muted = track_idx < 128 && folder_muted[track_idx];
+                let is_muted = track.muted
+                    || is_mute_grouped
+                    || is_folder_muted
+                    || (track_idx < 128 && vca_muted[track_idx]);
 
-                if any_soloed && !track.soloed && !meta.solo_safe {
-                    continue;
-                }
-                if is_muted {
-                    continue;
+                if ref_ab_idx.is_none() {
+                    let is_solo_safe_propagated = track_idx < 128 && implicit_solo_safe[track_idx];
+                    if any_soloed && !track.soloed && !meta.solo_safe && !is_solo_safe_propagated {
+                        continue;
+                    }
+                    if is_muted {
+                        continue;
+                    }
                 }
 
                 self.scratch_l[..block_size].fill(0.0);
@@ -1757,6 +1951,107 @@ impl GraphRunner {
                 self.track_buffers[track_idx][1][..block_size]
                     .copy_from_slice(&self.scratch_r[..block_size]);
 
+                // Apply Sidechain Matrix dynamic ducking routes targeting this track (zero-alloc)
+                let sc_sr = ctx.sample_rate.max(1) as f32;
+                for route in &mut self.sidechain_routes {
+                    if route.dest_idx == track_idx && route.source_idx < self.track_buffers.len() {
+                        let atk_s = (route.attack_ms * 0.001).max(0.0001);
+                        let rel_s = (route.release_ms * 0.001).max(0.001);
+                        let atk_coeff = (-1.0 / (atk_s * sc_sr)).exp();
+                        let rel_coeff = (-1.0 / (rel_s * sc_sr)).exp();
+                        let hpf_alpha = if route.hpf_hz > 1.0 {
+                            (2.0 * std::f32::consts::PI * route.hpf_hz / sc_sr).clamp(0.0, 1.0)
+                        } else {
+                            0.0
+                        };
+                        let lpf_alpha = if route.lpf_hz > 1.0 && route.lpf_hz < sc_sr * 0.45 {
+                            (2.0 * std::f32::consts::PI * route.lpf_hz / sc_sr).clamp(0.0, 1.0)
+                        } else {
+                            1.0
+                        };
+                        let ratio = route.ratio.max(1.0);
+                        let src_l = &self.track_buffers[route.source_idx][0];
+                        let src_r = &self.track_buffers[route.source_idx][1];
+                        for i in 0..block_size {
+                            let raw = (src_l[i] + src_r[i]) * 0.5 * route.send_gain;
+                            let mut det_sig = raw;
+                            if hpf_alpha > 0.0 {
+                                route.hpf_state += hpf_alpha * (det_sig - route.hpf_state);
+                                det_sig -= route.hpf_state;
+                            }
+                            if lpf_alpha < 1.0 {
+                                route.lpf_state += lpf_alpha * (det_sig - route.lpf_state);
+                                det_sig = route.lpf_state;
+                            }
+                            let det = det_sig.abs();
+                            let coeff = if det > route.env_state {
+                                atk_coeff
+                            } else {
+                                rel_coeff
+                            };
+                            route.env_state = coeff * route.env_state + (1.0 - coeff) * det;
+                            let env_db = 20.0 * route.env_state.max(1e-6).log10();
+                            let gr_db = if env_db > route.threshold_db {
+                                (route.threshold_db + (env_db - route.threshold_db) / ratio)
+                                    - env_db
+                            } else {
+                                0.0
+                            };
+                            route.current_gr_db = gr_db;
+                            if gr_db < -1e-4 {
+                                let g = 10.0f32.powf(gr_db / 20.0);
+                                self.scratch_l[i] *= g;
+                                self.scratch_r[i] *= g;
+                            }
+                        }
+                    }
+                }
+
+                // Apply Mid/Side stereo width adjustment (identity when stereo_width == 1.0)
+                if (meta.stereo_width - 1.0).abs() > 1e-4 {
+                    let w = meta.stereo_width.clamp(0.0, 2.0);
+                    for i in 0..block_size {
+                        let mid = (self.scratch_l[i] + self.scratch_r[i]) * 0.5;
+                        let side = (self.scratch_l[i] - self.scratch_r[i]) * 0.5 * w;
+                        self.scratch_l[i] = mid + side;
+                        self.scratch_r[i] = mid - side;
+                    }
+                }
+
+                // If Reference A/B mode is active on this track, route directly to Master output at unity
+                if ref_ab_idx == Some(track_idx) {
+                    let num_out = out_buffers.len();
+                    if num_out >= 2 {
+                        for i in 0..block_size {
+                            out_buffers[0][i] += self.scratch_l[i];
+                            out_buffers[1][i] += self.scratch_r[i];
+                        }
+                    } else if num_out == 1 {
+                        for i in 0..block_size {
+                            out_buffers[0][i] += self.scratch_l[i];
+                        }
+                    }
+                    continue;
+                }
+
+                // If PFL Solo is engaged anywhere, output PFL-soloed tracks directly pre-fader
+                if any_pfl {
+                    if track.soloed && meta.solo_mode == summoner_project::schema::SoloMode::Pfl {
+                        let num_out = out_buffers.len();
+                        if num_out >= 2 {
+                            for i in 0..block_size {
+                                out_buffers[0][i] += self.scratch_l[i];
+                                out_buffers[1][i] += self.scratch_r[i];
+                            }
+                        } else if num_out == 1 {
+                            for i in 0..block_size {
+                                out_buffers[0][i] += self.scratch_l[i];
+                            }
+                        }
+                    }
+                    continue;
+                }
+
                 let mut track_gain = track.gain;
                 let mut track_pan = track.pan;
                 let mut send0_override: Option<f32> = None;
@@ -1795,8 +2090,60 @@ impl GraphRunner {
                 let effective_gain = track_gain * strip_gain * vca_mult;
 
                 let pan = track_pan.clamp(-1.0, 1.0);
-                let left_gain = effective_gain * (1.0 - pan).min(1.0);
-                let right_gain = effective_gain * (1.0 + pan).min(1.0);
+                let (pan_l, pan_r) = meta.pan_law.gains(pan);
+                let left_gain = effective_gain * pan_l;
+                let right_gain = effective_gain * pan_r;
+
+                // Per-track post-fader channel-strip telemetry (MIX-5)
+                if let Some(tm) = self.track_telemetry.get_mut(track_idx) {
+                    let mut max_l = 0.0f32;
+                    let mut max_r = 0.0f32;
+                    let mut sum_sq_l = 0.0f32;
+                    let mut sum_sq_r = 0.0f32;
+                    for i in 0..block_size {
+                        let sl = self.scratch_l[i] * left_gain;
+                        let sr = if track.channels <= 1 {
+                            self.scratch_l[i] * right_gain
+                        } else {
+                            self.scratch_r[i] * right_gain
+                        };
+                        max_l = max_l.max(sl.abs());
+                        max_r = max_r.max(sr.abs());
+                        sum_sq_l += sl * sl;
+                        sum_sq_r += sr * sr;
+                    }
+                    let inv_n = 1.0 / (block_size.max(1) as f32);
+                    let rms_l = (sum_sq_l * inv_n).sqrt();
+                    let rms_r = (sum_sq_r * inv_n).sqrt();
+                    tm[0] = ChannelMeter {
+                        peak: max_l,
+                        peak_db: if max_l > 1e-6 {
+                            20.0 * max_l.log10()
+                        } else {
+                            -120.0
+                        },
+                        rms: rms_l,
+                        rms_db: if rms_l > 1e-6 {
+                            20.0 * rms_l.log10()
+                        } else {
+                            -120.0
+                        },
+                    };
+                    tm[1] = ChannelMeter {
+                        peak: max_r,
+                        peak_db: if max_r > 1e-6 {
+                            20.0 * max_r.log10()
+                        } else {
+                            -120.0
+                        },
+                        rms: rms_r,
+                        rms_db: if rms_r > 1e-6 {
+                            20.0 * rms_r.log10()
+                        } else {
+                            -120.0
+                        },
+                    };
+                }
 
                 // Aux Sends routing
                 for (send_idx, send) in meta.sends.iter().enumerate() {
@@ -1840,14 +2187,13 @@ impl GraphRunner {
                     }
                 }
 
-                // Subgroup Bus routing or direct Master mix
+                // Subgroup Bus routing, Folder routing, or direct Master mix
                 let mut routed_to_bus = false;
                 if let Some(ref bus_name) = meta.bus_target {
-                    if let Some(target_idx) = self
-                        .track_meta
-                        .iter()
-                        .position(|m| m.name == *bus_name || m.id.to_string() == *bus_name)
-                    {
+                    if let Some(target_idx) = self.track_meta.iter().position(|m| {
+                        m.id != meta.id
+                            && (m.name == *bus_name || bus_name.parse::<u64>().ok() == Some(m.id))
+                    }) {
                         for i in 0..block_size {
                             self.track_in_buffers[target_idx][0][i] +=
                                 self.scratch_l[i] * left_gain;
@@ -1855,6 +2201,23 @@ impl GraphRunner {
                                 self.scratch_r[i] * right_gain;
                         }
                         routed_to_bus = true;
+                    }
+                }
+                if !routed_to_bus {
+                    if let Some(fid) = meta.parent_folder_id {
+                        if let Some(folder_idx) = self
+                            .track_meta
+                            .iter()
+                            .position(|m| m.id == fid && m.id != meta.id)
+                        {
+                            for i in 0..block_size {
+                                self.track_in_buffers[folder_idx][0][i] +=
+                                    self.scratch_l[i] * left_gain;
+                                self.track_in_buffers[folder_idx][1][i] +=
+                                    self.scratch_r[i] * right_gain;
+                            }
+                            routed_to_bus = true;
+                        }
                     }
                 }
 
@@ -2876,5 +3239,142 @@ mod tests {
         }
         assert!((out_l[0] - 0.2).abs() < 1e-4, "got {}", out_l[0]);
         assert!((out_r[0] - 0.2).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_folder_stack_and_bus_solo_propagation_and_pan_laws() {
+        use summoner_core::allocator::AllocGuard;
+        use summoner_core::panner::PanLaw;
+        use summoner_project::schema::TrackConfig;
+
+        let mut project = create_default_project("Folder & Pan Law Test");
+        project.tracks.clear();
+
+        let child_id = 1;
+        let folder_id = 2;
+        let bus_id = 3;
+
+        project.tracks.push(TrackConfig {
+            id: child_id,
+            name: "Child Osc".to_string(),
+            parent_folder_id: Some(folder_id),
+            pan: 0.0,
+            pan_law: PanLaw::EqualPower3dB,
+            is_frozen: true,
+            frozen_buffer: Some(vec![1.0f32; 256 * 2]),
+            ..Default::default()
+        });
+        project.tracks.push(TrackConfig {
+            id: folder_id,
+            name: "Synth Folder".to_string(),
+            is_folder_track: true,
+            bus_target: Some("Main Bus".to_string()),
+            soloed: true,
+            ..Default::default()
+        });
+        project.tracks.push(TrackConfig {
+            id: bus_id,
+            name: "Main Bus".to_string(),
+            is_bus_track: true,
+            ..Default::default()
+        });
+
+        let mut runner = GraphRunner::new(&project);
+        let mut out_l = [0.0f32; 64];
+        let mut out_r = [0.0f32; 64];
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+        {
+            let _guard = AllocGuard::new();
+            runner.process_block(64, &ctx, &mut [&mut out_l, &mut out_r]);
+        }
+
+        // Soloing folder keeps child and destination Main Bus audible with -3dB EqualPower (~0.7071)
+        let expected = std::f32::consts::FRAC_1_SQRT_2;
+        assert!((out_l[0] - expected).abs() < 1e-4, "got {}", out_l[0]);
+        assert!((out_r[0] - expected).abs() < 1e-4, "got {}", out_r[0]);
+        assert!(runner.track_telemetry[2][0].peak > 0.5);
+    }
+
+    #[test]
+    fn test_sidechain_matrix_ducking_and_reference_track_ab_zero_alloc() {
+        use summoner_core::allocator::AllocGuard;
+        use summoner_project::schema::{SidechainRouteConfig, SoloMode, TrackConfig};
+
+        let mut project = create_default_project("Sidechain Matrix & Ref A/B");
+        project.tracks.clear();
+
+        // Track 1: Kick key source (loud constant trigger)
+        project.tracks.push(TrackConfig {
+            id: 1,
+            name: "Kick".to_string(),
+            is_frozen: true,
+            frozen_buffer: Some(vec![0.8f32; 256 * 2]),
+            ..Default::default()
+        });
+        // Track 2: Bass target ducked by Kick
+        project.tracks.push(TrackConfig {
+            id: 2,
+            name: "Bass".to_string(),
+            is_frozen: true,
+            frozen_buffer: Some(vec![1.0f32; 256 * 2]),
+            ..Default::default()
+        });
+        // Track 3: Reference mix track
+        project.tracks.push(TrackConfig {
+            id: 3,
+            name: "Reference".to_string(),
+            is_frozen: true,
+            frozen_buffer: Some(vec![0.33f32; 256 * 2]),
+            ..Default::default()
+        });
+
+        project.sidechain_routes.push(SidechainRouteConfig {
+            source_track_id: 1,
+            dest_track_id: 2,
+            send_gain: 1.0,
+            hpf_hz: 0.0,
+            lpf_hz: 20000.0,
+            threshold_db: -20.0,
+            ratio: 8.0,
+            attack_ms: 0.1,
+            release_ms: 50.0,
+            enabled: true,
+            ..Default::default()
+        });
+        project.reference_track_id = Some(3);
+        project.reference_ab_active = false;
+
+        let mut runner = GraphRunner::new(&project);
+        let mut out_l = [0.0f32; 64];
+        let mut out_r = [0.0f32; 64];
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+        {
+            let _guard = AllocGuard::new();
+            runner.process_block(64, &ctx, &mut [&mut out_l, &mut out_r]);
+        }
+
+        // Gain reduction must engage on Bass route
+        assert!(runner.sidechain_routes[0].current_gr_db < -1.0);
+        // Combined output should be less than un-ducked 0.8 + 1.0 = 1.8
+        assert!(out_l[63] < 1.6, "expected ducked mix, got {}", out_l[63]);
+
+        // Engage Reference A/B: outputs Track 3 cleanly at unity (0.33) with zero allocations
+        runner.reference_ab_active = true;
+        {
+            let _guard = AllocGuard::new();
+            runner.process_block(64, &ctx, &mut [&mut out_l, &mut out_r]);
+        }
+        assert!((out_l[0] - 0.33).abs() < 1e-4, "got {}", out_l[0]);
+
+        // Verify PFL solo bypasses normal channel fader
+        runner.reference_ab_active = false;
+        runner.tracks[0].soloed = true;
+        runner.tracks[0].gain = 0.0;
+        runner.track_meta[0].solo_mode = SoloMode::Pfl;
+        {
+            let _guard = AllocGuard::new();
+            runner.process_block(64, &ctx, &mut [&mut out_l, &mut out_r]);
+        }
+        assert!((out_l[0] - 0.8).abs() < 1e-4, "PFL should ignore fader=0");
     }
 }
