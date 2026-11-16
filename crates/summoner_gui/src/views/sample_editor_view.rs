@@ -133,10 +133,24 @@ pub struct SampleEditorView {
     pub loop_end_sample: usize,
     pub loop_crossfade_samples: usize,
     pub spectral_view_enabled: bool,
+    #[serde(default)]
+    pub warp_mode: summoner_project::audio_clip::ClipWarpMode,
+    #[serde(default = "default_one_f32")]
+    pub warp_stretch_ratio: f32,
+    #[serde(default)]
+    pub pitch_shift_semitones: f32,
+    #[serde(default)]
+    pub detected_bpm: Option<f64>,
+    #[serde(default)]
+    pub detected_key: Option<String>,
     #[serde(skip)]
     pub undo_stack: Vec<Vec<f32>>,
     #[serde(skip)]
     pub redo_stack: Vec<Vec<f32>>,
+}
+
+fn default_one_f32() -> f32 {
+    1.0
 }
 
 impl Default for SampleEditorView {
@@ -171,6 +185,11 @@ impl Default for SampleEditorView {
             loop_end_sample: num_samples,
             loop_crossfade_samples: 128,
             spectral_view_enabled: false,
+            warp_mode: summoner_project::audio_clip::ClipWarpMode::default(),
+            warp_stretch_ratio: 1.0,
+            pitch_shift_semitones: 0.0,
+            detected_bpm: None,
+            detected_key: None,
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
         }
@@ -651,6 +670,90 @@ impl SampleEditorView {
 
         spectrogram
     }
+
+    /// Analyze waveform transients, BPM, and musical key using `summoner_dsp` (REC-2, REC-3).
+    pub fn auto_detect_transients_and_bpm(&mut self, sensitivity: f32) {
+        let sr = (self.sample_rate.round().max(1.0)) as u32;
+        let analysis = summoner_dsp::detect_bpm_and_key(&self.waveform_samples, sr);
+        let transients = if (sensitivity - 0.75).abs() > 0.05 {
+            summoner_dsp::pitch_shift::detect_transients(&self.waveform_samples, sr, sensitivity)
+        } else {
+            analysis.transient_frames
+        };
+        self.transient_markers = transients
+            .into_iter()
+            .enumerate()
+            .map(|(i, pos)| {
+                TransientMarker::new(i + 1, format!("T{}", i + 1), pos, self.sample_rate)
+            })
+            .collect();
+        self.detected_bpm = Some(analysis.estimated_bpm);
+        self.detected_key = Some(analysis.key_name);
+    }
+
+    /// Quantize detected transient markers to a rhythmic beat grid (REC-5).
+    pub fn quantize_transients_to_grid(&mut self, bpm: f64, division_beats: f64, strength: f32) {
+        if bpm <= 0.0 || division_beats <= 0.0 || self.sample_rate <= 0.0 {
+            return;
+        }
+        let samples_per_grid = (self.sample_rate * 60.0 / bpm) * division_beats;
+        let s = strength.clamp(0.0, 1.0) as f64;
+        for m in &mut self.transient_markers {
+            let cur = m.sample_index as f64;
+            let grid_pos = (cur / samples_per_grid).round() * samples_per_grid;
+            let target = (cur + (grid_pos - cur) * s).round().max(0.0) as usize;
+            m.update_sample_index(target, self.sample_rate);
+        }
+    }
+
+    /// Convert editor transient markers into persistent `ClipWarpMarker`s for `AudioClipConfig` (REC-2).
+    pub fn to_clip_warp_markers(
+        &self,
+        bpm: f64,
+    ) -> Vec<summoner_project::audio_clip::ClipWarpMarker> {
+        let samples_per_beat = ((self.sample_rate * 60.0) / bpm.max(1.0)).max(1.0);
+        self.transient_markers
+            .iter()
+            .map(|m| summoner_project::audio_clip::ClipWarpMarker {
+                source_frame: m.sample_index as u64,
+                target_beat: m.sample_index as f64 / samples_per_beat,
+                transient_strength: 1.0,
+                locked: false,
+            })
+            .collect()
+    }
+
+    /// Apply configured warp mode, stretch ratio, pitch shift, and markers into the waveform (undoable).
+    pub fn apply_warp_and_pitch(&mut self) -> bool {
+        if self.waveform_samples.is_empty() {
+            return false;
+        }
+        self.push_undo_state();
+        let sr = (self.sample_rate.round().max(1.0)) as u32;
+        let dsp_mode = match self.warp_mode {
+            summoner_project::audio_clip::ClipWarpMode::Beats => summoner_dsp::WarpMode::Beats,
+            summoner_project::audio_clip::ClipWarpMode::Tones => summoner_dsp::WarpMode::Tones,
+            summoner_project::audio_clip::ClipWarpMode::Texture => summoner_dsp::WarpMode::Texture,
+            summoner_project::audio_clip::ClipWarpMode::Complex => summoner_dsp::WarpMode::Complex,
+            summoner_project::audio_clip::ClipWarpMode::RePitch => summoner_dsp::WarpMode::RePitch,
+            summoner_project::audio_clip::ClipWarpMode::SpectralIdm => {
+                summoner_dsp::WarpMode::SpectralIdm
+            }
+        };
+        let stretch = self.warp_stretch_ratio.clamp(0.25, 4.0) as f64;
+        let out_len = ((self.waveform_samples.len() as f64 * stretch).round() as usize).max(1);
+        let engine = summoner_dsp::ElasticWarpEngine::new(sr)
+            .with_mode(dsp_mode)
+            .with_pitch_semitones(self.pitch_shift_semitones);
+        self.waveform_samples = engine.warp_audio(&self.waveform_samples, out_len);
+        for m in &mut self.transient_markers {
+            let scaled = ((m.sample_index as f64 * stretch).round() as usize).min(out_len);
+            m.update_sample_index(scaled, self.sample_rate);
+        }
+        self.loop_start_sample = self.loop_start_sample.min(out_len);
+        self.loop_end_sample = out_len;
+        true
+    }
 }
 
 #[cfg(feature = "gui")]
@@ -935,5 +1038,42 @@ mod tests {
         let spec = editor.compute_spectrogram(8, 64);
         assert_eq!(spec.len(), 8);
         assert_eq!(spec[0].len(), 64);
+    }
+
+    #[test]
+    fn test_sample_editor_warp_detection_quantize_and_pitch_undoable() {
+        let mut editor = SampleEditorView::new();
+        let sr = 44100.0f64;
+        editor.sample_rate = sr;
+        let mut audio = vec![0.0f32; 44100];
+        for beat in 0..2 {
+            let start = beat * 22050 + 500;
+            for i in 0..800 {
+                let env = 1.0 - (i as f32 / 800.0);
+                audio[start + i] =
+                    env * (2.0 * std::f32::consts::PI * 220.0 * (i as f32 / sr as f32)).sin();
+            }
+        }
+        editor.waveform_samples = audio;
+        editor.auto_detect_transients_and_bpm(0.5);
+        assert!(editor.detected_bpm.is_some());
+        assert!(editor.detected_key.is_some());
+        assert!(!editor.transient_markers.is_empty());
+
+        editor.quantize_transients_to_grid(120.0, 0.25, 1.0);
+        let warp_markers = editor.to_clip_warp_markers(120.0);
+        assert_eq!(warp_markers.len(), editor.transient_markers.len());
+
+        let orig_len = editor.waveform_samples.len();
+        editor.warp_mode = summoner_project::audio_clip::ClipWarpMode::SpectralIdm;
+        editor.warp_stretch_ratio = 1.25;
+        editor.pitch_shift_semitones = 3.0;
+        assert!(editor.apply_warp_and_pitch());
+        assert_eq!(
+            editor.waveform_samples.len(),
+            (orig_len as f64 * 1.25).round() as usize
+        );
+        assert!(editor.undo());
+        assert_eq!(editor.waveform_samples.len(), orig_len);
     }
 }

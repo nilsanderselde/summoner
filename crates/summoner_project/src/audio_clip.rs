@@ -30,6 +30,40 @@ fn default_gain_1_f64() -> f64 {
     1.0
 }
 
+fn default_warp_grain_ms() -> f32 {
+    35.0
+}
+
+/// Time-stretching and audio warping algorithm mode stored on a project audio clip (REC-2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ClipWarpMode {
+    #[default]
+    Beats,
+    Tones,
+    Texture,
+    Complex,
+    RePitch,
+    SpectralIdm,
+}
+
+/// Persistent warp marker mapping a source audio frame to a timeline beat position (REC-2).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ClipWarpMarker {
+    pub source_frame: u64,
+    pub target_beat: f64,
+    #[serde(default = "default_gain_1")]
+    pub transient_strength: f32,
+    #[serde(default)]
+    pub locked: bool,
+}
+
+/// Breakpoint in a clip's per-clip gain automation envelope (REC-4).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct GainEnvelopePoint {
+    pub beat_offset: f64,
+    pub gain: f32,
+}
+
 /// Curvature characteristic of a volume fade.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum FadeCurve {
@@ -134,6 +168,22 @@ pub struct AudioClipConfig {
     pub time_stretch_ratio: f64,
     #[serde(default)]
     pub pitch_shift_semitones: f64,
+    #[serde(default)]
+    pub warp_enabled: bool,
+    #[serde(default)]
+    pub warp_mode: ClipWarpMode,
+    #[serde(default)]
+    pub warp_markers: Vec<ClipWarpMarker>,
+    #[serde(default = "default_warp_grain_ms")]
+    pub warp_grain_ms: f32,
+    #[serde(default)]
+    pub warp_flux: f32,
+    #[serde(default)]
+    pub formant_shift_semitones: f32,
+    #[serde(default)]
+    pub harmonize_to_project_scale: bool,
+    #[serde(default)]
+    pub gain_envelope: Vec<GainEnvelopePoint>,
 }
 
 impl AudioClipConfig {
@@ -169,6 +219,14 @@ impl AudioClipConfig {
             lane_index: 0,
             time_stretch_ratio: 1.0,
             pitch_shift_semitones: 0.0,
+            warp_enabled: false,
+            warp_mode: ClipWarpMode::default(),
+            warp_markers: Vec::new(),
+            warp_grain_ms: 35.0,
+            warp_flux: 0.0,
+            formant_shift_semitones: 0.0,
+            harmonize_to_project_scale: false,
+            gain_envelope: Vec::new(),
         }
     }
 
@@ -184,7 +242,7 @@ impl AudioClipConfig {
         beat >= self.start_beat && beat < self.end_beat()
     }
 
-    /// Calculate the effective gain multiplier at a specific beat, factoring in fade-in, fade-out, and mute.
+    /// Calculate the effective gain multiplier at a specific beat, factoring in fades, gain envelope, and mute.
     pub fn gain_at_beat(&self, beat: f64) -> f32 {
         if self.muted || !self.contains_beat(beat) {
             return 0.0;
@@ -192,6 +250,11 @@ impl AudioClipConfig {
 
         let local_beat = beat - self.start_beat;
         let mut multiplier = self.gain;
+
+        // Per-clip piecewise-linear gain automation envelope
+        if !self.gain_envelope.is_empty() {
+            multiplier *= Self::eval_gain_envelope(&self.gain_envelope, local_beat);
+        }
 
         // Fade in
         if self.fade_in_beats > 1e-6 && local_beat < self.fade_in_beats {
@@ -207,6 +270,130 @@ impl AudioClipConfig {
         }
 
         multiplier
+    }
+
+    fn eval_gain_envelope(points: &[GainEnvelopePoint], local_beat: f64) -> f32 {
+        if points.len() == 1 {
+            return points[0].gain.max(0.0);
+        }
+        if local_beat <= points[0].beat_offset {
+            return points[0].gain.max(0.0);
+        }
+        for w in points.windows(2) {
+            if local_beat <= w[1].beat_offset {
+                let span = (w[1].beat_offset - w[0].beat_offset).max(1e-9);
+                let t = ((local_beat - w[0].beat_offset) / span).clamp(0.0, 1.0) as f32;
+                return (w[0].gain + t * (w[1].gain - w[0].gain)).max(0.0);
+            }
+        }
+        points.last().map(|p| p.gain.max(0.0)).unwrap_or(1.0)
+    }
+
+    /// Add a warp marker mapping `source_frame` to `target_beat` and enable warping (REC-2).
+    pub fn add_warp_marker(&mut self, source_frame: u64, target_beat: f64) {
+        self.warp_enabled = true;
+        self.warp_markers.push(ClipWarpMarker {
+            source_frame,
+            target_beat: target_beat.max(0.0),
+            transient_strength: 1.0,
+            locked: false,
+        });
+        self.warp_markers.sort_by(|a, b| {
+            a.target_beat
+                .partial_cmp(&b.target_beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+
+    /// Move an existing warp marker to a new `target_beat` (REC-2).
+    pub fn move_warp_marker(&mut self, index: usize, new_target_beat: f64) -> bool {
+        if let Some(m) = self.warp_markers.get_mut(index) {
+            m.target_beat = new_target_beat.max(0.0);
+            self.warp_markers.sort_by(|a, b| {
+                a.target_beat
+                    .partial_cmp(&b.target_beat)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Remove a warp marker by index (REC-2).
+    pub fn remove_warp_marker(&mut self, index: usize) -> bool {
+        if index < self.warp_markers.len() {
+            self.warp_markers.remove(index);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Snap unlocked warp markers toward the nearest `grid_beats` subdivision with given strength [0..1] (REC-5).
+    pub fn quantize_warp_markers(&mut self, grid_beats: f64, strength: f32) {
+        if grid_beats <= 1e-6 {
+            return;
+        }
+        let s = strength.clamp(0.0, 1.0) as f64;
+        for m in &mut self.warp_markers {
+            if !m.locked {
+                let grid_target = (m.target_beat / grid_beats).round() * grid_beats;
+                m.target_beat = (m.target_beat + (grid_target - m.target_beat) * s).max(0.0);
+            }
+        }
+        self.warp_markers.sort_by(|a, b| {
+            a.target_beat
+                .partial_cmp(&b.target_beat)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+    }
+
+    /// Slip-edit the underlying source audio offset without moving timeline clip bounds (REC-4).
+    pub fn slip_edit(&mut self, delta_frames: i64) {
+        if delta_frames >= 0 {
+            self.offset_frames = self.offset_frames.saturating_add(delta_frames as u64);
+        } else {
+            self.offset_frames = self
+                .offset_frames
+                .saturating_sub(delta_frames.unsigned_abs());
+        }
+    }
+
+    /// Slice this clip at its `warp_markers` into sequential trimmed sub-clips (REC-4, HUM-6).
+    pub fn slice_at_warp_markers(&self, sample_rate: u32, bpm: f64) -> Vec<AudioClipConfig> {
+        let mut beats: Vec<f64> = self
+            .warp_markers
+            .iter()
+            .filter_map(|m| {
+                if m.target_beat > 1e-4 && m.target_beat < self.duration_beats - 1e-4 {
+                    Some(self.start_beat + m.target_beat)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        beats.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        beats.dedup_by(|a, b| (*a - *b).abs() < 1e-4);
+
+        if beats.is_empty() {
+            return vec![self.clone()];
+        }
+
+        let mut slices = Vec::new();
+        let mut remainder = self.clone();
+        for (idx, cut_beat) in beats.into_iter().enumerate() {
+            if cut_beat > remainder.start_beat && cut_beat < remainder.end_beat() {
+                if let Ok((mut head, tail)) = remainder.split_at_beat(cut_beat, sample_rate, bpm) {
+                    head.id = format!("{}_slice_{}", self.id, idx);
+                    slices.push(head);
+                    remainder = tail;
+                }
+            }
+        }
+        remainder.id = format!("{}_slice_{}", self.id, slices.len());
+        slices.push(remainder);
+        slices
     }
 
     /// Split this clip at a specified timeline beat into two non-destructive sub-clips.
@@ -323,5 +510,50 @@ mod tests {
         assert_eq!(clip_a.crossfade_with_clip_id.as_deref(), Some("clipB"));
         assert_eq!(clip_b.fade_in_beats, 1.0);
         assert_eq!(clip_b.crossfade_with_clip_id.as_deref(), Some("clipA"));
+    }
+
+    #[test]
+    fn test_warp_markers_quantize_gain_envelope_slip_and_slice() {
+        let mut clip = AudioClipConfig::new("clipW", "Breakbeat", "brk", 4.0, 4.0);
+        clip.add_warp_marker(22050, 1.15);
+        clip.add_warp_marker(44100, 2.10);
+        assert!(clip.warp_enabled);
+        assert_eq!(clip.warp_markers.len(), 2);
+
+        // Quantize to 0.25-beat grid at 100% strength
+        clip.quantize_warp_markers(0.25, 1.0);
+        assert!((clip.warp_markers[0].target_beat - 1.25).abs() < 1e-6);
+        assert!((clip.warp_markers[1].target_beat - 2.0).abs() < 1e-6);
+
+        // Move and remove markers
+        assert!(clip.move_warp_marker(0, 1.0));
+        assert!((clip.warp_markers[0].target_beat - 1.0).abs() < 1e-6);
+
+        // Gain envelope interpolation
+        clip.gain_envelope = vec![
+            GainEnvelopePoint {
+                beat_offset: 0.0,
+                gain: 0.2,
+            },
+            GainEnvelopePoint {
+                beat_offset: 2.0,
+                gain: 1.0,
+            },
+        ];
+        assert!((clip.gain_at_beat(5.0) - 0.6).abs() < 1e-4);
+
+        // Slip edit content offset without shifting start_beat
+        clip.slip_edit(512);
+        assert_eq!(clip.offset_frames, 512);
+        clip.slip_edit(-128);
+        assert_eq!(clip.offset_frames, 384);
+        assert_eq!(clip.start_beat, 4.0);
+
+        // Slice at warp markers (1.0 and 2.0 -> 3 slices spanning beats 4..5, 5..6, 6..8)
+        let slices = clip.slice_at_warp_markers(44100, 120.0);
+        assert_eq!(slices.len(), 3);
+        assert!((slices[0].start_beat - 4.0).abs() < 1e-6);
+        assert!((slices[1].start_beat - 5.0).abs() < 1e-6);
+        assert!((slices[2].start_beat - 6.0).abs() < 1e-6);
     }
 }

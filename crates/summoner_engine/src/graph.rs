@@ -653,6 +653,9 @@ impl NodeFactory {
                 summoner_dsp::ExpertSleepersModel::Es8,
                 sample_rate as f32,
             ))),
+            "WsolaTimeStretcher" | "ElasticWarpEngine" | "RealtimeWarpNode" => {
+                Some(Box::new(summoner_dsp::RealtimeWarpNode::new(sample_rate)))
+            }
             _ => None,
         }
     }
@@ -972,6 +975,7 @@ pub struct CompiledAudioClip {
     pub config: summoner_project::audio_clip::AudioClipConfig,
     pub samples_l: Vec<f32>,
     pub samples_r: Vec<f32>,
+    pub pre_warped: bool,
 }
 
 fn decode_wav_stereo_at_rate(
@@ -1208,11 +1212,79 @@ impl GraphRunner {
                         if let Some((samples_l, samples_r)) =
                             decode_wav_stereo_at_rate(path, project.transport.sample_rate)
                         {
-                            compiled_clips.push(CompiledAudioClip {
-                                config: clip.clone(),
-                                samples_l,
-                                samples_r,
-                            });
+                            let needs_warp = clip.warp_enabled
+                                || !clip.warp_markers.is_empty()
+                                || clip.pitch_shift_semitones.abs() > 1e-3
+                                || ((clip.time_stretch_ratio - 1.0).abs() > 1e-3
+                                    && clip.warp_mode
+                                        != summoner_project::audio_clip::ClipWarpMode::RePitch);
+
+                            if needs_warp && !samples_l.is_empty() {
+                                let total_src = samples_l.len().min(samples_r.len());
+                                let start = (clip.offset_frames as usize).min(total_src);
+                                let end = clip
+                                    .duration_frames
+                                    .map(|d| (start + d as usize).min(total_src))
+                                    .unwrap_or(total_src);
+                                let src_l = &samples_l[start..end];
+                                let src_r = &samples_r[start..end];
+                                let frames_per_beat = (project.transport.sample_rate as f64 * 60.0)
+                                    / project.transport.bpm.max(1.0);
+                                let target_len =
+                                    ((clip.duration_beats * frames_per_beat).round() as usize)
+                                        .max(1);
+                                let mode = match clip.warp_mode {
+                                    summoner_project::audio_clip::ClipWarpMode::Beats => {
+                                        summoner_dsp::WarpMode::Beats
+                                    }
+                                    summoner_project::audio_clip::ClipWarpMode::Tones => {
+                                        summoner_dsp::WarpMode::Tones
+                                    }
+                                    summoner_project::audio_clip::ClipWarpMode::Texture => {
+                                        summoner_dsp::WarpMode::Texture
+                                    }
+                                    summoner_project::audio_clip::ClipWarpMode::Complex => {
+                                        summoner_dsp::WarpMode::Complex
+                                    }
+                                    summoner_project::audio_clip::ClipWarpMode::RePitch => {
+                                        summoner_dsp::WarpMode::RePitch
+                                    }
+                                    summoner_project::audio_clip::ClipWarpMode::SpectralIdm => {
+                                        summoner_dsp::WarpMode::SpectralIdm
+                                    }
+                                };
+                                let mut engine = summoner_dsp::ElasticWarpEngine::new(
+                                    project.transport.sample_rate,
+                                )
+                                .with_mode(mode)
+                                .with_pitch_semitones(clip.pitch_shift_semitones as f32)
+                                .with_formant_semitones(clip.formant_shift_semitones)
+                                .with_grain_ms(clip.warp_grain_ms)
+                                .with_flux(clip.warp_flux);
+
+                                for m in &clip.warp_markers {
+                                    let rel_src =
+                                        (m.source_frame as usize).saturating_sub(start);
+                                    let tgt_frame =
+                                        ((m.target_beat * frames_per_beat).round() as usize)
+                                            .min(target_len);
+                                    engine.add_marker(rel_src, tgt_frame);
+                                }
+                                let (wl, wr) = engine.warp_stereo(src_l, src_r, target_len);
+                                compiled_clips.push(CompiledAudioClip {
+                                    config: clip.clone(),
+                                    samples_l: wl,
+                                    samples_r: wr,
+                                    pre_warped: true,
+                                });
+                            } else {
+                                compiled_clips.push(CompiledAudioClip {
+                                    config: clip.clone(),
+                                    samples_l,
+                                    samples_r,
+                                    pre_warped: false,
+                                });
+                            }
                         }
                     }
                 }
@@ -1382,26 +1454,35 @@ impl GraphRunner {
                             continue;
                         }
                         let total_len = clip.samples_l.len().min(clip.samples_r.len());
-                        let offset = clip.config.offset_frames as usize;
+                        let offset = if clip.pre_warped {
+                            0
+                        } else {
+                            clip.config.offset_frames as usize
+                        };
                         let avail = total_len.saturating_sub(offset);
                         if avail == 0 {
                             continue;
                         }
-                        let stretch = if clip.config.time_stretch_ratio > 1e-3 {
+                        let stretch = if clip.pre_warped {
+                            1.0
+                        } else if clip.config.time_stretch_ratio > 1e-3 {
                             clip.config.time_stretch_ratio
                         } else {
                             1.0
                         };
-                        let region_len = clip
-                            .config
-                            .duration_frames
-                            .map(|d| (d as usize).min(avail))
-                            .unwrap_or_else(|| {
-                                (((clip.config.duration_beats / stretch) * frames_per_beat).round()
-                                    as usize)
-                                    .min(avail)
-                            })
-                            .max(1);
+                        let region_len = if clip.pre_warped {
+                            avail.max(1)
+                        } else {
+                            clip.config
+                                .duration_frames
+                                .map(|d| (d as usize).min(avail))
+                                .unwrap_or_else(|| {
+                                    (((clip.config.duration_beats / stretch) * frames_per_beat)
+                                        .round() as usize)
+                                        .min(avail)
+                                })
+                                .max(1)
+                        };
                         let pan = clip.config.pan.clamp(-1.0, 1.0);
                         let pan_l = (1.0 - pan).min(1.0);
                         let pan_r = (1.0 + pan).min(1.0);
@@ -2406,6 +2487,67 @@ mod tests {
             runner.process_block(256, &ctx, &mut [&mut out_l, &mut out_r]);
             assert!(out_l.iter().all(|&s| s == 0.0));
         }
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_graph_runner_renders_warped_pitch_shifted_clip_zero_alloc() {
+        use summoner_core::allocator::AllocGuard;
+        use summoner_project::audio_clip::{AudioClipConfig, ClipWarpMode};
+        use summoner_project::schema::TrackConfig;
+
+        let dir =
+            std::env::temp_dir().join(format!("summoner_warped_clip_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let wav_path = dir.join("sine.wav");
+
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 32,
+            sample_format: hound::SampleFormat::Float,
+        };
+        let mut writer = hound::WavWriter::create(&wav_path, spec).unwrap();
+        for i in 0..22050 {
+            let s = (2.0 * std::f32::consts::PI * 220.0 * (i as f32 / 44100.0)).sin() * 0.5;
+            writer.write_sample(s).unwrap();
+        }
+        writer.finalize().unwrap();
+
+        let mut clip = AudioClipConfig::new("warped_1", "Warped Sine", "sine", 0.0, 2.0);
+        clip.file_path = Some(wav_path.to_string_lossy().to_string());
+        clip.warp_enabled = true;
+        clip.warp_mode = ClipWarpMode::Complex;
+        clip.pitch_shift_semitones = 7.0;
+
+        let mut project = create_default_project("Warped Clip Test");
+        project.tracks.clear();
+        project.transport.sample_rate = 44100;
+        project.transport.bpm = 120.0;
+        project.tracks.push(TrackConfig {
+            id: 1,
+            name: "Audio 1".to_string(),
+            channels: 2,
+            gain: 1.0,
+            audio_clips: vec![clip],
+            ..Default::default()
+        });
+
+        let mut runner = GraphRunner::new(&project);
+        assert_eq!(runner.track_audio_clips[0].len(), 1);
+        assert!(runner.track_audio_clips[0][0].pre_warped);
+
+        let mut out_l = [0.0f32; 512];
+        let mut out_r = [0.0f32; 512];
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 11025);
+        {
+            let _guard = AllocGuard::new();
+            runner.process_block(512, &ctx, &mut [&mut out_l, &mut out_r]);
+        }
+        assert!(out_l.iter().any(|&s| s.abs() > 0.05));
+        assert!(out_l.iter().all(|s| s.is_finite()));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

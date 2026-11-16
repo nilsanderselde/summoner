@@ -318,6 +318,9 @@ pub const KNOWN_NODE_TYPES: &[&str] = &[
     "SpectralResynthesisEngine",
     "GenCodeNode",
     "DcCoupledCvNode",
+    "WsolaTimeStretcher",
+    "ElasticWarpEngine",
+    "RealtimeWarpNode",
 ];
 
 #[cfg(test)]

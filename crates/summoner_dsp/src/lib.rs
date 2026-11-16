@@ -251,7 +251,10 @@ pub use oscillators::{
 };
 pub use oversampling::Oversampler;
 pub use parametric_eq::{EqBand, ParametricEqNode};
-pub use pitch_shift::{ElasticWarpEngine, WarpMarker, WsolaTimeStretcher};
+pub use pitch_shift::{
+    detect_bpm_and_key, AudioAnalysisResult, ElasticWarpEngine, RealtimeWarpNode, WarpMarker,
+    WarpMode, WsolaTimeStretcher,
+};
 pub use pitch_shifter::PitchShifterNode;
 pub use reverb::{ConvolutionReverbNode, EffectReverb};
 pub use ring_mod::{FrequencyShifter, RingModWaveform, RingModulator};
