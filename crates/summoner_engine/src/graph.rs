@@ -966,11 +966,65 @@ pub struct TrackMeta {
     pub hardware_output_channels: Option<(usize, usize)>,
 }
 
+/// Pre-decoded, sample-rate-aligned audio clip ready for zero-allocation RT playback.
+#[derive(Clone)]
+pub struct CompiledAudioClip {
+    pub config: summoner_project::audio_clip::AudioClipConfig,
+    pub samples_l: Vec<f32>,
+    pub samples_r: Vec<f32>,
+}
+
+fn decode_wav_stereo_at_rate(
+    path: &std::path::Path,
+    target_sample_rate: u32,
+) -> Option<(Vec<f32>, Vec<f32>)> {
+    let mut reader = hound::WavReader::open(path).ok()?;
+    let spec = reader.spec();
+    let chs = spec.channels.max(1) as usize;
+
+    let interleaved: Vec<f32> = match spec.sample_format {
+        hound::SampleFormat::Float => reader.samples::<f32>().filter_map(|s| s.ok()).collect(),
+        hound::SampleFormat::Int => {
+            let max_val = (1i64 << (spec.bits_per_sample.clamp(1, 32) - 1)) as f32;
+            reader
+                .samples::<i32>()
+                .filter_map(|s| s.ok().map(|v| v as f32 / max_val))
+                .collect()
+        }
+    };
+
+    let frames = interleaved.len() / chs;
+    if frames == 0 {
+        return None;
+    }
+
+    let mut samples_l = Vec::with_capacity(frames);
+    let mut samples_r = Vec::with_capacity(frames);
+    for f in 0..frames {
+        let l = interleaved[f * chs];
+        let r = if chs > 1 { interleaved[f * chs + 1] } else { l };
+        samples_l.push(l);
+        samples_r.push(r);
+    }
+
+    if spec.sample_rate > 0 && target_sample_rate > 0 && spec.sample_rate != target_sample_rate {
+        return Some(summoner_core::resample::resample_stereo(
+            &samples_l,
+            &samples_r,
+            spec.sample_rate,
+            target_sample_rate,
+        ));
+    }
+
+    Some((samples_l, samples_r))
+}
+
 pub struct GraphRunner {
     pub tracks: Vec<Track>,
     pub track_meta: Vec<TrackMeta>,
     pub track_filters: Vec<TrackFilters>,
     pub pdc_buffers: Vec<PdcDelayBuffer>,
+    pub track_audio_clips: Vec<Vec<CompiledAudioClip>>,
     pub master_trim_db: f32,
     pub telemetry: MasterMeterTelemetry,
     pub true_peak_meter: summoner_dsp::TruePeakMeter,
@@ -1102,7 +1156,8 @@ impl GraphRunner {
 
         let mut track_buffers = Vec::with_capacity(project.tracks.len());
         let mut track_in_buffers = Vec::with_capacity(project.tracks.len());
-        for _ in 0..project.tracks.len() {
+        let mut track_audio_clips = Vec::with_capacity(project.tracks.len());
+        for tc in &project.tracks {
             track_buffers.push([
                 Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
                 Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
@@ -1111,6 +1166,32 @@ impl GraphRunner {
                 Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
                 Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
             ]);
+
+            let mut compiled_clips = Vec::with_capacity(tc.audio_clips.len());
+            for clip in &tc.audio_clips {
+                let resolved_path = clip.file_path.as_deref().or_else(|| {
+                    project
+                        .assets
+                        .iter()
+                        .find(|a| a.id == clip.asset_id)
+                        .map(|a| a.path.as_str())
+                });
+                if let Some(p_str) = resolved_path {
+                    let path = std::path::Path::new(p_str);
+                    if path.exists() {
+                        if let Some((samples_l, samples_r)) =
+                            decode_wav_stereo_at_rate(path, project.transport.sample_rate)
+                        {
+                            compiled_clips.push(CompiledAudioClip {
+                                config: clip.clone(),
+                                samples_l,
+                                samples_r,
+                            });
+                        }
+                    }
+                }
+            }
+            track_audio_clips.push(compiled_clips);
         }
 
         Self {
@@ -1118,6 +1199,7 @@ impl GraphRunner {
             track_meta,
             track_filters,
             pdc_buffers,
+            track_audio_clips,
             master_trim_db: project.transport.master_trim_db,
             telemetry: MasterMeterTelemetry::default(),
             true_peak_meter: summoner_dsp::TruePeakMeter::new(),
@@ -1256,6 +1338,73 @@ impl GraphRunner {
                                 for i in 0..len {
                                     self.track_in_buffers[track_idx][1][i] += in_r[i];
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Mix active AudioClipConfig playback into track_in_buffers (feeds both dry audio and insert FX)
+                if ctx.is_playing && ctx.sample_rate > 0 && ctx.bpm > 0.0 {
+                    let frames_per_beat = (ctx.sample_rate as f64 * 60.0) / ctx.bpm.max(1.0);
+                    for clip in &self.track_audio_clips[track_idx] {
+                        if clip.config.muted || clip.samples_l.is_empty() {
+                            continue;
+                        }
+                        let total_len = clip.samples_l.len().min(clip.samples_r.len());
+                        let offset = clip.config.offset_frames as usize;
+                        let avail = total_len.saturating_sub(offset);
+                        if avail == 0 {
+                            continue;
+                        }
+                        let stretch = if clip.config.time_stretch_ratio > 1e-3 {
+                            clip.config.time_stretch_ratio
+                        } else {
+                            1.0
+                        };
+                        let region_len = clip
+                            .config
+                            .duration_frames
+                            .map(|d| (d as usize).min(avail))
+                            .unwrap_or_else(|| {
+                                (((clip.config.duration_beats / stretch) * frames_per_beat).round()
+                                    as usize)
+                                    .min(avail)
+                            })
+                            .max(1);
+                        let pan = clip.config.pan.clamp(-1.0, 1.0);
+                        let pan_l = (1.0 - pan).min(1.0);
+                        let pan_r = (1.0 + pan).min(1.0);
+
+                        for i in 0..block_size {
+                            let frame = ctx.frame_position + i as u64;
+                            let beat = frame as f64 / frames_per_beat;
+                            if !clip.config.contains_beat(beat) {
+                                continue;
+                            }
+                            let gain = clip.config.gain_at_beat(beat);
+                            if gain <= 0.0 {
+                                continue;
+                            }
+                            let mut rel_beats = (beat - clip.config.start_beat).max(0.0);
+                            if clip.config.loop_enabled && clip.config.loop_length_beats > 1e-6 {
+                                rel_beats %= clip.config.loop_length_beats;
+                            }
+                            let rel_frame =
+                                ((rel_beats / stretch) * frames_per_beat).round() as usize;
+                            let src_frame = if clip.config.is_reversed {
+                                let rev_local =
+                                    region_len.saturating_sub(1 + (rel_frame % region_len));
+                                offset + rev_local
+                            } else if clip.config.loop_enabled {
+                                offset + (rel_frame % region_len)
+                            } else {
+                                offset + rel_frame
+                            };
+                            if src_frame < total_len {
+                                self.track_in_buffers[track_idx][0][i] +=
+                                    clip.samples_l[src_frame] * gain * pan_l;
+                                self.track_in_buffers[track_idx][1][i] +=
+                                    clip.samples_r[src_frame] * gain * pan_r;
                             }
                         }
                     }
@@ -2144,5 +2293,89 @@ mod tests {
         assert!(out1.iter().all(|&s| s == 0.0));
         assert!(out2.iter().all(|&s| (s - 0.4).abs() < 1e-6));
         assert!(out3.iter().all(|&s| (s + 0.6).abs() < 1e-6));
+    }
+
+    #[test]
+    fn test_graph_runner_renders_audio_clips_with_fades_and_reverse_zero_alloc() {
+        use summoner_core::allocator::AllocGuard;
+        use summoner_project::audio_clip::AudioClipConfig;
+        use summoner_project::schema::TrackConfig;
+
+        let dir = std::env::temp_dir().join(format!("summoner_clip_render_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let wav_path = dir.join("clip_src.wav");
+
+        // Write 1 beat (22050 frames @ 44100 Hz, 120 BPM) rising ramp so reverse vs forward is distinguishable
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 32,
+            sample_format: hound::SampleFormat::Float,
+        };
+        let mut writer = hound::WavWriter::create(&wav_path, spec).unwrap();
+        for i in 0..22050 {
+            let amp = (i as f32 / 22050.0) * 0.8 + 0.1;
+            writer.write_sample(amp).unwrap();
+        }
+        writer.finalize().unwrap();
+
+        let mut clip = AudioClipConfig::new("clip_1", "Ramp", "ramp_asset", 0.0, 1.0);
+        clip.file_path = Some(wav_path.to_string_lossy().to_string());
+        clip.fade_in_beats = 0.25;
+        clip.fade_out_beats = 0.25;
+
+        let mut rev_clip = clip.clone();
+        rev_clip.id = "clip_rev".to_string();
+        rev_clip.start_beat = 1.0;
+        rev_clip.is_reversed = true;
+        rev_clip.fade_in_beats = 0.0;
+        rev_clip.fade_out_beats = 0.0;
+
+        let mut project = create_default_project("Audio Clip Playback Test");
+        project.tracks.clear();
+        project.transport.sample_rate = 44100;
+        project.transport.bpm = 120.0;
+        project.tracks.push(TrackConfig {
+            id: 1,
+            name: "Audio 1".to_string(),
+            channels: 2,
+            gain: 1.0,
+            audio_clips: vec![clip, rev_clip],
+            ..Default::default()
+        });
+
+        let mut runner = GraphRunner::new(&project);
+        assert_eq!(runner.track_audio_clips[0].len(), 2);
+
+        let mut out_l = [0.0f32; 256];
+        let mut out_r = [0.0f32; 256];
+        let mut ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+
+        {
+            let _guard = AllocGuard::new();
+            // Frame 0: fade-in starts near 0 and rises
+            runner.process_block(256, &ctx, &mut [&mut out_l, &mut out_r]);
+            assert!(out_l[0].abs() < 0.01);
+            assert!(out_l[255] > 0.0);
+
+            // Middle of clip 1 (frame 11025 = beat 0.5): full gain
+            ctx.frame_position = 11025;
+            runner.process_block(256, &ctx, &mut [&mut out_l, &mut out_r]);
+            let forward_mid = out_l[0];
+            assert!(forward_mid > 0.3);
+
+            // Start of reversed clip 2 (frame 22050 = beat 1.0): starts at loud end (~0.9)
+            ctx.frame_position = 22050;
+            runner.process_block(256, &ctx, &mut [&mut out_l, &mut out_r]);
+            assert!(out_l[0] > 0.7);
+
+            // Past end of clips (frame 45000 > beat 2.0): silent
+            ctx.frame_position = 45000;
+            runner.process_block(256, &ctx, &mut [&mut out_l, &mut out_r]);
+            assert!(out_l.iter().all(|&s| s == 0.0));
+        }
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -756,23 +756,8 @@ fn main() {
                 fs::read_to_string(&resolved_proj_path).expect("Failed to read project file");
             let project = parse_project_toml(&content).expect("Failed to parse project TOML");
 
-            let num_frames = explicit_frames.unwrap_or_else(|| {
-                let mut max_beat = project.loop_end_beat.max(0.0);
-                for tc in &project.tracks {
-                    for seq in tc.all_sequences() {
-                        let seq_end = seq.start_beat + (seq.steps.len() as f64) * seq.step_division;
-                        if seq_end > max_beat {
-                            max_beat = seq_end;
-                        }
-                    }
-                }
-                if max_beat <= 0.0 {
-                    max_beat = 4.0;
-                }
-                let frames_per_beat =
-                    project.transport.sample_rate as f64 * 60.0 / project.transport.bpm.max(1.0);
-                (max_beat * frames_per_beat).round().max(1.0) as usize
-            });
+            let num_frames =
+                explicit_frames.unwrap_or_else(|| audio_engine::default_render_frames(&project));
 
             println!("Rendering WAV file: '{}' -> '{}'", proj_path, out_wav_path);
 

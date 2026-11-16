@@ -410,6 +410,11 @@ pub fn default_render_frames(project: &ProjectConfig) -> usize {
                 max_beat = seq_end;
             }
         }
+        for clip in &tc.audio_clips {
+            if clip.end_beat() > max_beat {
+                max_beat = clip.end_beat();
+            }
+        }
     }
     if max_beat <= 0.0 {
         max_beat = 4.0;
