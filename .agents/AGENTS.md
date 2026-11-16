@@ -8,15 +8,15 @@
 - **Authoritative Roadmap**: Always discover and treat the latest dated `local/ROADMAP_YYYYMMDD_HHMMSS.md` file as authoritative.
 - **Historical Context**: Read older roadmap files in `local/` if needed for historical context or previous analysis.
 - **New Roadmap Generation**: Once all tasks in the current roadmap are 100% complete, create a new roadmap file `local/ROADMAP_YYYYMMDD_HHMMSS.md` containing the next phase of milestones before finishing.
-- **Private Metadata Repository**: `local/` has its own separate private Git repository; commit and push roadmap/requirements/audit changes directly inside `local/` (`cd local && git add ... && git commit -m "..." && git push`).
+- **Private Metadata Repository (Always Commit & Push)**: `local/` has its own separate private Git repository; always stage, commit, and `git push` every roadmap/requirements/audit change directly inside `local/` (`cd local && git add ... && git commit -m "..." && git push`) after creating or updating files in `local/`.
 
 ## Makefile Targets & Workflows
 - `make vibe` runs the autonomous vibe coding bash runner script (`scripts/smart-vibe.sh`).
 - `make vibe-py` runs the streaming Python runner (`scripts/vibe_runner.py`).
 - `make test`, `make check`, `make build`, `make run`, `make clippy`, `make fmt` provide workspace shortcuts.
 
-## Git Commit Requirement
-- Commit changed files intermittently with a clear, detailed Git commit message immediately after implementing and verifying each step, widget, or sub-feature with tests. Do NOT accumulate uncommitted changes across multiple steps or leave uncommitted edits at the end of turns so work is never lost when quota limits are reached.
+## Git Commit & Push Requirement
+- **Commit & Push After Every Verified Step**: Commit changed files intermittently with a clear, detailed Git commit message immediately after implementing and verifying each step, widget, or sub-feature with tests, and **always automatically `git push` new commits** to the Summoner repository (`origin`) as well as the `local/` private repository (`cd local && git push`). Do NOT leave uncommitted or unpushed work at the end of turns so progress is never lost when quota limits are reached.
 
 ## Subagent Codebase & Verification Directives
 - **Mandatory Self-Correction Loop**: Every agent *must* run `cargo check`, `cargo clippy`, and `cargo test` after modifying Rust code. They must self-correct any warnings or errors *before* finishing their turn.
