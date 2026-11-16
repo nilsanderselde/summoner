@@ -874,9 +874,12 @@ fn parse_id3v23_tag(bytes: &[u8]) -> Option<(AudioMetadataTags, usize)> {
         if id == [0, 0, 0, 0] {
             break;
         }
-        let frame_len =
-            u32::from_be_bytes([bytes[pos + 4], bytes[pos + 5], bytes[pos + 6], bytes[pos + 7]])
-                as usize;
+        let frame_len = u32::from_be_bytes([
+            bytes[pos + 4],
+            bytes[pos + 5],
+            bytes[pos + 6],
+            bytes[pos + 7],
+        ]) as usize;
         pos += 10;
         if pos + frame_len > end {
             break;
@@ -1218,7 +1221,14 @@ pub fn export_flac(
     channels: u16,
     compression_level: u32,
 ) -> Result<(), String> {
-    export_flac_with_metadata(path, samples, sample_rate, channels, compression_level, None)
+    export_flac_with_metadata(
+        path,
+        samples,
+        sample_rate,
+        channels,
+        compression_level,
+        None,
+    )
 }
 
 pub fn export_flac_with_metadata(
@@ -1970,9 +1980,9 @@ pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
                     let sr = u32::from_le_bytes([packet[8], packet[9], packet[10], packet[11]]);
                     let ch = u16::from_le_bytes([packet[12], packet[13]]).max(1);
                     let pcm_start = if version == 1 && packet.len() >= 20 {
-                        let meta_len = u32::from_le_bytes([
-                            packet[16], packet[17], packet[18], packet[19],
-                        ]) as usize;
+                        let meta_len =
+                            u32::from_le_bytes([packet[16], packet[17], packet[18], packet[19]])
+                                as usize;
                         (20 + meta_len).min(packet.len())
                     } else {
                         16
@@ -2059,7 +2069,14 @@ pub fn write_audio_file(
         sample_rate,
         ..Default::default()
     };
-    write_audio_file_with_settings(path, samples, sample_rate, channels, target_format, &settings)
+    write_audio_file_with_settings(
+        path,
+        samples,
+        sample_rate,
+        channels,
+        target_format,
+        &settings,
+    )
 }
 
 /// Automated multi-format audio batch converter CLI engine (`summon convert input/ output/ --format=flac`).
@@ -2515,6 +2532,152 @@ pub fn export_adm_bwf(project: &ProjectConfig) -> Result<Vec<u8>, String> {
     Ok(wav)
 }
 
+/// Pre-flight mastering quality control report (`HUM-5`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MasteringQcReport {
+    pub peak_dbfs: f32,
+    pub clipped_samples: usize,
+    pub estimated_lufs: f32,
+    pub lufs_delta_db: f32,
+    pub dc_offset: f32,
+    pub phase_correlation: f32,
+    pub leading_silence_frames: usize,
+    pub trailing_silence_frames: usize,
+    pub passed: bool,
+    pub warnings: Vec<String>,
+}
+
+/// Analyze an interleaved stereo buffer for pre-flight release readiness against `target_lufs` (`HUM-5`).
+pub fn analyze_mastering_qc(
+    samples: &[f32],
+    _sample_rate: u32,
+    target_lufs: f32,
+) -> MasteringQcReport {
+    if samples.is_empty() {
+        return MasteringQcReport {
+            peak_dbfs: -120.0,
+            clipped_samples: 0,
+            estimated_lufs: -120.0,
+            lufs_delta_db: -120.0 - target_lufs,
+            dc_offset: 0.0,
+            phase_correlation: 1.0,
+            leading_silence_frames: 0,
+            trailing_silence_frames: 0,
+            passed: false,
+            warnings: vec!["Empty audio buffer".to_string()],
+        };
+    }
+
+    let mut peak = 0.0f32;
+    let mut clipped_samples = 0usize;
+    let mut sum_dc = 0.0f64;
+    let mut sum_sq_l = 0.0f64;
+    let mut sum_sq_r = 0.0f64;
+    let mut sum_lr = 0.0f64;
+    let total_frames = samples.len() / 2;
+
+    let mut first_active = None;
+    let mut last_active = 0usize;
+
+    for (frame_idx, ch) in samples.chunks_exact(2).enumerate() {
+        let l = ch[0];
+        let r = ch[1];
+        if l.abs() >= 1.0 {
+            clipped_samples += 1;
+        }
+        if r.abs() >= 1.0 {
+            clipped_samples += 1;
+        }
+        let max_lr = l.abs().max(r.abs());
+        peak = peak.max(max_lr);
+        if max_lr >= 1e-4 {
+            if first_active.is_none() {
+                first_active = Some(frame_idx);
+            }
+            last_active = frame_idx;
+        }
+        sum_dc += ((l + r) * 0.5) as f64;
+        sum_sq_l += (l as f64) * (l as f64);
+        sum_sq_r += (r as f64) * (r as f64);
+        sum_lr += (l as f64) * (r as f64);
+    }
+
+    let n = total_frames.max(1) as f64;
+    let dc_offset = (sum_dc / n) as f32;
+    let mean_sq = (sum_sq_l + sum_sq_r) / (2.0 * n);
+    let rms = mean_sq.sqrt() as f32;
+    let peak_dbfs = if peak > 1e-6 {
+        20.0 * peak.log10()
+    } else {
+        -120.0
+    };
+    let estimated_lufs = if rms > 1e-6 {
+        -0.691 + 20.0 * rms.log10() + 3.0
+    } else {
+        -120.0
+    };
+    let lufs_delta_db = estimated_lufs - target_lufs;
+    let denom = (sum_sq_l * sum_sq_r).sqrt();
+    let phase_correlation = if denom > 1e-12 {
+        (sum_lr / denom).clamp(-1.0, 1.0) as f32
+    } else {
+        1.0
+    };
+
+    let (leading_silence_frames, trailing_silence_frames) = match first_active {
+        Some(first) => (first, total_frames.saturating_sub(last_active + 1)),
+        None => (total_frames, 0),
+    };
+
+    let mut warnings = Vec::new();
+    if clipped_samples > 0 {
+        warnings.push(format!(
+            "Detected {} clipped samples (>= 0 dBFS)",
+            clipped_samples
+        ));
+    }
+    if peak_dbfs > -0.1 {
+        warnings.push(format!(
+            "Peak {:.2} dBFS exceeds -0.1 dBFS ceiling",
+            peak_dbfs
+        ));
+    }
+    if dc_offset.abs() > 0.01 {
+        warnings.push(format!("Significant DC offset: {:.4}", dc_offset));
+    }
+    if lufs_delta_db.abs() > 4.0 {
+        warnings.push(format!(
+            "Loudness {:.1} LUFS deviates by {:.1} dB from target {:.1} LUFS",
+            estimated_lufs, lufs_delta_db, target_lufs
+        ));
+    }
+    if phase_correlation < 0.0 {
+        warnings.push(format!(
+            "Negative phase correlation: {:.2}",
+            phase_correlation
+        ));
+    }
+
+    let passed = clipped_samples == 0
+        && dc_offset.abs() <= 0.01
+        && lufs_delta_db.abs() <= 6.0
+        && phase_correlation >= -0.1
+        && peak > 1e-5;
+
+    MasteringQcReport {
+        peak_dbfs,
+        clipped_samples,
+        estimated_lufs,
+        lufs_delta_db,
+        dc_offset,
+        phase_correlation,
+        leading_silence_frames,
+        trailing_silence_frames,
+        passed,
+        warnings,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2852,10 +3015,8 @@ mod tests {
 
     #[test]
     fn test_iox1_mp3_flac_ogg_wav_aiff_metadata_and_multipage_roundtrip() {
-        let temp_dir = std::env::temp_dir().join(format!(
-            "summoner_iox1_meta_rt_{}",
-            std::process::id()
-        ));
+        let temp_dir =
+            std::env::temp_dir().join(format!("summoner_iox1_meta_rt_{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();
 
@@ -2906,10 +3067,16 @@ mod tests {
             assert_eq!(read_meta.artist.as_deref(), Some("Summoner Test"));
             assert_eq!(read_meta.isrc.as_deref(), Some("USSUM2600001"));
             if ext != "wav" && ext != "ogg" {
-                assert_eq!(read_meta.cover_art_png.as_deref(), Some(fake_png.as_slice()));
+                assert_eq!(
+                    read_meta.cover_art_png.as_deref(),
+                    Some(fake_png.as_slice())
+                );
             }
             if ext == "ogg" {
-                assert_eq!(read_meta.cover_art_png.as_deref(), Some(fake_png.as_slice()));
+                assert_eq!(
+                    read_meta.cover_art_png.as_deref(),
+                    Some(fake_png.as_slice())
+                );
             }
         }
 
@@ -2920,5 +3087,28 @@ mod tests {
         assert_eq!(claxon_samples.len(), signal.len());
 
         let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_mastering_preflight_qc_report() {
+        // Balanced -14 LUFS-ish stereo sine with leading silence
+        let mut clean = vec![0.0f32; 200]; // 100 frames leading silence
+        for i in 1..=4410 {
+            let s = (2.0 * std::f32::consts::PI * 440.0 * (i as f32 / 44100.0)).sin() * 0.25;
+            clean.push(s);
+            clean.push(s);
+        }
+        let report = analyze_mastering_qc(&clean, 44100, -14.0);
+        assert!(report.passed, "warnings: {:?}", report.warnings);
+        assert_eq!(report.clipped_samples, 0);
+        assert_eq!(report.leading_silence_frames, 100);
+        assert!((report.phase_correlation - 1.0).abs() < 1e-3);
+
+        // Clipped & inverted-phase signal must fail QC
+        let bad = vec![1.05f32, -1.05f32, 1.05f32, -1.05f32];
+        let bad_report = analyze_mastering_qc(&bad, 44100, -14.0);
+        assert!(!bad_report.passed);
+        assert_eq!(bad_report.clipped_samples, 4);
+        assert!(bad_report.phase_correlation < 0.0);
     }
 }

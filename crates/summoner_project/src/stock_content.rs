@@ -286,6 +286,249 @@ impl StockContentRegistry {
 
         proj
     }
+
+    /// Synthesize a deterministic, royalty-free stereo factory audio sample normalized to -1.0 dBFS (`CON-1`, `CON-2`).
+    pub fn synthesize_factory_sample(preset_id: &str, sample_rate: u32) -> Vec<f32> {
+        let sr = sample_rate.max(8000) as f32;
+        let duration_secs = match preset_id {
+            "hihat_closed" => 0.15,
+            "snare_909" | "idm_metallic_perc" => 0.35,
+            "kick_808" => 0.60,
+            _ => 1.0,
+        };
+        let frames = (sr * duration_secs) as usize;
+        let mut out = vec![0.0f32; frames * 2];
+        let mut noise_state: u64 = 0x9E37_79B9_7F4A_7C15;
+        let mut phase = 0.0f32;
+        let mut phase2 = 0.0f32;
+
+        for f in 0..frames {
+            let t = f as f32 / sr;
+            noise_state = noise_state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            let white = ((noise_state >> 40) as f32 / 16_777_215.0) * 2.0 - 1.0;
+
+            let (l, r) = match preset_id {
+                "kick_808" => {
+                    let freq = 48.0 + 130.0 * (-t * 28.0).exp();
+                    phase += 2.0 * std::f32::consts::PI * freq / sr;
+                    let env = (-t * 5.2).exp();
+                    let s = (phase.sin() * 1.4).tanh() * env;
+                    (s, s)
+                }
+                "snare_909" => {
+                    let body = (2.0 * std::f32::consts::PI * 185.0 * t).sin() * (-t * 18.0).exp();
+                    let snap = white * (-t * 14.0).exp() * 0.7;
+                    let s = (body + snap).clamp(-1.0, 1.0);
+                    (s, s)
+                }
+                "hihat_closed" => {
+                    let metal = (2.0 * std::f32::consts::PI * 3400.0 * t).sin()
+                        * (2.0 * std::f32::consts::PI * 4980.0 * t).sin();
+                    let s = (metal * 0.5 + white * 0.5) * (-t * 36.0).exp();
+                    (s, s)
+                }
+                "reese_bass_c2" => {
+                    phase += 2.0 * std::f32::consts::PI * 65.41 / sr;
+                    phase2 += 2.0 * std::f32::consts::PI * 66.15 / sr;
+                    let saw_l = 1.0 - 2.0 * ((phase / (2.0 * std::f32::consts::PI)) % 1.0);
+                    let saw_r = 1.0 - 2.0 * ((phase2 / (2.0 * std::f32::consts::PI)) % 1.0);
+                    let s_l = ((saw_l + saw_r * 0.6) * 0.8).tanh();
+                    let s_r = ((saw_r + saw_l * 0.6) * 0.8).tanh();
+                    (s_l, s_r)
+                }
+                "acid_squelch_loop" => {
+                    let step_hz = if ((t * 8.0) as usize).is_multiple_of(2) {
+                        55.0
+                    } else {
+                        110.0
+                    };
+                    phase += 2.0 * std::f32::consts::PI * step_hz / sr;
+                    let mod_sig = (2.0
+                        * std::f32::consts::PI
+                        * (320.0 + 900.0 * (-((t * 8.0) % 1.0) * 6.0).exp())
+                        * t)
+                        .sin();
+                    let s = (phase.sin() + 0.5 * mod_sig).tanh() * 0.85;
+                    (s, s)
+                }
+                "idm_metallic_perc" => {
+                    let mod_osc = (2.0 * std::f32::consts::PI * 713.0 * t).sin() * 3.5;
+                    let carrier = (2.0 * std::f32::consts::PI * 440.0 * t + mod_osc).sin();
+                    let env = (-t * 16.0).exp();
+                    (carrier * env, (carrier * 0.85 + white * 0.1) * env)
+                }
+                _ => {
+                    let c = (2.0 * std::f32::consts::PI * 130.81 * t).sin();
+                    let g = (2.0 * std::f32::consts::PI * 196.00 * t).sin();
+                    let b = (2.0 * std::f32::consts::PI * 246.94 * t).sin();
+                    let swell = (t / duration_secs).min(1.0);
+                    ((c + 0.6 * g) * swell * 0.5, (c + 0.6 * b) * swell * 0.5)
+                }
+            };
+
+            out[f * 2] = l;
+            out[f * 2 + 1] = r;
+        }
+
+        // Peak-normalize to -1.0 dBFS target ceiling
+        let peak = out.iter().fold(0.0f32, |m, &s| m.max(s.abs()));
+        if peak > 1e-6 {
+            let target_peak = 10.0f32.powf(-1.0 / 20.0);
+            let scale = target_peak / peak;
+            for s in &mut out {
+                *s *= scale;
+            }
+        }
+        out
+    }
+
+    /// Generate the "IDM Crown Jewel" standalone electronic showcase project (`CON-4`).
+    pub fn demo_idm_crown_jewel() -> ProjectConfig {
+        use crate::schema::{
+            ChordEventConfig, KeyPointConfig, NodeConfig, SequenceConfig, SidechainRouteConfig,
+            TrackerStepConfig,
+        };
+        use std::collections::HashMap;
+
+        let mut proj = ProjectConfig {
+            name: "IDM Crown Jewel".to_string(),
+            transport: TransportConfig {
+                bpm: 138.0,
+                time_signature: "4/4".to_string(),
+                key_points: vec![KeyPointConfig {
+                    beat: 0.0,
+                    root_note: 5, // F Minor
+                    scale_type: "Minor".to_string(),
+                }],
+                chord_track: vec![
+                    ChordEventConfig {
+                        beat: 0.0,
+                        duration_beats: 4.0,
+                        root_note: 5,
+                        quality: "min".to_string(),
+                        bass_note: None,
+                    },
+                    ChordEventConfig {
+                        beat: 4.0,
+                        duration_beats: 4.0,
+                        root_note: 8,
+                        quality: "Maj".to_string(),
+                        bass_note: None,
+                    },
+                ],
+                ..Default::default()
+            },
+            meta: Some(ProjectMetadata {
+                genre: Some("IDM / Breakbeat".to_string()),
+                bpm: Some(138.0),
+                key: Some("Fm".to_string()),
+                tags: vec![
+                    "idm".to_string(),
+                    "edm".to_string(),
+                    "microtonal".to_string(),
+                    "sidechain".to_string(),
+                ],
+                notes: Some(
+                    "Showcase standalone project with core scale lock, chord track, and sidechain bus."
+                        .to_string(),
+                ),
+            }),
+            ..Default::default()
+        };
+
+        let drum_id = 1;
+        proj.tracks.push(TrackConfig {
+            id: drum_id,
+            name: "Kick & Glitch Kit".to_string(),
+            gain: 0.9,
+            nodes: vec![NodeConfig {
+                kind: "DrumMachine".to_string(),
+                params: HashMap::new(),
+                plugin_state: None,
+            }],
+            sequence: Some(SequenceConfig {
+                start_beat: 0.0,
+                step_division: 0.5,
+                steps: vec![
+                    TrackerStepConfig {
+                        note: 36.0,
+                        velocity: 1.0,
+                        active: true,
+                        ..Default::default()
+                    },
+                    TrackerStepConfig {
+                        note: 38.0,
+                        velocity: 0.85,
+                        active: true,
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        let bass_id = 2;
+        proj.tracks.push(TrackConfig {
+            id: bass_id,
+            name: "Neuro Reese Bass".to_string(),
+            gain: 0.85,
+            scale_lock: true,
+            follow_chord_track: true,
+            nodes: vec![NodeConfig {
+                kind: "DailySubtractiveSynth".to_string(),
+                params: HashMap::new(),
+                plugin_state: None,
+            }],
+            sequence: Some(SequenceConfig {
+                start_beat: 0.0,
+                step_division: 1.0,
+                steps: vec![TrackerStepConfig {
+                    note: 41.0,
+                    velocity: 0.95,
+                    active: true,
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        let lead_id = 3;
+        proj.tracks.push(TrackConfig {
+            id: lead_id,
+            name: "FM Shimmer Arp".to_string(),
+            gain: 0.72,
+            pan: 0.2,
+            scale_lock: true,
+            follow_chord_track: true,
+            nodes: vec![NodeConfig {
+                kind: "FM2Op".to_string(),
+                params: HashMap::new(),
+                plugin_state: None,
+            }],
+            ..Default::default()
+        });
+
+        let bus_id = proj.create_bus_track("Synth Bus");
+        proj.tracks
+            .iter_mut()
+            .filter(|t| t.id == bass_id || t.id == lead_id)
+            .for_each(|t| t.bus_target = Some("Synth Bus".to_string()));
+        let _ = bus_id;
+
+        proj.upsert_sidechain_route(SidechainRouteConfig {
+            source_track_id: drum_id,
+            dest_track_id: bass_id,
+            threshold_db: -20.0,
+            ratio: 6.0,
+            ..Default::default()
+        });
+
+        proj
+    }
 }
 
 #[cfg(test)]
@@ -316,5 +559,37 @@ mod tests {
         assert_eq!(demo.transport.bpm, 120.0);
         assert_eq!(demo.tracks.len(), 3);
         assert_eq!(demo.meta.unwrap().genre, Some("Synthwave".to_string()));
+    }
+
+    #[test]
+    fn test_procedural_factory_samples_and_idm_demo() {
+        let target_ceiling = 10.0f32.powf(-1.0 / 20.0);
+        for id in [
+            "kick_808",
+            "snare_909",
+            "hihat_closed",
+            "reese_bass_c2",
+            "acid_squelch_loop",
+            "idm_metallic_perc",
+            "ambient_shimmer_pad",
+        ] {
+            let pcm = StockContentRegistry::synthesize_factory_sample(id, 44100);
+            assert!(!pcm.is_empty(), "empty sample for {}", id);
+            assert!(pcm.iter().all(|s| s.is_finite()));
+            let peak = pcm.iter().fold(0.0f32, |m, &s| m.max(s.abs()));
+            assert!(
+                (peak - target_ceiling).abs() < 1e-3,
+                "expected -1 dBFS ceiling on {}, got peak {}",
+                id,
+                peak
+            );
+        }
+
+        let idm = StockContentRegistry::demo_idm_crown_jewel();
+        assert_eq!(idm.transport.bpm, 138.0);
+        assert_eq!(idm.tracks.len(), 4);
+        assert_eq!(idm.sidechain_routes.len(), 1);
+        assert!(idm.tracks[1].scale_lock);
+        assert!(idm.tracks[1].follow_chord_track);
     }
 }

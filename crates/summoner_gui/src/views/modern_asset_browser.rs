@@ -1197,6 +1197,10 @@ pub struct ModernAssetBrowserState {
     pub expanded_folders: Vec<String>,
     pub selected_item: Option<String>,
     pub is_collapsed: bool,
+    pub auto_warp_preview: bool,
+    pub preview_volume: f32,
+    pub favorites: Vec<String>,
+    pub detected_loop_tags: std::collections::HashMap<String, (f64, String)>,
 }
 
 impl Default for ModernAssetBrowserState {
@@ -1215,7 +1219,62 @@ impl Default for ModernAssetBrowserState {
             ],
             selected_item: Some("Drums/Synths".to_string()),
             is_collapsed: false,
+            auto_warp_preview: true,
+            preview_volume: 0.85,
+            favorites: Vec::new(),
+            detected_loop_tags: std::collections::HashMap::new(),
         }
+    }
+}
+
+impl ModernAssetBrowserState {
+    /// Toggle favorite status for an asset browser item (`CON-3`).
+    pub fn toggle_favorite(&mut self, item: &str) -> bool {
+        if let Some(pos) = self.favorites.iter().position(|f| f == item) {
+            self.favorites.remove(pos);
+            false
+        } else {
+            self.favorites.push(item.to_string());
+            true
+        }
+    }
+
+    /// Analyze tempo & key on `mono_samples`, cache detected tags, and optionally auto-warp to
+    /// `project_bpm` for tempo-synced auditioning (`CON-3`).
+    pub fn preview_and_auto_warp_buffer(
+        &mut self,
+        item_name: &str,
+        mono_samples: &[f32],
+        sample_rate: u32,
+        project_bpm: f64,
+    ) -> Vec<f32> {
+        if mono_samples.is_empty() {
+            return Vec::new();
+        }
+        let analysis = summoner_dsp::detect_bpm_and_key(mono_samples, sample_rate);
+        self.detected_loop_tags.insert(
+            item_name.to_string(),
+            (analysis.estimated_bpm, analysis.key_name.clone()),
+        );
+        let mut out = if self.auto_warp_preview
+            && analysis.estimated_bpm > 1.0
+            && project_bpm > 1.0
+            && (analysis.estimated_bpm - project_bpm).abs() > 0.5
+        {
+            let target_len = ((mono_samples.len() as f64 * (analysis.estimated_bpm / project_bpm))
+                .round() as usize)
+                .max(1);
+            let engine = summoner_dsp::ElasticWarpEngine::new(sample_rate)
+                .with_mode(summoner_dsp::WarpMode::Complex);
+            engine.warp_audio(mono_samples, target_len)
+        } else {
+            mono_samples.to_vec()
+        };
+        let vol = self.preview_volume.clamp(0.0, 2.0);
+        for s in &mut out {
+            *s *= vol;
+        }
+        out
     }
 }
 
@@ -1445,4 +1504,33 @@ pub fn show_modern_asset_browser(
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_asset_browser_favorites_and_auto_warp_preview() {
+        let mut state = ModernAssetBrowserState::default();
+        assert!(state.toggle_favorite("factory/kits/tr808_classic.toml"));
+        assert_eq!(state.favorites.len(), 1);
+        assert!(!state.toggle_favorite("factory/kits/tr808_classic.toml"));
+        assert!(state.favorites.is_empty());
+
+        // 1 second of 120 BPM pulsed sine (peaks at 0.0s, 0.5s, 1.0s)
+        let mut mono = vec![0.0f32; 44100];
+        for beat_idx in 0..2 {
+            let start = beat_idx * 22050;
+            for i in 0..2205 {
+                let t = i as f32 / 44100.0;
+                mono[start + i] =
+                    (2.0 * std::f32::consts::PI * 220.0 * t).sin() * (-t * 20.0).exp();
+            }
+        }
+        let warped = state.preview_and_auto_warp_buffer("pulse_120.wav", &mono, 44100, 140.0);
+        assert!(!warped.is_empty());
+        assert!(state.detected_loop_tags.contains_key("pulse_120.wav"));
+        assert!(warped.iter().all(|s| s.is_finite()));
+    }
 }
