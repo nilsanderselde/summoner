@@ -478,6 +478,7 @@ impl SmfData {
                 master_trim_db: 0.0,
                 tempo_points: self.tempo_points.clone(),
                 meter_points: self.meter_points.clone(),
+                ..Default::default()
             },
             tracks: Vec::new(),
             markers: self.markers.clone(),
@@ -709,6 +710,7 @@ mod tests {
                     numerator: 4,
                     denominator: 4,
                 }],
+                ..Default::default()
             },
             markers: vec![MarkerConfig {
                 name: "Drop".to_string(),

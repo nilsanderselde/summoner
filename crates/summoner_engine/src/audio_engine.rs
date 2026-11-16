@@ -548,6 +548,97 @@ pub fn render_project_track_stems(
     stems
 }
 
+/// Freeze a track by offline-rendering its synthesis, audio clips, and insert FX into an
+/// interleaved stereo buffer on `track.frozen_buffer`, leaving channel-strip gain, pan, and
+/// sends live while marking `track.is_frozen = true`.
+pub fn freeze_track_in_place(
+    project: &mut ProjectConfig,
+    track_id: u64,
+    explicit_frames: Option<usize>,
+) -> Result<usize, String> {
+    let orig_track = project
+        .tracks
+        .iter()
+        .find(|t| t.id == track_id)
+        .cloned()
+        .ok_or_else(|| format!("Track {} not found for freeze", track_id))?;
+
+    let mut single_proj = project.clone();
+    let mut freeze_tc = orig_track;
+    freeze_tc.muted = false;
+    freeze_tc.soloed = false;
+    freeze_tc.is_frozen = false;
+    freeze_tc.frozen_buffer = None;
+    freeze_tc.gain = 1.0;
+    freeze_tc.pan = 0.0;
+    freeze_tc.phase_flip = false;
+    freeze_tc.input_gain_db = 0.0;
+    freeze_tc.output_gain_db = 0.0;
+    freeze_tc.send_to_master = true;
+    freeze_tc.bus_target = None;
+    freeze_tc.sends.clear();
+    freeze_tc.send_level = 0.0;
+    single_proj.tracks = vec![freeze_tc];
+    single_proj.automation_lanes.retain(|l| {
+        l.track_id == track_id
+            && !l.param_id.eq_ignore_ascii_case("track.gain")
+            && !l.param_id.eq_ignore_ascii_case("track.pan")
+            && !l.param_id.eq_ignore_ascii_case("send.0")
+            && !l.param_id.eq_ignore_ascii_case("track.send")
+    });
+
+    let num_frames = explicit_frames.unwrap_or_else(|| default_render_frames(&single_proj));
+    let sample_rate = single_proj.transport.sample_rate;
+    let bpm = single_proj.transport.bpm;
+    let mut runner = GraphRunner::new(&single_proj);
+    let mut transport = Transport::new(sample_rate, bpm);
+    transport.play();
+
+    const BLOCK_SIZE: usize = 64;
+    let mut out_l = [0.0f32; BLOCK_SIZE];
+    let mut out_r = [0.0f32; BLOCK_SIZE];
+    let mut interleaved = Vec::with_capacity(num_frames * 2);
+
+    let mut frames_processed = 0usize;
+    while frames_processed < num_frames {
+        let block_frames = (num_frames - frames_processed).min(BLOCK_SIZE);
+        out_l[..block_frames].fill(0.0);
+        out_r[..block_frames].fill(0.0);
+        let ctx = ProcessContext::from_transport(&transport);
+        {
+            let _guard = AllocGuard::new();
+            runner.process_block(
+                block_frames,
+                &ctx,
+                &mut [&mut out_l[..block_frames], &mut out_r[..block_frames]],
+            );
+        }
+        for f in 0..block_frames {
+            interleaved.push(out_l[f]);
+            interleaved.push(out_r[f]);
+        }
+        transport.advance_frames(block_frames as u64);
+        frames_processed += block_frames;
+    }
+
+    if let Some(target_track) = project.tracks.iter_mut().find(|t| t.id == track_id) {
+        target_track.frozen_buffer = Some(interleaved);
+        target_track.is_frozen = true;
+    }
+
+    Ok(frames_processed)
+}
+
+/// Unfreeze a track and drop its pre-rendered freeze buffer so live synthesis/FX run again.
+pub fn unfreeze_track(project: &mut ProjectConfig, track_id: u64) -> bool {
+    let Some(track) = project.tracks.iter_mut().find(|t| t.id == track_id) else {
+        return false;
+    };
+    track.is_frozen = false;
+    track.frozen_buffer = None;
+    true
+}
+
 /// Start a non-blocking real-time CPAL audio stream for the given project and shared `ParamBus`.
 /// If no audio output device is available (e.g. headless CI), returns a handle without an active hardware stream.
 pub fn spawn_live_engine(
@@ -1140,5 +1231,65 @@ mod tests {
         assert!(!handle.has_stream_error());
         assert_eq!(handle.reconnects(), 1);
         assert!(handle.is_playing());
+    }
+
+    #[test]
+    fn test_freeze_and_unfreeze_track_in_place() {
+        use summoner_project::create_default_project;
+        use summoner_project::schema::{
+            NodeConfig, SequenceConfig, TrackConfig, TrackerStepConfig,
+        };
+
+        let mut project = create_default_project("Freeze Test");
+        project.tracks.clear();
+        project.tracks.push(TrackConfig {
+            id: 10,
+            name: "Lead".to_string(),
+            gain: 0.5,
+            nodes: vec![NodeConfig {
+                kind: "SineOscillatorNode".to_string(),
+                params: std::collections::HashMap::new(),
+                plugin_state: None,
+            }],
+            sequence: Some(SequenceConfig {
+                start_beat: 0.0,
+                step_division: 1.0,
+                steps: vec![TrackerStepConfig {
+                    note: 69.0,
+                    velocity: 1.0,
+                    gate: 1.0,
+                    active: true,
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        let rendered = freeze_track_in_place(&mut project, 10, Some(1024))
+            .expect("freeze_track_in_place should succeed");
+        assert_eq!(rendered, 1024);
+        assert!(project.tracks[0].is_frozen);
+        let buf = project.tracks[0]
+            .frozen_buffer
+            .as_ref()
+            .expect("frozen_buffer should be populated");
+        assert_eq!(buf.len(), 2048);
+        assert!(buf.iter().any(|&s| s.abs() > 0.01));
+
+        let mut runner = GraphRunner::new(&project);
+        let mut out_l = [0.0f32; 128];
+        let mut out_r = [0.0f32; 128];
+        let ctx = ProcessContext::new(project.transport.sample_rate, project.transport.bpm, 128);
+        {
+            let _guard = AllocGuard::new();
+            runner.process_block(128, &ctx, &mut [&mut out_l, &mut out_r]);
+        }
+        assert!(out_l.iter().any(|&s| s.abs() > 0.005));
+
+        assert!(unfreeze_track(&mut project, 10));
+        assert!(!project.tracks[0].is_frozen);
+        assert!(project.tracks[0].frozen_buffer.is_none());
+        assert!(!unfreeze_track(&mut project, 999));
     }
 }

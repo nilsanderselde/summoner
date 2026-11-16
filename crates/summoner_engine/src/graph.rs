@@ -706,14 +706,64 @@ pub fn graph_from_project(project: &ProjectConfig, max_block_size: usize) -> Nod
 
 const MAX_RUNNER_BLOCK_SIZE: usize = 8192;
 
-/// Convert a track's sequence, clips, and automation lanes into frame-stamped events.
-/// Tracks with any note events start gated closed (NoteOff at frame 0).
+/// Convert a track's sequence, clips, and automation lanes into frame-stamped events
+/// using default 4/4 transport settings.
+#[allow(dead_code)]
 fn build_schedule(
     tc: &summoner_project::schema::TrackConfig,
     automation_lanes: &[summoner_project::schema::AutomationLaneConfig],
     sample_rate: u32,
     bpm: f64,
 ) -> Vec<ScheduledEvent> {
+    let transport = summoner_project::schema::TransportConfig {
+        sample_rate,
+        bpm,
+        ..Default::default()
+    };
+    build_schedule_with_transport(tc, automation_lanes, &transport)
+}
+
+fn is_mixer_automation_param(param_id: &str) -> bool {
+    param_id.eq_ignore_ascii_case("track.gain")
+        || param_id.eq_ignore_ascii_case("track.pan")
+        || param_id.eq_ignore_ascii_case("send.0")
+        || param_id.eq_ignore_ascii_case("track.send")
+}
+
+#[inline]
+fn eval_sorted_events_at_frame(
+    events: &[summoner_project::schema::AutomationEventConfig],
+    frame: u64,
+) -> Option<f32> {
+    if events.is_empty() {
+        return None;
+    }
+    if frame <= events[0].frame {
+        return Some(events[0].value);
+    }
+    let last = &events[events.len() - 1];
+    if frame >= last.frame {
+        return Some(last.value);
+    }
+    let idx = events.partition_point(|e| e.frame <= frame);
+    let a = &events[idx - 1];
+    let b = &events[idx];
+    if b.frame <= a.frame {
+        return Some(b.value);
+    }
+    let t = (frame - a.frame) as f32 / (b.frame - a.frame) as f32;
+    Some(a.value + (b.value - a.value) * t)
+}
+
+/// Convert a track's sequence, clips, and automation lanes into frame-stamped events,
+/// applying harmonic scale/chord lock and smooth 64-frame node automation interpolation.
+fn build_schedule_with_transport(
+    tc: &summoner_project::schema::TrackConfig,
+    automation_lanes: &[summoner_project::schema::AutomationLaneConfig],
+    transport: &summoner_project::schema::TransportConfig,
+) -> Vec<ScheduledEvent> {
+    let sample_rate = transport.sample_rate;
+    let bpm = transport.bpm;
     let frames_per_beat = sample_rate as f64 * 60.0 / bpm.max(1.0);
     let mut events = vec![ScheduledEvent {
         frame: 0,
@@ -750,12 +800,10 @@ fn build_schedule(
             }
 
             has_notes = true;
-            let note = (actual_step.note
+            let raw_base_note = actual_step.note
                 + seq.pitch_offset
                 + actual_step.pitch_offset as f64
-                + tc.midi_transpose as f64)
-                .round()
-                .clamp(0.0, 127.0) as u8;
+                + tc.midi_transpose as f64;
 
             let swing_beats = if i % 2 == 1 {
                 (actual_step.swing as f64).clamp(-0.5, 0.5) * effective_step_division
@@ -782,6 +830,25 @@ fn build_schedule(
             let vel = (actual_step.velocity * seq.gain as f32 * fade_mult).clamp(0.0, 1.0);
             for r in 0..ratchet_count {
                 let beat = base_beat + r as f64 * sub_step_beats;
+                let mut pitched = raw_base_note;
+                if tc.follow_chord_track {
+                    pitched += transport.active_chord_offset_at_beat(beat) as f64;
+                }
+                if tc.scale_lock {
+                    let (key_root, scale_name) = if !transport.key_points.is_empty() {
+                        transport.active_key_at_beat(beat)
+                    } else {
+                        (tc.root_note, tc.scale_type.as_str())
+                    };
+                    let scale = summoner_harmony::Scale::get_scale_by_name(scale_name);
+                    let tuning = summoner_harmony::EdoTuning::new(
+                        tc.tuning_edo.unwrap_or(12).min(u16::MAX as u32) as u16,
+                        tc.tuning_root_hz.unwrap_or(440.0) as f64,
+                        69.0,
+                    );
+                    pitched = scale.snap_note(pitched, key_root as u16, &tuning);
+                }
+                let note = pitched.round().clamp(0.0, 127.0) as u8;
                 let on = (beat * frames_per_beat).round().max(0.0) as u64;
                 let off = ((beat + (actual_step.gate as f64).clamp(0.01, 1.0) * sub_step_beats)
                     * frames_per_beat)
@@ -804,24 +871,52 @@ fn build_schedule(
     if !has_notes {
         events.clear();
     }
-    for lane in automation_lanes.iter().filter(|l| l.track_id == tc.id) {
-        let param_id = match lane.param_id.to_lowercase().as_str() {
-            "0" | "freq" | "frequency" | "cutoff" | "gain" | "drive" | "rate" | "pitch" => 0,
-            "1" | "res" | "resonance" | "pw" | "pulse_width" | "depth" | "mix" | "feedback" => 1,
-            "2" | "attack" | "damping" | "room_size" => 2,
-            "3" | "decay" => 3,
-            "4" | "sustain" => 4,
-            "5" | "release" => 5,
-            other => other.parse::<u32>().unwrap_or(0),
-        };
-        for ev in &lane.events {
-            events.push(ScheduledEvent {
-                frame: ev.frame,
-                event: NodeEvent::SetParam {
-                    id: param_id,
-                    value: ev.value,
-                },
-            });
+    if tc.automation_mode != summoner_project::schema::AutomationMode::Off {
+        for lane in automation_lanes
+            .iter()
+            .filter(|l| l.track_id == tc.id && !is_mixer_automation_param(&l.param_id))
+        {
+            let param_id = match lane.param_id.to_lowercase().as_str() {
+                "0" | "freq" | "frequency" | "cutoff" | "gain" | "drive" | "rate" | "pitch" => 0,
+                "1" | "res" | "resonance" | "pw" | "pulse_width" | "depth" | "mix" | "feedback" => {
+                    1
+                }
+                "2" | "attack" | "damping" | "room_size" => 2,
+                "3" | "decay" => 3,
+                "4" | "sustain" => 4,
+                "5" | "release" => 5,
+                other => other.parse::<u32>().unwrap_or(0),
+            };
+            let mut sorted_events = lane.events.clone();
+            sorted_events.sort_by_key(|e| e.frame);
+            const INTERP_STEP_FRAMES: u64 = 64;
+            for idx in 0..sorted_events.len() {
+                let ev0 = &sorted_events[idx];
+                events.push(ScheduledEvent {
+                    frame: ev0.frame,
+                    event: NodeEvent::SetParam {
+                        id: param_id,
+                        value: ev0.value,
+                    },
+                });
+                if let Some(ev1) = sorted_events.get(idx + 1) {
+                    if ev1.frame > ev0.frame + INTERP_STEP_FRAMES {
+                        let span = (ev1.frame - ev0.frame) as f32;
+                        let mut f = ev0.frame + INTERP_STEP_FRAMES;
+                        while f < ev1.frame {
+                            let t = (f - ev0.frame) as f32 / span;
+                            events.push(ScheduledEvent {
+                                frame: f,
+                                event: NodeEvent::SetParam {
+                                    id: param_id,
+                                    value: ev0.value + (ev1.value - ev0.value) * t,
+                                },
+                            });
+                            f += INTERP_STEP_FRAMES;
+                        }
+                    }
+                }
+            }
         }
     }
     events
@@ -967,6 +1062,7 @@ pub struct TrackMeta {
     pub legacy_send_level: f32,
     pub hardware_input_channels: Option<(usize, usize)>,
     pub hardware_output_channels: Option<(usize, usize)>,
+    pub automation_enabled: bool,
 }
 
 /// Pre-decoded, sample-rate-aligned audio clip ready for zero-allocation RT playback.
@@ -1055,6 +1151,8 @@ pub struct GraphRunner {
     pub track_filters: Vec<TrackFilters>,
     pub pdc_buffers: Vec<PdcDelayBuffer>,
     pub track_audio_clips: Vec<Vec<CompiledAudioClip>>,
+    pub frozen_buffers: Vec<Option<Vec<f32>>>,
+    pub track_mixer_lanes: Vec<Vec<summoner_project::schema::AutomationLaneConfig>>,
     pub master_trim_db: f32,
     pub telemetry: MasterMeterTelemetry,
     pub true_peak_meter: summoner_dsp::TruePeakMeter,
@@ -1102,6 +1200,8 @@ impl GraphRunner {
                 legacy_send_level: tc.send_level,
                 hardware_input_channels: tc.hardware_input_channels,
                 hardware_output_channels: tc.hardware_output_channels,
+                automation_enabled: tc.automation_mode
+                    != summoner_project::schema::AutomationMode::Off,
             });
 
             if !tc.connections.is_empty() {
@@ -1142,12 +1242,8 @@ impl GraphRunner {
                     }
                 }
             }
-            let events = build_schedule(
-                tc,
-                &project.automation_lanes,
-                project.transport.sample_rate,
-                project.transport.bpm,
-            );
+            let events =
+                build_schedule_with_transport(tc, &project.automation_lanes, &project.transport);
             track.set_schedule(events);
             tracks.push(track);
         }
@@ -1187,6 +1283,8 @@ impl GraphRunner {
         let mut track_buffers = Vec::with_capacity(project.tracks.len());
         let mut track_in_buffers = Vec::with_capacity(project.tracks.len());
         let mut track_audio_clips = Vec::with_capacity(project.tracks.len());
+        let mut frozen_buffers = Vec::with_capacity(project.tracks.len());
+        let mut track_mixer_lanes = Vec::with_capacity(project.tracks.len());
         for tc in &project.tracks {
             track_buffers.push([
                 Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
@@ -1196,6 +1294,21 @@ impl GraphRunner {
                 Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
                 Box::new([0.0f32; MAX_RUNNER_BLOCK_SIZE]),
             ]);
+            frozen_buffers.push(if tc.is_frozen {
+                tc.frozen_buffer.clone()
+            } else {
+                None
+            });
+            let mut mixer_lanes: Vec<summoner_project::schema::AutomationLaneConfig> = project
+                .automation_lanes
+                .iter()
+                .filter(|l| l.track_id == tc.id && is_mixer_automation_param(&l.param_id))
+                .cloned()
+                .collect();
+            for lane in &mut mixer_lanes {
+                lane.events.sort_by_key(|e| e.frame);
+            }
+            track_mixer_lanes.push(mixer_lanes);
 
             let mut compiled_clips = Vec::with_capacity(tc.audio_clips.len());
             for clip in &tc.audio_clips {
@@ -1212,9 +1325,31 @@ impl GraphRunner {
                         if let Some((samples_l, samples_r)) =
                             decode_wav_stereo_at_rate(path, project.transport.sample_rate)
                         {
+                            let mut effective_pitch_semitones = clip.pitch_shift_semitones as f32;
+                            if clip.harmonize_to_project_scale && !samples_l.is_empty() {
+                                let (key_root, _) = if !project.transport.key_points.is_empty() {
+                                    project.transport.active_key_at_beat(clip.start_beat)
+                                } else {
+                                    (tc.root_note, tc.scale_type.as_str())
+                                };
+                                let analysis = summoner_dsp::detect_bpm_and_key(
+                                    &samples_l,
+                                    project.transport.sample_rate,
+                                );
+                                let mut delta =
+                                    (key_root % 12) as i32 - (analysis.root_note % 12) as i32;
+                                if delta > 6 {
+                                    delta -= 12;
+                                } else if delta < -6 {
+                                    delta += 12;
+                                }
+                                effective_pitch_semitones += delta as f32;
+                            }
+
                             let needs_warp = clip.warp_enabled
+                                || clip.harmonize_to_project_scale
                                 || !clip.warp_markers.is_empty()
-                                || clip.pitch_shift_semitones.abs() > 1e-3
+                                || effective_pitch_semitones.abs() > 1e-3
                                 || ((clip.time_stretch_ratio - 1.0).abs() > 1e-3
                                     && clip.warp_mode
                                         != summoner_project::audio_clip::ClipWarpMode::RePitch);
@@ -1230,9 +1365,9 @@ impl GraphRunner {
                                 let src_r = &samples_r[start..end];
                                 let frames_per_beat = (project.transport.sample_rate as f64 * 60.0)
                                     / project.transport.bpm.max(1.0);
-                                let target_len =
-                                    ((clip.duration_beats * frames_per_beat).round() as usize)
-                                        .max(1);
+                                let target_len = ((clip.duration_beats * frames_per_beat).round()
+                                    as usize)
+                                    .max(1);
                                 let mode = match clip.warp_mode {
                                     summoner_project::audio_clip::ClipWarpMode::Beats => {
                                         summoner_dsp::WarpMode::Beats
@@ -1257,17 +1392,16 @@ impl GraphRunner {
                                     project.transport.sample_rate,
                                 )
                                 .with_mode(mode)
-                                .with_pitch_semitones(clip.pitch_shift_semitones as f32)
+                                .with_pitch_semitones(effective_pitch_semitones)
                                 .with_formant_semitones(clip.formant_shift_semitones)
                                 .with_grain_ms(clip.warp_grain_ms)
                                 .with_flux(clip.warp_flux);
 
                                 for m in &clip.warp_markers {
-                                    let rel_src =
-                                        (m.source_frame as usize).saturating_sub(start);
-                                    let tgt_frame =
-                                        ((m.target_beat * frames_per_beat).round() as usize)
-                                            .min(target_len);
+                                    let rel_src = (m.source_frame as usize).saturating_sub(start);
+                                    let tgt_frame = ((m.target_beat * frames_per_beat).round()
+                                        as usize)
+                                        .min(target_len);
                                     engine.add_marker(rel_src, tgt_frame);
                                 }
                                 let (wl, wr) = engine.warp_stereo(src_l, src_r, target_len);
@@ -1298,6 +1432,8 @@ impl GraphRunner {
             track_filters,
             pdc_buffers,
             track_audio_clips,
+            frozen_buffers,
+            track_mixer_lanes,
             master_trim_db: project.transport.master_trim_db,
             telemetry: MasterMeterTelemetry::default(),
             true_peak_meter: summoner_dsp::TruePeakMeter::new(),
@@ -1417,171 +1553,193 @@ impl GraphRunner {
                 self.scratch_l[..block_size].fill(0.0);
                 self.scratch_r[..block_size].fill(0.0);
 
-                let mut local_ctx = ctx.clone();
-                if let Some(edo) = track.tuning_edo {
-                    local_ctx.tuning_edo_divisions = edo;
-                }
-                if let Some(root_hz) = track.tuning_root_hz {
-                    local_ctx.tuning_root_hz = root_hz;
-                }
-
-                // If track has input monitoring enabled, route selected hardware input channels into track_in_buffers
-                if track.input_monitoring {
-                    if let Some(ins) = in_buffers {
-                        if !ins.is_empty() {
-                            let (ch_l, ch_r) = meta.hardware_input_channels.unwrap_or((0, 1));
-                            if let Some(in_l) = ins.get(ch_l) {
-                                let len = block_size.min(in_l.len());
-                                for i in 0..len {
-                                    self.track_in_buffers[track_idx][0][i] += in_l[i];
-                                }
-                            }
-                            if let Some(in_r) = ins.get(ch_r).or_else(|| ins.get(ch_l)) {
-                                let len = block_size.min(in_r.len());
-                                for i in 0..len {
-                                    self.track_in_buffers[track_idx][1][i] += in_r[i];
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Mix active AudioClipConfig playback into track_in_buffers (feeds both dry audio and insert FX)
-                if ctx.is_playing && ctx.sample_rate > 0 && ctx.bpm > 0.0 {
-                    let frames_per_beat = (ctx.sample_rate as f64 * 60.0) / ctx.bpm.max(1.0);
-                    for clip in &self.track_audio_clips[track_idx] {
-                        if clip.config.muted || clip.samples_l.is_empty() {
-                            continue;
-                        }
-                        let total_len = clip.samples_l.len().min(clip.samples_r.len());
-                        let offset = if clip.pre_warped {
-                            0
-                        } else {
-                            clip.config.offset_frames as usize
-                        };
-                        let avail = total_len.saturating_sub(offset);
-                        if avail == 0 {
-                            continue;
-                        }
-                        let stretch = if clip.pre_warped {
-                            1.0
-                        } else if clip.config.time_stretch_ratio > 1e-3 {
-                            clip.config.time_stretch_ratio
-                        } else {
-                            1.0
-                        };
-                        let region_len = if clip.pre_warped {
-                            avail.max(1)
-                        } else {
-                            clip.config
-                                .duration_frames
-                                .map(|d| (d as usize).min(avail))
-                                .unwrap_or_else(|| {
-                                    (((clip.config.duration_beats / stretch) * frames_per_beat)
-                                        .round() as usize)
-                                        .min(avail)
-                                })
-                                .max(1)
-                        };
-                        let pan = clip.config.pan.clamp(-1.0, 1.0);
-                        let pan_l = (1.0 - pan).min(1.0);
-                        let pan_r = (1.0 + pan).min(1.0);
-
+                if let Some(frozen) = self
+                    .frozen_buffers
+                    .get(track_idx)
+                    .and_then(|f| f.as_deref())
+                {
+                    if ctx.is_playing {
+                        let total_frozen_frames = frozen.len() / 2;
+                        let start_frame = ctx.frame_position as usize;
                         for i in 0..block_size {
-                            let frame = ctx.frame_position + i as u64;
-                            let beat = frame as f64 / frames_per_beat;
-                            if !clip.config.contains_beat(beat) {
-                                continue;
+                            let f = start_frame + i;
+                            if f < total_frozen_frames {
+                                self.scratch_l[i] = frozen[f * 2];
+                                self.scratch_r[i] = frozen[f * 2 + 1];
                             }
-                            let gain = clip.config.gain_at_beat(beat);
-                            if gain <= 0.0 {
-                                continue;
-                            }
-                            let mut rel_beats = (beat - clip.config.start_beat).max(0.0);
-                            if clip.config.loop_enabled && clip.config.loop_length_beats > 1e-6 {
-                                rel_beats %= clip.config.loop_length_beats;
-                            }
-                            let rel_frame =
-                                ((rel_beats / stretch) * frames_per_beat).round() as usize;
-                            let src_frame = if clip.config.is_reversed {
-                                let rev_local =
-                                    region_len.saturating_sub(1 + (rel_frame % region_len));
-                                offset + rev_local
-                            } else if clip.config.loop_enabled {
-                                offset + (rel_frame % region_len)
-                            } else {
-                                offset + rel_frame
-                            };
-                            if src_frame < total_len {
-                                self.track_in_buffers[track_idx][0][i] +=
-                                    clip.samples_l[src_frame] * gain * pan_l;
-                                self.track_in_buffers[track_idx][1][i] +=
-                                    clip.samples_r[src_frame] * gain * pan_r;
-                            }
-                        }
-                    }
-                }
-
-                // Mix in any accumulated audio from sends or buses
-                for i in 0..block_size {
-                    self.scratch_l[i] += self.track_in_buffers[track_idx][0][i];
-                    self.scratch_r[i] += self.track_in_buffers[track_idx][1][i];
-                }
-
-                if meta.sidechain_audition {
-                    if let Some(src_id) = meta.sidechain_source_track_id {
-                        if let Some(src_idx) = self.track_meta.iter().position(|m| m.id == src_id) {
-                            let src_l = &self.track_buffers[src_idx][0][..block_size];
-                            let src_r = &self.track_buffers[src_idx][1][..block_size];
-                            self.scratch_l[..block_size].copy_from_slice(src_l);
-                            self.scratch_r[..block_size].copy_from_slice(src_r);
                         }
                     }
                 } else {
-                    let (slice_l, slice_r) = (
-                        &mut self.scratch_l[..block_size],
-                        &mut self.scratch_r[..block_size],
-                    );
-                    let mut track_out_slices: [&mut [f32]; 2] = [slice_l, slice_r];
+                    let mut local_ctx = ctx.clone();
+                    if let Some(edo) = track.tuning_edo {
+                        local_ctx.tuning_edo_divisions = edo;
+                    }
+                    if let Some(root_hz) = track.tuning_root_hz {
+                        local_ctx.tuning_root_hz = root_hz;
+                    }
 
-                    let in_l = &self.track_in_buffers[track_idx][0][..block_size];
-                    let in_r = &self.track_in_buffers[track_idx][1][..block_size];
-                    let input_slices: [&[f32]; 2] = [in_l, in_r];
-                    let ins_param =
-                        if in_l.iter().any(|&s| s != 0.0) || in_r.iter().any(|&s| s != 0.0) {
-                            Some(&input_slices[..])
-                        } else {
-                            None
-                        };
-
-                    track.process_with_input(
-                        block_size,
-                        &local_ctx,
-                        ins_param,
-                        &mut track_out_slices[..out_buffers.len().min(2)],
-                    );
-
-                    if let Some(tf) = self.track_filters.get_mut(track_idx) {
-                        if let Some(ref mut dcf) = tf.dc_block {
-                            for i in 0..block_size {
-                                self.scratch_l[i] = dcf[0].process_sample(self.scratch_l[i]);
-                                self.scratch_r[i] = dcf[1].process_sample(self.scratch_r[i]);
+                    // If track has input monitoring enabled, route selected hardware input channels into track_in_buffers
+                    if track.input_monitoring {
+                        if let Some(ins) = in_buffers {
+                            if !ins.is_empty() {
+                                let (ch_l, ch_r) = meta.hardware_input_channels.unwrap_or((0, 1));
+                                if let Some(in_l) = ins.get(ch_l) {
+                                    let len = block_size.min(in_l.len());
+                                    for i in 0..len {
+                                        self.track_in_buffers[track_idx][0][i] += in_l[i];
+                                    }
+                                }
+                                if let Some(in_r) = ins.get(ch_r).or_else(|| ins.get(ch_l)) {
+                                    let len = block_size.min(in_r.len());
+                                    for i in 0..len {
+                                        self.track_in_buffers[track_idx][1][i] += in_r[i];
+                                    }
+                                }
                             }
                         }
-                        if let Some(ref mut lcf) = tf.low_cut {
+                    }
+
+                    // Mix active AudioClipConfig playback into track_in_buffers (feeds both dry audio and insert FX)
+                    if ctx.is_playing && ctx.sample_rate > 0 && ctx.bpm > 0.0 {
+                        let frames_per_beat = (ctx.sample_rate as f64 * 60.0) / ctx.bpm.max(1.0);
+                        for clip in &self.track_audio_clips[track_idx] {
+                            if clip.config.muted || clip.samples_l.is_empty() {
+                                continue;
+                            }
+                            let total_len = clip.samples_l.len().min(clip.samples_r.len());
+                            let offset = if clip.pre_warped {
+                                0
+                            } else {
+                                clip.config.offset_frames as usize
+                            };
+                            let avail = total_len.saturating_sub(offset);
+                            if avail == 0 {
+                                continue;
+                            }
+                            let stretch = if clip.pre_warped {
+                                1.0
+                            } else if clip.config.time_stretch_ratio > 1e-3 {
+                                clip.config.time_stretch_ratio
+                            } else {
+                                1.0
+                            };
+                            let region_len = if clip.pre_warped {
+                                avail.max(1)
+                            } else {
+                                clip.config
+                                    .duration_frames
+                                    .map(|d| (d as usize).min(avail))
+                                    .unwrap_or_else(|| {
+                                        (((clip.config.duration_beats / stretch) * frames_per_beat)
+                                            .round()
+                                            as usize)
+                                            .min(avail)
+                                    })
+                                    .max(1)
+                            };
+                            let pan = clip.config.pan.clamp(-1.0, 1.0);
+                            let pan_l = (1.0 - pan).min(1.0);
+                            let pan_r = (1.0 + pan).min(1.0);
+
                             for i in 0..block_size {
-                                self.scratch_l[i] =
-                                    lcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
-                                self.scratch_r[i] =
-                                    lcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                                let frame = ctx.frame_position + i as u64;
+                                let beat = frame as f64 / frames_per_beat;
+                                if !clip.config.contains_beat(beat) {
+                                    continue;
+                                }
+                                let gain = clip.config.gain_at_beat(beat);
+                                if gain <= 0.0 {
+                                    continue;
+                                }
+                                let mut rel_beats = (beat - clip.config.start_beat).max(0.0);
+                                if clip.config.loop_enabled && clip.config.loop_length_beats > 1e-6
+                                {
+                                    rel_beats %= clip.config.loop_length_beats;
+                                }
+                                let rel_frame =
+                                    ((rel_beats / stretch) * frames_per_beat).round() as usize;
+                                let src_frame = if clip.config.is_reversed {
+                                    let rev_local =
+                                        region_len.saturating_sub(1 + (rel_frame % region_len));
+                                    offset + rev_local
+                                } else if clip.config.loop_enabled {
+                                    offset + (rel_frame % region_len)
+                                } else {
+                                    offset + rel_frame
+                                };
+                                if src_frame < total_len {
+                                    self.track_in_buffers[track_idx][0][i] +=
+                                        clip.samples_l[src_frame] * gain * pan_l;
+                                    self.track_in_buffers[track_idx][1][i] +=
+                                        clip.samples_r[src_frame] * gain * pan_r;
+                                }
                             }
                         }
-                        if let Some(ref mut hcf) = tf.high_cut {
-                            for i in 0..block_size {
-                                self.scratch_l[i] =
-                                    hcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
-                                self.scratch_r[i] =
-                                    hcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                    }
+
+                    // Mix in any accumulated audio from sends or buses
+                    for i in 0..block_size {
+                        self.scratch_l[i] += self.track_in_buffers[track_idx][0][i];
+                        self.scratch_r[i] += self.track_in_buffers[track_idx][1][i];
+                    }
+
+                    if meta.sidechain_audition {
+                        if let Some(src_id) = meta.sidechain_source_track_id {
+                            if let Some(src_idx) =
+                                self.track_meta.iter().position(|m| m.id == src_id)
+                            {
+                                let src_l = &self.track_buffers[src_idx][0][..block_size];
+                                let src_r = &self.track_buffers[src_idx][1][..block_size];
+                                self.scratch_l[..block_size].copy_from_slice(src_l);
+                                self.scratch_r[..block_size].copy_from_slice(src_r);
+                            }
+                        }
+                    } else {
+                        let (slice_l, slice_r) = (
+                            &mut self.scratch_l[..block_size],
+                            &mut self.scratch_r[..block_size],
+                        );
+                        let mut track_out_slices: [&mut [f32]; 2] = [slice_l, slice_r];
+
+                        let in_l = &self.track_in_buffers[track_idx][0][..block_size];
+                        let in_r = &self.track_in_buffers[track_idx][1][..block_size];
+                        let input_slices: [&[f32]; 2] = [in_l, in_r];
+                        let ins_param =
+                            if in_l.iter().any(|&s| s != 0.0) || in_r.iter().any(|&s| s != 0.0) {
+                                Some(&input_slices[..])
+                            } else {
+                                None
+                            };
+
+                        track.process_with_input(
+                            block_size,
+                            &local_ctx,
+                            ins_param,
+                            &mut track_out_slices[..out_buffers.len().min(2)],
+                        );
+
+                        if let Some(tf) = self.track_filters.get_mut(track_idx) {
+                            if let Some(ref mut dcf) = tf.dc_block {
+                                for i in 0..block_size {
+                                    self.scratch_l[i] = dcf[0].process_sample(self.scratch_l[i]);
+                                    self.scratch_r[i] = dcf[1].process_sample(self.scratch_r[i]);
+                                }
+                            }
+                            if let Some(ref mut lcf) = tf.low_cut {
+                                for i in 0..block_size {
+                                    self.scratch_l[i] =
+                                        lcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
+                                    self.scratch_r[i] =
+                                        lcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                                }
+                            }
+                            if let Some(ref mut hcf) = tf.high_cut {
+                                for i in 0..block_size {
+                                    self.scratch_l[i] =
+                                        hcf[0].process_sample(self.scratch_l[i], ctx.sample_rate);
+                                    self.scratch_r[i] =
+                                        hcf[1].process_sample(self.scratch_r[i], ctx.sample_rate);
+                                }
                             }
                         }
                     }
@@ -1599,6 +1757,32 @@ impl GraphRunner {
                 self.track_buffers[track_idx][1][..block_size]
                     .copy_from_slice(&self.scratch_r[..block_size]);
 
+                let mut track_gain = track.gain;
+                let mut track_pan = track.pan;
+                let mut send0_override: Option<f32> = None;
+                let mut legacy_send_level = meta.legacy_send_level;
+                if meta.automation_enabled {
+                    if let Some(mixer_lanes) = self.track_mixer_lanes.get(track_idx) {
+                        for lane in mixer_lanes {
+                            if let Some(val) =
+                                eval_sorted_events_at_frame(&lane.events, ctx.frame_position)
+                            {
+                                if lane.param_id.eq_ignore_ascii_case("track.gain") {
+                                    track_gain = val.clamp(0.0, 4.0);
+                                } else if lane.param_id.eq_ignore_ascii_case("track.pan") {
+                                    track_pan = val.clamp(-1.0, 1.0);
+                                } else if lane.param_id.eq_ignore_ascii_case("send.0")
+                                    || lane.param_id.eq_ignore_ascii_case("track.send")
+                                {
+                                    let clamped = val.clamp(0.0, 2.0);
+                                    send0_override = Some(clamped);
+                                    legacy_send_level = clamped;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 let strip_db = track.input_gain_db + track.output_gain_db;
                 let vca_mult = if track_idx < 128 {
                     vca_gains[track_idx]
@@ -1608,15 +1792,20 @@ impl GraphRunner {
                 let strip_gain = 10.0f32.powf(strip_db / 20.0)
                     * if track.phase_flip { -1.0 } else { 1.0 }
                     * master_trim;
-                let effective_gain = track.gain * strip_gain * vca_mult;
+                let effective_gain = track_gain * strip_gain * vca_mult;
 
-                let pan = track.pan.clamp(-1.0, 1.0);
+                let pan = track_pan.clamp(-1.0, 1.0);
                 let left_gain = effective_gain * (1.0 - pan).min(1.0);
                 let right_gain = effective_gain * (1.0 + pan).min(1.0);
 
                 // Aux Sends routing
-                for send in &meta.sends {
-                    if send.muted || send.amount <= 0.0 {
+                for (send_idx, send) in meta.sends.iter().enumerate() {
+                    let send_amount = if send_idx == 0 {
+                        send0_override.unwrap_or(send.amount)
+                    } else {
+                        send.amount
+                    };
+                    if send.muted || send_amount <= 0.0 {
                         continue;
                     }
                     if let Some(target_idx) = self
@@ -1625,9 +1814,9 @@ impl GraphRunner {
                         .position(|m| m.id == send.target_track_id)
                     {
                         let (send_l_gain, send_r_gain) = if send.is_pre_fader {
-                            (send.amount, send.amount)
+                            (send_amount, send_amount)
                         } else {
-                            (left_gain * send.amount, right_gain * send.amount)
+                            (left_gain * send_amount, right_gain * send_amount)
                         };
                         for i in 0..block_size {
                             self.track_in_buffers[target_idx][0][i] +=
@@ -1639,11 +1828,11 @@ impl GraphRunner {
                 }
 
                 // Legacy send_level routing to return track if present
-                if meta.legacy_send_level > 0.0 {
+                if legacy_send_level > 0.0 {
                     if let Some(target_idx) = self.track_meta.iter().position(|m| m.is_return_track)
                     {
-                        let s_l = left_gain * meta.legacy_send_level;
-                        let s_r = right_gain * meta.legacy_send_level;
+                        let s_l = left_gain * legacy_send_level;
+                        let s_r = right_gain * legacy_send_level;
                         for i in 0..block_size {
                             self.track_in_buffers[target_idx][0][i] += self.scratch_l[i] * s_l;
                             self.track_in_buffers[target_idx][1][i] += self.scratch_r[i] * s_r;
@@ -2497,8 +2686,7 @@ mod tests {
         use summoner_project::audio_clip::{AudioClipConfig, ClipWarpMode};
         use summoner_project::schema::TrackConfig;
 
-        let dir =
-            std::env::temp_dir().join(format!("summoner_warped_clip_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("summoner_warped_clip_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let wav_path = dir.join("sine.wav");
@@ -2550,5 +2738,143 @@ mod tests {
         assert!(out_l.iter().all(|s| s.is_finite()));
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_scale_lock_and_chord_track_in_schedule_and_smooth_automation() {
+        use summoner_project::schema::{
+            AutomationEventConfig, AutomationLaneConfig, AutomationMode, ChordEventConfig,
+            KeyPointConfig, SequenceConfig, TrackConfig, TrackerStepConfig, TransportConfig,
+        };
+
+        let mut transport = TransportConfig {
+            sample_rate: 44100,
+            bpm: 120.0,
+            ..Default::default()
+        };
+        transport.key_points.push(KeyPointConfig {
+            beat: 0.0,
+            root_note: 0, // C Major
+            scale_type: "Major".to_string(),
+        });
+        transport.chord_track.push(ChordEventConfig {
+            beat: 2.0,
+            duration_beats: 2.0,
+            root_note: 5, // F (+5 from C)
+            quality: "Maj".to_string(),
+            bass_note: None,
+        });
+
+        let mut tc = TrackConfig {
+            id: 7,
+            scale_lock: true,
+            follow_chord_track: true,
+            automation_mode: AutomationMode::Read,
+            ..Default::default()
+        };
+        tc.sequence = Some(SequenceConfig {
+            start_beat: 0.0,
+            step_division: 2.0,
+            steps: vec![
+                TrackerStepConfig {
+                    note: 61.0,
+                    velocity: 0.9,
+                    active: true,
+                    ..Default::default()
+                },
+                TrackerStepConfig {
+                    note: 60.0,
+                    velocity: 0.9,
+                    active: true,
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        });
+
+        let lanes = vec![AutomationLaneConfig {
+            param_id: "cutoff".to_string(),
+            track_id: 7,
+            events: vec![
+                AutomationEventConfig {
+                    frame: 0,
+                    value: 0.0,
+                },
+                AutomationEventConfig {
+                    frame: 256,
+                    value: 1.0,
+                },
+            ],
+        }];
+
+        let sched = build_schedule_with_transport(&tc, &lanes, &transport);
+        let note_ons: Vec<u8> = sched
+            .iter()
+            .filter_map(|s| match s.event {
+                NodeEvent::NoteOn { note, .. } => Some(note),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(note_ons.len(), 2);
+        assert!(matches!(note_ons[0] % 12, 0 | 2 | 4 | 5 | 7 | 9 | 11));
+        assert_eq!(note_ons[1], 65);
+
+        let interp_params: Vec<(u64, f32)> = sched
+            .iter()
+            .filter_map(|s| match s.event {
+                NodeEvent::SetParam { id: 0, value } => Some((s.frame, value)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(interp_params.len(), 5);
+        assert!(interp_params
+            .iter()
+            .any(|&(f, v)| f == 128 && (v - 0.5).abs() < 1e-5));
+    }
+
+    #[test]
+    fn test_frozen_track_playback_zero_alloc_and_mixer_automation() {
+        use summoner_core::allocator::AllocGuard;
+        use summoner_project::schema::{
+            AutomationEventConfig, AutomationLaneConfig, AutomationMode, TrackConfig,
+        };
+
+        let mut project = create_default_project("Frozen Track Test");
+        project.tracks.clear();
+        project.tracks.push(TrackConfig {
+            id: 1,
+            name: "Frozen Synth".to_string(),
+            channels: 2,
+            gain: 1.0,
+            is_frozen: true,
+            frozen_buffer: Some(vec![0.4f32; 512 * 2]),
+            automation_mode: AutomationMode::Read,
+            ..Default::default()
+        });
+        project.automation_lanes.push(AutomationLaneConfig {
+            param_id: "track.gain".to_string(),
+            track_id: 1,
+            events: vec![
+                AutomationEventConfig {
+                    frame: 0,
+                    value: 0.25,
+                },
+                AutomationEventConfig {
+                    frame: 200,
+                    value: 0.75,
+                },
+            ],
+        });
+
+        let mut runner = GraphRunner::new(&project);
+        let mut out_l = [0.0f32; 128];
+        let mut out_r = [0.0f32; 128];
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 100);
+        {
+            let _guard = AllocGuard::new();
+            runner.process_block(128, &ctx, &mut [&mut out_l, &mut out_r]);
+        }
+        assert!((out_l[0] - 0.2).abs() < 1e-4, "got {}", out_l[0]);
+        assert!((out_r[0] - 0.2).abs() < 1e-4);
     }
 }

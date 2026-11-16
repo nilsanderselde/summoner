@@ -10,6 +10,7 @@ repository.workspace = true
 summoner_core = { path = "../summoner_core" }
 summoner_project = { path = "../summoner_project" }
 summoner_dsp = { path = "../summoner_dsp" }
+summoner_harmony = { path = "../summoner_harmony" }
 cpal = "0.15"
 midir = "0.10"
 crossbeam-channel = "0.5"

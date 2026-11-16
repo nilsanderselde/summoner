@@ -19,10 +19,10 @@ pub mod recorder;
 pub mod virtual_midi;
 
 pub use audio_engine::{
-    backend_to_host_id, default_render_frames, host_id_to_backend, render_project_to_wav,
-    render_project_track_stems, run_live, spawn_live_engine, spawn_live_engine_with_settings,
-    AudioDeviceInfo, AudioDeviceManager, AudioEngineSettings, EngineCommand, LiveEngineHandle,
-    ParamUpdate,
+    backend_to_host_id, default_render_frames, freeze_track_in_place, host_id_to_backend,
+    render_project_to_wav, render_project_track_stems, run_live, spawn_live_engine,
+    spawn_live_engine_with_settings, unfreeze_track, AudioDeviceInfo, AudioDeviceManager,
+    AudioEngineSettings, EngineCommand, LiveEngineHandle, ParamUpdate,
 };
 pub use disk_stream::{DiskStreamConfig, DiskStreamHandle, DiskStreamManager};
 pub use graph::{graph_from_project, GraphRunner, NodeFactory};

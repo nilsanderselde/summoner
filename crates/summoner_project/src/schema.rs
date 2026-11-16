@@ -160,6 +160,163 @@ impl ProjectConfig {
             }
         }
     }
+
+    /// Record a parameter automation point onto `track_id` / `param_id` according to the track's `AutomationMode`.
+    /// Returns `true` if a point was written, or `false` if the track is missing or in `Read`/`Off` mode.
+    pub fn record_automation_point(
+        &mut self,
+        track_id: u64,
+        param_id: &str,
+        frame: u64,
+        value: f32,
+    ) -> bool {
+        let Some(mode) = self
+            .tracks
+            .iter()
+            .find(|t| t.id == track_id)
+            .map(|t| t.automation_mode)
+        else {
+            return false;
+        };
+
+        match mode {
+            AutomationMode::Read | AutomationMode::Off => return false,
+            AutomationMode::Touch
+            | AutomationMode::Latch
+            | AutomationMode::Write
+            | AutomationMode::Trim => {}
+        }
+
+        let lane_idx = self
+            .automation_lanes
+            .iter()
+            .position(|l| l.track_id == track_id && l.param_id == param_id)
+            .unwrap_or_else(|| {
+                self.automation_lanes.push(AutomationLaneConfig {
+                    param_id: param_id.to_string(),
+                    track_id,
+                    events: Vec::new(),
+                });
+                self.automation_lanes.len() - 1
+            });
+
+        let lane = &mut self.automation_lanes[lane_idx];
+        lane.events.sort_by_key(|e| e.frame);
+
+        let recorded_value = if mode == AutomationMode::Trim {
+            evaluate_automation_lane_at_frame(&lane.events, frame).unwrap_or(0.0) + value
+        } else {
+            value
+        };
+
+        if let Some(existing) = lane.events.iter_mut().find(|e| e.frame == frame) {
+            existing.value = recorded_value;
+        } else {
+            let pos = lane.events.partition_point(|e| e.frame < frame);
+            lane.events.insert(
+                pos,
+                AutomationEventConfig {
+                    frame,
+                    value: recorded_value,
+                },
+            );
+        }
+
+        true
+    }
+
+    /// Simplify redundant nearly-collinear breakpoints on the specified automation lane using
+    /// Ramer-Douglas-Peucker thinning with vertical tolerance `epsilon`.
+    /// Returns the number of events removed.
+    pub fn thin_automation_lane(&mut self, track_id: u64, param_id: &str, epsilon: f32) -> usize {
+        let Some(lane) = self
+            .automation_lanes
+            .iter_mut()
+            .find(|l| l.track_id == track_id && l.param_id == param_id)
+        else {
+            return 0;
+        };
+
+        if lane.events.len() <= 2 {
+            return 0;
+        }
+
+        lane.events.sort_by_key(|e| e.frame);
+        let original_len = lane.events.len();
+        let eps = epsilon.max(0.0) as f64;
+        let mut keep = vec![false; original_len];
+        keep[0] = true;
+        keep[original_len - 1] = true;
+        rdp_mark_kept(&lane.events, 0, original_len - 1, eps, &mut keep);
+
+        let mut idx = 0usize;
+        lane.events.retain(|_| {
+            let k = keep[idx];
+            idx += 1;
+            k
+        });
+        original_len - lane.events.len()
+    }
+}
+
+fn evaluate_automation_lane_at_frame(events: &[AutomationEventConfig], frame: u64) -> Option<f32> {
+    if events.is_empty() {
+        return None;
+    }
+    if frame <= events[0].frame {
+        return Some(events[0].value);
+    }
+    let last = events.last()?;
+    if frame >= last.frame {
+        return Some(last.value);
+    }
+    let idx = events.partition_point(|e| e.frame <= frame);
+    let a = &events[idx - 1];
+    let b = &events[idx];
+    if b.frame <= a.frame {
+        return Some(b.value);
+    }
+    let t = (frame - a.frame) as f32 / (b.frame - a.frame) as f32;
+    Some(a.value + (b.value - a.value) * t)
+}
+
+fn rdp_mark_kept(
+    events: &[AutomationEventConfig],
+    start: usize,
+    end: usize,
+    epsilon: f64,
+    keep: &mut [bool],
+) {
+    if end <= start + 1 {
+        return;
+    }
+    let f0 = events[start].frame as f64;
+    let v0 = events[start].value as f64;
+    let f1 = events[end].frame as f64;
+    let v1 = events[end].value as f64;
+    let df = f1 - f0;
+
+    let mut max_err = -1.0f64;
+    let mut split_idx = start;
+    for (i, ev) in events.iter().enumerate().take(end).skip(start + 1) {
+        let interp = if df > 0.0 {
+            let t = (ev.frame as f64 - f0) / df;
+            v0 + (v1 - v0) * t
+        } else {
+            v0
+        };
+        let err = (ev.value as f64 - interp).abs();
+        if err > max_err {
+            max_err = err;
+            split_idx = i;
+        }
+    }
+
+    if max_err > epsilon && split_idx > start && split_idx < end {
+        keep[split_idx] = true;
+        rdp_mark_kept(events, start, split_idx, epsilon, keep);
+        rdp_mark_kept(events, split_idx, end, epsilon, keep);
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -268,6 +425,48 @@ pub struct MeterPointConfig {
     pub denominator: u8,
 }
 
+/// Key and scale change event on the master harmonic track.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct KeyPointConfig {
+    pub beat: f64,
+    /// Root pitch class `0..11` (`0 = C .. 11 = B`).
+    #[serde(default)]
+    pub root_note: u8,
+    #[serde(default = "default_scale_type")]
+    pub scale_type: String,
+}
+
+/// Chord event on the master chord track for harmonic lock and accompaniment.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct ChordEventConfig {
+    pub beat: f64,
+    pub duration_beats: f64,
+    /// Chord root pitch class `0..11` (`0 = C .. 11 = B`).
+    #[serde(default)]
+    pub root_note: u8,
+    /// Chord quality symbol (e.g. `"Maj"`, `"min"`, `"dim"`, `"aug"`, `"dom7"`, `"min7"`).
+    #[serde(default = "default_chord_quality")]
+    pub quality: String,
+    #[serde(default)]
+    pub bass_note: Option<u8>,
+}
+
+fn default_chord_quality() -> String {
+    "Maj".to_string()
+}
+
+/// Track automation read/write mode (MIX-3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum AutomationMode {
+    #[default]
+    Read,
+    Touch,
+    Latch,
+    Write,
+    Trim,
+    Off,
+}
+
 /// Transport settings in project document.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TransportConfig {
@@ -282,6 +481,10 @@ pub struct TransportConfig {
     pub tempo_points: Vec<TempoPointConfig>,
     #[serde(default)]
     pub meter_points: Vec<MeterPointConfig>,
+    #[serde(default)]
+    pub key_points: Vec<KeyPointConfig>,
+    #[serde(default)]
+    pub chord_track: Vec<ChordEventConfig>,
 }
 
 impl Default for TransportConfig {
@@ -294,6 +497,8 @@ impl Default for TransportConfig {
             master_trim_db: 0.0,
             tempo_points: Vec::new(),
             meter_points: Vec::new(),
+            key_points: Vec::new(),
+            chord_track: Vec::new(),
         }
     }
 }
@@ -328,6 +533,46 @@ impl TransportConfig {
             ));
         }
         map
+    }
+
+    /// Resolve active harmonic key `(root_note, scale_type)` at `beat`.
+    /// Defaults to `(0, "Major")` (C Major) if no key point precedes `beat`.
+    pub fn active_key_at_beat(&self, beat: f64) -> (u8, &str) {
+        let mut active: Option<&KeyPointConfig> = None;
+        for kp in &self.key_points {
+            if kp.beat <= beat + 1e-9 && active.is_none_or(|cur| kp.beat >= cur.beat) {
+                active = Some(kp);
+            }
+        }
+        match active {
+            Some(kp) => (kp.root_note % 12, kp.scale_type.as_str()),
+            None => (0, "Major"),
+        }
+    }
+
+    /// Compute the signed shortest-interval semitone offset (`-5..=6`) from the active key root
+    /// to the active chord root spanning `beat`, or `0` when no chord spans `beat`.
+    pub fn active_chord_offset_at_beat(&self, beat: f64) -> i32 {
+        let mut active: Option<&ChordEventConfig> = None;
+        for ch in &self.chord_track {
+            let end_beat = ch.beat + ch.duration_beats.max(0.0);
+            if ch.beat <= beat + 1e-9
+                && beat < end_beat - 1e-9
+                && active.is_none_or(|cur| ch.beat >= cur.beat)
+            {
+                active = Some(ch);
+            }
+        }
+        let Some(chord) = active else {
+            return 0;
+        };
+        let (key_root, _) = self.active_key_at_beat(beat);
+        let raw = ((chord.root_note % 12) as i32 - (key_root % 12) as i32).rem_euclid(12);
+        if raw > 6 {
+            raw - 12
+        } else {
+            raw
+        }
     }
 }
 
@@ -436,6 +681,12 @@ pub struct TrackConfig {
     pub hardware_input_channels: Option<(usize, usize)>,
     #[serde(default)]
     pub hardware_output_channels: Option<(usize, usize)>,
+    #[serde(default)]
+    pub scale_lock: bool,
+    #[serde(default)]
+    pub follow_chord_track: bool,
+    #[serde(default)]
+    pub automation_mode: AutomationMode,
 }
 
 /// Auxiliary send routing configuration.
@@ -512,6 +763,9 @@ impl Default for TrackConfig {
             sidechain_audition: false,
             hardware_input_channels: None,
             hardware_output_channels: None,
+            scale_lock: false,
+            follow_chord_track: false,
+            automation_mode: AutomationMode::default(),
         }
     }
 }
@@ -833,5 +1087,74 @@ name = "Audio 1"
         assert_eq!(map.meter_at_beat(0.0), (7, 8));
         assert_eq!(map.tempo_at_beat(16.0), 150.0);
         assert_eq!(map.meter_at_beat(16.0), (4, 4));
+    }
+
+    #[test]
+    fn test_key_and_chord_track_resolution() {
+        let mut transport = TransportConfig::default();
+        assert_eq!(transport.active_key_at_beat(0.0), (0, "Major"));
+        assert_eq!(transport.active_chord_offset_at_beat(2.0), 0);
+
+        transport.key_points.push(KeyPointConfig {
+            beat: 0.0,
+            root_note: 0, // C
+            scale_type: "Major".to_string(),
+        });
+        transport.key_points.push(KeyPointConfig {
+            beat: 8.0,
+            root_note: 9, // A
+            scale_type: "Minor".to_string(),
+        });
+        transport.chord_track.push(ChordEventConfig {
+            beat: 4.0,
+            duration_beats: 4.0,
+            root_note: 5, // F (+5 from C)
+            quality: "Maj".to_string(),
+            bass_note: None,
+        });
+        transport.chord_track.push(ChordEventConfig {
+            beat: 8.0,
+            duration_beats: 4.0,
+            root_note: 4, // E (-5 from A)
+            quality: "min".to_string(),
+            bass_note: None,
+        });
+
+        assert_eq!(transport.active_key_at_beat(4.0), (0, "Major"));
+        assert_eq!(transport.active_chord_offset_at_beat(5.0), 5);
+        assert_eq!(transport.active_key_at_beat(9.0), (9, "Minor"));
+        assert_eq!(transport.active_chord_offset_at_beat(9.0), -5);
+        assert_eq!(transport.active_chord_offset_at_beat(12.0), 0);
+    }
+
+    #[test]
+    fn test_automation_mode_record_and_thin() {
+        let mut project = ProjectConfig::default();
+        project.tracks.push(TrackConfig {
+            id: 1,
+            automation_mode: AutomationMode::Read,
+            ..Default::default()
+        });
+
+        assert!(!project.record_automation_point(1, "track.gain", 0, 0.5));
+        project.tracks[0].automation_mode = AutomationMode::Write;
+        assert!(project.record_automation_point(1, "track.gain", 0, 0.0));
+        assert!(project.record_automation_point(1, "track.gain", 100, 0.5));
+        assert!(project.record_automation_point(1, "track.gain", 200, 1.0));
+        assert!(project.record_automation_point(1, "track.gain", 300, 1.0));
+        assert!(project.record_automation_point(1, "track.gain", 400, 0.2));
+
+        project.tracks[0].automation_mode = AutomationMode::Trim;
+        assert!(project.record_automation_point(1, "track.gain", 300, -0.25));
+        let lane = &project.automation_lanes[0];
+        let pt_300 = lane.events.iter().find(|e| e.frame == 300).unwrap();
+        assert!((pt_300.value - 0.75).abs() < 1e-6);
+
+        // Linear point at frame 100 (exact 0.5 on 0->200 segment) should be thinned cleanly
+        project.tracks[0].automation_mode = AutomationMode::Write;
+        assert!(project.record_automation_point(1, "track.gain", 300, 1.0));
+        let removed = project.thin_automation_lane(1, "track.gain", 0.01);
+        assert_eq!(removed, 1);
+        assert_eq!(project.automation_lanes[0].events.len(), 4);
     }
 }
