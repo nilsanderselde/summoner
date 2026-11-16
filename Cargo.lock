@@ -4075,6 +4075,7 @@ dependencies = [
  "cpal",
  "crossbeam-channel",
  "hound",
+ "libc",
  "midir",
  "serde",
  "summoner_core",

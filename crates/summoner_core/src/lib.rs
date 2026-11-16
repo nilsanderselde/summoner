@@ -69,9 +69,9 @@ pub use audio::{
     AudioRingBuffer, ChannelLayout, FixedAudioBuffer, Frame, MultichannelAudioBuffer, Sample,
 };
 pub use audio_drivers::{
-    AAudioDriver, AlsaDriver, AsapiDriver, AudioDeviceDescriptor, AudioDriverBackendType,
-    AudioUnitDriver, DeviceDirection, LiveAudioTelemetry, NativeAudioDriver,
-    NativeAudioDriverTuner, WasapiDriver,
+    macos_microphone_usage_plist_entry, AAudioDriver, AlsaDriver, AsapiDriver,
+    AudioDeviceDescriptor, AudioDriverBackendType, AudioUnitDriver, CoreAudioPermissionStatus,
+    DeviceDirection, LiveAudioTelemetry, NativeAudioDriver, NativeAudioDriverTuner, WasapiDriver,
 };
 pub use bellows_bus::*;
 pub use ble_midi::*;

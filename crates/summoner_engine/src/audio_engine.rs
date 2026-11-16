@@ -50,7 +50,25 @@ pub fn set_realtime_audio_thread_priority() {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "linux")]
+pub fn set_realtime_audio_thread_priority() {
+    unsafe {
+        let mut param: libc::sched_param = std::mem::zeroed();
+        param.sched_priority = 50;
+        if libc::pthread_setschedparam(libc::pthread_self(), libc::SCHED_FIFO, &param) != 0 {
+            libc::setpriority(libc::PRIO_PROCESS, 0, -10);
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub fn set_realtime_audio_thread_priority() {
+    unsafe {
+        libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0);
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
 pub fn set_realtime_audio_thread_priority() {}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -266,6 +284,8 @@ pub struct LiveEngineHandle {
     pub input_active: Arc<AtomicBool>,
     pub cpu_load_milli_pct: Arc<AtomicU32>,
     pub xrun_count: Arc<AtomicU64>,
+    pub stream_error: Arc<AtomicBool>,
+    pub reconnect_count: Arc<AtomicU32>,
     pub input_ring_buffer: Arc<AudioRingBuffer>,
     pub midi_receiver: Option<Arc<crate::midi_engine::MidiInputReceiver>>,
     _stream: Option<cpal::Stream>,
@@ -279,6 +299,52 @@ impl LiveEngineHandle {
 
     pub fn is_playing(&self) -> bool {
         self.playing.load(Ordering::Relaxed)
+    }
+
+    pub fn has_stream_error(&self) -> bool {
+        self.stream_error.load(Ordering::Relaxed)
+    }
+
+    pub fn simulate_stream_error(&self) {
+        self.stream_error.store(true, Ordering::Relaxed);
+    }
+
+    pub fn reconnects(&self) -> u32 {
+        self.reconnect_count.load(Ordering::Relaxed)
+    }
+
+    /// Re-open audio streams if a hardware disconnect or stream error occurred.
+    /// Returns `true` if recovery ran.
+    pub fn recover_if_needed(
+        &mut self,
+        project: &ProjectConfig,
+        settings: &AudioEngineSettings,
+    ) -> bool {
+        if !self.has_stream_error() {
+            return false;
+        }
+        let was_playing = self.is_playing();
+        let prev_reconnects = self.reconnect_count.load(Ordering::Relaxed);
+        let prev_frame = self.frame_position.load(Ordering::Relaxed);
+
+        // Drop old streams before opening replacements
+        self._stream = None;
+        self._input_stream = None;
+
+        let fresh = spawn_live_engine_with_settings(
+            project,
+            Arc::clone(&self.param_bus),
+            was_playing,
+            settings,
+        );
+        fresh
+            .reconnect_count
+            .store(prev_reconnects + 1, Ordering::Relaxed);
+        if prev_frame > 0 {
+            fresh.seek_frame(prev_frame);
+        }
+        *self = fresh;
+        true
     }
 
     pub fn seek_frame(&self, frame: u64) {
@@ -499,6 +565,8 @@ pub fn spawn_live_engine_with_settings(
     let input_active = Arc::new(AtomicBool::new(false));
     let cpu_load_milli_pct = Arc::new(AtomicU32::new(0));
     let xrun_count = Arc::new(AtomicU64::new(0));
+    let stream_error = Arc::new(AtomicBool::new(false));
+    let reconnect_count = Arc::new(AtomicU32::new(0));
     let input_ring_buffer = Arc::new(AudioRingBuffer::new(65536));
 
     let (cmd_tx, cmd_rx): (Sender<EngineCommand>, Receiver<EngineCommand>) =
@@ -568,12 +636,27 @@ pub fn spawn_live_engine_with_settings(
         if let Some(in_dev) = in_dev_opt {
             if let Ok(in_cfg) = in_dev.default_input_config() {
                 let mut stream_cfg: cpal::StreamConfig = in_cfg.into();
+                if let Some(req_sr) = settings.requested_sample_rate {
+                    let supported = in_dev
+                        .supported_input_configs()
+                        .ok()
+                        .map(|mut cfgs| {
+                            cfgs.any(|c| {
+                                req_sr >= c.min_sample_rate().0 && req_sr <= c.max_sample_rate().0
+                            })
+                        })
+                        .unwrap_or(false);
+                    if supported {
+                        stream_cfg.sample_rate = cpal::SampleRate(req_sr);
+                    }
+                }
                 if let Some(buf_size) = settings.requested_buffer_size {
                     stream_cfg.buffer_size = cpal::BufferSize::Fixed(buf_size);
                 }
                 in_channels = stream_cfg.channels as usize;
                 let rb_producer = Arc::clone(&input_ring_buffer);
                 let in_active_flag = Arc::clone(&input_active);
+                let err_flag_in = Arc::clone(&stream_error);
 
                 let res = in_dev.build_input_stream(
                     &stream_cfg,
@@ -582,7 +665,10 @@ pub fn spawn_live_engine_with_settings(
                         rb_producer.push_slice(data);
                         in_active_flag.store(true, Ordering::Relaxed);
                     },
-                    |err| eprintln!("Live audio input stream error: {}", err),
+                    move |err| {
+                        eprintln!("Live audio input stream error: {}", err);
+                        err_flag_in.store(true, Ordering::Relaxed);
+                    },
                     None,
                 );
                 if let Ok(s) = res {
@@ -603,11 +689,23 @@ pub fn spawn_live_engine_with_settings(
     };
 
     if let (Some(device), Some(config)) = (device_opt, config_opt) {
-        let sample_rate = config.sample_rate().0;
         let mut stream_config: cpal::StreamConfig = config.into();
+        if let Some(req_sr) = settings.requested_sample_rate {
+            let supported = device
+                .supported_output_configs()
+                .ok()
+                .map(|mut cfgs| {
+                    cfgs.any(|c| req_sr >= c.min_sample_rate().0 && req_sr <= c.max_sample_rate().0)
+                })
+                .unwrap_or(false);
+            if supported {
+                stream_config.sample_rate = cpal::SampleRate(req_sr);
+            }
+        }
         if let Some(buf_size) = settings.requested_buffer_size {
             stream_config.buffer_size = cpal::BufferSize::Fixed(buf_size);
         }
+        let sample_rate = stream_config.sample_rate.0;
         let channels = stream_config.channels as usize;
 
         let mut proj_for_rate = project.clone();
@@ -634,6 +732,7 @@ pub fn spawn_live_engine_with_settings(
         let mut in_r = Box::new([0.0f32; MAX_BLOCK_SIZE]);
         let mut in_interleaved = Box::new([0.0f32; MAX_BLOCK_SIZE * 2]);
 
+        let err_flag_out = Arc::clone(&stream_error);
         let stream_res = device.build_output_stream(
             &stream_config,
             move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
@@ -770,7 +869,10 @@ pub fn spawn_live_engine_with_settings(
                 }
                 frame_pos_cb.store(current_frame, Ordering::Relaxed);
             },
-            |err| eprintln!("an error occurred on output stream: {}", err),
+            move |err| {
+                eprintln!("an error occurred on output stream: {}", err);
+                err_flag_out.store(true, Ordering::Relaxed);
+            },
             None,
         );
 
@@ -786,6 +888,8 @@ pub fn spawn_live_engine_with_settings(
                 input_active,
                 cpu_load_milli_pct,
                 xrun_count,
+                stream_error,
+                reconnect_count,
                 input_ring_buffer,
                 midi_receiver,
                 _stream: Some(stream),
@@ -797,13 +901,17 @@ pub fn spawn_live_engine_with_settings(
     LiveEngineHandle {
         playing,
         frame_position,
-        sample_rate: sample_rate_default,
+        sample_rate: settings
+            .requested_sample_rate
+            .unwrap_or(sample_rate_default),
         param_bus,
         cmd_tx,
         param_tx,
         input_active,
         cpu_load_milli_pct,
         xrun_count,
+        stream_error,
+        reconnect_count,
         input_ring_buffer,
         midi_receiver,
         _stream: None,
@@ -988,5 +1096,34 @@ mod tests {
         let param_bus = Arc::new(ParamBus::new());
         let handle = spawn_live_engine_with_settings(&project, param_bus, false, &settings);
         assert!(!handle.is_playing());
+        assert!(handle.sample_rate > 0);
+    }
+
+    #[test]
+    fn test_realtime_thread_priority_does_not_panic() {
+        set_realtime_audio_thread_priority();
+    }
+
+    #[test]
+    fn test_live_engine_stream_error_recovery() {
+        let project = create_default_project("Recovery Test");
+        let param_bus = Arc::new(ParamBus::new());
+        let settings = AudioEngineSettings {
+            requested_sample_rate: Some(48000),
+            ..Default::default()
+        };
+        let mut handle = spawn_live_engine_with_settings(&project, param_bus, true, &settings);
+
+        assert!(!handle.has_stream_error());
+        assert_eq!(handle.reconnects(), 0);
+        assert!(!handle.recover_if_needed(&project, &settings));
+
+        handle.simulate_stream_error();
+        assert!(handle.has_stream_error());
+
+        assert!(handle.recover_if_needed(&project, &settings));
+        assert!(!handle.has_stream_error());
+        assert_eq!(handle.reconnects(), 1);
+        assert!(handle.is_playing());
     }
 }

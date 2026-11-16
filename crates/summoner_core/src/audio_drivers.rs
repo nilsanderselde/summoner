@@ -449,6 +449,22 @@ impl NativeAudioDriverTuner {
     }
 }
 
+/// macOS CoreAudio microphone permission status (`NSMicrophoneUsageDescription`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum CoreAudioPermissionStatus {
+    Authorized,
+    NotDetermined,
+    Denied,
+}
+
+/// Info.plist key and usage description required for macOS CoreAudio input / microphone access.
+pub fn macos_microphone_usage_plist_entry() -> (&'static str, &'static str) {
+    (
+        "NSMicrophoneUsageDescription",
+        "Summoner DAW requires microphone and audio interface access for multitrack recording and live audio input monitoring.",
+    )
+}
+
 /// macOS CoreAudio Aggregate Device Configuration (Task A4).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct CoreAudioAggregateConfig {
@@ -646,5 +662,20 @@ mod tests {
 
         assert_eq!(telemetry.xrun_count, 0);
         assert!(telemetry.cpu_load_pct < 5.0);
+    }
+
+    #[test]
+    fn test_macos_coreaudio_permission_plist_entry() {
+        let (key, desc) = macos_microphone_usage_plist_entry();
+        assert_eq!(key, "NSMicrophoneUsageDescription");
+        assert!(!desc.is_empty());
+        assert_ne!(
+            CoreAudioPermissionStatus::Authorized,
+            CoreAudioPermissionStatus::Denied
+        );
+        assert_ne!(
+            CoreAudioPermissionStatus::NotDetermined,
+            CoreAudioPermissionStatus::Authorized
+        );
     }
 }

@@ -19,3 +19,6 @@ serde = { workspace = true, features = ["derive"] }
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["processthreadsapi"] }
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
