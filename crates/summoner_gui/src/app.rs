@@ -4302,6 +4302,7 @@ mod tests {
 
     #[test]
     fn test_gui_audio_driver_settings_apply_and_persistence() {
+        let _state_isolation = crate::app_state::ScopedGuiStateTestFile::new("audio_driver");
         let project = create_default_project("Audio Settings Test");
         let param_bus = Arc::new(ParamBus::new());
         let mut app = SummonerApp::new(project, param_bus);
@@ -4331,6 +4332,7 @@ mod tests {
 
     #[test]
     fn test_preferences_window_and_shortcut_customization() {
+        let _state_isolation = crate::app_state::ScopedGuiStateTestFile::new("preferences");
         let project = create_default_project("Preferences Test");
         let param_bus = Arc::new(ParamBus::new());
         let mut app = SummonerApp::new(project, param_bus);

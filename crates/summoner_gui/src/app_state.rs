@@ -87,8 +87,68 @@ pub fn default_auto_save_interval() -> u64 {
     300
 }
 
+#[cfg(test)]
+std::thread_local! {
+    static TEST_GUI_STATE_PATH: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
+}
+
+/// RAII test helper isolating `GuiState::load()` / `GuiState::save()` onto a per-test temp file
+/// so parallel `cargo test -p summoner_gui` runs never contend on `.summoner_gui_state.toml` (`M2.4`).
+#[cfg(test)]
+pub struct ScopedGuiStateTestFile {
+    prev: Option<PathBuf>,
+    path: PathBuf,
+}
+
+#[cfg(test)]
+impl ScopedGuiStateTestFile {
+    pub fn new(label: &str) -> Self {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let path = std::env::temp_dir().join(format!(
+            "summoner_gui_state_{}_{}_{:?}.toml",
+            label,
+            nanos,
+            std::thread::current().id()
+        ));
+        let prev = TEST_GUI_STATE_PATH.with(|cell| cell.borrow_mut().replace(path.clone()));
+        Self { prev, path }
+    }
+}
+
+#[cfg(test)]
+impl Drop for ScopedGuiStateTestFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+        TEST_GUI_STATE_PATH.with(|cell| {
+            *cell.borrow_mut() = self.prev.take();
+        });
+    }
+}
+
 impl GuiState {
     pub const STATE_FILE: &'static str = ".summoner_gui_state.toml";
+
+    fn active_state_path() -> PathBuf {
+        #[cfg(test)]
+        {
+            if let Some(override_path) = TEST_GUI_STATE_PATH.with(|cell| cell.borrow().clone()) {
+                override_path
+            } else {
+                std::env::temp_dir().join(format!(
+                    "summoner_gui_default_{}_{:?}.toml",
+                    std::process::id(),
+                    std::thread::current().id()
+                ))
+            }
+        }
+        #[cfg(not(test))]
+        {
+            summoner_core::paths::state_file(Self::STATE_FILE)
+        }
+    }
 
     pub fn load_from_path(path: &Path) -> Option<Self> {
         let content = std::fs::read_to_string(path).ok()?;
@@ -96,7 +156,7 @@ impl GuiState {
     }
 
     pub fn load() -> Option<Self> {
-        Self::load_from_path(&summoner_core::paths::state_file(Self::STATE_FILE))
+        Self::load_from_path(&Self::active_state_path())
     }
 
     pub fn save_to_path(&self, path: &Path) {
@@ -106,7 +166,7 @@ impl GuiState {
     }
 
     pub fn save(&self) {
-        self.save_to_path(&summoner_core::paths::state_file(Self::STATE_FILE));
+        self.save_to_path(&Self::active_state_path());
     }
 }
 

@@ -478,6 +478,68 @@ impl Default for SpatialLayoutCalculator {
     }
 }
 
+/// Viewport virtualization helpers for 60 FPS large-session rendering (M2.4 / GUI-6).
+pub struct ViewportVirtualizer;
+
+impl ViewportVirtualizer {
+    /// Returns the clamped half-open row index range visible inside a vertically scrolled viewport,
+    /// expanded by `overscan_rows` above and below.
+    pub fn visible_row_range(
+        scroll_offset_px: f32,
+        viewport_height_px: f32,
+        row_height_px: f32,
+        total_rows: usize,
+        overscan_rows: usize,
+    ) -> std::ops::Range<usize> {
+        if total_rows == 0 || row_height_px <= 0.0 || viewport_height_px <= 0.0 {
+            return 0..0;
+        }
+        let scroll = scroll_offset_px.max(0.0);
+        let first_visible = (scroll / row_height_px).floor() as usize;
+        let last_visible = ((scroll + viewport_height_px) / row_height_px).ceil() as usize;
+        let start = first_visible.saturating_sub(overscan_rows).min(total_rows);
+        let end = (last_visible + overscan_rows).min(total_rows);
+        start..end
+    }
+
+    /// Returns true if a clip span `[clip_start_beat, clip_end_beat]` intersects the visible beat window.
+    #[inline]
+    pub fn is_beat_span_visible(
+        clip_start_beat: f64,
+        clip_end_beat: f64,
+        view_start_beat: f64,
+        view_end_beat: f64,
+    ) -> bool {
+        clip_end_beat >= view_start_beat && clip_start_beat <= view_end_beat
+    }
+
+    /// Culls a dense piano-roll note slice `(pitch, start_beat, duration_beats)` against the
+    /// active viewport time and pitch window, returning matching note indices.
+    pub fn filter_visible_notes(
+        notes: &[(u8, f64, f64)],
+        view_start_beat: f64,
+        view_end_beat: f64,
+        min_pitch: u8,
+        max_pitch: u8,
+    ) -> Vec<usize> {
+        let mut visible = Vec::new();
+        for (idx, &(pitch, start_beat, duration_beats)) in notes.iter().enumerate() {
+            if pitch >= min_pitch
+                && pitch <= max_pitch
+                && Self::is_beat_span_visible(
+                    start_beat,
+                    start_beat + duration_beats.max(0.0),
+                    view_start_beat,
+                    view_end_beat,
+                )
+            {
+                visible.push(idx);
+            }
+        }
+        visible
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -560,5 +622,35 @@ mod tests {
         assert_eq!(rects.len(), 2);
         assert_eq!(rects[0], Rect::new(0.0, 0.0, 100.0, 100.0));
         assert_eq!(rects[1], Rect::new(100.0, 0.0, 200.0, 100.0));
+    }
+
+    #[test]
+    fn test_m2_viewport_virtualizer_200_tracks_and_10k_notes_60fps_budget() {
+        let range = ViewportVirtualizer::visible_row_range(560.0, 448.0, 56.0, 240, 2);
+        assert_eq!(range, 8..20);
+
+        let empty_range = ViewportVirtualizer::visible_row_range(0.0, 400.0, 50.0, 0, 1);
+        assert_eq!(empty_range, 0..0);
+
+        // 10,000 notes spanning 2,500 beats; viewport only displays beats 100..116, pitches 60..72
+        let notes: Vec<(u8, f64, f64)> = (0..10_000)
+            .map(|i| {
+                let pitch = 36 + (i % 60) as u8;
+                let beat = (i as f64) * 0.25;
+                (pitch, beat, 0.5)
+            })
+            .collect();
+
+        let start = std::time::Instant::now();
+        let visible = ViewportVirtualizer::filter_visible_notes(&notes, 100.0, 116.0, 60, 72);
+        let elapsed = start.elapsed();
+
+        assert!(!visible.is_empty());
+        assert!(visible.len() < 100);
+        assert!(
+            elapsed.as_millis() < 16,
+            "10k note viewport culling exceeded 16ms 60 FPS frame budget: {:?}",
+            elapsed
+        );
     }
 }
