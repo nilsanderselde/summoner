@@ -553,7 +553,9 @@ impl NodeFactory {
                 Some(Box::new(ProcessorNodeAdapter::new(sitar)))
             }
             "ConcertGrandPiano" | "ConcertGrandPianoNode" | "GrandPiano" | "GrandPianoModel" => {
-                Some(Box::new(summoner_dsp::ConcertGrandPianoNode::new(sample_rate)))
+                Some(Box::new(summoner_dsp::ConcertGrandPianoNode::new(
+                    sample_rate,
+                )))
             }
             "PipeOrgan" | "PipeOrganNode" | "PipeOrganModel" => {
                 Some(Box::new(summoner_dsp::PipeOrganNode::new(sample_rate)))
@@ -604,11 +606,12 @@ impl NodeFactory {
             "CommutedPluckedString" | "CommutedPluckedStringNode" => Some(Box::new(
                 summoner_dsp::CommutedPluckedStringNode::new(sample_rate),
             )),
-            "StruckIdiophoneResonator" | "StruckIdiophoneResonatorNode" | "SteelpanModel" | "GamelanGender" => {
-                Some(Box::new(
-                    summoner_dsp::idiophone_resonator::StruckIdiophoneResonatorNode::new(sample_rate),
-                ))
-            }
+            "StruckIdiophoneResonator"
+            | "StruckIdiophoneResonatorNode"
+            | "SteelpanModel"
+            | "GamelanGender" => Some(Box::new(
+                summoner_dsp::idiophone_resonator::StruckIdiophoneResonatorNode::new(sample_rate),
+            )),
             "ModalSynthesis" | "ModalSynthesisNode" => {
                 Some(Box::new(summoner_dsp::ModalSynthesisNode::new(sample_rate)))
             }
@@ -696,12 +699,13 @@ impl NodeFactory {
             "WsolaTimeStretcher" | "ElasticWarpEngine" | "RealtimeWarpNode" => {
                 Some(Box::new(summoner_dsp::RealtimeWarpNode::new(sample_rate)))
             }
-            "MimicSlicer" | "MimicSlicerNode" | "LoopSlicer" | "LoopSlicerNode" | "SampleSlicerNode" => {
-                Some(Box::new(summoner_dsp::MimicSlicerNode::new(sample_rate)))
+            "SliceSampler" | "SliceSamplerNode" | "LoopSlicer" | "LoopSlicerNode"
+            | "SampleSlicerNode" => {
+                Some(Box::new(summoner_dsp::SliceSamplerNode::new(sample_rate)))
             }
-            "ChiptuneSynth" | "ChiptuneTracker" | "ChiptuneTrackerNode" => {
-                Some(Box::new(summoner_dsp::ChiptuneTrackerNode::new(sample_rate)))
-            }
+            "ChiptuneSynth" | "ChiptuneTracker" | "ChiptuneTrackerNode" => Some(Box::new(
+                summoner_dsp::ChiptuneTrackerNode::new(sample_rate),
+            )),
             "Vocoder" | "VocoderNode" | "VocoderMatrix" | "VocoderMatrixNode" => {
                 Some(Box::new(summoner_dsp::VocoderNode::new(sample_rate)))
             }
@@ -847,8 +851,7 @@ fn build_schedule_with_transport(
                 let mut ev = lane.events.clone();
                 ev.sort_by_key(|e| e.frame);
                 track_root_lane = Some(ev);
-            } else if lane.param_id.eq_ignore_ascii_case("track.scale") && !lane.events.is_empty()
-            {
+            } else if lane.param_id.eq_ignore_ascii_case("track.scale") && !lane.events.is_empty() {
                 let mut ev = lane.events.clone();
                 ev.sort_by_key(|e| e.frame);
                 track_scale_lane = Some(ev);
@@ -1439,7 +1442,8 @@ pub fn compute_topological_pdc(tracks: &[Track], track_meta: &[TrackMeta]) -> (V
     for i in 0..n {
         let meta = &track_meta[i];
         if meta.is_folder_track && !meta.is_vca {
-            pdc_delays[i] = total_system_pdc.saturating_sub(feeder_arrival[i] + own_lat[i] + rem_lat[i]);
+            pdc_delays[i] =
+                total_system_pdc.saturating_sub(feeder_arrival[i] + own_lat[i] + rem_lat[i]);
             arrival[i] = feeder_arrival[i] + own_lat[i] + pdc_delays[i];
             if let Some(b_idx) = resolve_bus_target_idx(track_meta, i) {
                 feeder_arrival[b_idx] = feeder_arrival[b_idx].max(arrival[i]);
@@ -1450,7 +1454,8 @@ pub fn compute_topological_pdc(tracks: &[Track], track_meta: &[TrackMeta]) -> (V
     for i in 0..n {
         let meta = &track_meta[i];
         if meta.is_return_track && !meta.is_vca {
-            pdc_delays[i] = total_system_pdc.saturating_sub(feeder_arrival[i] + own_lat[i] + rem_lat[i]);
+            pdc_delays[i] =
+                total_system_pdc.saturating_sub(feeder_arrival[i] + own_lat[i] + rem_lat[i]);
             arrival[i] = feeder_arrival[i] + own_lat[i] + pdc_delays[i];
             if let Some(b_idx) = resolve_bus_target_idx(track_meta, i) {
                 feeder_arrival[b_idx] = feeder_arrival[b_idx].max(arrival[i]);
@@ -1603,8 +1608,7 @@ impl GraphRunner {
         }
 
         // Calculate topological PDC delays across Regular -> Folder -> Return -> Bus (M2.2)
-        let (pdc_delays, total_pdc_latency_samples) =
-            compute_topological_pdc(&tracks, &track_meta);
+        let (pdc_delays, total_pdc_latency_samples) = compute_topological_pdc(&tracks, &track_meta);
         let mut pdc_buffers = Vec::with_capacity(tracks.len());
         for delay in pdc_delays {
             pdc_buffers.push(PdcDelayBuffer::new(delay));
@@ -3842,15 +3846,16 @@ mod tests {
                 self.latency
             }
 
-            fn process(&mut self, input: &[&[Sample]], output: &mut [&mut [Sample]], _ctx: &ProcessContext) {
+            fn process(
+                &mut self,
+                input: &[&[Sample]],
+                output: &mut [&mut [Sample]],
+                _ctx: &ProcessContext,
+            ) {
                 let len = output[0].len();
                 for i in 0..len {
                     let in_l = input.first().and_then(|c| c.get(i)).copied().unwrap_or(0.0);
-                    let in_r = input
-                        .get(1)
-                        .and_then(|c| c.get(i))
-                        .copied()
-                        .unwrap_or(in_l);
+                    let in_r = input.get(1).and_then(|c| c.get(i)).copied().unwrap_or(in_l);
                     let read = (self.pos + 256 - self.latency) % 256;
                     output[0][i] = self.ring_l[read];
                     if output.len() > 1 {
@@ -3944,8 +3949,12 @@ mod tests {
             }
         }
 
-        runner.tracks[0].add_node(Box::new(ImpulsePrefixNode(false, 20, [0.0; 256], [0.0; 256], 0)));
-        runner.tracks[1].add_node(Box::new(ImpulsePrefixNode(false, 15, [0.0; 256], [0.0; 256], 0)));
+        runner.tracks[0].add_node(Box::new(ImpulsePrefixNode(
+            false, 20, [0.0; 256], [0.0; 256], 0,
+        )));
+        runner.tracks[1].add_node(Box::new(ImpulsePrefixNode(
+            false, 15, [0.0; 256], [0.0; 256], 0,
+        )));
         runner.tracks[2].add_node(Box::new(FixedDelayTestNode::new(10)));
         runner.tracks[3].add_node(Box::new(FixedDelayTestNode::new(50)));
 
@@ -3981,13 +3990,13 @@ mod tests {
     }
 
     #[test]
-    fn test_node_factory_sf2_mimic_chiptune_vocoder_and_model_aliases() {
+    fn test_node_factory_sf2_slice_sampler_chiptune_vocoder_and_model_aliases() {
         let kinds = [
             "Sf2SoundFont",
             "SoundFontNode",
             "SfzSampler",
-            "MimicSlicer",
-            "MimicSlicerNode",
+            "SliceSampler",
+            "SliceSamplerNode",
             "LoopSlicer",
             "LoopSlicerNode",
             "SampleSlicerNode",
@@ -4030,14 +4039,20 @@ mod tests {
 
         // Verify audio synthesis on NoteOn for the core new instruments
         let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
-        for playable in ["Sf2SoundFont", "MimicSlicer", "ChiptuneTracker", "Vocoder"] {
+        for playable in ["Sf2SoundFont", "SliceSampler", "ChiptuneTracker", "Vocoder"] {
             let cfg = summoner_project::schema::NodeConfig {
                 kind: playable.to_string(),
                 params: std::collections::HashMap::new(),
                 plugin_state: None,
             };
             let mut node = NodeFactory::create_node_with_rate(&cfg, 44100).unwrap();
-            node.handle_event(&NodeEvent::NoteOn { note: 38, velocity: 1.0 }, &ctx);
+            node.handle_event(
+                &NodeEvent::NoteOn {
+                    note: 38,
+                    velocity: 1.0,
+                },
+                &ctx,
+            );
             let mut in_mod = vec![0.35f32; 512];
             for (i, s) in in_mod.iter_mut().enumerate() {
                 *s = (2.0 * std::f32::consts::PI * 300.0 * i as f32 / 44100.0).sin() * 0.5;
@@ -4048,7 +4063,11 @@ mod tests {
             let mut outs = [out_l.as_mut_slice(), out_r.as_mut_slice()];
             node.process(&ins, &mut outs, &ctx);
             let energy: f32 = out_l.iter().map(|s| s * s).sum();
-            assert!(energy > 1e-5, "'{}' should emit audio after NoteOn", playable);
+            assert!(
+                energy > 1e-5,
+                "'{}' should emit audio after NoteOn",
+                playable
+            );
         }
     }
 

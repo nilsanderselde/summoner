@@ -422,7 +422,9 @@ mod tests {
         let mut autosave = mgr.auto_save_manager.clone();
         autosave.create_backup_snapshot(&proj).unwrap();
 
-        let prompt = mgr.poll_recovery_prompt().expect("expected recovery prompt");
+        let prompt = mgr
+            .poll_recovery_prompt()
+            .expect("expected recovery prompt");
         assert_eq!(prompt.project_name, "Unsaved IDM Sketch");
         assert!(prompt.latest_snapshot_path.exists());
 

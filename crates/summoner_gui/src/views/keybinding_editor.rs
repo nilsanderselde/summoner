@@ -127,7 +127,9 @@ pub struct KeybindingConflict {
 }
 
 /// Switchable DAW shortcut profile presets with conflict-free ergonomics (`M3.2` / `GUI-2`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 pub enum DawShortcutProfile {
     #[default]
     SummonerNative,
@@ -324,7 +326,13 @@ impl KeybindingEditorView {
                 );
                 self.assign_shortcut(
                     "nav_arranger",
-                    Some(KeyShortcut::new("Tab", KeyModifiers { shift: true, ..Default::default() })),
+                    Some(KeyShortcut::new(
+                        "Tab",
+                        KeyModifiers {
+                            shift: true,
+                            ..Default::default()
+                        },
+                    )),
                     false,
                 );
             }
@@ -351,11 +359,7 @@ impl KeybindingEditorView {
                     Some(KeyShortcut::new("R", main_mod)),
                     false,
                 );
-                self.assign_shortcut(
-                    "nav_mixer",
-                    Some(KeyShortcut::new("M", main_mod)),
-                    false,
-                );
+                self.assign_shortcut("nav_mixer", Some(KeyShortcut::new("M", main_mod)), false);
                 self.assign_shortcut(
                     "file_save_as",
                     Some(KeyShortcut::new("S", main_shift)),
@@ -545,7 +549,11 @@ impl KeybindingEditorView {
                             egui::Button::new(
                                 egui::RichText::new(profile.label())
                                     .size(11.0)
-                                    .color(if is_sel { Color32::BLACK } else { Color32::WHITE }),
+                                    .color(if is_sel {
+                                        Color32::BLACK
+                                    } else {
+                                        Color32::WHITE
+                                    }),
                             )
                             .fill(if is_sel {
                                 Color32::from_rgb(0, 229, 255)

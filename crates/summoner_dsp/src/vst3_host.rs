@@ -626,7 +626,8 @@ pub struct Vst3SandboxIpcFrame {
 
 impl Vst3SandboxIpcFrame {
     pub fn encode_bytes(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(20 + self.param_updates.len() * 8 + self.audio_samples.len() * 4);
+        let mut out =
+            Vec::with_capacity(20 + self.param_updates.len() * 8 + self.audio_samples.len() * 4);
         out.extend_from_slice(b"V3IP");
         out.extend_from_slice(&self.block_frames.to_le_bytes());
         out.extend_from_slice(&self.channels.to_le_bytes());
@@ -785,8 +786,9 @@ impl Vst3PluginInstance {
             email: [0; 128],
             flags: 0,
         };
-        let info_res =
-            unsafe { ((*vtbl_ptr).get_factory_info)(factory_ptr as *mut c_void, &mut factory_info) };
+        let info_res = unsafe {
+            ((*vtbl_ptr).get_factory_info)(factory_ptr as *mut c_void, &mut factory_info)
+        };
         if info_res == K_RESULT_OK {
             let vendor = c_char_array_to_string(&factory_info.vendor);
             if !vendor.is_empty() {
@@ -1009,9 +1011,7 @@ impl Vst3PluginInstance {
                 let wet_sample = if self.svf_enabled && ch_idx < 2 {
                     let v3 = scaled - self.svf_state[ch_idx][1];
                     let v1 = a1 * self.svf_state[ch_idx][0] + a2 * v3;
-                    let v2 = self.svf_state[ch_idx][1]
-                        + a2 * self.svf_state[ch_idx][0]
-                        + a3 * v3;
+                    let v2 = self.svf_state[ch_idx][1] + a2 * self.svf_state[ch_idx][0] + a3 * v3;
                     self.svf_state[ch_idx][0] = 2.0 * v1 - self.svf_state[ch_idx][0];
                     self.svf_state[ch_idx][1] = 2.0 * v2 - self.svf_state[ch_idx][1];
                     v2
@@ -1329,8 +1329,9 @@ mod tests {
             num_outputs: 2,
         };
 
-        let mut instance = Vst3PluginInstance::from_factory_fn(desc, get_test_plugin_factory, 48000.0, 128)
-            .expect("COM factory binding should succeed");
+        let mut instance =
+            Vst3PluginInstance::from_factory_fn(desc, get_test_plugin_factory, 48000.0, 128)
+                .expect("COM factory binding should succeed");
         assert!(instance.factory_bound);
         assert_eq!(instance.descriptor.vendor, "Summoner COM Audio");
         assert_eq!(instance.descriptor.name, "SummonerResonator");
@@ -1349,7 +1350,8 @@ mod tests {
             audio_samples: vec![0.25, -0.25, 0.5, -0.5],
         };
         let encoded = ipc_frame.encode_bytes();
-        let decoded = Vst3SandboxIpcFrame::decode_bytes(&encoded).expect("IPC frame decode should succeed");
+        let decoded =
+            Vst3SandboxIpcFrame::decode_bytes(&encoded).expect("IPC frame decode should succeed");
         assert_eq!(decoded, ipc_frame);
     }
 }

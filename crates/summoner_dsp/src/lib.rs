@@ -260,8 +260,8 @@ pub use reverb::{ConvolutionReverbNode, EffectReverb};
 pub use ring_mod::{FrequencyShifter, RingModWaveform, RingModulator};
 pub use sampler::{SampleBuffer, SamplerNode};
 pub use slicer::{
-    AutoSlicer, ChiptuneTrackerNode, ChiptuneWaveform, MimicSliceMode, MimicSlicerNode,
-    SliceMarker, VocoderNode, ONNX_TRANSIENT_MODEL_BYTES,
+    AutoSlicer, ChiptuneTrackerNode, ChiptuneWaveform, SliceMarker, SlicePlayMode,
+    SliceSamplerNode, VocoderNode, ONNX_TRANSIENT_MODEL_BYTES,
 };
 pub use stem_separator::{
     MultiTrackAudioRouter, StemMetadata, StemMetadataParser, StemSeparator,

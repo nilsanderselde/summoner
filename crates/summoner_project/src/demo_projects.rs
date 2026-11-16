@@ -545,7 +545,8 @@ impl FirstRunSetupWizard {
     }
 
     pub fn configure_audio(&mut self, driver: &str, sample_rate: u32, buffer_size: usize) {
-        self.onboarding.complete_milestone(OnboardingMilestone::WelcomeSeen);
+        self.onboarding
+            .complete_milestone(OnboardingMilestone::WelcomeSeen);
         self.selected_driver = driver.to_string();
         self.sample_rate = sample_rate.max(8000);
         self.buffer_size = buffer_size.clamp(32, 4096);

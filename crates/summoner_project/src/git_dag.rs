@@ -199,7 +199,11 @@ impl GitSessionDag {
             title: title_str,
             author: self.author.clone(),
             track_count: state.tracks.len(),
-            summary: format!("Saved version '{}' ({} tracks)", self.head().message, state.tracks.len()),
+            summary: format!(
+                "Saved version '{}' ({} tracks)",
+                self.head().message,
+                state.tracks.len()
+            ),
         }
     }
 
@@ -212,7 +216,11 @@ impl GitSessionDag {
                 title: c.message.clone(),
                 author: c.author.clone(),
                 track_count: c.state.tracks.len(),
-                summary: format!("Saved version '{}' ({} tracks)", c.message, c.state.tracks.len()),
+                summary: format!(
+                    "Saved version '{}' ({} tracks)",
+                    c.message,
+                    c.state.tracks.len()
+                ),
             })
             .collect()
     }

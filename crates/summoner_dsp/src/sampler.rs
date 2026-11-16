@@ -933,7 +933,10 @@ mod tests {
         let ctx = ProcessContext::new(44100, 120.0, 0);
         node.process_block(&inputs, &mut outputs, &ctx);
         let energy: f32 = out_l.iter().map(|s| s * s).sum();
-        assert!(energy > 1e-4, "Default GM bank should produce audible waveform");
+        assert!(
+            energy > 1e-4,
+            "Default GM bank should produce audible waveform"
+        );
 
         let empty_sf2 = crate::sf2_parser::Sf2SoundFont {
             info: Default::default(),

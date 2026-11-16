@@ -672,14 +672,26 @@ impl NativeAudioDriverTuner {
     ) -> Result<HardwareLoopbackSignOffReport, String> {
         self.open_stream()?;
         let (backend_name, sample_rate, buffer_size_frames) = match &self.driver {
-            NativeAudioDriver::AAudio(d) => ("AAudio".to_string(), d.sample_rate, d.buffer_size_frames),
-            NativeAudioDriver::AudioUnit(d) => ("AudioUnit".to_string(), d.sample_rate, d.frame_capacity),
-            NativeAudioDriver::Wasapi(d) => {
-                ("WASAPI Exclusive".to_string(), d.sample_rate, d.buffer_size_frames)
+            NativeAudioDriver::AAudio(d) => {
+                ("AAudio".to_string(), d.sample_rate, d.buffer_size_frames)
             }
-            NativeAudioDriver::Asapi(d) => ("ASIO/ASAPI".to_string(), d.sample_rate, d.buffer_size_frames),
+            NativeAudioDriver::AudioUnit(d) => {
+                ("AudioUnit".to_string(), d.sample_rate, d.frame_capacity)
+            }
+            NativeAudioDriver::Wasapi(d) => (
+                "WASAPI Exclusive".to_string(),
+                d.sample_rate,
+                d.buffer_size_frames,
+            ),
+            NativeAudioDriver::Asapi(d) => (
+                "ASIO/ASAPI".to_string(),
+                d.sample_rate,
+                d.buffer_size_frames,
+            ),
             NativeAudioDriver::Alsa(d) => ("ALSA".to_string(), d.sample_rate, d.period_size_frames),
-            NativeAudioDriver::PipeWire(d) => ("PipeWire".to_string(), d.sample_rate, d.quantum_frames),
+            NativeAudioDriver::PipeWire(d) => {
+                ("PipeWire".to_string(), d.sample_rate, d.quantum_frames)
+            }
             NativeAudioDriver::CoreAudioDesktop(d) => {
                 ("CoreAudio".to_string(), d.sample_rate, d.io_buffer_frames)
             }

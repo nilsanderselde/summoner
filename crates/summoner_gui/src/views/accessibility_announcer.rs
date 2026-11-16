@@ -275,7 +275,12 @@ impl AccessibilityAnnouncerView {
                     format!("Track {} Volume Fader", t + 1),
                     AccessibleRole::Slider,
                     "0.0 dB",
-                    Rect::new(20.0 * scale + (t as f32) * (min_target + 8.0), 140.0 * scale, min_target, min_target),
+                    Rect::new(
+                        20.0 * scale + (t as f32) * (min_target + 8.0),
+                        140.0 * scale,
+                        min_target,
+                        min_target,
+                    ),
                     base_tab + self.elements.len(),
                 )
                 .with_help("Use Up/Down arrows to adjust channel gain"),
@@ -289,7 +294,12 @@ impl AccessibilityAnnouncerView {
                     format!("Piano Roll Note {}", n + 1),
                     AccessibleRole::Button,
                     "C4 vel=100",
-                    Rect::new(20.0 * scale + (n as f32) * min_target, 220.0 * scale, min_target, min_target),
+                    Rect::new(
+                        20.0 * scale + (n as f32) * min_target,
+                        220.0 * scale,
+                        min_target,
+                        min_target,
+                    ),
                     base_tab + self.elements.len(),
                 )
                 .with_help("Press Left/Right to nudge note timing"),
@@ -303,7 +313,12 @@ impl AccessibilityAnnouncerView {
                     format!("Modular Patch Node {}", p + 1),
                     AccessibleRole::RackSlot,
                     "Active",
-                    Rect::new(20.0 * scale + (p as f32) * (min_target + 12.0), 300.0 * scale, min_target, min_target),
+                    Rect::new(
+                        20.0 * scale + (p as f32) * (min_target + 12.0),
+                        300.0 * scale,
+                        min_target,
+                        min_target,
+                    ),
                     base_tab + self.elements.len(),
                 )
                 .with_help("Press Enter to probe or connect cable port"),
@@ -319,9 +334,11 @@ impl AccessibilityAnnouncerView {
         }
         dpi_scales.iter().all(|&scale| {
             let min_scaled = MIN_HIT_TARGET_PT * scale.min(1.0);
-            self.elements
-                .iter()
-                .all(|el| el.bounds.width >= min_scaled && el.bounds.height >= min_scaled && !el.label.is_empty())
+            self.elements.iter().all(|el| {
+                el.bounds.width >= min_scaled
+                    && el.bounds.height >= min_scaled
+                    && !el.label.is_empty()
+            })
         })
     }
 

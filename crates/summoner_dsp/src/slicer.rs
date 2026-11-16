@@ -35,7 +35,7 @@ pub enum SliceAlgorithm {
     Onnx,
 }
 
-/// Offline transient detection module (Mimic-style).
+/// Offline transient detection module (auto-slice).
 pub struct AutoSlicer {
     pub algorithm: SliceAlgorithm,
     pub threshold: f32,
@@ -299,9 +299,9 @@ impl AutoSlicer {
     }
 }
 
-/// Per-slice playback mode inspired by Reason's Mimic creative sampler.
+/// Per-slice playback mode for the auto-slicing creative sampler.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum MimicSliceMode {
+pub enum SlicePlayMode {
     #[default]
     Forward,
     Reverse,
@@ -311,7 +311,7 @@ pub enum MimicSliceMode {
     TapeStop,
 }
 
-impl MimicSliceMode {
+impl SlicePlayMode {
     pub fn from_param(value: f32) -> Self {
         match value.round() as i32 {
             1 => Self::Reverse,
@@ -324,12 +324,12 @@ impl MimicSliceMode {
     }
 }
 
-/// Real-time zero-allocation auto-slicing creative sampler inspired by Reason Mimic.
+/// Real-time zero-allocation auto-slicing creative sampler for creative loop and song slicing.
 ///
 /// Auto-detects transient slices on load via `AutoSlicer` and maps them chromatically from
 /// MIDI note 36 (`C1`). Zero heap allocations occur inside `process` or `handle_event`.
 #[derive(Debug, Clone)]
-pub struct MimicSlicerNode {
+pub struct SliceSamplerNode {
     sample_rate: f32,
     buffer: Arc<SampleBuffer>,
     slices: Vec<SliceMarker>,
@@ -339,15 +339,15 @@ pub struct MimicSlicerNode {
     active_note: u8,
     gate_open: bool,
     envelope: f32,
-    slice_mode: MimicSliceMode,
+    slice_mode: SlicePlayMode,
     pitch_semitones: f32,
     one_shot: bool,
     stutter_phase: f32,
     tape_stop_rate: f32,
 }
 
-impl MimicSlicerNode {
-    /// Create a Mimic-style auto-slicing sampler pre-loaded with a default 8-hit breakbeat loop
+impl SliceSamplerNode {
+    /// Create a auto-slicing auto-slicing sampler pre-loaded with a default 8-hit breakbeat loop
     /// so it is immediately playable on MIDI notes C1 (`36`) and above.
     pub fn new(sample_rate: u32) -> Self {
         let sr = sample_rate.max(8000);
@@ -382,7 +382,7 @@ impl MimicSlicerNode {
         Self::from_buffer(buf, 1.5)
     }
 
-    /// Construct a `MimicSlicerNode` from any loaded audio buffer (`WAV`, `AIFF`, `FLAC`, song stem)
+    /// Construct a `SliceSamplerNode` from any loaded audio buffer (`WAV`, `AIFF`, `FLAC`, song stem)
     /// and automatically detect transient slice markers.
     pub fn from_buffer(buffer: Arc<SampleBuffer>, sensitivity: f32) -> Self {
         let slicer = AutoSlicer::new(sensitivity.max(0.1), SliceAlgorithm::SpectralFlux);
@@ -424,7 +424,7 @@ impl MimicSlicerNode {
             active_note: 36,
             gate_open: false,
             envelope: 0.0,
-            slice_mode: MimicSliceMode::Forward,
+            slice_mode: SlicePlayMode::Forward,
             pitch_semitones: 0.0,
             one_shot: true,
             stutter_phase: 0.0,
@@ -440,14 +440,14 @@ impl MimicSlicerNode {
         &self.slices
     }
 
-    pub fn slice_mode(&self) -> MimicSliceMode {
+    pub fn slice_mode(&self) -> SlicePlayMode {
         self.slice_mode
     }
 }
 
-impl AudioNode for MimicSlicerNode {
+impl AudioNode for SliceSamplerNode {
     fn name(&self) -> &str {
-        "MimicSlicerNode"
+        "SliceSamplerNode"
     }
 
     fn handle_event(&mut self, event: &NodeEvent, _ctx: &ProcessContext) {
@@ -467,7 +467,7 @@ impl AudioNode for MimicSlicerNode {
                 self.stutter_phase = 0.0;
                 self.tape_stop_rate = 1.0;
                 self.playhead_pos = match self.slice_mode {
-                    MimicSliceMode::Reverse => len.saturating_sub(2) as f64,
+                    SlicePlayMode::Reverse => len.saturating_sub(2) as f64,
                     _ => 0.0,
                 };
             }
@@ -477,7 +477,7 @@ impl AudioNode for MimicSlicerNode {
                 }
             }
             NodeEvent::SetParam { id, value } => match id {
-                0 => self.slice_mode = MimicSliceMode::from_param(value),
+                0 => self.slice_mode = SlicePlayMode::from_param(value),
                 1 => self.pitch_semitones = value.clamp(-24.0, 24.0),
                 2 => self.one_shot = value >= 0.5,
                 _ => {}
@@ -485,7 +485,12 @@ impl AudioNode for MimicSlicerNode {
         }
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         for ch in output.iter_mut() {
             ch.fill(0.0);
         }
@@ -522,28 +527,32 @@ impl AudioNode for MimicSlicerNode {
             }
 
             let step = match self.slice_mode {
-                MimicSliceMode::Forward => pitch_ratio,
-                MimicSliceMode::Reverse => -pitch_ratio,
-                MimicSliceMode::HalfSpeed => 0.5 * pitch_ratio,
-                MimicSliceMode::DoubleSpeed => 2.0 * pitch_ratio,
-                MimicSliceMode::StutterGate => pitch_ratio,
-                MimicSliceMode::TapeStop => {
+                SlicePlayMode::Forward => pitch_ratio,
+                SlicePlayMode::Reverse => -pitch_ratio,
+                SlicePlayMode::HalfSpeed => 0.5 * pitch_ratio,
+                SlicePlayMode::DoubleSpeed => 2.0 * pitch_ratio,
+                SlicePlayMode::StutterGate => pitch_ratio,
+                SlicePlayMode::TapeStop => {
                     let cur = pitch_ratio * self.tape_stop_rate as f64;
                     self.tape_stop_rate *= tape_decay;
                     cur
                 }
             };
 
-            let stutter_gain = if self.slice_mode == MimicSliceMode::StutterGate {
+            let stutter_gain = if self.slice_mode == SlicePlayMode::StutterGate {
                 self.stutter_phase = (self.stutter_phase + 16.0 / sr) % 1.0;
-                if self.stutter_phase < 0.5 { 1.0 } else { 0.15 }
+                if self.stutter_phase < 0.5 {
+                    1.0
+                } else {
+                    0.15
+                }
             } else {
                 1.0
             };
 
             let max_pos = slice_len as f64;
             if self.playhead_pos < 0.0 || self.playhead_pos >= max_pos {
-                if self.slice_mode == MimicSliceMode::StutterGate {
+                if self.slice_mode == SlicePlayMode::StutterGate {
                     self.playhead_pos = 0.0;
                 } else {
                     self.active_slice = None;
@@ -569,7 +578,7 @@ impl AudioNode for MimicSlicerNode {
     }
 }
 
-/// Hardware-authentic 8-bit chiptune waveform modes (NES 2A03 & GameBoy DMG).
+/// Hardware-authentic 8-bit chiptune waveform modes (classic console and handheld).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ChiptuneWaveform {
     Pulse12_5,
@@ -597,7 +606,7 @@ impl ChiptuneWaveform {
 }
 
 /// Authentic Chiptune Tracker Voice supporting duty-cycle pulse, 4-bit quantized triangle,
-/// 16-byte GameBoy wave RAM, 15-bit LFSR noise, and 60 Hz tick `0xy` arpeggiator/portamento/vibrato.
+/// 16-byte handheld-style wave RAM, 15-bit LFSR noise, and 60 Hz tick `0xy` arpeggiator/portamento/vibrato.
 #[derive(Debug, Clone)]
 pub struct ChiptuneTrackerNode {
     sample_rate: f32,
@@ -640,7 +649,7 @@ impl ChiptuneTrackerNode {
             vibrato_phase: 0.0,
             lfsr: 0x4000,
             noise_hold: 0.0,
-            // Default GameBoy DMG-style stepped wave RAM table
+            // Default handheld-style stepped wave RAM table
             wave_ram: [0, 3, 6, 9, 12, 15, 13, 10, 7, 11, 14, 12, 8, 5, 3, 1],
         }
     }
@@ -681,7 +690,12 @@ impl AudioNode for ChiptuneTrackerNode {
         }
     }
 
-    fn process(&mut self, _input: &[&[Sample]], output: &mut [&mut [Sample]], ctx: &ProcessContext) {
+    fn process(
+        &mut self,
+        _input: &[&[Sample]],
+        output: &mut [&mut [Sample]],
+        ctx: &ProcessContext,
+    ) {
         for ch in output.iter_mut() {
             ch.fill(0.0);
         }
@@ -728,10 +742,34 @@ impl AudioNode for ChiptuneTrackerNode {
             let wrapped = self.phase < prev_phase;
 
             let raw = match self.waveform {
-                ChiptuneWaveform::Pulse12_5 => if self.phase < 0.125 { 1.0 } else { -1.0 },
-                ChiptuneWaveform::Pulse25 => if self.phase < 0.25 { 1.0 } else { -1.0 },
-                ChiptuneWaveform::Pulse50 => if self.phase < 0.50 { 1.0 } else { -1.0 },
-                ChiptuneWaveform::Pulse75 => if self.phase < 0.75 { 1.0 } else { -1.0 },
+                ChiptuneWaveform::Pulse12_5 => {
+                    if self.phase < 0.125 {
+                        1.0
+                    } else {
+                        -1.0
+                    }
+                }
+                ChiptuneWaveform::Pulse25 => {
+                    if self.phase < 0.25 {
+                        1.0
+                    } else {
+                        -1.0
+                    }
+                }
+                ChiptuneWaveform::Pulse50 => {
+                    if self.phase < 0.50 {
+                        1.0
+                    } else {
+                        -1.0
+                    }
+                }
+                ChiptuneWaveform::Pulse75 => {
+                    if self.phase < 0.75 {
+                        1.0
+                    } else {
+                        -1.0
+                    }
+                }
                 ChiptuneWaveform::Triangle4Bit => {
                     let step = (self.phase * 32.0).floor() as usize;
                     let level = if step < 16 { step } else { 31 - step };
@@ -862,7 +900,11 @@ impl VocoderNode {
     }
 
     pub fn band_envelopes(&self) -> &[f32; VOCODER_NUM_BANDS] {
-        if self.freeze { &self.frozen_env } else { &self.env }
+        if self.freeze {
+            &self.frozen_env
+        } else {
+            &self.env
+        }
     }
 }
 
@@ -936,7 +978,11 @@ impl AudioNode for VocoderNode {
             if !self.freeze {
                 for b in 0..VOCODER_NUM_BANDS {
                     let bp = self.mod_bands[b].process_bandpass(modulator).abs();
-                    let c = if bp > self.env[b] { atk_coeff } else { rel_coeff };
+                    let c = if bp > self.env[b] {
+                        atk_coeff
+                    } else {
+                        rel_coeff
+                    };
                     self.env[b] = c * self.env[b] + (1.0 - c) * bp;
                 }
             }
@@ -944,7 +990,8 @@ impl AudioNode for VocoderNode {
             // Synthesize carrier shaped by shifted modulator band envelopes
             let mut wet = 0.0f32;
             for b in 0..VOCODER_NUM_BANDS {
-                let src_idx = (b as isize - shift).clamp(0, (VOCODER_NUM_BANDS - 1) as isize) as usize;
+                let src_idx =
+                    (b as isize - shift).clamp(0, (VOCODER_NUM_BANDS - 1) as isize) as usize;
                 let gain = if self.freeze {
                     self.frozen_env[src_idx]
                 } else {
@@ -1029,8 +1076,8 @@ mod tests {
     }
 
     #[test]
-    fn test_mimic_slicer_node_auto_slices_and_plays_modes() {
-        let mut node = MimicSlicerNode::new(44100);
+    fn test_slice_sampler_node_auto_slices_and_plays_modes() {
+        let mut node = SliceSamplerNode::new(44100);
         assert!(node.slice_count() >= 4);
         let ctx = ProcessContext::new(44100, 120.0, 0);
 
@@ -1054,7 +1101,11 @@ mod tests {
             let mut outs = [left.as_mut_slice(), right.as_mut_slice()];
             node.process(&[], &mut outs, &ctx);
             let energy: f32 = left.iter().map(|s| s * s).sum();
-            assert!(energy > 1e-4, "Mode {} should emit non-zero slice audio", mode_idx);
+            assert!(
+                energy > 1e-4,
+                "Mode {} should emit non-zero slice audio",
+                mode_idx
+            );
         }
     }
 
@@ -1071,7 +1122,13 @@ mod tests {
                 },
                 &ctx,
             );
-            node.handle_event(&NodeEvent::NoteOn { note: 60, velocity: 1.0 }, &ctx);
+            node.handle_event(
+                &NodeEvent::NoteOn {
+                    note: 60,
+                    velocity: 1.0,
+                },
+                &ctx,
+            );
             let mut left = vec![0.0f32; 1024];
             let mut right = vec![0.0f32; 1024];
             let mut outs = [left.as_mut_slice(), right.as_mut_slice()];
@@ -1086,7 +1143,13 @@ mod tests {
     fn test_vocoder_node_modulates_carrier_and_freezes() {
         let mut node = VocoderNode::new(44100);
         let ctx = ProcessContext::new(44100, 120.0, 0);
-        node.handle_event(&NodeEvent::NoteOn { note: 48, velocity: 1.0 }, &ctx);
+        node.handle_event(
+            &NodeEvent::NoteOn {
+                note: 48,
+                velocity: 1.0,
+            },
+            &ctx,
+        );
 
         // Modulator: 440 Hz vocal-like harmonic tone + 6 kHz sibilant burst
         let mut mod_in = vec![0.0f32; 1024];
@@ -1103,7 +1166,10 @@ mod tests {
             node.process(&inputs, &mut outs, &ctx);
         }
         let wet_energy: f32 = out_l.iter().map(|s| s * s).sum();
-        assert!(wet_energy > 1e-4, "Vocoder should synthesize modulated signal");
+        assert!(
+            wet_energy > 1e-4,
+            "Vocoder should synthesize modulated signal"
+        );
 
         // Enable freeze and feed silent modulator: band envelopes stay locked
         node.handle_event(&NodeEvent::SetParam { id: 3, value: 1.0 }, &ctx);
@@ -1113,6 +1179,9 @@ mod tests {
         let mut frozen_outs = [frozen_l.as_mut_slice()];
         node.process(&silent_in, &mut frozen_outs, &ctx);
         let frozen_energy: f32 = frozen_l.iter().map(|s| s * s).sum();
-        assert!(frozen_energy > 1e-4, "Frozen vocoder should sustain spectral envelope");
+        assert!(
+            frozen_energy > 1e-4,
+            "Frozen vocoder should sustain spectral envelope"
+        );
     }
 }

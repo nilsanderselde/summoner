@@ -754,9 +754,9 @@ mod tests {
     #[test]
     fn test_m4_real_binary_video_container_decode_and_filmstrip() {
         let frames_rgb = vec![
-            vec![255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0],     // Frame 0: Red 2x2
-            vec![0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0],     // Frame 1: Green 2x2
-            vec![0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255],     // Frame 2: Blue 2x2
+            vec![255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0], // Frame 0: Red 2x2
+            vec![0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0], // Frame 1: Green 2x2
+            vec![0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255], // Frame 2: Blue 2x2
         ];
         let stream = encode_raw_rgb_video_container(2, 2, TimecodeRate::Fps24, &frames_rgb);
 
@@ -770,7 +770,10 @@ mod tests {
             .populate_from_container_bytes("vid_clip_1", &stream)
             .expect("populate cache");
         assert_eq!(loaded, 3);
-        assert_eq!(&cache.get("vid_clip_1", 2).unwrap().rgba_data[0..4], &[0, 0, 255, 255]);
+        assert_eq!(
+            &cache.get("vid_clip_1", 2).unwrap().rgba_data[0..4],
+            &[0, 0, 255, 255]
+        );
         assert!(decode_video_frame_from_container(&stream, 99).is_err());
     }
 }
