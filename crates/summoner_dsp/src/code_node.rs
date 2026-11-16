@@ -291,6 +291,59 @@ impl GenCompiler {
     }
 }
 
+/// Curated, musician-friendly starter DSP presets for `GenCodeNode` (`MOD-3`).
+/// Lets musicians load IDM/EDM processing algorithms in one click without writing DSP code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GenStarterPreset {
+    AnalogWarmthSaturator,
+    AcidResonantOnePole,
+    IdmBitFoldCrusher,
+    StereoHaasWidener,
+    SubOctaveDivider,
+}
+
+impl GenStarterPreset {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Self::AnalogWarmthSaturator => "Analog Warmth Saturator",
+            Self::AcidResonantOnePole => "Acid Resonant One-Pole",
+            Self::IdmBitFoldCrusher => "IDM Sine Wavefolder",
+            Self::StereoHaasWidener => "Stereo Haas Widener",
+            Self::SubOctaveDivider => "Sub-Harmonic Divider",
+        }
+    }
+
+    pub fn source(self) -> &'static str {
+        match self {
+            Self::AnalogWarmthSaturator => {
+                "y = in1 * (1.0 + p1 * 3.0); out1 = tanh(y); out2 = tanh(in2 * (1.0 + p1 * 3.0));"
+            }
+            Self::AcidResonantOnePole => {
+                "y = in1 * p1 + hist1 * (1.0 - p1); hist1 = y; out1 = tanh(y * (1.0 + p2 * 4.0)); out2 = out1;"
+            }
+            Self::IdmBitFoldCrusher => {
+                "x = in1 * (1.0 + p1 * 6.0); out1 = sin(x); out2 = cos(in2 * (1.0 + p1 * 6.0));"
+            }
+            Self::StereoHaasWidener => {
+                "d = hist1; hist1 = in2; out1 = in1 + d * p1; out2 = in2 - d * p1;"
+            }
+            Self::SubOctaveDivider => {
+                "y = in1 * 0.7 + hist1 * 0.3; hist1 = y; out1 = clamp(y * (1.0 + p1 * 2.0)); out2 = out1;"
+            }
+        }
+    }
+
+    pub fn default_params(self) -> (f32, f32) {
+        match self {
+            Self::AnalogWarmthSaturator => (0.4, 0.0),
+            Self::AcidResonantOnePole => (0.25, 0.5),
+            Self::IdmBitFoldCrusher => (0.45, 0.0),
+            Self::StereoHaasWidener => (0.5, 0.0),
+            Self::SubOctaveDivider => (0.6, 0.0),
+        }
+    }
+}
+
 /// Real-time safe Code-in-a-Node (Gen~) execution device.
 pub struct GenCodeNode {
     pub name: String,
@@ -337,6 +390,15 @@ impl GenCodeNode {
         self.program = Arc::new(compiled);
         self.code_source = source.to_string();
         Ok(())
+    }
+
+    /// Load a musician-friendly starter DSP preset and apply its default macro knobs (`MOD-3`).
+    pub fn load_starter_preset(&mut self, preset: GenStarterPreset) -> Result<(), String> {
+        let (p1, p2) = preset.default_params();
+        self.set_param(0, p1);
+        self.set_param(1, p2);
+        self.name = preset.display_name().to_string();
+        self.set_code(preset.source())
     }
 
     /// Set parameter by 0-based index [0..7].
@@ -638,6 +700,36 @@ mod tests {
         for (a, b) in outputs[0].iter().zip(outputs[1].iter()).take(512) {
             assert!((a - 0.4).abs() < 1e-5);
             assert!((b - 0.4).abs() < 1e-5);
+        }
+    }
+
+    #[test]
+    fn test_code_node_starter_presets_compile_and_process() {
+        let presets = [
+            GenStarterPreset::AnalogWarmthSaturator,
+            GenStarterPreset::AcidResonantOnePole,
+            GenStarterPreset::IdmBitFoldCrusher,
+            GenStarterPreset::StereoHaasWidener,
+            GenStarterPreset::SubOctaveDivider,
+        ];
+        for preset in presets {
+            let mut node = GenCodeNode::new(44100.0);
+            node.load_starter_preset(preset)
+                .expect("starter preset must compile cleanly");
+            let mut non_zero = false;
+            for n in 1..=16 {
+                let x = (n as f32 * 0.25).sin() * 0.5;
+                let (l, r) = node.process_stereo(x, -x);
+                assert!(l.is_finite() && r.is_finite());
+                if l.abs() > 1e-4 || r.abs() > 1e-4 {
+                    non_zero = true;
+                }
+            }
+            assert!(
+                non_zero,
+                "preset {} should produce signal",
+                preset.display_name()
+            );
         }
     }
 }

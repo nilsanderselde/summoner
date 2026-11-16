@@ -15,7 +15,7 @@
 //! - Rear Panel Mode (Reason-style Tab key 3D flip revealing jacks and hanging physics cables).
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Cable signal type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -24,17 +24,123 @@ pub enum CableType {
     Cv,
     Gate,
     Midi,
+    /// Discrete event/message domain distinct from sample-rate audio (`MOD-1`).
+    Message,
 }
 
 impl CableType {
     pub fn default_color(&self) -> [u8; 4] {
         match self {
-            Self::Audio => [230, 40, 40, 255], // Red
-            Self::Cv => [240, 200, 20, 255],   // Yellow
-            Self::Gate => [50, 220, 80, 255],  // Green
-            Self::Midi => [180, 80, 240, 255], // Purple
+            Self::Audio => [230, 40, 40, 255],    // Red
+            Self::Cv => [240, 200, 20, 255],      // Yellow
+            Self::Gate => [50, 220, 80, 255],     // Green
+            Self::Midi => [180, 80, 240, 255],    // Purple
+            Self::Message => [40, 210, 240, 255], // Cyan
         }
     }
+}
+
+/// Discrete Max-style message payload passed along `CableType::Message` patch cords (`MOD-1`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum MessageValue {
+    Bang,
+    Float(f32),
+    Int(i64),
+    Symbol(String),
+    List(Vec<f32>),
+}
+
+/// Built-in message-domain operators for rhythmic/generative control patching (`MOD-1`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MessageSchedulerNode {
+    Metro,
+    EuclideanGenerator,
+    RandomWalk,
+    Route,
+    PackUnpack,
+    ChordTrigger,
+}
+
+/// Evaluate a discrete message operator for step `step` (`MOD-1`).
+pub fn evaluate_message_node(
+    kind: MessageSchedulerNode,
+    input: &MessageValue,
+    param: f32,
+    step: u64,
+) -> Option<MessageValue> {
+    match kind {
+        MessageSchedulerNode::Metro => {
+            let div = (param.round() as u64).max(1);
+            if step.is_multiple_of(div) {
+                Some(MessageValue::Bang)
+            } else {
+                None
+            }
+        }
+        MessageSchedulerNode::EuclideanGenerator => {
+            let steps = 16u64;
+            let pulses = (param.round() as u64).clamp(1, steps);
+            let cur = step % steps;
+            let bucket = (cur * pulses) / steps;
+            let prev = if cur == 0 { steps - 1 } else { cur - 1 };
+            let prev_bucket = (prev * pulses) / steps;
+            if cur == 0 || bucket != prev_bucket {
+                Some(MessageValue::Bang)
+            } else {
+                None
+            }
+        }
+        MessageSchedulerNode::RandomWalk => {
+            let x = step
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            let norm = ((x >> 40) as f32) / 16_777_215.0;
+            let base = match input {
+                MessageValue::Float(f) => *f,
+                _ => 0.5,
+            };
+            Some(MessageValue::Float(
+                (base + (norm - 0.5) * param.clamp(0.05, 1.0)).clamp(0.0, 1.0),
+            ))
+        }
+        MessageSchedulerNode::Route => match input {
+            MessageValue::List(v) if !v.is_empty() => Some(MessageValue::Float(v[0])),
+            other => Some(other.clone()),
+        },
+        MessageSchedulerNode::PackUnpack => match input {
+            MessageValue::Float(f) => Some(MessageValue::List(vec![*f, param])),
+            MessageValue::Int(i) => Some(MessageValue::List(vec![*i as f32, param])),
+            MessageValue::List(vals) => vals.first().copied().map(MessageValue::Float),
+            MessageValue::Bang => Some(MessageValue::List(vec![1.0, param])),
+            MessageValue::Symbol(_) => None,
+        },
+        MessageSchedulerNode::ChordTrigger => {
+            let root = match input {
+                MessageValue::Int(n) => *n as f32,
+                MessageValue::Float(f) => *f,
+                _ => 60.0,
+            };
+            let third = if param < 0.0 { 3.0 } else { 4.0 };
+            Some(MessageValue::List(vec![root, root + third, root + 7.0]))
+        }
+    }
+}
+
+/// Guided pre-wired IDM/EDM modular templates requiring no prior Max/MSP knowledge (`MOD-2`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GuidedMacroTemplate {
+    GlitchStutterEngine,
+    HarmonicPolyrhythmArp,
+    FollowerSidechainModulator,
+}
+
+/// Live signal & message probe statistics attached to a patch cable (`MOD-5`).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct CableProbeStats {
+    pub min_val: f32,
+    pub max_val: f32,
+    pub rms_val: f32,
+    pub last_message: Option<String>,
 }
 
 /// Port connector on a canvas node.
@@ -180,6 +286,8 @@ pub struct PatchCanvas {
     next_id: usize,
     #[serde(skip)]
     pub active_drag: Option<ActiveCableDrag>,
+    #[serde(skip)]
+    pub cable_probes: HashMap<usize, CableProbeStats>,
 }
 
 impl PatchCanvas {
@@ -192,6 +300,7 @@ impl PatchCanvas {
             rear_panel_flipped: false,
             next_id: 1,
             active_drag: None,
+            cable_probes: HashMap::new(),
         }
     }
 
@@ -421,7 +530,7 @@ impl PatchCanvas {
         let subpatch = Subpatch {
             id: subpatch_id,
             name: name.to_string(),
-            inner_nodes,
+            inner_nodes: inner_nodes.clone(),
             inner_cables,
             inlets: inlets.clone(),
             outlets: outlets.clone(),
@@ -432,15 +541,126 @@ impl PatchCanvas {
         self.nodes.retain(|n| !set.contains(&n.id));
         self.cables = remaining_cables;
 
-        // Insert subpatch representative node onto canvas
+        // Insert subpatch representative node onto canvas, surfacing Presentation Mode controls
         let mut subpatch_node = CanvasNode::new(subpatch_id, name, "Subpatch", (100.0, 100.0));
         subpatch_node.is_subpatch = true;
         subpatch_node.subpatch_id = Some(subpatch_id);
         subpatch_node.inputs = inlets;
         subpatch_node.outputs = outlets;
+        for inner in &inner_nodes {
+            for param in &inner.params {
+                if param.exposed_in_presentation {
+                    subpatch_node.params.push(param.clone());
+                }
+            }
+        }
         self.nodes.push(subpatch_node);
 
         Ok(subpatch_id)
+    }
+
+    /// Insert a beginner-friendly, pre-wired modular IDM/EDM macro abstraction with exposed
+    /// Presentation Mode knobs (`MOD-2`). Returns the created top-level subpatch node ID.
+    pub fn insert_guided_macro(&mut self, template: GuidedMacroTemplate) -> usize {
+        match template {
+            GuidedMacroTemplate::GlitchStutterEngine => {
+                let mut metro = CanvasNode::new(0, "MetroClock", "Message", (40.0, 60.0));
+                metro.add_output(1, "Tick", CableType::Message);
+                metro.add_param("rate", "Stutter Rate", 0.5, 0.1, 1.0);
+                metro.expose_param("rate", (20.0, 30.0));
+
+                let mut euclid = CanvasNode::new(0, "EuclideanGate", "Message", (220.0, 60.0));
+                euclid.add_input(1, "Clock", CableType::Message);
+                euclid.add_output(2, "Trigger", CableType::Message);
+                euclid.add_param("density", "Density", 5.0, 1.0, 16.0);
+                euclid.expose_param("density", (110.0, 30.0));
+
+                let mut fx = CanvasNode::new(0, "StutterFilter", "DSP", (400.0, 60.0));
+                fx.add_input(1, "Trigger", CableType::Message);
+                fx.add_input(2, "Audio In", CableType::Audio);
+                fx.add_output(3, "Audio Out", CableType::Audio);
+                fx.add_param("morph", "Filter Morph", 0.65, 0.0, 1.0);
+                fx.expose_param("morph", (200.0, 30.0));
+
+                let m_id = self.add_node(metro);
+                let e_id = self.add_node(euclid);
+                let f_id = self.add_node(fx);
+                let _ = self.connect_cable(m_id, 1, e_id, 1);
+                let _ = self.connect_cable(e_id, 2, f_id, 1);
+                self.create_subpatch("Glitch Stutter Engine", &[m_id, e_id, f_id])
+                    .unwrap_or(f_id)
+            }
+            GuidedMacroTemplate::HarmonicPolyrhythmArp => {
+                let mut euclid = CanvasNode::new(0, "EuclideanArp", "Message", (40.0, 60.0));
+                euclid.add_output(1, "Bang", CableType::Message);
+                euclid.add_param("pulses", "Euclidean Pulses", 7.0, 1.0, 16.0);
+                euclid.expose_param("pulses", (20.0, 30.0));
+
+                let mut chord = CanvasNode::new(0, "ChordTrigger", "Harmony", (240.0, 60.0));
+                chord.add_input(1, "Bang", CableType::Message);
+                chord.add_output(2, "Notes", CableType::Message);
+                chord.add_param("spread", "Harmonic Spread", 0.5, -1.0, 1.0);
+                chord.expose_param("spread", (110.0, 30.0));
+
+                let e_id = self.add_node(euclid);
+                let c_id = self.add_node(chord);
+                let _ = self.connect_cable(e_id, 1, c_id, 1);
+                self.create_subpatch("Harmonic Polyrhythm Arp", &[e_id, c_id])
+                    .unwrap_or(c_id)
+            }
+            GuidedMacroTemplate::FollowerSidechainModulator => {
+                let mut env = CanvasNode::new(0, "EnvelopeFollower", "Modulator", (40.0, 60.0));
+                env.add_input(1, "Audio In", CableType::Audio);
+                env.add_output(2, "Env CV", CableType::Cv);
+                env.add_param("sens", "Sensitivity", 0.7, 0.0, 1.0);
+                env.expose_param("sens", (20.0, 30.0));
+
+                let mut filt = CanvasNode::new(0, "LadderVCF", "Filter", (240.0, 60.0));
+                filt.add_input(1, "Cutoff CV", CableType::Cv);
+                filt.add_output(2, "Audio Out", CableType::Audio);
+                filt.add_param("depth", "Mod Depth", 0.6, 0.0, 1.0);
+                filt.expose_param("depth", (110.0, 30.0));
+
+                let env_id = self.add_node(env);
+                let f_id = self.add_node(filt);
+                let _ = self.connect_cable(env_id, 2, f_id, 1);
+                self.create_subpatch("Sidechain Filter Mod", &[env_id, f_id])
+                    .unwrap_or(f_id)
+            }
+        }
+    }
+
+    /// Record audio-rate probe telemetry (`min`, `max`, `rms`) on a cable (`MOD-5`).
+    pub fn update_cable_probe_audio(&mut self, cable_id: usize, samples: &[f32]) {
+        if samples.is_empty() {
+            return;
+        }
+        let mut min_val = f32::INFINITY;
+        let mut max_val = f32::NEG_INFINITY;
+        let mut sum_sq = 0.0f32;
+        for &s in samples {
+            min_val = min_val.min(s);
+            max_val = max_val.max(s);
+            sum_sq += s * s;
+        }
+        let rms_val = (sum_sq / samples.len() as f32).sqrt();
+        let entry = self.cable_probes.entry(cable_id).or_default();
+        entry.min_val = min_val;
+        entry.max_val = max_val;
+        entry.rms_val = rms_val;
+    }
+
+    /// Record discrete message traffic onto a `CableType::Message` probe (`MOD-5`).
+    pub fn update_cable_probe_message(&mut self, cable_id: usize, msg: &MessageValue) {
+        let formatted = match msg {
+            MessageValue::Bang => "bang".to_string(),
+            MessageValue::Float(v) => format!("{:.3}", v),
+            MessageValue::Int(i) => i.to_string(),
+            MessageValue::Symbol(s) => s.clone(),
+            MessageValue::List(vals) => format!("list({})", vals.len()),
+        };
+        let entry = self.cable_probes.entry(cable_id).or_default();
+        entry.last_message = Some(formatted);
     }
 
     /// Toggle Presentation Mode (hides cables and non-macro elements for clean live performance).
@@ -648,5 +868,63 @@ mod tests {
         assert_eq!(curve.len(), 11);
         // Midpoint should sag downwards
         assert!(curve[5].1 > 20.0);
+    }
+
+    #[test]
+    fn test_message_domain_metro_euclidean_route_pack() {
+        let m0 = evaluate_message_node(MessageSchedulerNode::Metro, &MessageValue::Bang, 4.0, 0);
+        let m1 = evaluate_message_node(MessageSchedulerNode::Metro, &MessageValue::Bang, 4.0, 1);
+        assert_eq!(m0, Some(MessageValue::Bang));
+        assert_eq!(m1, None);
+
+        let hits: usize = (0..16)
+            .filter_map(|s| {
+                evaluate_message_node(
+                    MessageSchedulerNode::EuclideanGenerator,
+                    &MessageValue::Bang,
+                    5.0,
+                    s,
+                )
+            })
+            .count();
+        assert_eq!(hits, 5);
+
+        let packed = evaluate_message_node(
+            MessageSchedulerNode::PackUnpack,
+            &MessageValue::Float(0.25),
+            0.75,
+            0,
+        );
+        assert_eq!(packed, Some(MessageValue::List(vec![0.25, 0.75])));
+        let chord = evaluate_message_node(
+            MessageSchedulerNode::ChordTrigger,
+            &MessageValue::Int(60),
+            -1.0,
+            0,
+        );
+        assert_eq!(chord, Some(MessageValue::List(vec![60.0, 63.0, 67.0])));
+    }
+
+    #[test]
+    fn test_guided_idm_macro_templates_and_cable_probes() {
+        let mut canvas = PatchCanvas::new();
+        let sub_id = canvas.insert_guided_macro(GuidedMacroTemplate::GlitchStutterEngine);
+        assert_eq!(canvas.subpatches.len(), 1);
+        assert_eq!(canvas.nodes.len(), 1);
+        assert_eq!(canvas.nodes[0].id, sub_id);
+        assert_eq!(canvas.nodes[0].params.len(), 3);
+        assert!(canvas.nodes[0]
+            .params
+            .iter()
+            .all(|p| p.exposed_in_presentation));
+
+        // Probe stats for audio + discrete messages
+        canvas.update_cable_probe_audio(1, &[-0.5, 0.5, -0.5, 0.5]);
+        canvas.update_cable_probe_message(2, &MessageValue::Bang);
+        assert_eq!(canvas.cable_probes[&1].rms_val, 0.5);
+        assert_eq!(
+            canvas.cable_probes[&2].last_message.as_deref(),
+            Some("bang")
+        );
     }
 }
