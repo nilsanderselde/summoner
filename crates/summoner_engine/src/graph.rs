@@ -516,6 +516,143 @@ impl NodeFactory {
                 }
                 Some(Box::new(ProcessorNodeAdapter::new(sitar)))
             }
+            "ConcertGrandPiano" | "ConcertGrandPianoNode" | "GrandPiano" => Some(Box::new(
+                summoner_dsp::ConcertGrandPianoNode::new(sample_rate),
+            )),
+            "PipeOrgan" | "PipeOrganNode" => {
+                Some(Box::new(summoner_dsp::PipeOrganNode::new(sample_rate)))
+            }
+            "Clavinet" | "ClavinetNode" => Some(Box::new(summoner_dsp::Clavinet::new(sample_rate))),
+            "BowedString" | "BowedStringNode" => {
+                Some(Box::new(summoner_dsp::BowedStringNode::new(sample_rate)))
+            }
+            "Shakuhachi" | "ShakuhachiNode" => {
+                Some(Box::new(summoner_dsp::Shakuhachi::new(sample_rate)))
+            }
+            "Koto" | "KotoNode" => Some(Box::new(summoner_dsp::Koto::new(sample_rate))),
+            "HurdyGurdy" | "HurdyGurdyNode" => {
+                Some(Box::new(summoner_dsp::HurdyGurdy::new(sample_rate)))
+            }
+            "GlassArmonica" | "GlassArmonicaNode" => {
+                Some(Box::new(summoner_dsp::GlassArmonica::new(sample_rate)))
+            }
+            "FreeReed" | "FreeReedNode" => {
+                Some(Box::new(summoner_dsp::FreeReedNode::new(sample_rate)))
+            }
+            "VocalTract" | "VocalTractNode" => {
+                Some(Box::new(summoner_dsp::VocalTractNode::new(sample_rate)))
+            }
+            "WaveguideBrass" | "WaveguideBrassNode" => {
+                Some(Box::new(summoner_dsp::WaveguideBrassNode::new(sample_rate)))
+            }
+            "WaveguideMesh" | "WaveguideMeshNode" => {
+                Some(Box::new(summoner_dsp::WaveguideMeshNode::new(sample_rate)))
+            }
+            "WoodwindJet" | "WoodwindJetNode" => {
+                Some(Box::new(summoner_dsp::WoodwindJetNode::new(sample_rate)))
+            }
+            "GlottalPulse" | "GlottalPulseNode" => {
+                Some(Box::new(summoner_dsp::GlottalPulseNode::new(sample_rate)))
+            }
+            "PercussionMembrane" | "PercussionMembraneNode" => Some(Box::new(
+                summoner_dsp::percussion_membrane::PercussionMembraneNode::new(sample_rate),
+            )),
+            "PlateTank" | "PlateTankNode" => {
+                Some(Box::new(summoner_dsp::PlateTankNode::new(sample_rate)))
+            }
+            "SpringLattice" | "SpringLatticeNode" => {
+                Some(Box::new(summoner_dsp::SpringLatticeNode::new(sample_rate)))
+            }
+            "CommutedPluckedString" | "CommutedPluckedStringNode" => Some(Box::new(
+                summoner_dsp::CommutedPluckedStringNode::new(sample_rate),
+            )),
+            "StruckIdiophoneResonator" | "StruckIdiophoneResonatorNode" => Some(Box::new(
+                summoner_dsp::idiophone_resonator::StruckIdiophoneResonatorNode::new(sample_rate),
+            )),
+            "ModalSynthesis" | "ModalSynthesisNode" => {
+                Some(Box::new(summoner_dsp::ModalSynthesisNode::new(sample_rate)))
+            }
+            "DailySubtractiveSynth" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::DailySubtractiveSynth::new(),
+            ))),
+            "DailyWavetableSynth" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::DailyWavetableSynth::new(sample_rate),
+            ))),
+            "DailyFmSynth" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::DailyFmSynth::new(),
+            ))),
+            "DailySampler" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::DailySampler::new(summoner_dsp::sampler::MultiSampleBank::new()),
+            ))),
+            "StreamingSamplerNode" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::StreamingSamplerNode::new(std::sync::Arc::new(
+                    summoner_dsp::StreamingSampleBank::new(),
+                )),
+            ))),
+            "GranularCloudNode" => {
+                Some(Box::new(summoner_dsp::GranularCloudNode::new(sample_rate)))
+            }
+            "AutoWah" | "AutoWahNode" => Some(Box::new(summoner_dsp::AutoWah::new())),
+            "AutoTune" | "AutoTuneNode" => {
+                Some(Box::new(summoner_dsp::autotune::AutoTuneNode::default()))
+            }
+            "TruePeakLimiter" => Some(Box::new(summoner_dsp::TruePeakLimiter::default())),
+            "ConvolutionReverb" | "ConvolutionReverbNode" => Some(Box::new(
+                ProcessorNodeAdapter::new(summoner_dsp::ConvolutionReverbNode::new(
+                    vec![1.0, 0.5, 0.25, 0.125],
+                    *params.get("mix").unwrap_or(&0.3),
+                )),
+            )),
+            "MultibandDynamicsProcessor" => Some(Box::new(
+                summoner_dsp::MultibandDynamicsProcessor::new(sample_rate as f32),
+            )),
+            "GlitchGate" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::GlitchGate::new(
+                    *params.get("rate_hz").unwrap_or(&4.0),
+                    *params.get("pw").unwrap_or(&0.5),
+                ),
+            ))),
+            "GlitchStutter" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::GlitchStutter::new(512),
+            ))),
+            "GlitchShuffle" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::GlitchShuffle::new(*params.get("shuffle").unwrap_or(&0.3)),
+            ))),
+            "TapeStop" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::TapeStop::new(0.5, 0.5),
+            ))),
+            "AudioReverse" => Some(Box::new(ProcessorNodeAdapter::new(
+                summoner_dsp::AudioReverse::new(512),
+            ))),
+            "BinauralSpatialPannerNode" => Some(Box::new(
+                summoner_dsp::BinauralSpatialPannerNode::new(sample_rate),
+            )),
+            "AmbisonicsBinauralConvolver3D" => Some(Box::new(
+                summoner_dsp::AmbisonicsBinauralConvolver3D::new(sample_rate, 64),
+            )),
+            "ContinuousSpatialPannerDoppler3D" => Some(Box::new(
+                summoner_dsp::ContinuousSpatialPannerDoppler3D::new(sample_rate),
+            )),
+            "MultichannelSpatialPannerNode" => {
+                Some(Box::new(summoner_dsp::MultichannelSpatialPannerNode::new(
+                    summoner_dsp::SpatialOutputFormat::DolbyAtmos7_1_4,
+                    sample_rate as f32,
+                )))
+            }
+            "SpatialRoomNode" => Some(Box::new(summoner_dsp::SpatialRoomNode::new(sample_rate))),
+            "DownmixMatrixNode" => Some(Box::new(summoner_dsp::DownmixMatrixNode::new(
+                summoner_dsp::SpatialOutputFormat::DolbyAtmos7_1_4,
+                summoner_dsp::SpatialOutputFormat::Stereo,
+                summoner_dsp::DownmixConfig::default(),
+            ))),
+            "SpectralResynthesisEngine" => Some(Box::new(
+                summoner_dsp::SpectralResynthesisEngine::new(sample_rate),
+            )),
+            "GenCodeNode" => Some(Box::new(summoner_dsp::GenCodeNode::new(sample_rate as f32))),
+            "DcCoupledCvNode" => Some(Box::new(summoner_dsp::DcCoupledCvNode::new(
+                summoner_dsp::ExpertSleepersModel::Es8,
+                sample_rate as f32,
+            ))),
             _ => None,
         }
     }

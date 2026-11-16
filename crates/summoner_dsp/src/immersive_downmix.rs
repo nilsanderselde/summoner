@@ -289,17 +289,18 @@ impl SignalProcessor for DownmixMatrixNode {
             return;
         }
         let frames = inputs[0].len().min(outputs[0].len());
-        let in_channels = inputs.len();
-        let out_channels = outputs.len();
+        const MAX_CH: usize = 16;
+        let in_channels = inputs.len().min(MAX_CH);
+        let out_channels = outputs.len().min(MAX_CH);
 
-        let mut in_frame = vec![0.0f32; in_channels];
-        let mut out_frame = vec![0.0f32; out_channels];
+        let mut in_frame = [0.0f32; MAX_CH];
+        let mut out_frame = [0.0f32; MAX_CH];
 
         for f in 0..frames {
             for (ch, in_ch) in inputs.iter().enumerate().take(in_channels) {
                 in_frame[ch] = in_ch[f];
             }
-            self.process_frame(&in_frame, &mut out_frame);
+            self.process_frame(&in_frame[..in_channels], &mut out_frame[..out_channels]);
             for (ch, out_ch) in outputs.iter_mut().enumerate().take(out_channels) {
                 out_ch[f] = out_frame[ch];
             }
