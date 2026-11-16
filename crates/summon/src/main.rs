@@ -743,15 +743,17 @@ fn main() {
                 }
             }
 
-            if !Path::new(proj_path).exists() {
+            let resolved_proj_path = resolve_project_file_path(proj_path);
+            if !resolved_proj_path.exists() {
                 eprintln!(
                     "Error: Project file '{}' not found. Run `summon init` first.",
-                    proj_path
+                    resolved_proj_path.display()
                 );
                 process::exit(1);
             }
 
-            let content = fs::read_to_string(proj_path).expect("Failed to read project file");
+            let content =
+                fs::read_to_string(&resolved_proj_path).expect("Failed to read project file");
             let project = parse_project_toml(&content).expect("Failed to parse project TOML");
 
             let num_frames = explicit_frames.unwrap_or_else(|| {
