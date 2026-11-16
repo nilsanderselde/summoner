@@ -1220,6 +1220,11 @@ impl GraphRunner {
         self.process_block_with_input(block_size, ctx, None, out_buffers);
     }
 
+    /// Borrow the left channel output buffer rendered for track `track_idx` during the last block.
+    pub fn track_buffer_left(&self, track_idx: usize) -> Option<&[f32]> {
+        self.track_buffers.get(track_idx).map(|b| &b[0][..])
+    }
+
     #[allow(clippy::needless_range_loop)]
     pub fn process_block_with_input(
         &mut self,

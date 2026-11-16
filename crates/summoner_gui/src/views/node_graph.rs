@@ -606,11 +606,20 @@ pub fn show_node_graph(
                             && ui.button(kind).clicked()
                         {
                             let new_idx = graph.nodes.len();
-                            graph.nodes.push(Box::new(PassthroughNode));
+                            let node = summoner_engine::graph::NodeFactory::create_node(
+                                &summoner_project::schema::NodeConfig {
+                                    kind: kind.to_string(),
+                                    params: Default::default(),
+                                    plugin_state: None,
+                                },
+                            )
+                            .unwrap_or_else(|| Box::new(PassthroughNode));
+                            graph.nodes.push(node);
                             state.positions.insert(
                                 new_idx,
                                 egui::pos2(150.0 + (new_idx as f32) * 30.0, 150.0),
                             );
+                            modified = true;
                             graph.compile();
                             ui.close_menu();
                         }

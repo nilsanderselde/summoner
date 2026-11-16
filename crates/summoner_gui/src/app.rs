@@ -174,6 +174,10 @@ pub struct SummonerApp {
     pub show_dpi_scale_panel_modal: bool,
     pub award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView,
     pub audio_engine: Option<summoner_engine::LiveEngineHandle>,
+    pub audio_recorder: summoner_engine::recorder::AudioRecorder,
+    pub midi_recorder: summoner_engine::midi_recorder::MidiRecorder,
+    pub preview_runner: summoner_engine::graph::GraphRunner,
+    pub synced_graph_track_id: Option<u64>,
     pub session_dag: summoner_project::git_dag::GitSessionDag,
     pub show_preferences_window: bool,
     pub preferences_state: crate::param_controls::PreferencesState,
@@ -365,6 +369,10 @@ impl SummonerApp {
             show_dpi_scale_panel_modal: false,
             award_winning_view: crate::views::award_winning_gui_view::AwardWinningGuiView::new(),
             audio_engine: None,
+            audio_recorder: summoner_engine::recorder::AudioRecorder::new(sample_rate, bpm),
+            midi_recorder: summoner_engine::midi_recorder::MidiRecorder::new(),
+            preview_runner: summoner_engine::graph::GraphRunner::new(&project),
+            synced_graph_track_id: None,
             session_dag: summoner_project::git_dag::GitSessionDag::new(
                 project.clone(),
                 "Summoner User",
@@ -413,6 +421,151 @@ impl SummonerApp {
         app
     }
 
+    pub fn rebuild_preview_runner(&mut self) {
+        self.preview_runner = summoner_engine::graph::GraphRunner::new(&self.project);
+        if let Some(ref engine) = self.audio_engine {
+            engine.reload_project(self.project.clone());
+        }
+    }
+
+    pub fn start_recording_session(&mut self) {
+        let rec_dir = self
+            .project_path
+            .as_ref()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("recordings"))
+            .unwrap_or_else(|| {
+                summoner_core::paths::AppDirs::current()
+                    .data
+                    .join("recordings")
+            });
+        let _ = std::fs::create_dir_all(&rec_dir);
+
+        let sr = self.project.transport.sample_rate.max(1) as f64;
+        let bpm = self.project.transport.bpm.max(1.0);
+        let frames_per_beat = (sr * 60.0) / bpm;
+        let start_frame = (self.playhead_beat * frames_per_beat).round().max(0.0) as u64;
+
+        let mut armed_any = false;
+        for track in &self.project.tracks {
+            if track.record_armed {
+                armed_any = true;
+                let source = match track.hardware_input_channels {
+                    Some((l, r)) if l == r => summoner_engine::recorder::AudioInputSource::Mono(l),
+                    Some((l, r)) => summoner_engine::recorder::AudioInputSource::Stereo(l, r),
+                    None => summoner_engine::recorder::AudioInputSource::Stereo(0, 1),
+                };
+                self.audio_recorder.arm_track(
+                    track.id,
+                    source,
+                    &rec_dir,
+                    &format!("track_{}", track.id),
+                );
+                self.midi_recorder.arm_track(track.id);
+            } else {
+                self.audio_recorder.disarm_track(track.id);
+                self.midi_recorder.disarm_track(track.id);
+            }
+        }
+
+        let loop_cfg = if self.project.loop_enabled
+            && self.project.loop_end_beat > self.project.loop_start_beat
+        {
+            Some(summoner_engine::recorder::LoopRecordSettings {
+                loop_enabled: true,
+                loop_start_frame: (self.project.loop_start_beat * frames_per_beat)
+                    .round()
+                    .max(0.0) as u64,
+                loop_end_frame: (self.project.loop_end_beat * frames_per_beat)
+                    .round()
+                    .max(0.0) as u64,
+            })
+        } else {
+            None
+        };
+
+        if armed_any {
+            self.audio_recorder
+                .start_recording(start_frame, 0, None, loop_cfg);
+            self.midi_recorder.start_recording(self.playhead_beat);
+        }
+        self.recording_all = true;
+        self.transport_running = true;
+        self.automation_registry.start_record_all();
+        self.status_message = Some(if armed_any {
+            "Recording armed audio/MIDI tracks and automation".to_string()
+        } else {
+            "Recording automation (no tracks record-armed)".to_string()
+        });
+    }
+
+    pub fn stop_recording_session(&mut self) {
+        self.recording_all = false;
+        self.automation_registry.stop_record_all();
+
+        let takes = self.audio_recorder.stop_recording();
+        let mut existing_seqs = HashMap::new();
+        for track in &self.project.tracks {
+            if let Some(ref seq) = track.sequence {
+                existing_seqs.insert(track.id, seq.clone());
+            }
+        }
+        let recorded_midi = self
+            .midi_recorder
+            .stop_recording(self.playhead_beat, &existing_seqs);
+
+        let bpm = self.project.transport.bpm.max(1.0);
+        let mut committed_any = false;
+
+        for take in takes {
+            if take.total_frames == 0 {
+                continue;
+            }
+            if let Some(track) = self
+                .project
+                .tracks
+                .iter_mut()
+                .find(|t| t.id == take.track_id)
+            {
+                let clip_idx = track.audio_clips.len() + 1;
+                let clip_id = format!(
+                    "rec_t{}_{}_take{}",
+                    take.track_id, clip_idx, take.take_index
+                );
+                let clip_name = format!("{} Take {}", track.name, take.take_index);
+                let clip = take.to_audio_clip_config(&clip_id, &clip_name, bpm);
+                let asset_id = clip.asset_id.clone();
+                let path_str = take.file_path.to_string_lossy().to_string();
+                track.audio_clips.push(clip);
+                self.project
+                    .assets
+                    .push(summoner_project::schema::AssetConfig {
+                        id: asset_id,
+                        hash: "recorded_take".to_string(),
+                        path: path_str,
+                        auto_slice: false,
+                        slice_threshold: 0.15,
+                    });
+                committed_any = true;
+            }
+        }
+
+        for (tid, seq) in recorded_midi {
+            if !seq.steps.is_empty() {
+                if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == tid) {
+                    track.sequence = Some(seq);
+                    committed_any = true;
+                }
+            }
+        }
+
+        if committed_any {
+            self.rebuild_preview_runner();
+            self.commit_current_state("Record session takes");
+            self.status_message = Some("Recorded takes committed to timeline".to_string());
+        }
+    }
+
     pub fn commit_current_state(&mut self, message: &str) {
         self.session_dag.commit(message, self.project.clone());
     }
@@ -438,6 +591,8 @@ impl SummonerApp {
         if !handled {
             if let Some(state) = self.session_dag.undo() {
                 self.project = state.clone();
+                self.synced_graph_track_id = None;
+                self.rebuild_preview_runner();
                 self.status_message = Some("Undid mutation via session history".to_string());
             } else {
                 self.status_message = Some("Undo: no parent commit in history".to_string());
@@ -466,6 +621,8 @@ impl SummonerApp {
         if !handled {
             if let Some(state) = self.session_dag.redo() {
                 self.project = state.clone();
+                self.synced_graph_track_id = None;
+                self.rebuild_preview_runner();
                 self.status_message = Some("Redid mutation via session history".to_string());
             } else {
                 self.status_message = Some("Redo: no further history".to_string());
@@ -716,16 +873,39 @@ impl SummonerApp {
         if let Some(track) = self.project.tracks.iter().find(|t| t.id == track_id) {
             let mut graph = NodeGraph::new(format!("Track {} Graph", track_id), 64, 2);
             self.node_graph_state.positions.clear();
-            for (idx, _node_cfg) in track.nodes.iter().enumerate() {
-                graph
-                    .nodes
-                    .push(Box::new(summoner_core::node::PassthroughNode));
+            for (idx, node_cfg) in track.nodes.iter().enumerate() {
+                let node = summoner_engine::graph::NodeFactory::create_node_with_rate(
+                    node_cfg,
+                    self.project.transport.sample_rate,
+                )
+                .unwrap_or_else(|| Box::new(summoner_core::node::PassthroughNode));
+                graph.nodes.push(node);
                 self.node_graph_state.positions.insert(
                     idx,
                     egui::pos2(120.0 + (idx as f32) * 160.0, 120.0 + (idx as f32) * 30.0),
                 );
             }
-            if graph.nodes.len() > 1 {
+            if !track.connections.is_empty() {
+                for conn in &track.connections {
+                    let parts_from: Vec<&str> = conn.from.split(':').collect();
+                    let parts_to: Vec<&str> = conn.to.split(':').collect();
+                    if parts_from.len() == 2 && parts_to.len() == 2 {
+                        if let (Ok(fn_idx), Ok(fp_idx), Ok(tn_idx), Ok(tp_idx)) = (
+                            parts_from[0].parse::<usize>(),
+                            parts_from[1].parse::<usize>(),
+                            parts_to[0].parse::<usize>(),
+                            parts_to[1].parse::<usize>(),
+                        ) {
+                            graph.edges.push(summoner_core::graph::Edge {
+                                from_node: fn_idx,
+                                from_port: fp_idx,
+                                to_node: tn_idx,
+                                to_port: tp_idx,
+                            });
+                        }
+                    }
+                }
+            } else if graph.nodes.len() > 1 {
                 for i in 0..(graph.nodes.len() - 1) {
                     graph.edges.push(summoner_core::graph::Edge {
                         from_node: i,
@@ -737,6 +917,39 @@ impl SummonerApp {
             }
             graph.compile();
             self.dummy_graph = graph;
+            self.synced_graph_track_id = Some(track_id);
+        }
+    }
+
+    pub fn sync_graph_to_track(&mut self, track_id: u64) {
+        if let Some(track) = self.project.tracks.iter_mut().find(|t| t.id == track_id) {
+            let old_nodes = track.nodes.clone();
+            track.nodes = self
+                .dummy_graph
+                .nodes
+                .iter()
+                .enumerate()
+                .map(|(idx, node)| {
+                    let kind = node.name().to_string();
+                    let prev = old_nodes.get(idx).filter(|p| p.kind == kind);
+                    summoner_project::schema::NodeConfig {
+                        kind,
+                        params: prev.map(|p| p.params.clone()).unwrap_or_default(),
+                        plugin_state: prev.and_then(|p| p.plugin_state.clone()),
+                    }
+                })
+                .collect();
+            track.connections = self
+                .dummy_graph
+                .edges
+                .iter()
+                .map(|e| summoner_project::schema::ConnectionConfig {
+                    from: format!("{}:{}", e.from_node, e.from_port),
+                    to: format!("{}:{}", e.to_node, e.to_port),
+                })
+                .collect();
+            self.rebuild_preview_runner();
+            self.commit_current_state("Update track DSP graph");
         }
     }
 
@@ -886,6 +1099,13 @@ impl SummonerApp {
                 if avg_sec > 0.0 {
                     let calculated_bpm = 60.0 / avg_sec;
                     self.project.transport.bpm = calculated_bpm.clamp(self.min_bpm, self.max_bpm);
+                    if let Some(ref engine) = self.audio_engine {
+                        let _ = engine
+                            .cmd_tx
+                            .try_send(summoner_engine::EngineCommand::SetBpm(
+                                self.project.transport.bpm,
+                            ));
+                    }
                 }
             }
         }
@@ -918,6 +1138,8 @@ impl SummonerApp {
                 .insert(track.id, Arc::new(Oscilloscope::new()));
         }
         self.stage_view.populate_from_project(&self.project);
+        self.synced_graph_track_id = None;
+        self.rebuild_preview_runner();
         self.status_message = Some("Created new session".to_string());
     }
 
@@ -942,6 +1164,8 @@ impl SummonerApp {
                         .insert(track.id, Arc::new(Oscilloscope::new()));
                 }
                 self.stage_view.populate_from_project(&self.project);
+                self.synced_graph_track_id = None;
+                self.preview_runner = summoner_engine::graph::GraphRunner::new(&self.project);
                 if let Some(ref engine) = self.audio_engine {
                     engine.reload_project(self.project.clone());
                 }
@@ -1469,21 +1693,22 @@ impl eframe::App for SummonerApp {
                 }
                 "transport_play" => {
                     self.transport_running = !self.transport_running;
-                    if !self.transport_running {
-                        self.automation_registry.stop_record_all();
+                    if !self.transport_running && self.recording_all {
+                        self.stop_recording_session();
                     }
                 }
                 "transport_record" => {
-                    self.recording_all = !self.recording_all;
                     if self.recording_all {
-                        self.automation_registry.start_record_all();
+                        self.stop_recording_session();
                     } else {
-                        self.automation_registry.stop_record_all();
+                        self.start_recording_session();
                     }
                 }
                 "panic" => {
                     self.transport_running = false;
-                    self.automation_registry.stop_record_all();
+                    if self.recording_all {
+                        self.stop_recording_session();
+                    }
                     self.stage_view.trigger_panic();
                 }
                 "set_bpm" => {
@@ -2205,6 +2430,9 @@ impl eframe::App for SummonerApp {
                                 params: std::collections::HashMap::new(),
                                 plugin_state: None,
                             });
+                            self.sync_track_to_graph(tid);
+                            self.rebuild_preview_runner();
+                            self.commit_current_state(&format!("Add node {}", matched_kind));
                             self.current_view = ViewMode::NodeGraph(tid);
                         }
                     }
@@ -2228,21 +2456,63 @@ impl eframe::App for SummonerApp {
                     .apply_beat(&self.automation_registry, self.current_beat);
             }
 
-            // Step 33.3: Real-time audio signal synthesis & oscilloscope streaming
-            let sample_rate = self.project.transport.sample_rate as f32;
+            // Real-time DSP rendering, input/MIDI capture, and oscilloscope streaming
+            let sample_rate = self.project.transport.sample_rate.max(1);
             let frames = ((dt * sample_rate as f64).round() as usize).clamp(16, 1024);
-            let playhead = self.playhead_beat as f32;
-            for track in &self.project.tracks {
+
+            if let Some(ref engine) = self.audio_engine {
+                self.cpu_usage = engine.cpu_load_pct();
+                while let Some(ev) = engine.try_recv_midi() {
+                    self.midi_recorder
+                        .process_event(ev.event, self.playhead_beat);
+                }
+                if self.recording_all {
+                    let mut interleaved_in = [0.0f32; 2048];
+                    let popped = engine.read_input_samples(&mut interleaved_in[..frames * 2]);
+                    let popped_frames = popped / 2;
+                    if popped_frames > 0 {
+                        let mut in_l = [0.0f32; 1024];
+                        let mut in_r = [0.0f32; 1024];
+                        for f in 0..popped_frames {
+                            in_l[f] = interleaved_in[f * 2];
+                            in_r[f] = interleaved_in[f * 2 + 1];
+                        }
+                        let fpb = (sample_rate as f64 * 60.0) / self.project.transport.bpm.max(1.0);
+                        let cur_frame = (self.playhead_beat * fpb).round().max(0.0) as u64;
+                        self.audio_recorder.process_input_block(
+                            cur_frame,
+                            &in_l[..popped_frames],
+                            &in_r[..popped_frames],
+                        );
+                    }
+                }
+                let mut out_drain = [0.0f32; 1024];
+                let _ = engine.read_output_samples(&mut out_drain[..frames]);
+            }
+
+            let fpb = (sample_rate as f64 * 60.0) / self.project.transport.bpm.max(1.0);
+            let frame_pos = (self.playhead_beat * fpb).round().max(0.0) as u64;
+            let mut proc_ctx = summoner_core::node::ProcessContext::new(
+                sample_rate,
+                self.project.transport.bpm,
+                frame_pos,
+            );
+            proc_ctx.param_bus = Some(Arc::clone(&self.param_bus));
+            let mut out_l = [0.0f32; 1024];
+            let mut out_r = [0.0f32; 1024];
+            self.preview_runner.process_block(
+                frames,
+                &proc_ctx,
+                &mut [&mut out_l[..frames], &mut out_r[..frames]],
+            );
+
+            for (idx, track) in self.project.tracks.iter().enumerate() {
                 if !track.muted {
                     if let Some(osc) = self.oscilloscope_buffers.get(&track.id) {
-                        let _alloc_guard = summoner_core::allocator::AllocGuard::new();
-                        let freq = 110.0 * (track.id as f32);
-                        let gain = track.gain.clamp(0.0, 2.0);
-                        for f in 0..frames {
-                            let t = (playhead * 1000.0 + f as f32) / sample_rate;
-                            let phase = t * freq * std::f32::consts::TAU;
-                            let sample = (phase.sin() * 0.7 + (phase * 2.0).sin() * 0.2) * gain;
-                            osc.write_sample(sample);
+                        if let Some(buf) = self.preview_runner.track_buffer_left(idx) {
+                            for &sample in &buf[..frames] {
+                                osc.write_sample(sample);
+                            }
                         }
                     }
                 }
@@ -2278,6 +2548,8 @@ impl eframe::App for SummonerApp {
                                         .insert(track.id, Arc::new(Oscilloscope::new()));
                                 }
                                 self.stage_view.populate_from_project(&self.project);
+                                self.synced_graph_track_id = None;
+                                self.rebuild_preview_runner();
                                 self.status_message = Some(format!(
                                     "Created session from template: {}",
                                     template_name
@@ -3219,6 +3491,8 @@ impl eframe::App for SummonerApp {
                                     .insert(track.id, Arc::new(Oscilloscope::new()));
                             }
                             self.stage_view.populate_from_project(&self.project);
+                            self.synced_graph_track_id = None;
+                            self.rebuild_preview_runner();
                             self.show_first_run_wizard = false;
                             self.save_gui_state();
                         }
@@ -3285,11 +3559,10 @@ impl eframe::App for SummonerApp {
         egui::TopBottomPanel::bottom("transport_panel").show(ctx, |ui| {
             // Shift+R toggle Record All
             if ctx.input(|i| i.modifiers.shift && i.key_pressed(egui::Key::R)) {
-                self.recording_all = !self.recording_all;
                 if self.recording_all {
-                    self.automation_registry.start_record_all();
+                    self.stop_recording_session();
                 } else {
-                    self.automation_registry.stop_record_all();
+                    self.start_recording_session();
                 }
             }
 
@@ -3303,8 +3576,8 @@ impl eframe::App for SummonerApp {
                     .clicked()
                 {
                     self.transport_running = !self.transport_running;
-                    if !self.transport_running {
-                        self.automation_registry.stop_record_all();
+                    if !self.transport_running && self.recording_all {
+                        self.stop_recording_session();
                     }
                 }
 
@@ -3317,11 +3590,10 @@ impl eframe::App for SummonerApp {
                     record_btn = record_btn.highlight();
                 }
                 if record_btn.clicked() {
-                    self.recording_all = !self.recording_all;
                     if self.recording_all {
-                        self.automation_registry.start_record_all();
+                        self.stop_recording_session();
                     } else {
-                        self.automation_registry.stop_record_all();
+                        self.start_recording_session();
                     }
                 }
 
@@ -3485,6 +3757,9 @@ impl eframe::App for SummonerApp {
                     }
                 }
                 ViewMode::NodeGraph(track_id) => {
+                    if self.synced_graph_track_id != Some(track_id) {
+                        self.sync_track_to_graph(track_id);
+                    }
                     if self.show_tutorial_tooltips {
                         egui::Frame::none()
                             .fill(egui::Color32::from_rgb(25, 40, 65))
@@ -3497,9 +3772,16 @@ impl eframe::App for SummonerApp {
                             });
                         ui.add_space(4.0);
                     }
+                    let prev_nodes = self.dummy_graph.nodes.len();
+                    let prev_edges = self.dummy_graph.edges.len();
                     let mut selected_edge = None;
                     let osc = self.oscilloscope_buffers.get(&track_id).map(|o| o.as_ref());
                     show_node_graph(ui, &mut self.dummy_graph, &mut self.node_graph_state, &mut selected_edge, osc);
+                    if self.dummy_graph.nodes.len() != prev_nodes
+                        || self.dummy_graph.edges.len() != prev_edges
+                    {
+                        self.sync_graph_to_track(track_id);
+                    }
                 }
                 ViewMode::Mixer => {
                     if let Some((nav_tid, nav_kind)) = show_mixer(ui, &mut self.project, &mut self.selected_track_id, Some(&self.spectrum_analyzer)) {
@@ -4084,5 +4366,88 @@ mod tests {
         assert!(loaded.preferences_state.is_some());
         let pref = loaded.preferences_state.unwrap();
         assert_eq!(pref.shortcuts.get_binding("Play / Pause"), Some("P"));
+    }
+
+    #[test]
+    fn test_rec1_rec9_audio_and_midi_recording_creates_clips_and_is_undoable() {
+        let mut project = create_default_project("REC-1 REC-9 Test");
+        project.tracks[0].record_armed = true;
+        project.tracks[0].sequence = None;
+        project.tracks[0].audio_clips.clear();
+
+        let param_bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(project, param_bus);
+        assert!(app.project.tracks[0].audio_clips.is_empty());
+
+        app.start_recording_session();
+        assert!(app.recording_all);
+        assert!(app.transport_running);
+
+        let in_l = [0.4f32; 512];
+        let in_r = [-0.4f32; 512];
+        app.audio_recorder.process_input_block(0, &in_l, &in_r);
+
+        app.midi_recorder
+            .process_event(summoner_core::midi::MidiEvent::NoteOn(0, 64, 100), 0.0);
+        app.midi_recorder
+            .process_event(summoner_core::midi::MidiEvent::NoteOff(0, 64, 0), 0.5);
+
+        app.stop_recording_session();
+        assert!(!app.recording_all);
+        assert_eq!(app.project.tracks[0].audio_clips.len(), 1);
+        let rec_file = app.project.tracks[0].audio_clips[0].file_path.clone();
+        let seq = app.project.tracks[0]
+            .sequence
+            .as_ref()
+            .expect("MIDI take recorded");
+        assert!(!seq.steps.is_empty());
+        assert_eq!(seq.steps[0].note, 64.0);
+
+        // Undo must revert the recorded clip and MIDI sequence via session_dag (REC-9)
+        app.handle_undo();
+        assert!(app.project.tracks[0].audio_clips.is_empty());
+        assert!(app.project.tracks[0].sequence.is_none());
+
+        if let Some(path) = rec_file {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+
+    #[test]
+    fn test_node_graph_syncs_with_track_config() {
+        let project = create_default_project("NodeGraph Sync Test");
+        let param_bus = Arc::new(ParamBus::new());
+        let mut app = SummonerApp::new(project, param_bus);
+
+        app.sync_track_to_graph(2);
+        let initial_nodes = app.dummy_graph.nodes.len();
+        assert!(initial_nodes > 0);
+
+        let gain_node = summoner_engine::graph::NodeFactory::create_node(
+            &summoner_project::schema::NodeConfig {
+                kind: "GainNode".to_string(),
+                params: Default::default(),
+                plugin_state: None,
+            },
+        )
+        .expect("GainNode should instantiate");
+        app.dummy_graph.nodes.push(gain_node);
+        let new_idx = app.dummy_graph.nodes.len() - 1;
+        app.dummy_graph.edges.push(summoner_core::graph::Edge {
+            from_node: 0,
+            from_port: 0,
+            to_node: new_idx,
+            to_port: 0,
+        });
+        app.dummy_graph.compile();
+
+        app.sync_graph_to_track(2);
+        let t2 = app.project.tracks.iter().find(|t| t.id == 2).unwrap();
+        assert_eq!(t2.nodes.len(), initial_nodes + 1);
+        assert_eq!(t2.nodes.last().unwrap().kind, "GainNode");
+        assert!(t2
+            .connections
+            .iter()
+            .any(|c| c.from == "0:0" && c.to == format!("{new_idx}:0")));
     }
 }

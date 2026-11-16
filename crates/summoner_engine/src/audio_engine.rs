@@ -287,6 +287,7 @@ pub struct LiveEngineHandle {
     pub stream_error: Arc<AtomicBool>,
     pub reconnect_count: Arc<AtomicU32>,
     pub input_ring_buffer: Arc<AudioRingBuffer>,
+    pub output_ring_buffer: Arc<AudioRingBuffer>,
     pub midi_receiver: Option<Arc<crate::midi_engine::MidiInputReceiver>>,
     _stream: Option<cpal::Stream>,
     _input_stream: Option<cpal::Stream>,
@@ -372,6 +373,10 @@ impl LiveEngineHandle {
 
     pub fn read_input_samples(&self, dest: &mut [f32]) -> usize {
         self.input_ring_buffer.pop_slice(dest)
+    }
+
+    pub fn read_output_samples(&self, dest: &mut [f32]) -> usize {
+        self.output_ring_buffer.pop_slice(dest)
     }
 
     pub fn is_midi_active(&self) -> bool {
@@ -573,6 +578,7 @@ pub fn spawn_live_engine_with_settings(
     let stream_error = Arc::new(AtomicBool::new(false));
     let reconnect_count = Arc::new(AtomicU32::new(0));
     let input_ring_buffer = Arc::new(AudioRingBuffer::new(65536));
+    let output_ring_buffer = Arc::new(AudioRingBuffer::new(65536));
 
     let (cmd_tx, cmd_rx): (Sender<EngineCommand>, Receiver<EngineCommand>) =
         crossbeam_channel::bounded(64);
@@ -727,6 +733,7 @@ pub fn spawn_live_engine_with_settings(
         let frame_pos_cb = Arc::clone(&frame_position);
         let param_bus_audio = Arc::clone(&param_bus);
         let rb_consumer = Arc::clone(&input_ring_buffer);
+        let out_rb_cb = Arc::clone(&output_ring_buffer);
         let cpu_cb = Arc::clone(&cpu_load_milli_pct);
         let xrun_cb = Arc::clone(&xrun_count);
 
@@ -838,6 +845,7 @@ pub fn spawn_live_engine_with_settings(
                     transport.play();
                     metronome.process_block(&transport, frames, buf_l, buf_r);
                 }
+                out_rb_cb.push_slice(&out_l[..frames]);
                 let elapsed = start_time.elapsed();
                 let block_duration = frames as f64 / sample_rate as f64;
                 let cpu_pct = (elapsed.as_secs_f64() / block_duration.max(0.0001) * 100.0) as f32;
@@ -896,6 +904,7 @@ pub fn spawn_live_engine_with_settings(
                 stream_error,
                 reconnect_count,
                 input_ring_buffer,
+                output_ring_buffer,
                 midi_receiver,
                 _stream: Some(stream),
                 _input_stream: in_stream,
@@ -918,6 +927,7 @@ pub fn spawn_live_engine_with_settings(
         stream_error,
         reconnect_count,
         input_ring_buffer,
+        output_ring_buffer,
         midi_receiver,
         _stream: None,
         _input_stream: in_stream,
