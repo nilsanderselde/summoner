@@ -185,6 +185,52 @@ impl GitSessionDag {
             patch.replace('\n', "\\n").replace('"', "\\\"")
         )
     }
+
+    /// Save a musical milestone snapshot without exposing raw Git internals (`M3.2` / `HUM-8`).
+    pub fn create_friendly_milestone(
+        &mut self,
+        title: impl Into<String>,
+        state: ProjectConfig,
+    ) -> FriendlyProjectSnapshot {
+        let title_str = title.into();
+        let snap_id = self.commit(title_str.clone(), state.clone());
+        FriendlyProjectSnapshot {
+            snapshot_id: snap_id,
+            title: title_str,
+            author: self.author.clone(),
+            track_count: state.tracks.len(),
+            summary: format!("Saved version '{}' ({} tracks)", self.head().message, state.tracks.len()),
+        }
+    }
+
+    /// List all session milestones in musician-friendly language (`M3.2` / `HUM-8`).
+    pub fn list_friendly_milestones(&self) -> Vec<FriendlyProjectSnapshot> {
+        self.history
+            .iter()
+            .map(|c| FriendlyProjectSnapshot {
+                snapshot_id: c.id.clone(),
+                title: c.message.clone(),
+                author: c.author.clone(),
+                track_count: c.state.tracks.len(),
+                summary: format!("Saved version '{}' ({} tracks)", c.message, c.state.tracks.len()),
+            })
+            .collect()
+    }
+
+    /// Restore a saved milestone by its friendly snapshot identifier (`M3.2` / `HUM-8`).
+    pub fn restore_friendly_milestone(&mut self, snapshot_id: &str) -> Option<&ProjectConfig> {
+        self.rollback_to_commit(snapshot_id)
+    }
+}
+
+/// Musician-friendly project history snapshot hiding raw Git concepts (`M3.2` / `HUM-8`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FriendlyProjectSnapshot {
+    pub snapshot_id: String,
+    pub title: String,
+    pub author: String,
+    pub track_count: usize,
+    pub summary: String,
 }
 
 /// Open an existing Git repository at project_dir or initialize a new one.
@@ -379,5 +425,27 @@ mod tests {
         assert!(text2.contains("State 3"));
 
         let _ = std::fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn test_m3_friendly_non_technical_version_snapshots() {
+        let mut proj = create_default_project("Harmonic Etude");
+        let mut dag = GitSessionDag::new(proj.clone(), "producer");
+
+        proj.transport.bpm = 142.0;
+        let snap1 = dag.create_friendly_milestone("chorus synth layer", proj.clone());
+        assert!(snap1.summary.contains("Saved version 'chorus synth layer'"));
+        assert!(!snap1.summary.to_lowercase().contains("commit"));
+        assert!(!snap1.summary.to_lowercase().contains("branch"));
+
+        proj.transport.bpm = 150.0;
+        let _snap2 = dag.create_friendly_milestone("glitch breakdown edit", proj.clone());
+        let list = dag.list_friendly_milestones();
+        assert_eq!(list.len(), 3);
+
+        let restored = dag
+            .restore_friendly_milestone(&snap1.snapshot_id)
+            .expect("should restore friendly snapshot");
+        assert_eq!(restored.transport.bpm, 142.0);
     }
 }

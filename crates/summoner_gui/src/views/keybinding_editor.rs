@@ -126,6 +126,27 @@ pub struct KeybindingConflict {
     pub conflicting_action_names: Vec<String>,
 }
 
+/// Switchable DAW shortcut profile presets with conflict-free ergonomics (`M3.2` / `GUI-2`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+pub enum DawShortcutProfile {
+    #[default]
+    SummonerNative,
+    AbletonLive,
+    LogicPro,
+    Reaper,
+}
+
+impl DawShortcutProfile {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::SummonerNative => "Summoner",
+            Self::AbletonLive => "Ableton",
+            Self::LogicPro => "Logic",
+            Self::Reaper => "Reaper",
+        }
+    }
+}
+
 /// Custom DAW Shortcut Keybinding Editor View (Step 1323).
 #[derive(Debug, Clone)]
 pub struct KeybindingEditorView {
@@ -135,6 +156,7 @@ pub struct KeybindingEditorView {
     pub editing_action_id: Option<String>,
     pub editing_is_secondary: bool,
     pub current_os: OperatingSystem,
+    pub active_profile: DawShortcutProfile,
 }
 
 impl Default for KeybindingEditorView {
@@ -254,6 +276,92 @@ impl KeybindingEditorView {
             editing_action_id: None,
             editing_is_secondary: false,
             current_os: os,
+            active_profile: DawShortcutProfile::SummonerNative,
+        }
+    }
+
+    /// Apply a switchable DAW keybinding profile preset and guarantee zero shortcut conflicts (`M3.2`).
+    pub fn apply_profile(&mut self, profile: DawShortcutProfile) {
+        self.active_profile = profile;
+        self.reset_all_defaults();
+        let is_mac = self.current_os == OperatingSystem::MacOS;
+        let main_mod = if is_mac {
+            KeyModifiers {
+                meta: true,
+                ..Default::default()
+            }
+        } else {
+            KeyModifiers::ctrl()
+        };
+        let main_shift = if is_mac {
+            KeyModifiers {
+                meta: true,
+                shift: true,
+                ..Default::default()
+            }
+        } else {
+            KeyModifiers::ctrl_shift()
+        };
+
+        match profile {
+            DawShortcutProfile::SummonerNative => {
+                self.assign_shortcut(
+                    "tool_command_palette",
+                    Some(KeyShortcut::new("P", main_mod)),
+                    true,
+                );
+            }
+            DawShortcutProfile::AbletonLive => {
+                self.assign_shortcut(
+                    "transport_record",
+                    Some(KeyShortcut::new("F9", KeyModifiers::none())),
+                    false,
+                );
+                self.assign_shortcut(
+                    "nav_mixer",
+                    Some(KeyShortcut::new("Tab", KeyModifiers::none())),
+                    false,
+                );
+                self.assign_shortcut(
+                    "nav_arranger",
+                    Some(KeyShortcut::new("Tab", KeyModifiers { shift: true, ..Default::default() })),
+                    false,
+                );
+            }
+            DawShortcutProfile::LogicPro => {
+                self.assign_shortcut(
+                    "transport_play_pause",
+                    Some(KeyShortcut::new("Space", KeyModifiers::none())),
+                    false,
+                );
+                self.assign_shortcut(
+                    "nav_mixer",
+                    Some(KeyShortcut::new("X", KeyModifiers::none())),
+                    false,
+                );
+                self.assign_shortcut(
+                    "nav_live_rack",
+                    Some(KeyShortcut::new("B", KeyModifiers::none())),
+                    false,
+                );
+            }
+            DawShortcutProfile::Reaper => {
+                self.assign_shortcut(
+                    "transport_record",
+                    Some(KeyShortcut::new("R", main_mod)),
+                    false,
+                );
+                self.assign_shortcut(
+                    "nav_mixer",
+                    Some(KeyShortcut::new("M", main_mod)),
+                    false,
+                );
+                self.assign_shortcut(
+                    "file_save_as",
+                    Some(KeyShortcut::new("S", main_shift)),
+                    false,
+                );
+            }
         }
     }
 
@@ -421,6 +529,39 @@ impl KeybindingEditorView {
 
                 ui.add_space(12.0);
                 ui.label(
+                    egui::RichText::new("Profile:")
+                        .size(12.0)
+                        .color(Color32::from_rgb(180, 200, 225)),
+                );
+                for profile in [
+                    DawShortcutProfile::SummonerNative,
+                    DawShortcutProfile::AbletonLive,
+                    DawShortcutProfile::LogicPro,
+                    DawShortcutProfile::Reaper,
+                ] {
+                    let is_sel = self.active_profile == profile;
+                    if ui
+                        .add(
+                            egui::Button::new(
+                                egui::RichText::new(profile.label())
+                                    .size(11.0)
+                                    .color(if is_sel { Color32::BLACK } else { Color32::WHITE }),
+                            )
+                            .fill(if is_sel {
+                                Color32::from_rgb(0, 229, 255)
+                            } else {
+                                Color32::from_rgb(40, 50, 70)
+                            })
+                            .min_size(Vec2::new(MIN_HIT_TARGET_PT, 30.0)),
+                        )
+                        .clicked()
+                    {
+                        self.apply_profile(profile);
+                    }
+                }
+
+                ui.add_space(12.0);
+                ui.label(
                     egui::RichText::new("Category:")
                         .size(12.0)
                         .color(Color32::from_rgb(180, 200, 225)),
@@ -575,5 +716,30 @@ impl KeybindingEditorView {
             });
         })
         .response
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_m3_daw_shortcut_profiles_conflict_free() {
+        let mut editor = KeybindingEditorView::new(OperatingSystem::Windows);
+        for profile in [
+            DawShortcutProfile::SummonerNative,
+            DawShortcutProfile::AbletonLive,
+            DawShortcutProfile::LogicPro,
+            DawShortcutProfile::Reaper,
+        ] {
+            editor.apply_profile(profile);
+            assert_eq!(editor.active_profile, profile);
+            assert!(
+                editor.detect_conflicts().is_empty(),
+                "Profile {:?} produced shortcut conflicts: {:?}",
+                profile,
+                editor.detect_conflicts()
+            );
+        }
     }
 }

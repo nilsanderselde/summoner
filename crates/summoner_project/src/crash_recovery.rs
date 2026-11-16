@@ -144,6 +144,43 @@ impl CrashRecoveryManager {
         }
         Ok(())
     }
+
+    /// Poll for an unclean session lock and build an actionable recovery prompt (`M3.4` / `PLT-6`).
+    pub fn poll_recovery_prompt(&self) -> Option<CrashRecoveryPrompt> {
+        if !self.check_unclean_shutdown() {
+            return None;
+        }
+        let snapshot_path = self.find_latest_backup_snapshot()?;
+        let content = fs::read_to_string(&self.lock_path).ok()?;
+        let lock = toml::from_str::<SessionLock>(&content).ok()?;
+        Some(CrashRecoveryPrompt {
+            project_name: lock.project_name,
+            opened_at_timestamp: lock.opened_at_timestamp,
+            latest_snapshot_path: snapshot_path,
+            process_id: lock.process_id,
+        })
+    }
+
+    /// Accept the recovery prompt: restore latest snapshot and reset clean session lock (`M3.4`).
+    pub fn accept_recovery_prompt(&self) -> Result<ProjectConfig, String> {
+        let project = self.recover_latest_snapshot()?;
+        self.register_clean_exit()?;
+        Ok(project)
+    }
+
+    /// Dismiss the recovery prompt without restoring snapshot and clear stale session lock (`M3.4`).
+    pub fn dismiss_recovery_prompt(&self) -> Result<(), String> {
+        self.register_clean_exit()
+    }
+}
+
+/// Interactive crash recovery dialog descriptor presented on relaunch after an unclean exit (`M3.4`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CrashRecoveryPrompt {
+    pub project_name: String,
+    pub opened_at_timestamp: u64,
+    pub latest_snapshot_path: PathBuf,
+    pub process_id: u32,
 }
 
 /// Project file schema migration engine ensuring backward compatibility across versions.
@@ -361,5 +398,45 @@ mod tests {
         assert_eq!(deserialized.tracks.len(), 128);
         assert_eq!(deserialized.automation_lanes.len(), 128);
         assert_eq!(deserialized.tracks[127].name, "Track 128");
+    }
+
+    #[test]
+    fn test_m3_crash_recovery_prompt_accept_and_dismiss() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "summoner_crash_prompt_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _ = fs::remove_dir_all(&temp_dir);
+        let mgr = CrashRecoveryManager::new(&temp_dir);
+
+        assert!(mgr.poll_recovery_prompt().is_none());
+
+        mgr.start_session("Unsaved IDM Sketch").unwrap();
+        let proj = ProjectConfig {
+            name: "Unsaved IDM Sketch".to_string(),
+            ..Default::default()
+        };
+        let mut autosave = mgr.auto_save_manager.clone();
+        autosave.create_backup_snapshot(&proj).unwrap();
+
+        let prompt = mgr.poll_recovery_prompt().expect("expected recovery prompt");
+        assert_eq!(prompt.project_name, "Unsaved IDM Sketch");
+        assert!(prompt.latest_snapshot_path.exists());
+
+        let restored = mgr.accept_recovery_prompt().expect("accept should restore");
+        assert_eq!(restored.name, "Unsaved IDM Sketch");
+        assert!(!mgr.check_unclean_shutdown());
+
+        // Also test dismissing clears stale session lock without failing
+        mgr.start_session("Dismissed Session").unwrap();
+        autosave.create_backup_snapshot(&proj).unwrap();
+        assert!(mgr.poll_recovery_prompt().is_some());
+        mgr.dismiss_recovery_prompt().unwrap();
+        assert!(mgr.poll_recovery_prompt().is_none());
+
+        let _ = fs::remove_dir_all(&temp_dir);
     }
 }

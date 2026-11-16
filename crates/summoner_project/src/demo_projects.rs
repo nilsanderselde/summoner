@@ -499,6 +499,81 @@ impl DemoProjects {
     }
 }
 
+/// Interactive step states for the first-run onboarding setup wizard (`M3.1` / `GUI-1`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum FirstRunWizardStep {
+    Welcome,
+    AudioDriverSetup,
+    LatencyCalibration,
+    MidiControllerSetup,
+    LaunchShowcase,
+}
+
+/// Guided first-run audio/MIDI setup wizard that launches the IDM Crown Jewel demo (`M3.1`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FirstRunSetupWizard {
+    pub current_step: FirstRunWizardStep,
+    pub selected_driver: String,
+    pub sample_rate: u32,
+    pub buffer_size: usize,
+    pub calibrated_rtl_ms: Option<f32>,
+    pub detected_midi_controllers: Vec<String>,
+    pub tutorial_tooltips_enabled: bool,
+    pub completed: bool,
+    pub onboarding: OnboardingManager,
+}
+
+impl Default for FirstRunSetupWizard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl FirstRunSetupWizard {
+    pub fn new() -> Self {
+        Self {
+            current_step: FirstRunWizardStep::Welcome,
+            selected_driver: "WASAPI Exclusive".to_string(),
+            sample_rate: 48000,
+            buffer_size: 128,
+            calibrated_rtl_ms: None,
+            detected_midi_controllers: Vec::new(),
+            tutorial_tooltips_enabled: true,
+            completed: false,
+            onboarding: OnboardingManager::new(),
+        }
+    }
+
+    pub fn configure_audio(&mut self, driver: &str, sample_rate: u32, buffer_size: usize) {
+        self.onboarding.complete_milestone(OnboardingMilestone::WelcomeSeen);
+        self.selected_driver = driver.to_string();
+        self.sample_rate = sample_rate.max(8000);
+        self.buffer_size = buffer_size.clamp(32, 4096);
+        self.onboarding
+            .complete_milestone(OnboardingMilestone::AudioDeviceConfigured);
+        self.current_step = FirstRunWizardStep::LatencyCalibration;
+    }
+
+    pub fn run_calibration_tone(&mut self) -> f32 {
+        let rtl_ms = (self.buffer_size as f32 * 2.0 / self.sample_rate as f32) * 1000.0;
+        self.calibrated_rtl_ms = Some(rtl_ms);
+        self.current_step = FirstRunWizardStep::MidiControllerSetup;
+        rtl_ms
+    }
+
+    pub fn detect_midi_devices(&mut self, devices: Vec<String>) {
+        self.detected_midi_controllers = devices;
+        self.current_step = FirstRunWizardStep::LaunchShowcase;
+    }
+
+    pub fn complete_and_load_showcase(&mut self) -> ProjectConfig {
+        self.onboarding
+            .complete_milestone(OnboardingMilestone::FirstTrackCreated);
+        self.completed = true;
+        crate::stock_content::StockContentRegistry::demo_idm_crown_jewel()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -550,5 +625,26 @@ mod tests {
         let immersive = DemoProjects::create_immersive_demo();
         assert_eq!(immersive.tracks.len(), 6);
         assert_eq!(immersive.tracks[5].channels, 6);
+    }
+
+    #[test]
+    fn test_m3_first_run_setup_wizard_loads_idm_showcase() {
+        let mut wizard = FirstRunSetupWizard::new();
+        assert_eq!(wizard.current_step, FirstRunWizardStep::Welcome);
+        assert!(!wizard.completed);
+
+        wizard.configure_audio("ASIO4ALL", 48000, 128);
+        assert_eq!(wizard.current_step, FirstRunWizardStep::LatencyCalibration);
+        let rtl_ms = wizard.run_calibration_tone();
+        assert!(rtl_ms <= 12.0);
+        assert_eq!(wizard.current_step, FirstRunWizardStep::MidiControllerSetup);
+
+        wizard.detect_midi_devices(vec!["Summoner MK1 Push".to_string()]);
+        assert_eq!(wizard.current_step, FirstRunWizardStep::LaunchShowcase);
+
+        let demo = wizard.complete_and_load_showcase();
+        assert!(wizard.completed);
+        assert_eq!(demo.name, "IDM Crown Jewel");
+        assert!(demo.tracks.len() >= 4);
     }
 }

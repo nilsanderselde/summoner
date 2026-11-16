@@ -22,8 +22,9 @@ use std::fs;
 use std::path::Path;
 
 /// Release channel for software updates.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum UpdateChannel {
+    #[default]
     Stable,
     Beta,
     Nightly,
@@ -114,7 +115,7 @@ impl Ord for UpdateSemVer {
 }
 
 /// Software update manifest published to update servers.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UpdateManifest {
     pub version: String,
     pub channel: UpdateChannel,
@@ -124,6 +125,10 @@ pub struct UpdateManifest {
     pub blake3_checksum: String,
     pub min_os_version: HashMap<String, String>,
     pub is_security_critical: bool,
+    #[serde(default)]
+    pub signature_hex: String,
+    #[serde(default)]
+    pub signer_public_key_hex: String,
 }
 
 impl UpdateManifest {
@@ -134,6 +139,115 @@ impl UpdateManifest {
     pub fn from_json(json: &str) -> Result<Self, String> {
         serde_json::from_str(json).map_err(|e| e.to_string())
     }
+
+    fn canonical_signing_bytes(&self) -> Vec<u8> {
+        let mut payload = Vec::new();
+        payload.extend_from_slice(self.version.as_bytes());
+        payload.push(0);
+        payload.extend_from_slice(self.download_url.as_bytes());
+        payload.push(0);
+        payload.extend_from_slice(self.blake3_checksum.as_bytes());
+        payload.push(0);
+        payload.push(self.channel as u8);
+        payload
+    }
+
+    /// Sign manifest metadata with a 32-byte release signing key using Winternitz/BLAKE3
+    /// hash-based asymmetric signature (`M3.4` / `PLT-7`).
+    pub fn sign_with_key(&mut self, signing_key: &[u8; 32]) {
+        self.signer_public_key_hex = wots_public_key_hex(signing_key);
+        self.signature_hex = wots_sign_hex(signing_key, &self.canonical_signing_bytes());
+    }
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        out.push(HEX[(b >> 4) as usize] as char);
+        out.push(HEX[(b & 0x0f) as usize] as char);
+    }
+    out
+}
+
+fn hex_decode(hex: &str) -> Option<Vec<u8>> {
+    if !hex.len().is_multiple_of(2) {
+        return None;
+    }
+    let bytes = hex.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len() / 2);
+    for pair in bytes.chunks_exact(2) {
+        let hi = (pair[0] as char).to_digit(16)? as u8;
+        let lo = (pair[1] as char).to_digit(16)? as u8;
+        out.push((hi << 4) | lo);
+    }
+    Some(out)
+}
+
+fn wots_nibbles(msg: &[u8]) -> [u8; 67] {
+    let digest = blake3::hash(msg);
+    let mut nibbles = [0u8; 67];
+    let mut sum: u32 = 0;
+    for (idx, &b) in digest.as_bytes().iter().enumerate() {
+        let hi = (b >> 4) & 0x0f;
+        let lo = b & 0x0f;
+        nibbles[idx * 2] = hi;
+        nibbles[idx * 2 + 1] = lo;
+        sum += hi as u32 + lo as u32;
+    }
+    let csum = (64 * 15) - sum;
+    nibbles[64] = ((csum >> 8) & 0x0f) as u8;
+    nibbles[65] = ((csum >> 4) & 0x0f) as u8;
+    nibbles[66] = (csum & 0x0f) as u8;
+    nibbles
+}
+
+fn hash_chain(mut val: [u8; 32], steps: u8) -> [u8; 32] {
+    for _ in 0..steps {
+        val = *blake3::hash(&val).as_bytes();
+    }
+    val
+}
+
+fn wots_public_key_hex(signing_key: &[u8; 32]) -> String {
+    let mut pk_hasher = blake3::Hasher::new();
+    for i in 0u8..67u8 {
+        let sk = *blake3::keyed_hash(signing_key, &[i]).as_bytes();
+        let pk_i = hash_chain(sk, 15);
+        pk_hasher.update(&pk_i);
+    }
+    pk_hasher.finalize().to_hex().to_string()
+}
+
+fn wots_sign_hex(signing_key: &[u8; 32], msg: &[u8]) -> String {
+    let nibbles = wots_nibbles(msg);
+    let mut raw = Vec::with_capacity(67 * 32);
+    for (i, &n) in nibbles.iter().enumerate() {
+        let sk = *blake3::keyed_hash(signing_key, &[i as u8]).as_bytes();
+        let sig_i = hash_chain(sk, n);
+        raw.extend_from_slice(&sig_i);
+    }
+    hex_encode(&raw)
+}
+
+fn wots_verify_hex(msg: &[u8], sig_hex: &str, trusted_pub_key_hex: &str) -> bool {
+    let Some(sig_bytes) = hex_decode(sig_hex) else {
+        return false;
+    };
+    if sig_bytes.len() != 67 * 32 {
+        return false;
+    }
+    let nibbles = wots_nibbles(msg);
+    let mut pk_hasher = blake3::Hasher::new();
+    for (i, (&n, chunk)) in nibbles.iter().zip(sig_bytes.chunks_exact(32)).enumerate() {
+        let _ = i;
+        let mut arr = [0u8; 32];
+        arr.copy_from_slice(chunk);
+        let derived_pk_i = hash_chain(arr, 15 - n);
+        pk_hasher.update(&derived_pk_i);
+    }
+    let derived_pub_hex = pk_hasher.finalize().to_hex().to_string();
+    derived_pub_hex.eq_ignore_ascii_case(trusted_pub_key_hex)
 }
 
 /// Result of evaluating an update check.
@@ -254,6 +368,26 @@ impl AutoUpdateChecker {
     pub fn verify_package_checksum(&self, package_bytes: &[u8], expected_checksum: &str) -> bool {
         let hash = blake3::hash(package_bytes).to_hex().to_string();
         hash.eq_ignore_ascii_case(expected_checksum)
+    }
+
+    /// Cryptographically verify manifest authenticity against the pinned release public key (`M3.4`).
+    pub fn verify_manifest_signature(
+        &self,
+        manifest: &UpdateManifest,
+        trusted_pub_key_hex: &str,
+    ) -> bool {
+        if manifest.signature_hex.is_empty()
+            || !manifest
+                .signer_public_key_hex
+                .eq_ignore_ascii_case(trusted_pub_key_hex)
+        {
+            return false;
+        }
+        wots_verify_hex(
+            &manifest.canonical_signing_bytes(),
+            &manifest.signature_hex,
+            trusted_pub_key_hex,
+        )
     }
 }
 
@@ -478,6 +612,7 @@ mod tests {
             blake3_checksum: "deadbeef".to_string(),
             min_os_version: HashMap::new(),
             is_security_critical: false,
+            ..Default::default()
         };
 
         // Stable channel ignores Beta manifest
@@ -576,5 +711,32 @@ mod tests {
         let count = dispatcher.spool_to_directory(&temp_dir).unwrap();
         assert_eq!(count, 1);
         let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_m3_signed_update_manifest_verification_and_tamper_rejection() {
+        let signing_key = [0x5Au8; 32];
+        let mut manifest = UpdateManifest {
+            version: "1.0.1".to_string(),
+            channel: UpdateChannel::Stable,
+            release_date: "2026-11-16".to_string(),
+            release_notes: "Security & hardware latency hotfix".to_string(),
+            download_url: "https://updates.summoner-audio.org/Summoner-1.0.1.msi".to_string(),
+            blake3_checksum: "abcd1234".to_string(),
+            ..Default::default()
+        };
+        manifest.sign_with_key(&signing_key);
+        let trusted_pub = manifest.signer_public_key_hex.clone();
+
+        let checker = AutoUpdateChecker::new("1.0.0", UpdateChannel::Stable);
+        assert!(checker.verify_manifest_signature(&manifest, &trusted_pub));
+
+        // Tampering with download_url must invalidate signature even under the same public key
+        let mut tampered = manifest.clone();
+        tampered.download_url = "https://evil.example.com/payload.msi".to_string();
+        assert!(!checker.verify_manifest_signature(&tampered, &trusted_pub));
+
+        // Untrusted signer key must also be rejected
+        assert!(!checker.verify_manifest_signature(&manifest, "0000deadbeef"));
     }
 }
