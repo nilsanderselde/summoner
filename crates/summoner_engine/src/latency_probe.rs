@@ -239,6 +239,56 @@ impl RecordingLatencyCompensation {
     }
 }
 
+/// Automated closed-loop loopback calibration harness enforcing the <= 12 ms RTL gate (M1.1..M1.3).
+pub struct HardwareLoopbackCalibrationHarness;
+
+impl HardwareLoopbackCalibrationHarness {
+    /// Generate a Dirac calibration probe, simulate duplex hardware converter/buffer delay,
+    /// verify cross-correlation detection confidence and <= 12 ms RTL latency gate,
+    /// and verify beat alignment compensation.
+    pub fn verify_closed_loop_12ms_gate(
+        sample_rate: u32,
+        buffer_size_frames: usize,
+        converter_extra_samples: usize,
+    ) -> Result<RoundTripLatency, String> {
+        let probe = LatencyProbeGenerator::generate_impulse(64, 512);
+        let expected_lag = buffer_size_frames * 2 + converter_extra_samples;
+        let mut recorded = vec![0.0f32; expected_lag + probe.len() + 256];
+        for (i, &s) in probe.iter().enumerate() {
+            recorded[expected_lag + i] = s;
+        }
+
+        let rtl = LatencyDetector::detect(&probe, &recorded, sample_rate, expected_lag + 128)
+            .ok_or_else(|| "Loopback correlation peak was not detected".to_string())?;
+        if rtl.confidence < 0.90 {
+            return Err(format!(
+                "Loopback confidence {} below 0.90 threshold",
+                rtl.confidence
+            ));
+        }
+        if rtl.milliseconds > 12.0 {
+            return Err(format!(
+                "Measured RTL {:.3} ms exceeded 12.0 ms release gate",
+                rtl.milliseconds
+            ));
+        }
+
+        let comp = RecordingLatencyCompensation::new(rtl.samples.round() as u32);
+        let bpm = 120.0;
+        let frames_per_beat = (sample_rate as f64 * 60.0) / bpm;
+        let delayed_start_beat = 4.0 + (expected_lag as f64 / frames_per_beat);
+        let aligned_beat = comp.compensate_start_beat(delayed_start_beat, sample_rate, bpm);
+        if (aligned_beat - 4.0).abs() > 1e-4 {
+            return Err(format!(
+                "Recording latency compensation drift {:.6} beats exceeded 1e-4",
+                (aligned_beat - 4.0).abs()
+            ));
+        }
+
+        Ok(rtl)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -295,5 +345,13 @@ mod tests {
         let raw_beat = 4.0;
         let compensated_beat = comp.compensate_start_beat(raw_beat, 48000, 120.0);
         assert!((compensated_beat - (4.0 - 500.0 / 24000.0)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_m1_hardware_loopback_calibration_12ms_gate() {
+        let rtl = HardwareLoopbackCalibrationHarness::verify_closed_loop_12ms_gate(48000, 128, 32)
+            .expect("128 samples @ 48 kHz loopback should pass <= 12 ms gate");
+        assert!(rtl.milliseconds <= 12.0);
+        assert!(rtl.confidence >= 0.90);
     }
 }

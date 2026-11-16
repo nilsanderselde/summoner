@@ -11,8 +11,8 @@ DMG_NAME="SummonerDAW-v${VERSION}-macOS.dmg"
 
 echo "Building macOS release binary..."
 if command -v lipo >/dev/null 2>&1; then
-    cargo build --release --target aarch64-apple-darwin || true
-    cargo build --release --target x86_64-apple-darwin || true
+    cargo build --release --features gui --target aarch64-apple-darwin || true
+    cargo build --release --features gui --target x86_64-apple-darwin || true
 fi
 
 echo "Creating bundle structure..."
@@ -33,7 +33,7 @@ elif [[ -f "${X86_64_BIN}" ]]; then
     cp "${X86_64_BIN}" "${OUT_BIN}"
 else
     echo "Building release binary for host target..."
-    cargo build --release
+    cargo build --release --features gui
     cp target/release/summon "${OUT_BIN}"
 fi
 chmod +x "${OUT_BIN}"
@@ -78,6 +78,9 @@ echo "Creating DMG..."
 if command -v hdiutil >/dev/null 2>&1; then
     hdiutil create -volname "${APP_NAME}" -srcfolder "${STAGE_DIR}" -ov -format UDZO "${DMG_NAME}"
     echo "DMG build complete: ${DMG_NAME}"
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "${DMG_NAME}" > "SHA256SUMS-macos.txt"
+    fi
 else
     echo "hdiutil not available on this platform; staged bundle ready at ${STAGE_DIR}"
 fi

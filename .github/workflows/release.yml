@@ -68,6 +68,7 @@ jobs:
           chmod +x packaging/linux/build_appimage.sh packaging/linux/build_deb.sh
           ./packaging/linux/build_appimage.sh || true
           ./packaging/linux/build_deb.sh || true
+          sha256sum summoner-linux-x86_64.tar.gz target/*.deb target/*.AppImage > SHA256SUMS-linux.txt || sha256sum summoner-linux-x86_64.tar.gz > SHA256SUMS-linux.txt
 
       # Windows-specific build & package steps
       - name: Build and Package Windows Assets
@@ -81,11 +82,13 @@ jobs:
           & "target\release\summon.exe" --help
           # Create zip
           Compress-Archive -Path "target\release\summon.exe" -DestinationPath "summoner-windows-x64.zip"
-          # Compile NSIS installer
+          # Compile NSIS installer and invoke Authenticode signing script
           makensis packaging/windows/installer.nsi
           if (Test-Path "packaging\windows\SummonerDAW-Installer-v1.0.0-x64.exe") {
               Move-Item "packaging\windows\SummonerDAW-Installer-v1.0.0-x64.exe" "SummonerDAW-Installer-v1.0.0-x64.exe"
+              & ./packaging/windows/sign_installer.ps1 -FilePath "SummonerDAW-Installer-v1.0.0-x64.exe"
           }
+          Get-FileHash summoner-windows-x64.zip, SummonerDAW-Installer-v1.0.0-x64.exe -Algorithm SHA256 -ErrorAction SilentlyContinue | Format-List | Out-File SHA256SUMS-windows.txt
 
       # macOS-specific build & package steps
       - name: Install macOS Cross Targets
@@ -103,6 +106,7 @@ jobs:
           ./packaging/macos/create_dmg.sh
           ./packaging/macos/notarize_dmg.sh || true
           tar -czf summoner-macos-universal.tar.gz -C target/macOS_stage/Summoner.app .
+          shasum -a 256 SummonerDAW-v1.0.0-macOS.dmg summoner-macos-universal.tar.gz > SHA256SUMS-macos.txt || shasum -a 256 summoner-macos-universal.tar.gz > SHA256SUMS-macos.txt
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
@@ -112,6 +116,7 @@ jobs:
             *.zip
             *.dmg
             *.exe
+            SHA256SUMS-*.txt
             target/*.deb
             target/*.AppImage
         env:
