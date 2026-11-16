@@ -8,6 +8,7 @@
 - **Authoritative Roadmap**: Always discover and treat the latest dated `local/ROADMAP_YYYYMMDD_HHMMSS.md` file as authoritative.
 - **Historical Context**: Read older roadmap files in `local/` if needed for historical context or previous analysis.
 - **New Roadmap Generation**: Once all tasks in the current roadmap are 100% complete, create a new roadmap file `local/ROADMAP_YYYYMMDD_HHMMSS.md` containing the next phase of milestones before finishing.
+- **Private Metadata Repository**: `local/` has its own separate private Git repository; commit and push roadmap/requirements/audit changes directly inside `local/` (`cd local && git add ... && git commit -m "..." && git push`).
 
 ## Makefile Targets & Workflows
 - `make vibe` runs the autonomous vibe coding bash runner script (`scripts/smart-vibe.sh`).
