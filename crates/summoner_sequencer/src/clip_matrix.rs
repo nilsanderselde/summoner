@@ -241,6 +241,10 @@ pub struct ClipMatrix {
     pub last_evaluated_beat: f64,
     #[serde(skip)]
     pub arrangement_recorder: SessionArrangementRecorder,
+    #[serde(skip)]
+    pub midi_slot_triggers: HashMap<(u8, u8), (usize, usize)>,
+    #[serde(skip)]
+    pub midi_scene_triggers: HashMap<(u8, u8), usize>,
 }
 
 impl Default for ClipMatrix {
@@ -279,6 +283,8 @@ impl ClipMatrix {
             pending_events: Vec::with_capacity(64),
             last_evaluated_beat: 0.0,
             arrangement_recorder: SessionArrangementRecorder::default(),
+            midi_slot_triggers: HashMap::new(),
+            midi_scene_triggers: HashMap::new(),
         }
     }
 
@@ -389,6 +395,42 @@ impl ClipMatrix {
         if immediate {
             self.active_scene_idx = None;
         }
+    }
+
+    /// Bind a MIDI `(status & 0xF0, data1)` message to trigger a `(track_idx, scene_idx)` clip (`MID-6`).
+    pub fn bind_midi_slot_trigger(
+        &mut self,
+        status: u8,
+        data1: u8,
+        track_idx: usize,
+        scene_idx: usize,
+    ) {
+        self.midi_slot_triggers
+            .insert((status & 0xF0, data1 & 0x7F), (track_idx, scene_idx));
+    }
+
+    /// Bind a MIDI `(status & 0xF0, data1)` message to trigger an entire `scene_idx` row (`MID-6`).
+    pub fn bind_midi_scene_trigger(&mut self, status: u8, data1: u8, scene_idx: usize) {
+        self.midi_scene_triggers
+            .insert((status & 0xF0, data1 & 0x7F), scene_idx);
+    }
+
+    /// Handle incoming live MIDI trigger `(status, data1, value_or_velocity)` for hardware clip launching (`MID-6`).
+    /// Returns `true` if a bound clip slot or scene was triggered.
+    pub fn handle_midi_trigger(&mut self, status: u8, data1: u8, velocity: u8) -> bool {
+        if velocity == 0 {
+            return false;
+        }
+        let key = (status & 0xF0, data1 & 0x7F);
+        if let Some(&(track_idx, scene_idx)) = self.midi_slot_triggers.get(&key) {
+            self.trigger_clip(track_idx, scene_idx, true);
+            return true;
+        }
+        if let Some(&scene_idx) = self.midi_scene_triggers.get(&key) {
+            self.trigger_scene(scene_idx, true);
+            return true;
+        }
+        false
     }
 
     fn execute_clip_launch(&mut self, track_idx: usize, scene_idx: usize, current_beat: f64) {
@@ -774,5 +816,26 @@ mod tests {
         assert_eq!(recorded[1].clip_name, "Drums Chorus");
         assert_eq!(recorded[1].timeline_start_beat, 8.0);
         assert_eq!(recorded[1].timeline_length_beats, 8.0);
+    }
+
+    #[test]
+    fn test_clip_matrix_midi_learned_slot_and_scene_triggers() {
+        let mut matrix = ClipMatrix::new(2, 2);
+        matrix.set_clip(0, 0, "Kick", 4.0, true);
+        matrix.set_clip(0, 1, "Drop Lead", 4.0, true);
+        matrix.set_clip(1, 1, "Drop Bass", 4.0, true);
+
+        matrix.bind_midi_slot_trigger(0x90, 36, 0, 0);
+        matrix.bind_midi_scene_trigger(0xB0, 64, 1);
+
+        // Velocity 0 should ignore note-off
+        assert!(!matrix.handle_midi_trigger(0x90, 36, 0));
+        assert!(matrix.handle_midi_trigger(0x90, 36, 100));
+        assert_eq!(matrix.get_slot(0, 0).unwrap().state, SlotState::Playing);
+
+        assert!(matrix.handle_midi_trigger(0xB0, 64, 127));
+        assert_eq!(matrix.active_scene_idx, Some(1));
+        assert_eq!(matrix.get_slot(0, 1).unwrap().state, SlotState::Playing);
+        assert_eq!(matrix.get_slot(1, 1).unwrap().state, SlotState::Playing);
     }
 }

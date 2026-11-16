@@ -30,6 +30,7 @@ pub enum VirtualMidiDirection {
 pub struct VirtualMidiPortInfo {
     pub id: usize,
     pub name: String,
+    pub stable_port_id: String,
     pub direction: VirtualMidiDirection,
     pub is_connected: bool,
 }
@@ -39,10 +40,30 @@ pub struct VirtualMidiPortInfo {
 pub struct VirtualMidiPort {
     pub id: usize,
     pub name: String,
+    pub stable_port_id: String,
     pub direction: VirtualMidiDirection,
     pub is_connected: bool,
     incoming_queue: VecDeque<(u64, Vec<u8>)>,
     outgoing_queue: VecDeque<(u64, Vec<u8>)>,
+}
+
+fn stable_virtual_port_id(name: &str, direction: VirtualMidiDirection) -> String {
+    let dir_tag = match direction {
+        VirtualMidiDirection::Input => "input",
+        VirtualMidiDirection::Output => "output",
+        VirtualMidiDirection::Bidirectional => "bidirectional",
+    };
+    let slug: String = name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    format!("summoner://virtual/{}/{}", dir_tag, slug)
 }
 
 impl VirtualMidiPort {
@@ -50,6 +71,7 @@ impl VirtualMidiPort {
         Self {
             id,
             name: name.to_string(),
+            stable_port_id: stable_virtual_port_id(name, direction),
             direction,
             is_connected: true,
             incoming_queue: VecDeque::new(),
@@ -91,6 +113,44 @@ impl VirtualMidiPort {
     /// Drain all queued outgoing packets to push to the OS MIDI subsystem.
     pub fn drain_outgoing(&mut self) -> Vec<(u64, Vec<u8>)> {
         self.outgoing_queue.drain(..).collect()
+    }
+
+    /// Frame and queue an arbitrary System Exclusive payload (`0xF0 ... 0xF7`) for output (`AIO-8`).
+    /// Accepts either raw payload bytes or already-framed `0xF0..0xF7` messages.
+    pub fn send_sysex(&mut self, timestamp_samples: u64, payload: &[u8]) -> Result<(), String> {
+        if payload.is_empty() {
+            return Err("SysEx payload cannot be empty".into());
+        }
+        let mut framed = Vec::with_capacity(payload.len() + 2);
+        if payload.first() != Some(&0xF0) {
+            framed.push(0xF0);
+        }
+        for &b in payload {
+            if b == 0xF0 && !framed.is_empty() {
+                continue;
+            }
+            if b == 0xF7 {
+                break;
+            }
+            framed.push(b & 0x7F);
+        }
+        framed.push(0xF7);
+        self.send(timestamp_samples, &framed)
+    }
+
+    /// Extract complete incoming `0xF0..0xF7` SysEx packets without discarding non-SysEx messages.
+    pub fn drain_sysex(&mut self) -> Vec<(u64, Vec<u8>)> {
+        let mut sysex = Vec::new();
+        let mut remaining = VecDeque::with_capacity(self.incoming_queue.len());
+        while let Some((ts, msg)) = self.incoming_queue.pop_front() {
+            if msg.first() == Some(&0xF0) && msg.last() == Some(&0xF7) {
+                sysex.push((ts, msg));
+            } else {
+                remaining.push_back((ts, msg));
+            }
+        }
+        self.incoming_queue = remaining;
+        sysex
     }
 }
 
@@ -142,6 +202,7 @@ impl VirtualMidiManager {
             .map(|p| VirtualMidiPortInfo {
                 id: p.id,
                 name: p.name.clone(),
+                stable_port_id: p.stable_port_id.clone(),
                 direction: p.direction,
                 is_connected: p.is_connected,
             })
@@ -211,5 +272,30 @@ mod tests {
         assert_eq!(inc.len(), 1);
         assert_eq!(out[0].0, 500);
         assert_eq!(inc[0].0, 600);
+    }
+
+    #[test]
+    fn test_virtual_midi_sysex_and_stable_port_id() {
+        let mut mgr = VirtualMidiManager::new();
+        let pid = mgr
+            .create_port("Summoner Sync Bus 1", VirtualMidiDirection::Bidirectional)
+            .unwrap();
+        let info = mgr.list_ports();
+        assert_eq!(
+            info[0].stable_port_id,
+            "summoner://virtual/bidirectional/summoner_sync_bus_1"
+        );
+
+        let port = mgr.get_port_mut(pid).unwrap();
+        port.send_sysex(1024, &[0x7E, 0x7F, 0x06, 0x01]).unwrap();
+        let outgoing = port.drain_outgoing();
+        assert_eq!(outgoing[0].1, vec![0xF0, 0x7E, 0x7F, 0x06, 0x01, 0xF7]);
+
+        port.receive(2000, &[0x90, 60, 100]).unwrap();
+        port.receive(2048, &[0xF0, 0x41, 0x10, 0xF7]).unwrap();
+        let syx = port.drain_sysex();
+        assert_eq!(syx, vec![(2048, vec![0xF0, 0x41, 0x10, 0xF7])]);
+        let rem = port.drain_incoming();
+        assert_eq!(rem, vec![(2000, vec![0x90, 60, 100])]);
     }
 }

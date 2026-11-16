@@ -583,6 +583,266 @@ impl PresonusFaderPortProfile {
 // Multi-Surface Router Manager
 // ============================================================================
 
+/// Mackie Control Universal (MCU) hardware profile (`MID-1`).
+#[derive(Debug, Clone)]
+pub struct MackieMcuProfile {
+    pub faders: [f32; 8],
+    pub mutes: [bool; 8],
+    pub solos: [bool; 8],
+    pub armed: [bool; 8],
+}
+
+impl Default for MackieMcuProfile {
+    fn default() -> Self {
+        Self {
+            faders: [0.75; 8],
+            mutes: [false; 8],
+            solos: [false; 8],
+            armed: [false; 8],
+        }
+    }
+}
+
+impl MackieMcuProfile {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn set_fader_packet(&self, ch: usize, value: f32) -> Option<SurfaceOutputPacket> {
+        if ch >= 8 {
+            return None;
+        }
+        let val14 = (value.clamp(0.0, 1.0) * 16383.0).round() as u16;
+        let lsb = (val14 & 0x7F) as u8;
+        let msb = ((val14 >> 7) & 0x7F) as u8;
+        Some(SurfaceOutputPacket::new(vec![0xE0 | (ch as u8), lsb, msb]))
+    }
+
+    pub fn handle_midi_in(&mut self, bytes: &[u8]) -> Option<SurfaceAction> {
+        if bytes.len() < 3 {
+            return None;
+        }
+        let status = bytes[0];
+        let kind = status & 0xF0;
+        let ch = (status & 0x0F) as usize;
+        if kind == 0xE0 && ch < 8 {
+            let val14 = (bytes[1] as u16) | ((bytes[2] as u16) << 7);
+            let vol = (val14 as f32 / 16383.0).clamp(0.0, 1.0);
+            self.faders[ch] = vol;
+            return Some(SurfaceAction::SetTrackVolume {
+                track_index: ch,
+                volume: vol,
+            });
+        }
+        if kind == 0xB0 && (0x10..=0x17).contains(&bytes[1]) {
+            let enc = (bytes[1] - 0x10) as usize;
+            let raw = bytes[2];
+            let delta = if raw < 64 {
+                raw as f32 * 0.02
+            } else {
+                -((raw - 64) as f32) * 0.02
+            };
+            return Some(SurfaceAction::EncoderTweak {
+                encoder_index: enc,
+                delta,
+            });
+        }
+        if kind == 0x90 && bytes[2] > 0 {
+            let note = bytes[1];
+            if (0x00..=0x07).contains(&note) {
+                let idx = note as usize;
+                self.armed[idx] = !self.armed[idx];
+                return Some(SurfaceAction::SetTrackArm {
+                    track_index: idx,
+                    armed: self.armed[idx],
+                });
+            }
+            if (0x08..=0x0F).contains(&note) {
+                let idx = (note - 0x08) as usize;
+                self.solos[idx] = !self.solos[idx];
+                return Some(SurfaceAction::SetTrackSolo {
+                    track_index: idx,
+                    soloed: self.solos[idx],
+                });
+            }
+            if (0x10..=0x17).contains(&note) {
+                let idx = (note - 0x10) as usize;
+                self.mutes[idx] = !self.mutes[idx];
+                return Some(SurfaceAction::SetTrackMute {
+                    track_index: idx,
+                    muted: self.mutes[idx],
+                });
+            }
+            return match note {
+                0x5D => Some(SurfaceAction::TransportStop),
+                0x5E => Some(SurfaceAction::TransportPlay),
+                0x5F => Some(SurfaceAction::TransportRecord),
+                0x56 => Some(SurfaceAction::TransportToggleLoop),
+                _ => None,
+            };
+        }
+        None
+    }
+}
+
+/// Computer-keyboard QWERTY musical typing controller (`MID-2`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MusicalTypingKeyboard {
+    pub octave: u8,
+    pub velocity: u8,
+    pub sustain_held: bool,
+    pub pitch_bend: i16,
+}
+
+impl Default for MusicalTypingKeyboard {
+    fn default() -> Self {
+        Self {
+            octave: 4,
+            velocity: 100,
+            sustain_held: false,
+            pitch_bend: 0,
+        }
+    }
+}
+
+impl MusicalTypingKeyboard {
+    pub fn key_to_semitone_offset(key: char) -> Option<u8> {
+        match key.to_ascii_lowercase() {
+            'z' => Some(0),
+            's' => Some(1),
+            'x' => Some(2),
+            'd' => Some(3),
+            'c' => Some(4),
+            'v' => Some(5),
+            'g' => Some(6),
+            'b' => Some(7),
+            'h' => Some(8),
+            'n' => Some(9),
+            'j' => Some(10),
+            'm' => Some(11),
+            ',' => Some(12),
+            'q' => Some(12),
+            '2' => Some(13),
+            'w' => Some(14),
+            '3' => Some(15),
+            'e' => Some(16),
+            'r' => Some(17),
+            '5' => Some(18),
+            't' => Some(19),
+            '6' => Some(20),
+            'y' => Some(21),
+            '7' => Some(22),
+            'u' => Some(23),
+            'i' => Some(24),
+            _ => None,
+        }
+    }
+
+    pub fn handle_key_event(&mut self, key: char, pressed: bool) -> Option<[u8; 3]> {
+        if pressed {
+            match key {
+                '-' | '_' => {
+                    self.octave = self.octave.saturating_sub(1);
+                    return None;
+                }
+                '=' | '+' => {
+                    self.octave = (self.octave + 1).min(8);
+                    return None;
+                }
+                '[' => {
+                    self.velocity = self.velocity.saturating_sub(10).max(1);
+                    return None;
+                }
+                ']' => {
+                    self.velocity = self.velocity.saturating_add(10).min(127);
+                    return None;
+                }
+                ' ' => {
+                    self.sustain_held = !self.sustain_held;
+                    return Some([0xB0, 64, if self.sustain_held { 127 } else { 0 }]);
+                }
+                _ => {}
+            }
+        }
+        let offset = Self::key_to_semitone_offset(key)?;
+        let note = ((self.octave as u16 + 1) * 12 + offset as u16).min(127) as u8;
+        if pressed {
+            Some([0x90, note, self.velocity.clamp(1, 127)])
+        } else {
+            Some([0x80, note, 0])
+        }
+    }
+}
+
+/// Sample-library articulation entry in an `ExpressionMap` (`MID-4`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArticulationSlot {
+    pub name: String,
+    pub keyswitch_note: Option<u8>,
+    pub cc_switch: Option<(u8, u8)>,
+    pub target_channel: Option<u8>,
+}
+
+/// Expression map translating musical articulation labels into keyswitches/CCs (`MID-4`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ExpressionMap {
+    pub instrument_name: String,
+    pub slots: Vec<ArticulationSlot>,
+}
+
+impl ExpressionMap {
+    pub fn orchestral_default() -> Self {
+        Self {
+            instrument_name: "Orchestral Strings".to_string(),
+            slots: vec![
+                ArticulationSlot {
+                    name: "Legato".to_string(),
+                    keyswitch_note: Some(24),
+                    cc_switch: Some((32, 1)),
+                    target_channel: Some(0),
+                },
+                ArticulationSlot {
+                    name: "Staccato".to_string(),
+                    keyswitch_note: Some(25),
+                    cc_switch: Some((32, 2)),
+                    target_channel: Some(1),
+                },
+                ArticulationSlot {
+                    name: "Pizzicato".to_string(),
+                    keyswitch_note: Some(26),
+                    cc_switch: Some((32, 3)),
+                    target_channel: Some(2),
+                },
+                ArticulationSlot {
+                    name: "Tremolo".to_string(),
+                    keyswitch_note: Some(27),
+                    cc_switch: Some((32, 4)),
+                    target_channel: Some(3),
+                },
+            ],
+        }
+    }
+
+    pub fn resolve_articulation(&self, name: &str) -> Vec<[u8; 3]> {
+        let Some(slot) = self
+            .slots
+            .iter()
+            .find(|s| s.name.eq_ignore_ascii_case(name))
+        else {
+            return Vec::new();
+        };
+        let ch = slot.target_channel.unwrap_or(0) & 0x0F;
+        let mut msgs = Vec::new();
+        if let Some((cc, val)) = slot.cc_switch {
+            msgs.push([0xB0 | ch, cc & 0x7F, val & 0x7F]);
+        }
+        if let Some(ks) = slot.keyswitch_note {
+            msgs.push([0x90 | ch, ks & 0x7F, 100]);
+        }
+        msgs
+    }
+}
+
 /// Hardware control surface kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ControlSurfaceKind {
@@ -590,6 +850,7 @@ pub enum ControlSurfaceKind {
     AbletonPush2,
     AbletonPush3,
     PresonusFaderPort,
+    MackieMcu,
 }
 
 /// Central router managing connected hardware control surfaces.
@@ -598,6 +859,7 @@ pub struct ControlSurfaceManager {
     pub launchpad: Option<LaunchpadProProfile>,
     pub push: Option<AbletonPushProfile>,
     pub faderport: Option<PresonusFaderPortProfile>,
+    pub mackie_mcu: Option<MackieMcuProfile>,
 }
 
 impl ControlSurfaceManager {
@@ -620,6 +882,9 @@ impl ControlSurfaceManager {
             ControlSurfaceKind::PresonusFaderPort => {
                 self.faderport = Some(PresonusFaderPortProfile::new());
             }
+            ControlSurfaceKind::MackieMcu => {
+                self.mackie_mcu = Some(MackieMcuProfile::new());
+            }
         }
     }
 
@@ -631,6 +896,7 @@ impl ControlSurfaceManager {
                 self.push.as_mut()?.handle_midi_in(bytes)
             }
             ControlSurfaceKind::PresonusFaderPort => self.faderport.as_mut()?.handle_midi_in(bytes),
+            ControlSurfaceKind::MackieMcu => self.mackie_mcu.as_mut()?.handle_midi_in(bytes),
         }
     }
 
@@ -640,6 +906,11 @@ impl ControlSurfaceManager {
         if let Some(ref mut fp) = self.faderport {
             if fp.selected_channel == track {
                 packets.push(fp.set_motorized_fader(volume));
+            }
+        }
+        if let Some(ref mut mcu) = self.mackie_mcu {
+            if let Some(pkt) = mcu.set_fader_packet(track, volume) {
+                packets.push(pkt);
             }
         }
         if let Some(ref mut push) = self.push {
@@ -753,5 +1024,32 @@ mod tests {
         let pkts = manager.sync_track_volume(0, 0.9);
         assert_eq!(pkts.len(), 1);
         assert_eq!(pkts[0].raw_bytes[0], 0xE0);
+    }
+
+    #[test]
+    fn test_mackie_mcu_musical_typing_and_expression_map() {
+        let mut mgr = ControlSurfaceManager::new();
+        mgr.connect_surface(ControlSurfaceKind::MackieMcu);
+        let mute_act = mgr.handle_midi(ControlSurfaceKind::MackieMcu, &[0x90, 0x12, 127]);
+        assert_eq!(
+            mute_act,
+            Some(SurfaceAction::SetTrackMute {
+                track_index: 2,
+                muted: true
+            })
+        );
+        let pkts = mgr.sync_track_volume(1, 0.5);
+        assert_eq!(pkts.len(), 1);
+        assert_eq!(pkts[0].raw_bytes[0], 0xE1);
+
+        let mut kb = MusicalTypingKeyboard::default();
+        assert_eq!(kb.handle_key_event('z', true), Some([0x90, 60, 100]));
+        kb.handle_key_event('=', true);
+        assert_eq!(kb.handle_key_event('z', true), Some([0x90, 72, 100]));
+        assert_eq!(kb.handle_key_event('z', false), Some([0x80, 72, 0]));
+
+        let expr = ExpressionMap::orchestral_default();
+        let msgs = expr.resolve_articulation("Pizzicato");
+        assert_eq!(msgs, vec![[0xB2, 32, 3], [0x92, 26, 100]]);
     }
 }

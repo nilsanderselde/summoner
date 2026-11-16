@@ -114,9 +114,9 @@ pub const CAPABILITIES: &[Capability] = &[
     cap(
         "link.ableton",
         "Ableton Link network sync",
-        Modelled,
-        "MID-7",
+        Real,
         "",
+        "UDP Link peer discovery, Ping/Pong clock offset, and timeline sync",
     ),
     cap(
         "midi.io",

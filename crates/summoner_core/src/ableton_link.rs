@@ -115,6 +115,178 @@ pub enum LinkPacket {
     },
 }
 
+const LINK_WIRE_MAGIC: &[u8; 5] = b"SMLK\x01";
+
+impl LinkPacket {
+    /// Encode packet to compact little-endian UDP datagram bytes (`MID-7`).
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(64);
+        out.extend_from_slice(LINK_WIRE_MAGIC);
+        match self {
+            Self::Ping {
+                peer_id,
+                send_time_micros,
+            } => {
+                out.push(1);
+                out.extend_from_slice(&peer_id.to_le_bytes());
+                out.extend_from_slice(&send_time_micros.to_le_bytes());
+            }
+            Self::Pong {
+                peer_id,
+                origin_send_time_micros,
+                receive_time_micros,
+                reply_send_time_micros,
+            } => {
+                out.push(2);
+                out.extend_from_slice(&peer_id.to_le_bytes());
+                out.extend_from_slice(&origin_send_time_micros.to_le_bytes());
+                out.extend_from_slice(&receive_time_micros.to_le_bytes());
+                out.extend_from_slice(&reply_send_time_micros.to_le_bytes());
+            }
+            Self::SyncState {
+                peer_id,
+                session_id,
+                timeline,
+                is_playing,
+                start_stop_time_micros,
+            } => {
+                out.push(3);
+                out.extend_from_slice(&peer_id.to_le_bytes());
+                out.extend_from_slice(&session_id.to_le_bytes());
+                out.extend_from_slice(&timeline.time_micros.to_le_bytes());
+                out.extend_from_slice(&timeline.beat.to_le_bytes());
+                out.extend_from_slice(&timeline.bpm.to_le_bytes());
+                out.push(if *is_playing { 1 } else { 0 });
+                out.extend_from_slice(&start_stop_time_micros.to_le_bytes());
+            }
+            Self::StartStop {
+                peer_id,
+                is_playing,
+                action_time_micros,
+            } => {
+                out.push(4);
+                out.extend_from_slice(&peer_id.to_le_bytes());
+                out.push(if *is_playing { 1 } else { 0 });
+                out.extend_from_slice(&action_time_micros.to_le_bytes());
+            }
+        }
+        out
+    }
+
+    /// Decode a UDP datagram packet previously encoded with [`Self::to_bytes`].
+    pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        if bytes.len() < 6 || &bytes[..5] != LINK_WIRE_MAGIC {
+            return None;
+        }
+        let read_u64 = |off: usize| -> Option<u64> {
+            let slice: [u8; 8] = bytes.get(off..off + 8)?.try_into().ok()?;
+            Some(u64::from_le_bytes(slice))
+        };
+        let read_f64 = |off: usize| -> Option<f64> {
+            let slice: [u8; 8] = bytes.get(off..off + 8)?.try_into().ok()?;
+            Some(f64::from_le_bytes(slice))
+        };
+        match bytes[5] {
+            1 if bytes.len() >= 22 => Some(Self::Ping {
+                peer_id: read_u64(6)?,
+                send_time_micros: read_u64(14)?,
+            }),
+            2 if bytes.len() >= 38 => Some(Self::Pong {
+                peer_id: read_u64(6)?,
+                origin_send_time_micros: read_u64(14)?,
+                receive_time_micros: read_u64(22)?,
+                reply_send_time_micros: read_u64(30)?,
+            }),
+            3 if bytes.len() >= 55 => Some(Self::SyncState {
+                peer_id: read_u64(6)?,
+                session_id: read_u64(14)?,
+                timeline: LinkTimeline {
+                    time_micros: read_u64(22)?,
+                    beat: read_f64(30)?,
+                    bpm: read_f64(38)?,
+                },
+                is_playing: *bytes.get(46)? != 0,
+                start_stop_time_micros: read_u64(47)?,
+            }),
+            4 if bytes.len() >= 23 => Some(Self::StartStop {
+                peer_id: read_u64(6)?,
+                is_playing: *bytes.get(14)? != 0,
+                action_time_micros: read_u64(15)?,
+            }),
+            _ => None,
+        }
+    }
+}
+
+/// Real non-blocking UDP peer endpoint wrapping `AbletonLinkEngine` (`MID-7`).
+pub struct LinkUdpPeer {
+    socket: std::net::UdpSocket,
+    pub engine: AbletonLinkEngine,
+}
+
+impl LinkUdpPeer {
+    /// Bind a Link peer on `0.0.0.0:<port>` (or pass `0` for an ephemeral port).
+    pub fn bind(port: u16, initial_bpm: f64, quantum: f64) -> std::io::Result<Self> {
+        Self::bind_addr(("0.0.0.0", port), initial_bpm, quantum)
+    }
+
+    /// Bind a Link peer on an explicit socket address (e.g. `127.0.0.1:0` for loopback).
+    pub fn bind_addr<A: std::net::ToSocketAddrs>(
+        addr: A,
+        initial_bpm: f64,
+        quantum: f64,
+    ) -> std::io::Result<Self> {
+        let socket = std::net::UdpSocket::bind(addr)?;
+        socket.set_nonblocking(true)?;
+        Ok(Self {
+            socket,
+            engine: AbletonLinkEngine::new(initial_bpm, quantum),
+        })
+    }
+
+    pub fn local_addr(&self) -> std::io::Result<std::net::SocketAddr> {
+        self.socket.local_addr()
+    }
+
+    pub fn send_packet(
+        &self,
+        pkt: &LinkPacket,
+        target: std::net::SocketAddr,
+    ) -> std::io::Result<usize> {
+        let bytes = pkt.to_bytes();
+        self.socket.send_to(&bytes, target)
+    }
+
+    pub fn broadcast_sync(&self, target: std::net::SocketAddr) -> std::io::Result<usize> {
+        let pkt = self.engine.create_sync_packet();
+        self.send_packet(&pkt, target)
+    }
+
+    pub fn send_ping(&self, target: std::net::SocketAddr) -> std::io::Result<usize> {
+        let pkt = LinkPacket::Ping {
+            peer_id: self.engine.peer_id(),
+            send_time_micros: self.engine.current_time_micros(),
+        };
+        self.send_packet(&pkt, target)
+    }
+
+    /// Poll non-blocking UDP packets, updating `engine` and replying `Pong` to any `Ping`.
+    pub fn poll_network(&self) -> usize {
+        let mut buf = [0u8; 512];
+        let mut count = 0usize;
+        while let Ok((amt, src)) = self.socket.recv_from(&mut buf) {
+            if let Some(pkt) = LinkPacket::from_bytes(&buf[..amt]) {
+                let now = self.engine.current_time_micros();
+                if let Some(reply) = self.engine.handle_packet(pkt, now) {
+                    let _ = self.send_packet(&reply, src);
+                }
+                count += 1;
+            }
+        }
+        count
+    }
+}
+
 /// Link audio synchronization result returned on every audio block render.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LinkAudioSyncResult {
@@ -452,5 +624,28 @@ mod tests {
         // Engine 2 should now match Engine 1's tempo and playing state
         assert!(engine2.is_playing());
         assert!((engine2.tempo() - 124.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_link_udp_peer_real_socket_ping_pong_and_tempo_sync() {
+        let peer1 = LinkUdpPeer::bind_addr("127.0.0.1:0", 128.0, 4.0).unwrap();
+        let peer2 = LinkUdpPeer::bind_addr("127.0.0.1:0", 110.0, 4.0).unwrap();
+        let addr1 = peer1.local_addr().unwrap();
+        let addr2 = peer2.local_addr().unwrap();
+
+        peer1.send_ping(addr2).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        assert!(peer2.poll_network() >= 1);
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        assert!(peer1.poll_network() >= 1);
+        assert_eq!(peer1.engine.query_audio_block_sync().num_peers, 1);
+
+        peer1.engine.set_playing(true);
+        peer1.broadcast_sync(addr2).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        assert!(peer2.poll_network() >= 1);
+        assert!(peer2.engine.is_playing());
+        assert!((peer2.engine.tempo() - 128.0).abs() < 1e-4);
+        assert!(addr1.port() > 0);
     }
 }

@@ -62,6 +62,24 @@ impl MusicalScaleType {
         let pc = (pitch as isize - root_note as isize).rem_euclid(12) as u8;
         self.intervals().contains(&pc)
     }
+
+    /// Resolve a `MusicalScaleType` from a scale name stored on `TransportConfig` / `TrackConfig`.
+    pub fn from_scale_name(name: &str) -> Self {
+        match name.trim().to_ascii_lowercase().as_str() {
+            "minor" | "naturalminor" | "natural minor" | "aeolian" => Self::NaturalMinor,
+            "harmonicminor" | "harmonic minor" => Self::HarmonicMinor,
+            "melodicminor" | "melodic minor" => Self::MelodicMinor,
+            "dorian" => Self::Dorian,
+            "phrygian" => Self::Phrygian,
+            "lydian" => Self::Lydian,
+            "mixolydian" => Self::Mixolydian,
+            "pentatonic" | "pentatonicmajor" | "pentatonic major" => Self::PentatonicMajor,
+            "pentatonicminor" | "pentatonic minor" => Self::PentatonicMinor,
+            "blues" => Self::Blues,
+            "chromatic" => Self::Chromatic,
+            _ => Self::Major,
+        }
+    }
 }
 
 /// One-click chord stamp presets (Task D2).
@@ -203,6 +221,20 @@ impl Default for PianoRollState {
             humanize_gate_jitter: 0.05,
             humanize_velocity_jitter: 0.1,
         }
+    }
+}
+
+impl PianoRollState {
+    /// Synchronize active scale highlight from project transport key points at `beat` (`MID-3`).
+    pub fn sync_scale_from_transport(
+        &mut self,
+        transport: &summoner_project::schema::TransportConfig,
+        beat: f64,
+    ) {
+        let (root, scale_name) = transport.active_key_at_beat(beat);
+        self.root_note = root;
+        self.scale_type = scale_name.to_string();
+        self.musical_scale = MusicalScaleType::from_scale_name(scale_name);
     }
 }
 
@@ -2038,5 +2070,22 @@ mod tests {
         assert!(sequence.steps[2].active);
         assert_eq!(sequence.steps[2].note, 60.0);
         assert_eq!(sequence.steps[2].gate, 1.0);
+    }
+
+    #[test]
+    fn test_piano_roll_scale_sync_from_transport() {
+        let mut transport = summoner_project::schema::TransportConfig::default();
+        transport
+            .key_points
+            .push(summoner_project::schema::KeyPointConfig {
+                beat: 0.0,
+                root_note: 2,
+                scale_type: "Dorian".to_string(),
+            });
+        let mut state = PianoRollState::default();
+        state.sync_scale_from_transport(&transport, 4.0);
+        assert_eq!(state.root_note, 2);
+        assert_eq!(state.scale_type, "Dorian");
+        assert_eq!(state.musical_scale, MusicalScaleType::Dorian);
     }
 }
