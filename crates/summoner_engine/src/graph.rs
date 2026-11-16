@@ -188,10 +188,12 @@ impl NodeFactory {
                 *params.get("cutoff").unwrap_or(&1000.0),
                 *params.get("res").unwrap_or(&0.0),
             )))),
-            "FilterSVF" => Some(Box::new(ProcessorNodeAdapter::new(FilterSVF::new(
-                *params.get("cutoff").unwrap_or(&1000.0),
-                *params.get("res").unwrap_or(&0.0),
-            )))),
+            "FilterSVF" | "StateVariableFilterNode" => {
+                Some(Box::new(ProcessorNodeAdapter::new(FilterSVF::new(
+                    *params.get("cutoff").unwrap_or(&1000.0),
+                    *params.get("res").unwrap_or(&0.0),
+                ))))
+            }
             "FilterComb" => Some(Box::new(ProcessorNodeAdapter::new(FilterComb::new(
                 *params.get("freq").unwrap_or(&440.0),
                 *params.get("feedback").unwrap_or(&0.5),
@@ -207,14 +209,20 @@ impl NodeFactory {
             "VCA" => Some(Box::new(ProcessorNodeAdapter::new(VCA::new(
                 *params.get("gain").unwrap_or(&1.0),
             )))),
-            "BiquadFilter" => Some(Box::new(ProcessorNodeAdapter::new(FilterBiquad::new(
-                summoner_dsp::biquad::FilterType::Lowpass,
-                *params.get("cutoff").unwrap_or(&1000.0),
-            )))),
+            "BiquadFilter" | "FilterBiquad" => {
+                Some(Box::new(ProcessorNodeAdapter::new(FilterBiquad::new(
+                    summoner_dsp::biquad::FilterType::Lowpass,
+                    *params.get("cutoff").unwrap_or(&1000.0),
+                ))))
+            }
             "CompressorNode" => Some(Box::new(ProcessorNodeAdapter::new(CompressorNode::new()))),
             "LimiterNode" => Some(Box::new(ProcessorNodeAdapter::new(LimiterNode::new(64)))),
-            "EffectChorus" => Some(Box::new(ProcessorNodeAdapter::new(EffectChorus::new()))),
-            "EffectFlanger" => Some(Box::new(ProcessorNodeAdapter::new(EffectFlanger::new()))),
+            "EffectChorus" | "BbdChorusNode" => {
+                Some(Box::new(ProcessorNodeAdapter::new(EffectChorus::new())))
+            }
+            "EffectFlanger" | "ThroughZeroFlangerNode" => {
+                Some(Box::new(ProcessorNodeAdapter::new(EffectFlanger::new())))
+            }
             "EffectPhaser" => Some(Box::new(ProcessorNodeAdapter::new(EffectPhaser::new()))),
             "RingModulator" => Some(Box::new(ProcessorNodeAdapter::new(RingModulator::new()))),
             "FrequencyShifter" => {
@@ -400,6 +408,7 @@ impl NodeFactory {
                     std::path::Path::new(".")
                 };
                 summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
+                bank.ensure_default_fallback(sample_rate);
                 Some(Box::new(ProcessorNodeAdapter::new(
                     summoner_dsp::SamplerDevice::new(bank),
                 )))
@@ -412,6 +421,33 @@ impl NodeFactory {
                     std::path::Path::new(".")
                 };
                 summoner_dsp::sampler::load_bank_buffers(&mut bank, base_dir);
+                bank.ensure_default_fallback(sample_rate);
+                Some(Box::new(ProcessorNodeAdapter::new(
+                    summoner_dsp::sampler::MultiSamplerNode::new(bank),
+                )))
+            }
+            "Sf2SoundFont" | "SoundFontNode" | "SfzSampler" => {
+                let mut bank = if let Some(ref ps) = config.plugin_state {
+                    let path = std::path::Path::new(&ps.plugin_path);
+                    if !ps.plugin_path.is_empty() && path.exists() {
+                        if let Ok(bytes) = std::fs::read(path) {
+                            if let Ok(sf2) = summoner_dsp::Sf2SoundFont::parse(&bytes) {
+                                summoner_dsp::sampler::MultiSampleBank::from_sf2(&sf2, sample_rate)
+                            } else {
+                                summoner_dsp::sampler::MultiSampleBank::new_default_gm_bank(
+                                    sample_rate,
+                                )
+                            }
+                        } else {
+                            summoner_dsp::sampler::MultiSampleBank::new_default_gm_bank(sample_rate)
+                        }
+                    } else {
+                        summoner_dsp::sampler::MultiSampleBank::new_default_gm_bank(sample_rate)
+                    }
+                } else {
+                    summoner_dsp::sampler::MultiSampleBank::new_default_gm_bank(sample_rate)
+                };
+                bank.ensure_default_fallback(sample_rate);
                 Some(Box::new(ProcessorNodeAdapter::new(
                     summoner_dsp::sampler::MultiSamplerNode::new(bank),
                 )))
@@ -452,7 +488,7 @@ impl NodeFactory {
                 Some(Box::new(node))
             }
 
-            "TonewheelOrganNode" | "TonewheelOrgan" => {
+            "TonewheelOrganNode" | "TonewheelOrgan" | "TonewheelOrganModel" => {
                 let mut organ = summoner_dsp::TonewheelOrgan::new(sample_rate);
                 if let Some(&gain) = params.get("gain") {
                     organ.master_gain = gain;
@@ -465,7 +501,7 @@ impl NodeFactory {
                 }
                 Some(Box::new(ProcessorNodeAdapter::new(organ)))
             }
-            "RotarySpeakerNode" | "RotarySpeaker" => {
+            "RotarySpeakerNode" | "RotarySpeaker" | "RotarySpeakerModel" => {
                 let mut speaker = summoner_dsp::RotarySpeaker::new(sample_rate);
                 if let Some(&drive) = params.get("drive") {
                     speaker.drive_saturation_db = drive;
@@ -478,7 +514,7 @@ impl NodeFactory {
                 }
                 Some(Box::new(ProcessorNodeAdapter::new(speaker)))
             }
-            "ElectricPianoNode" | "ElectricPiano" => {
+            "ElectricPianoNode" | "ElectricPiano" | "ElectricPianoModel" => {
                 let mut ep = summoner_dsp::ElectricPiano::new(sample_rate);
                 if let Some(&gain) = params.get("gain") {
                     ep.master_gain = gain;
@@ -500,7 +536,7 @@ impl NodeFactory {
                 }
                 Some(Box::new(ProcessorNodeAdapter::new(ep)))
             }
-            "SitarNode" | "Sitar" => {
+            "SitarNode" | "Sitar" | "SitarModel" => {
                 let mut sitar = summoner_dsp::Sitar::new(sample_rate);
                 if let Some(&gain) = params.get("gain") {
                     sitar.master_gain = gain;
@@ -516,17 +552,19 @@ impl NodeFactory {
                 }
                 Some(Box::new(ProcessorNodeAdapter::new(sitar)))
             }
-            "ConcertGrandPiano" | "ConcertGrandPianoNode" | "GrandPiano" => Some(Box::new(
-                summoner_dsp::ConcertGrandPianoNode::new(sample_rate),
-            )),
-            "PipeOrgan" | "PipeOrganNode" => {
+            "ConcertGrandPiano" | "ConcertGrandPianoNode" | "GrandPiano" | "GrandPianoModel" => {
+                Some(Box::new(summoner_dsp::ConcertGrandPianoNode::new(sample_rate)))
+            }
+            "PipeOrgan" | "PipeOrganNode" | "PipeOrganModel" => {
                 Some(Box::new(summoner_dsp::PipeOrganNode::new(sample_rate)))
             }
-            "Clavinet" | "ClavinetNode" => Some(Box::new(summoner_dsp::Clavinet::new(sample_rate))),
-            "BowedString" | "BowedStringNode" => {
+            "Clavinet" | "ClavinetNode" | "ClavinetModel" => {
+                Some(Box::new(summoner_dsp::Clavinet::new(sample_rate)))
+            }
+            "BowedString" | "BowedStringNode" | "BowedStringModel" => {
                 Some(Box::new(summoner_dsp::BowedStringNode::new(sample_rate)))
             }
-            "Shakuhachi" | "ShakuhachiNode" => {
+            "Shakuhachi" | "ShakuhachiNode" | "ShakuhachiModel" => {
                 Some(Box::new(summoner_dsp::Shakuhachi::new(sample_rate)))
             }
             "Koto" | "KotoNode" => Some(Box::new(summoner_dsp::Koto::new(sample_rate))),
@@ -542,13 +580,13 @@ impl NodeFactory {
             "VocalTract" | "VocalTractNode" => {
                 Some(Box::new(summoner_dsp::VocalTractNode::new(sample_rate)))
             }
-            "WaveguideBrass" | "WaveguideBrassNode" => {
+            "WaveguideBrass" | "WaveguideBrassNode" | "WaveguideBrassModel" => {
                 Some(Box::new(summoner_dsp::WaveguideBrassNode::new(sample_rate)))
             }
             "WaveguideMesh" | "WaveguideMeshNode" => {
                 Some(Box::new(summoner_dsp::WaveguideMeshNode::new(sample_rate)))
             }
-            "WoodwindJet" | "WoodwindJetNode" => {
+            "WoodwindJet" | "WoodwindJetNode" | "WoodwindJetModel" | "TurkishNeyModel" => {
                 Some(Box::new(summoner_dsp::WoodwindJetNode::new(sample_rate)))
             }
             "GlottalPulse" | "GlottalPulseNode" => {
@@ -566,9 +604,11 @@ impl NodeFactory {
             "CommutedPluckedString" | "CommutedPluckedStringNode" => Some(Box::new(
                 summoner_dsp::CommutedPluckedStringNode::new(sample_rate),
             )),
-            "StruckIdiophoneResonator" | "StruckIdiophoneResonatorNode" => Some(Box::new(
-                summoner_dsp::idiophone_resonator::StruckIdiophoneResonatorNode::new(sample_rate),
-            )),
+            "StruckIdiophoneResonator" | "StruckIdiophoneResonatorNode" | "SteelpanModel" | "GamelanGender" => {
+                Some(Box::new(
+                    summoner_dsp::idiophone_resonator::StruckIdiophoneResonatorNode::new(sample_rate),
+                ))
+            }
             "ModalSynthesis" | "ModalSynthesisNode" => {
                 Some(Box::new(summoner_dsp::ModalSynthesisNode::new(sample_rate)))
             }
@@ -656,6 +696,15 @@ impl NodeFactory {
             "WsolaTimeStretcher" | "ElasticWarpEngine" | "RealtimeWarpNode" => {
                 Some(Box::new(summoner_dsp::RealtimeWarpNode::new(sample_rate)))
             }
+            "MimicSlicer" | "MimicSlicerNode" | "LoopSlicer" | "LoopSlicerNode" | "SampleSlicerNode" => {
+                Some(Box::new(summoner_dsp::MimicSlicerNode::new(sample_rate)))
+            }
+            "ChiptuneSynth" | "ChiptuneTracker" | "ChiptuneTrackerNode" => {
+                Some(Box::new(summoner_dsp::ChiptuneTrackerNode::new(sample_rate)))
+            }
+            "Vocoder" | "VocoderNode" | "VocoderMatrix" | "VocoderMatrixNode" => {
+                Some(Box::new(summoner_dsp::VocoderNode::new(sample_rate)))
+            }
             _ => None,
         }
     }
@@ -730,6 +779,27 @@ fn is_mixer_automation_param(param_id: &str) -> bool {
         || param_id.eq_ignore_ascii_case("track.send")
 }
 
+fn is_track_scale_automation_param(param_id: &str) -> bool {
+    param_id.eq_ignore_ascii_case("track.root_note") || param_id.eq_ignore_ascii_case("track.scale")
+}
+
+fn scale_name_from_automation_value(val: f32) -> &'static str {
+    match val.round() as i32 {
+        0 => "Major",
+        1 => "Minor",
+        2 => "Dorian",
+        3 => "Phrygian",
+        4 => "Lydian",
+        5 => "Mixolydian",
+        6 => "HarmonicMinor",
+        7 => "MelodicMinor",
+        8 => "PentatonicMajor",
+        9 => "PentatonicMinor",
+        10 => "WholeTone",
+        _ => "Chromatic",
+    }
+}
+
 #[inline]
 fn eval_sorted_events_at_frame(
     events: &[summoner_project::schema::AutomationEventConfig],
@@ -769,6 +839,22 @@ fn build_schedule_with_transport(
         frame: 0,
         event: NodeEvent::NoteOff { note: 0 },
     }];
+    let mut track_root_lane: Option<Vec<summoner_project::schema::AutomationEventConfig>> = None;
+    let mut track_scale_lane: Option<Vec<summoner_project::schema::AutomationEventConfig>> = None;
+    if tc.automation_mode != summoner_project::schema::AutomationMode::Off {
+        for lane in automation_lanes.iter().filter(|l| l.track_id == tc.id) {
+            if lane.param_id.eq_ignore_ascii_case("track.root_note") && !lane.events.is_empty() {
+                let mut ev = lane.events.clone();
+                ev.sort_by_key(|e| e.frame);
+                track_root_lane = Some(ev);
+            } else if lane.param_id.eq_ignore_ascii_case("track.scale") && !lane.events.is_empty()
+            {
+                let mut ev = lane.events.clone();
+                ev.sort_by_key(|e| e.frame);
+                track_scale_lane = Some(ev);
+            }
+        }
+    }
     let mut has_notes = false;
     for seq in tc.sequence.iter().chain(tc.clips.iter()) {
         let stretch = if seq.time_stretch > 0.0 {
@@ -830,16 +916,28 @@ fn build_schedule_with_transport(
             let vel = (actual_step.velocity * seq.gain as f32 * fade_mult).clamp(0.0, 1.0);
             for r in 0..ratchet_count {
                 let beat = base_beat + r as f64 * sub_step_beats;
+                let on = (beat * frames_per_beat).round().max(0.0) as u64;
                 let mut pitched = raw_base_note;
                 if tc.follow_chord_track {
                     pitched += transport.active_chord_offset_at_beat(beat) as f64;
                 }
-                if tc.scale_lock {
-                    let (key_root, scale_name) = if !transport.key_points.is_empty() {
+                let has_scale_auto = track_root_lane.is_some() || track_scale_lane.is_some();
+                if tc.scale_lock || has_scale_auto {
+                    let (mut key_root, mut scale_name) = if !transport.key_points.is_empty() {
                         transport.active_key_at_beat(beat)
                     } else {
                         (tc.root_note, tc.scale_type.as_str())
                     };
+                    if let Some(ref evs) = track_root_lane {
+                        if let Some(val) = eval_sorted_events_at_frame(evs, on) {
+                            key_root = (val.round() as i32).rem_euclid(12) as u8;
+                        }
+                    }
+                    if let Some(ref evs) = track_scale_lane {
+                        if let Some(val) = eval_sorted_events_at_frame(evs, on) {
+                            scale_name = scale_name_from_automation_value(val);
+                        }
+                    }
                     let scale = summoner_harmony::Scale::get_scale_by_name(scale_name);
                     let tuning = summoner_harmony::EdoTuning::new(
                         tc.tuning_edo.unwrap_or(12).min(u16::MAX as u32) as u16,
@@ -849,7 +947,6 @@ fn build_schedule_with_transport(
                     pitched = scale.snap_note(pitched, key_root as u16, &tuning);
                 }
                 let note = pitched.round().clamp(0.0, 127.0) as u8;
-                let on = (beat * frames_per_beat).round().max(0.0) as u64;
                 let off = ((beat + (actual_step.gate as f64).clamp(0.01, 1.0) * sub_step_beats)
                     * frames_per_beat)
                     .round()
@@ -872,10 +969,11 @@ fn build_schedule_with_transport(
         events.clear();
     }
     if tc.automation_mode != summoner_project::schema::AutomationMode::Off {
-        for lane in automation_lanes
-            .iter()
-            .filter(|l| l.track_id == tc.id && !is_mixer_automation_param(&l.param_id))
-        {
+        for lane in automation_lanes.iter().filter(|l| {
+            l.track_id == tc.id
+                && !is_mixer_automation_param(&l.param_id)
+                && !is_track_scale_automation_param(&l.param_id)
+        }) {
             let param_id = match lane.param_id.to_lowercase().as_str() {
                 "0" | "freq" | "frequency" | "cutoff" | "gain" | "drive" | "rate" | "pitch" => 0,
                 "1" | "res" | "resonance" | "pw" | "pulse_width" | "depth" | "mix" | "feedback" => {
@@ -3880,5 +3978,174 @@ mod tests {
                 .filter(|&(_, v)| v.abs() > 1e-4)
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn test_node_factory_sf2_mimic_chiptune_vocoder_and_model_aliases() {
+        let kinds = [
+            "Sf2SoundFont",
+            "SoundFontNode",
+            "SfzSampler",
+            "MimicSlicer",
+            "MimicSlicerNode",
+            "LoopSlicer",
+            "LoopSlicerNode",
+            "SampleSlicerNode",
+            "ChiptuneSynth",
+            "ChiptuneTracker",
+            "ChiptuneTrackerNode",
+            "Vocoder",
+            "VocoderNode",
+            "VocoderMatrix",
+            "VocoderMatrixNode",
+            "GrandPianoModel",
+            "ElectricPianoModel",
+            "TonewheelOrganModel",
+            "RotarySpeakerModel",
+            "SitarModel",
+            "PipeOrganModel",
+            "ClavinetModel",
+            "BowedStringModel",
+            "ShakuhachiModel",
+            "WaveguideBrassModel",
+            "WoodwindJetModel",
+            "TurkishNeyModel",
+            "SteelpanModel",
+            "GamelanGender",
+            "BbdChorusNode",
+            "ThroughZeroFlangerNode",
+            "FilterBiquad",
+            "StateVariableFilterNode",
+        ];
+
+        for kind in kinds {
+            let cfg = summoner_project::schema::NodeConfig {
+                kind: kind.to_string(),
+                params: std::collections::HashMap::new(),
+                plugin_state: None,
+            };
+            let node = NodeFactory::create_node_with_rate(&cfg, 44100);
+            assert!(node.is_some(), "NodeFactory should instantiate '{}'", kind);
+        }
+
+        // Verify audio synthesis on NoteOn for the core new instruments
+        let ctx = summoner_core::node::ProcessContext::new(44100, 120.0, 0);
+        for playable in ["Sf2SoundFont", "MimicSlicer", "ChiptuneTracker", "Vocoder"] {
+            let cfg = summoner_project::schema::NodeConfig {
+                kind: playable.to_string(),
+                params: std::collections::HashMap::new(),
+                plugin_state: None,
+            };
+            let mut node = NodeFactory::create_node_with_rate(&cfg, 44100).unwrap();
+            node.handle_event(&NodeEvent::NoteOn { note: 38, velocity: 1.0 }, &ctx);
+            let mut in_mod = vec![0.35f32; 512];
+            for (i, s) in in_mod.iter_mut().enumerate() {
+                *s = (2.0 * std::f32::consts::PI * 300.0 * i as f32 / 44100.0).sin() * 0.5;
+            }
+            let mut out_l = vec![0.0f32; 512];
+            let mut out_r = vec![0.0f32; 512];
+            let ins = [in_mod.as_slice()];
+            let mut outs = [out_l.as_mut_slice(), out_r.as_mut_slice()];
+            node.process(&ins, &mut outs, &ctx);
+            let energy: f32 = out_l.iter().map(|s| s * s).sum();
+            assert!(energy > 1e-5, "'{}' should emit audio after NoteOn", playable);
+        }
+    }
+
+    #[test]
+    fn test_per_track_dynamic_scale_and_root_automation() {
+        use summoner_project::schema::{
+            AutomationEventConfig, AutomationLaneConfig, AutomationMode, SequenceConfig,
+            TrackConfig, TrackerStepConfig, TransportConfig,
+        };
+
+        let sample_rate = 44100u32;
+        let bpm = 120.0f64;
+        // 1 beat at 120 BPM = 0.5s = 22050 frames
+        let beat4_frame = sample_rate as u64 * 2;
+        let transport = TransportConfig {
+            sample_rate,
+            bpm,
+            ..Default::default()
+        };
+
+        // Two steps of D#4 (63): beat 0 and beat 4.
+        let make_step = |note: f64| TrackerStepConfig {
+            active: true,
+            note,
+            velocity: 0.9,
+            gate: 0.5,
+            ..Default::default()
+        };
+        let tc = TrackConfig {
+            id: 42,
+            name: "Dynamic Scale Track".to_string(),
+            automation_mode: AutomationMode::Read,
+            scale_lock: true,
+            root_note: 0,
+            scale_type: "Major".to_string(),
+            sequence: Some(SequenceConfig {
+                start_beat: 0.0,
+                step_division: 4.0,
+                steps: vec![make_step(63.0), make_step(63.0)],
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        // Automate track.scale from 0 (Major -> D#4 snaps away from Eb4 to D4=62 or E4=64)
+        // at beat 0 to 1 (Minor -> D#4/Eb4 IS in C Minor = 63) before beat 4, and ensure zero
+        // spurious SetParam events are generated for track.scale/track.root_note.
+        let lanes = vec![
+            AutomationLaneConfig {
+                param_id: "track.root_note".to_string(),
+                track_id: 42,
+                events: vec![
+                    AutomationEventConfig {
+                        frame: 0,
+                        value: 0.0, // C
+                    },
+                    AutomationEventConfig {
+                        frame: beat4_frame,
+                        value: 0.0, // C
+                    },
+                ],
+            },
+            AutomationLaneConfig {
+                param_id: "track.scale".to_string(),
+                track_id: 42,
+                events: vec![
+                    AutomationEventConfig {
+                        frame: 0,
+                        value: 0.0, // Major
+                    },
+                    AutomationEventConfig {
+                        frame: beat4_frame,
+                        value: 1.0, // Minor
+                    },
+                ],
+            },
+        ];
+
+        let scheduled = build_schedule_with_transport(&tc, &lanes, &transport);
+        let note_ons: Vec<(u64, u8)> = scheduled
+            .iter()
+            .filter_map(|ev| match ev.event {
+                NodeEvent::NoteOn { note, .. } => Some((ev.frame, note)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(note_ons.len(), 2);
+        // Beat 0 in C Major: 63 (D#) is outside C Major -> snapped to 62 (D) or 64 (E)
+        assert_ne!(note_ons[0].1, 63);
+        // Beat 4 in C Minor: 63 (Eb) is in C Minor -> stays 63
+        assert_eq!(note_ons[1].1, 63);
+
+        // No SetParam events emitted for track.scale or track.root_note
+        let spurious_set_params = scheduled
+            .iter()
+            .filter(|ev| matches!(ev.event, NodeEvent::SetParam { .. }))
+            .count();
+        assert_eq!(spurious_set_params, 0);
     }
 }
