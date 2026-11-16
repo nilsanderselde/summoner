@@ -409,6 +409,7 @@ pub struct AudioRecorder {
     bpm: f64,
     punch: PunchSettings,
     loop_cfg: LoopRecordSettings,
+    latency_compensation_frames: u64,
     cmd_tx: Sender<DiskWriterCommand>,
     worker_running: Arc<AtomicBool>,
     worker_handle: Option<JoinHandle<()>>,
@@ -434,6 +435,7 @@ impl AudioRecorder {
             bpm,
             punch: PunchSettings::default(),
             loop_cfg: LoopRecordSettings::default(),
+            latency_compensation_frames: 0,
             cmd_tx,
             worker_running,
             worker_handle: Some(worker_handle),
@@ -501,6 +503,16 @@ impl AudioRecorder {
     /// Current recording state.
     pub fn state(&self) -> RecordState {
         self.state
+    }
+
+    /// Configure round-trip hardware latency compensation in sample frames (AIO-7).
+    pub fn set_latency_compensation_frames(&mut self, frames: u64) {
+        self.latency_compensation_frames = frames;
+    }
+
+    /// Return the configured round-trip hardware latency compensation in sample frames.
+    pub fn latency_compensation_frames(&self) -> u64 {
+        self.latency_compensation_frames
     }
 
     /// Start a recording session. Called from non-realtime thread.
@@ -635,8 +647,13 @@ impl AudioRecorder {
         thread::sleep(Duration::from_millis(60));
 
         if let Ok(mut lock) = self.completed_takes.lock() {
-            let res = lock.clone();
-            lock.clear();
+            let comp = crate::latency_probe::RecordingLatencyCompensation::new(
+                u32::try_from(self.latency_compensation_frames).unwrap_or(u32::MAX),
+            );
+            let res: Vec<RecordedTakeResult> = lock
+                .drain(..)
+                .map(|take| comp.compensate_take(&take, self.bpm))
+                .collect();
             res
         } else {
             Vec::new()
@@ -802,6 +819,49 @@ mod tests {
         assert_eq!(takes[0].total_frames, 1000);
         assert_eq!(takes[1].take_index, 2);
         assert_eq!(takes[1].total_frames, 500);
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_audio_recorder_latency_compensation_offset() {
+        use crate::latency_probe::{LatencyDetector, LatencyProbeGenerator};
+
+        let temp_dir =
+            std::env::temp_dir().join(format!("summoner_rec_rtl_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).expect("Failed to create temp dir");
+
+        let sample_rate = 48000u32;
+        let probe = LatencyProbeGenerator::generate_impulse(64, 256);
+        let synthetic_delay = 512usize;
+        let mut recorded_probe = vec![0.0f32; 1024];
+        for (i, &s) in probe.iter().enumerate() {
+            if synthetic_delay + i < recorded_probe.len() {
+                recorded_probe[synthetic_delay + i] = s;
+            }
+        }
+        let rtl = LatencyDetector::detect(&probe, &recorded_probe, sample_rate, 700)
+            .expect("RTL probe must detect delay");
+        let rtl_frames = rtl.samples.round() as u64;
+        assert_eq!(rtl_frames, 512);
+
+        let mut recorder = AudioRecorder::new(sample_rate, 120.0);
+        recorder.set_latency_compensation_frames(rtl_frames);
+        assert_eq!(recorder.latency_compensation_frames(), 512);
+
+        recorder.arm_track(1, AudioInputSource::Mono(0), &temp_dir, "rtl_vox");
+        // Start recording at timeline frame 24000 (beat 1.0 @ 120 BPM, 48kHz)
+        recorder.start_recording(24000, 0, None, None);
+        let block = vec![0.25f32; 512];
+        recorder.process_input_block(24000, &block, &block);
+
+        let takes = recorder.stop_recording();
+        assert_eq!(takes.len(), 1);
+        assert_eq!(takes[0].start_frame, 24000 - 512);
+        let frames_per_beat = (sample_rate as f64 * 60.0) / 120.0;
+        let expected_beat = 1.0 - (512.0 / frames_per_beat);
+        assert!((takes[0].start_beat - expected_beat).abs() < 1e-6);
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

@@ -825,6 +825,8 @@ pub struct TrackMeta {
     pub sidechain_audition: bool,
     pub sends: Vec<summoner_project::schema::TrackSendConfig>,
     pub legacy_send_level: f32,
+    pub hardware_input_channels: Option<(usize, usize)>,
+    pub hardware_output_channels: Option<(usize, usize)>,
 }
 
 pub struct GraphRunner {
@@ -877,6 +879,8 @@ impl GraphRunner {
                 sidechain_audition: tc.sidechain_audition,
                 sends: tc.sends.clone(),
                 legacy_send_level: tc.send_level,
+                hardware_input_channels: tc.hardware_input_channels,
+                hardware_output_channels: tc.hardware_output_channels,
             });
 
             if !tc.connections.is_empty() {
@@ -1099,19 +1103,22 @@ impl GraphRunner {
                     local_ctx.tuning_root_hz = root_hz;
                 }
 
-                // If track has input monitoring enabled, mix in live audio
+                // If track has input monitoring enabled, route selected hardware input channels into track_in_buffers
                 if track.input_monitoring {
                     if let Some(ins) = in_buffers {
-                        if let Some(in_l) = ins.first() {
-                            let len = block_size.min(in_l.len());
-                            for i in 0..len {
-                                self.scratch_l[i] += in_l[i];
+                        if !ins.is_empty() {
+                            let (ch_l, ch_r) = meta.hardware_input_channels.unwrap_or((0, 1));
+                            if let Some(in_l) = ins.get(ch_l) {
+                                let len = block_size.min(in_l.len());
+                                for i in 0..len {
+                                    self.track_in_buffers[track_idx][0][i] += in_l[i];
+                                }
                             }
-                        }
-                        if let Some(in_r) = ins.get(1).or_else(|| ins.first()) {
-                            let len = block_size.min(in_r.len());
-                            for i in 0..len {
-                                self.scratch_r[i] += in_r[i];
+                            if let Some(in_r) = ins.get(ch_r).or_else(|| ins.get(ch_l)) {
+                                let len = block_size.min(in_r.len());
+                                for i in 0..len {
+                                    self.track_in_buffers[track_idx][1][i] += in_r[i];
+                                }
                             }
                         }
                     }
@@ -1265,20 +1272,21 @@ impl GraphRunner {
                 }
 
                 if !routed_to_bus && meta.send_to_master {
-                    let num_out = out_buffers.len().min(2);
-                    if num_out == 2 {
+                    let (out_ch_l, out_ch_r) = meta.hardware_output_channels.unwrap_or((0, 1));
+                    let num_out = out_buffers.len();
+                    if out_ch_l < num_out && out_ch_r < num_out && out_ch_l != out_ch_r {
                         let scratch_r = if track.channels <= 1 {
                             &self.scratch_l[..block_size]
                         } else {
                             &self.scratch_r[..block_size]
                         };
                         for i in 0..block_size {
-                            out_buffers[0][i] += self.scratch_l[i] * left_gain;
-                            out_buffers[1][i] += scratch_r[i] * right_gain;
+                            out_buffers[out_ch_l][i] += self.scratch_l[i] * left_gain;
+                            out_buffers[out_ch_r][i] += scratch_r[i] * right_gain;
                         }
-                    } else if num_out == 1 {
+                    } else if out_ch_l < num_out {
                         for i in 0..block_size {
-                            out_buffers[0][i] += self.scratch_l[i] * effective_gain;
+                            out_buffers[out_ch_l][i] += self.scratch_l[i] * effective_gain;
                         }
                     }
                 }
@@ -1956,5 +1964,48 @@ mod tests {
         // Verify telemetry
         assert!(runner.telemetry.channels[0].peak > 0.0);
         assert!(runner.telemetry.momentary_lufs > -70.0);
+    }
+
+    #[test]
+    fn test_multichannel_io_routing_matrix() {
+        use summoner_project::schema::TrackConfig;
+        let mut project = create_default_project("Multichannel I/O Routing");
+        project.tracks.clear();
+
+        // Track 1: routes hardware inputs (2, 3) to hardware outputs (2, 3)
+        let t1 = TrackConfig {
+            id: 1,
+            name: "Ext Synth 3/4".to_string(),
+            channels: 2,
+            gain: 1.0,
+            input_monitoring: true,
+            send_to_master: true,
+            hardware_input_channels: Some((2, 3)),
+            hardware_output_channels: Some((2, 3)),
+            ..Default::default()
+        };
+        project.tracks.push(t1);
+
+        let mut runner = GraphRunner::new(&project);
+        let in0 = [0.0f32; 64];
+        let in1 = [0.0f32; 64];
+        let in2 = [0.4f32; 64];
+        let in3 = [-0.6f32; 64];
+        let ins: [&[f32]; 4] = [&in0, &in1, &in2, &in3];
+
+        let mut out0 = [0.0f32; 64];
+        let mut out1 = [0.0f32; 64];
+        let mut out2 = [0.0f32; 64];
+        let mut out3 = [0.0f32; 64];
+        let mut outs: [&mut [f32]; 4] = [&mut out0, &mut out1, &mut out2, &mut out3];
+
+        let ctx = summoner_core::node::ProcessContext::new(48000, 120.0, 0);
+        runner.process_block_with_input(64, &ctx, Some(&ins), &mut outs);
+
+        // Outputs 0/1 remain silent while outputs 2/3 carry inputs 2/3
+        assert!(out0.iter().all(|&s| s == 0.0));
+        assert!(out1.iter().all(|&s| s == 0.0));
+        assert!(out2.iter().all(|&s| (s - 0.4).abs() < 1e-6));
+        assert!(out3.iter().all(|&s| (s + 0.6).abs() < 1e-6));
     }
 }

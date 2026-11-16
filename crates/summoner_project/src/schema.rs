@@ -432,6 +432,10 @@ pub struct TrackConfig {
     pub solo_safe: bool,
     #[serde(default)]
     pub sidechain_audition: bool,
+    #[serde(default)]
+    pub hardware_input_channels: Option<(usize, usize)>,
+    #[serde(default)]
+    pub hardware_output_channels: Option<(usize, usize)>,
 }
 
 /// Auxiliary send routing configuration.
@@ -506,6 +510,8 @@ impl Default for TrackConfig {
             mute_group: None,
             solo_safe: false,
             sidechain_audition: false,
+            hardware_input_channels: None,
+            hardware_output_channels: None,
         }
     }
 }

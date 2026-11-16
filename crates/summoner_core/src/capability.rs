@@ -86,9 +86,9 @@ pub const CAPABILITIES: &[Capability] = &[
     cap(
         "audio.sample_rate_conversion",
         "Sample-rate conversion",
-        Modelled,
-        "AIO-6",
-        "No resampler dependency",
+        Real,
+        "",
+        "Blackman-Harris windowed-sinc polyphase resampler",
     ),
     cap(
         "ble_midi.backend",
