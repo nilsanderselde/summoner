@@ -978,26 +978,54 @@ fn decode_wav_stereo_at_rate(
     path: &std::path::Path,
     target_sample_rate: u32,
 ) -> Option<(Vec<f32>, Vec<f32>)> {
-    let mut reader = hound::WavReader::open(path).ok()?;
-    let spec = reader.spec();
-    let chs = spec.channels.max(1) as usize;
+    if let Ok(mut reader) = hound::WavReader::open(path) {
+        let spec = reader.spec();
+        let chs = spec.channels.max(1) as usize;
 
-    let interleaved: Vec<f32> = match spec.sample_format {
-        hound::SampleFormat::Float => reader.samples::<f32>().filter_map(|s| s.ok()).collect(),
-        hound::SampleFormat::Int => {
-            let max_val = (1i64 << (spec.bits_per_sample.clamp(1, 32) - 1)) as f32;
-            reader
-                .samples::<i32>()
-                .filter_map(|s| s.ok().map(|v| v as f32 / max_val))
-                .collect()
+        let interleaved: Vec<f32> = match spec.sample_format {
+            hound::SampleFormat::Float => reader.samples::<f32>().filter_map(|s| s.ok()).collect(),
+            hound::SampleFormat::Int => {
+                let max_val = (1i64 << (spec.bits_per_sample.clamp(1, 32) - 1)) as f32;
+                reader
+                    .samples::<i32>()
+                    .filter_map(|s| s.ok().map(|v| v as f32 / max_val))
+                    .collect()
+            }
+        };
+
+        let frames = interleaved.len() / chs;
+        if frames > 0 {
+            let mut samples_l = Vec::with_capacity(frames);
+            let mut samples_r = Vec::with_capacity(frames);
+            for f in 0..frames {
+                let l = interleaved[f * chs];
+                let r = if chs > 1 { interleaved[f * chs + 1] } else { l };
+                samples_l.push(l);
+                samples_r.push(r);
+            }
+
+            if spec.sample_rate > 0
+                && target_sample_rate > 0
+                && spec.sample_rate != target_sample_rate
+            {
+                return Some(summoner_core::resample::resample_stereo(
+                    &samples_l,
+                    &samples_r,
+                    spec.sample_rate,
+                    target_sample_rate,
+                ));
+            }
+
+            return Some((samples_l, samples_r));
         }
-    };
+    }
 
+    let (interleaved, src_sr, channels) = summoner_project::export::read_audio_file(path).ok()?;
+    let chs = channels.max(1) as usize;
     let frames = interleaved.len() / chs;
     if frames == 0 {
         return None;
     }
-
     let mut samples_l = Vec::with_capacity(frames);
     let mut samples_r = Vec::with_capacity(frames);
     for f in 0..frames {
@@ -1006,16 +1034,14 @@ fn decode_wav_stereo_at_rate(
         samples_l.push(l);
         samples_r.push(r);
     }
-
-    if spec.sample_rate > 0 && target_sample_rate > 0 && spec.sample_rate != target_sample_rate {
+    if src_sr > 0 && target_sample_rate > 0 && src_sr != target_sample_rate {
         return Some(summoner_core::resample::resample_stereo(
             &samples_l,
             &samples_r,
-            spec.sample_rate,
+            src_sr,
             target_sample_rate,
         ));
     }
-
     Some((samples_l, samples_r))
 }
 

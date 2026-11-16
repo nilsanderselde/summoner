@@ -40,6 +40,36 @@ impl std::str::FromStr for DitherMode {
     }
 }
 
+/// Container-agnostic audio metadata tags and embedded album artwork (IOX-1).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct AudioMetadataTags {
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub bpm: Option<f64>,
+    pub initial_key: Option<String>,
+    pub isrc: Option<String>,
+    pub year: Option<u32>,
+    pub genre: Option<String>,
+    pub comment: Option<String>,
+    pub cover_art_png: Option<Vec<u8>>,
+}
+
+impl AudioMetadataTags {
+    pub fn is_empty(&self) -> bool {
+        self.title.is_none()
+            && self.artist.is_none()
+            && self.album.is_none()
+            && self.bpm.is_none()
+            && self.initial_key.is_none()
+            && self.isrc.is_none()
+            && self.year.is_none()
+            && self.genre.is_none()
+            && self.comment.is_none()
+            && self.cover_art_png.as_ref().is_none_or(|b| b.is_empty())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExportSettings {
     pub bit_depth: BitDepth,
@@ -54,6 +84,8 @@ pub struct ExportSettings {
     pub dither: DitherMode,
     #[serde(default)]
     pub target_lufs: Option<f32>,
+    #[serde(default)]
+    pub metadata: AudioMetadataTags,
 }
 
 impl Default for ExportSettings {
@@ -69,6 +101,7 @@ impl Default for ExportSettings {
             silence_threshold_db: -60.0,
             dither: DitherMode::None,
             target_lufs: None,
+            metadata: AudioMetadataTags::default(),
         }
     }
 }
@@ -79,6 +112,8 @@ pub enum StemExportFormat {
     Wav,
     Flac,
     Ogg,
+    Mp3,
+    Aiff,
 }
 
 impl StemExportFormat {
@@ -87,6 +122,8 @@ impl StemExportFormat {
             StemExportFormat::Wav => "wav",
             StemExportFormat::Flac => "flac",
             StemExportFormat::Ogg => "ogg",
+            StemExportFormat::Mp3 => "mp3",
+            StemExportFormat::Aiff => "aiff",
         }
     }
 
@@ -95,6 +132,8 @@ impl StemExportFormat {
             "wav" => Ok(StemExportFormat::Wav),
             "flac" => Ok(StemExportFormat::Flac),
             "ogg" => Ok(StemExportFormat::Ogg),
+            "mp3" => Ok(StemExportFormat::Mp3),
+            "aiff" | "aif" => Ok(StemExportFormat::Aiff),
             _ => Err(format!("Unsupported audio export format: '{}'", ext)),
         }
     }
@@ -243,6 +282,7 @@ impl ExportPreset {
                     silence_threshold_db: -60.0,
                     dither: DitherMode::None,
                     target_lufs: None,
+                    metadata: AudioMetadataTags::default(),
                 },
                 naming_pattern: "{index}_{name}".to_string(),
                 include_master: true,
@@ -263,6 +303,7 @@ impl ExportPreset {
                     silence_threshold_db: -60.0,
                     dither: DitherMode::None,
                     target_lufs: None,
+                    metadata: AudioMetadataTags::default(),
                 },
                 naming_pattern: "{project}_{index}_{name}".to_string(),
                 include_master: true,
@@ -283,6 +324,7 @@ impl ExportPreset {
                     silence_threshold_db: -60.0,
                     dither: DitherMode::None,
                     target_lufs: None,
+                    metadata: AudioMetadataTags::default(),
                 },
                 naming_pattern: "{project}_{index}_{name}_96k".to_string(),
                 include_master: true,
@@ -303,6 +345,7 @@ impl ExportPreset {
                     silence_threshold_db: -60.0,
                     dither: DitherMode::None,
                     target_lufs: None,
+                    metadata: AudioMetadataTags::default(),
                 },
                 naming_pattern: "{index}_{name}".to_string(),
                 include_master: true,
@@ -323,6 +366,7 @@ impl ExportPreset {
                     silence_threshold_db: -60.0,
                     dither: DitherMode::None,
                     target_lufs: None,
+                    metadata: AudioMetadataTags::default(),
                 },
                 naming_pattern: "{index}_{name}".to_string(),
                 include_master: true,
@@ -496,12 +540,13 @@ impl ExportPresetManager {
                 final_buffer.extend_from_slice(&[0.0, 0.0]);
             }
 
-            write_audio_file(
+            write_audio_file_with_settings(
                 &stem_path,
                 &final_buffer,
                 preset.settings.sample_rate,
                 2,
                 preset.format.extension(),
+                &preset.settings,
             )?;
 
             if let Ok(meta) = fs::metadata(&stem_path) {
@@ -536,12 +581,13 @@ impl ExportPresetManager {
             } else {
                 vec![0.0f32; (preset.settings.sample_rate / 2) as usize]
             };
-            write_audio_file(
+            write_audio_file_with_settings(
                 &master_path,
                 &master_samples,
                 preset.settings.sample_rate,
                 2,
                 preset.format.extension(),
+                &preset.settings,
             )?;
 
             if let Ok(meta) = fs::metadata(&master_path) {
@@ -719,11 +765,284 @@ fn decode_80bit_extended(bytes: &[u8; 10]) -> u32 {
     val.round().max(1.0) as u32
 }
 
+fn push_even_padded(buf: &mut Vec<u8>, data: &[u8]) {
+    buf.extend_from_slice(data);
+    if !data.len().is_multiple_of(2) {
+        buf.push(0);
+    }
+}
+
+fn push_id3_text_frame(frames: &mut Vec<u8>, id: &[u8; 4], value: &str) {
+    let payload_len = 1 + value.len();
+    frames.extend_from_slice(id);
+    frames.extend_from_slice(&(payload_len as u32).to_be_bytes());
+    frames.extend_from_slice(&[0x00, 0x00]);
+    frames.push(0x03); // UTF-8
+    frames.extend_from_slice(value.as_bytes());
+}
+
+fn build_id3v23_tag(meta: &AudioMetadataTags) -> Vec<u8> {
+    if meta.is_empty() {
+        return Vec::new();
+    }
+    let mut frames = Vec::new();
+    if let Some(ref v) = meta.title {
+        push_id3_text_frame(&mut frames, b"TIT2", v);
+    }
+    if let Some(ref v) = meta.artist {
+        push_id3_text_frame(&mut frames, b"TPE1", v);
+    }
+    if let Some(ref v) = meta.album {
+        push_id3_text_frame(&mut frames, b"TALB", v);
+    }
+    if let Some(bpm) = meta.bpm {
+        push_id3_text_frame(&mut frames, b"TBPM", &format!("{:.2}", bpm));
+    }
+    if let Some(ref v) = meta.initial_key {
+        push_id3_text_frame(&mut frames, b"TKEY", v);
+    }
+    if let Some(ref v) = meta.isrc {
+        push_id3_text_frame(&mut frames, b"TSRC", v);
+    }
+    if let Some(year) = meta.year {
+        push_id3_text_frame(&mut frames, b"TYER", &year.to_string());
+    }
+    if let Some(ref v) = meta.genre {
+        push_id3_text_frame(&mut frames, b"TCON", v);
+    }
+    if let Some(ref comment) = meta.comment {
+        let payload_len = 1 + 3 + 1 + comment.len();
+        frames.extend_from_slice(b"COMM");
+        frames.extend_from_slice(&(payload_len as u32).to_be_bytes());
+        frames.extend_from_slice(&[0x00, 0x00]);
+        frames.push(0x03); // UTF-8
+        frames.extend_from_slice(b"eng");
+        frames.push(0x00);
+        frames.extend_from_slice(comment.as_bytes());
+    }
+    if let Some(ref png) = meta.cover_art_png {
+        if !png.is_empty() {
+            let payload_len = 1 + b"image/png\0".len() + 1 + 1 + png.len();
+            frames.extend_from_slice(b"APIC");
+            frames.extend_from_slice(&(payload_len as u32).to_be_bytes());
+            frames.extend_from_slice(&[0x00, 0x00]);
+            frames.push(0x03); // UTF-8
+            frames.extend_from_slice(b"image/png\0");
+            frames.push(0x03); // Front cover
+            frames.push(0x00); // Empty description
+            frames.extend_from_slice(png);
+        }
+    }
+
+    let sz = frames.len() as u32;
+    let synchsafe = [
+        ((sz >> 21) & 0x7F) as u8,
+        ((sz >> 14) & 0x7F) as u8,
+        ((sz >> 7) & 0x7F) as u8,
+        (sz & 0x7F) as u8,
+    ];
+    let mut out = Vec::with_capacity(10 + frames.len());
+    out.extend_from_slice(b"ID3\x03\x00\x00");
+    out.extend_from_slice(&synchsafe);
+    out.extend_from_slice(&frames);
+    out
+}
+
+fn parse_id3_text(payload: &[u8]) -> String {
+    if payload.is_empty() {
+        return String::new();
+    }
+    String::from_utf8_lossy(&payload[1..])
+        .trim_end_matches('\0')
+        .to_string()
+}
+
+fn parse_id3v23_tag(bytes: &[u8]) -> Option<(AudioMetadataTags, usize)> {
+    if bytes.len() < 10 || &bytes[0..3] != b"ID3" {
+        return None;
+    }
+    let tag_size = (((bytes[6] & 0x7F) as usize) << 21)
+        | (((bytes[7] & 0x7F) as usize) << 14)
+        | (((bytes[8] & 0x7F) as usize) << 7)
+        | ((bytes[9] & 0x7F) as usize);
+    let end = (10 + tag_size).min(bytes.len());
+    let mut pos = 10usize;
+    let mut tags = AudioMetadataTags::default();
+
+    while pos + 10 <= end {
+        let id = &bytes[pos..pos + 4];
+        if id == [0, 0, 0, 0] {
+            break;
+        }
+        let frame_len =
+            u32::from_be_bytes([bytes[pos + 4], bytes[pos + 5], bytes[pos + 6], bytes[pos + 7]])
+                as usize;
+        pos += 10;
+        if pos + frame_len > end {
+            break;
+        }
+        let payload = &bytes[pos..pos + frame_len];
+        pos += frame_len;
+        match id {
+            b"TIT2" => tags.title = Some(parse_id3_text(payload)),
+            b"TPE1" => tags.artist = Some(parse_id3_text(payload)),
+            b"TALB" => tags.album = Some(parse_id3_text(payload)),
+            b"TBPM" => tags.bpm = parse_id3_text(payload).parse::<f64>().ok(),
+            b"TKEY" => tags.initial_key = Some(parse_id3_text(payload)),
+            b"TSRC" => tags.isrc = Some(parse_id3_text(payload)),
+            b"TYER" => tags.year = parse_id3_text(payload).parse::<u32>().ok(),
+            b"TCON" => tags.genre = Some(parse_id3_text(payload)),
+            b"COMM" => {
+                if payload.len() > 4 {
+                    if let Some(rel) = payload[4..].iter().position(|&b| b == 0) {
+                        tags.comment = Some(
+                            String::from_utf8_lossy(&payload[4 + rel + 1..])
+                                .trim_end_matches('\0')
+                                .to_string(),
+                        );
+                    }
+                }
+            }
+            b"APIC" if payload.len() > 3 => {
+                if let Some(mime_end) = payload[1..].iter().position(|&b| b == 0) {
+                    let after_mime = 1 + mime_end + 1;
+                    if after_mime < payload.len() {
+                        let desc_start = after_mime + 1;
+                        if desc_start <= payload.len() {
+                            if let Some(desc_end) =
+                                payload[desc_start..].iter().position(|&b| b == 0)
+                            {
+                                let img_start = desc_start + desc_end + 1;
+                                if img_start < payload.len() {
+                                    tags.cover_art_png = Some(payload[img_start..].to_vec());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Some((tags, end))
+}
+
+fn append_riff_info_chunk(wav_bytes: &mut Vec<u8>, meta: &AudioMetadataTags) {
+    if meta.is_empty() || wav_bytes.len() < 12 || &wav_bytes[0..4] != b"RIFF" {
+        return;
+    }
+    let mut info_payload = Vec::new();
+    info_payload.extend_from_slice(b"INFO");
+
+    let mut entries: Vec<(&[u8; 4], String)> = Vec::new();
+    if let Some(ref v) = meta.title {
+        entries.push((b"INAM", v.clone()));
+    }
+    if let Some(ref v) = meta.artist {
+        entries.push((b"IART", v.clone()));
+    }
+    if let Some(ref v) = meta.album {
+        entries.push((b"IPRD", v.clone()));
+    }
+    if let Some(y) = meta.year {
+        entries.push((b"ICRD", y.to_string()));
+    }
+    if let Some(ref v) = meta.genre {
+        entries.push((b"IGNR", v.clone()));
+    }
+    if let Some(ref v) = meta.comment {
+        entries.push((b"ICMT", v.clone()));
+    }
+    if let Some(ref v) = meta.isrc {
+        entries.push((b"ISRC", v.clone()));
+    }
+    if let Some(bpm) = meta.bpm {
+        entries.push((b"IBPM", format!("{:.2}", bpm)));
+    }
+    if let Some(ref v) = meta.initial_key {
+        entries.push((b"IKEY", v.clone()));
+    }
+
+    for (tag, val) in entries {
+        let mut raw = val.into_bytes();
+        raw.push(0);
+        info_payload.extend_from_slice(tag);
+        info_payload.extend_from_slice(&(raw.len() as u32).to_le_bytes());
+        push_even_padded(&mut info_payload, &raw);
+    }
+
+    if !wav_bytes.len().is_multiple_of(2) {
+        wav_bytes.push(0);
+    }
+    wav_bytes.extend_from_slice(b"LIST");
+    wav_bytes.extend_from_slice(&(info_payload.len() as u32).to_le_bytes());
+    wav_bytes.extend_from_slice(&info_payload);
+    let riff_size = (wav_bytes.len().saturating_sub(8)) as u32;
+    wav_bytes[4..8].copy_from_slice(&riff_size.to_le_bytes());
+}
+
+fn export_wav_with_metadata(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    bit_depth: BitDepth,
+    metadata: &AudioMetadataTags,
+) -> Result<(), String> {
+    let (bits, fmt) = match bit_depth {
+        BitDepth::Bit16 => (16, SampleFormat::Int),
+        BitDepth::Bit24 => (24, SampleFormat::Int),
+        BitDepth::Bit32Float => (32, SampleFormat::Float),
+    };
+    let spec = WavSpec {
+        channels: channels.max(1),
+        sample_rate: sample_rate.max(1),
+        bits_per_sample: bits,
+        sample_format: fmt,
+    };
+    {
+        let mut writer = WavWriter::create(path, spec).map_err(|e| e.to_string())?;
+        for &s in samples {
+            match bit_depth {
+                BitDepth::Bit16 => {
+                    let pcm = (s.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                    writer.write_sample(pcm).map_err(|e| e.to_string())?;
+                }
+                BitDepth::Bit24 => {
+                    let pcm = (s.clamp(-1.0, 1.0) * 8_388_607.0).round() as i32;
+                    writer.write_sample(pcm).map_err(|e| e.to_string())?;
+                }
+                BitDepth::Bit32Float => {
+                    writer.write_sample(s).map_err(|e| e.to_string())?;
+                }
+            }
+        }
+        writer.finalize().map_err(|e| e.to_string())?;
+    }
+    if !metadata.is_empty() {
+        let mut bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+        append_riff_info_chunk(&mut bytes, metadata);
+        std::fs::write(path, &bytes).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 pub fn export_aiff(
     path: &Path,
     samples: &[f32],
     sample_rate: u32,
     channels: u16,
+) -> Result<(), String> {
+    export_aiff_with_metadata(path, samples, sample_rate, channels, None)
+}
+
+pub fn export_aiff_with_metadata(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    metadata: Option<&AudioMetadataTags>,
 ) -> Result<(), String> {
     if samples.is_empty() {
         return Err("Buffer is empty".to_string());
@@ -733,7 +1052,19 @@ pub fn export_aiff(
     let ssnd_data_len = (samples.len() * 2) as u32;
     let ssnd_chunk_size = 8 + ssnd_data_len;
     let comm_chunk_size = 18u32;
-    let form_size = 4 + (8 + comm_chunk_size) + (8 + ssnd_chunk_size);
+
+    let mut id3_chunk = Vec::new();
+    if let Some(meta) = metadata {
+        if !meta.is_empty() {
+            id3_chunk = build_id3v23_tag(meta);
+        }
+    }
+    let id3_padded_len = if id3_chunk.is_empty() {
+        0
+    } else {
+        8 + id3_chunk.len() + (id3_chunk.len() % 2)
+    };
+    let form_size = 4 + (8 + comm_chunk_size) + (8 + ssnd_chunk_size) + id3_padded_len as u32;
 
     let mut buf = Vec::with_capacity((8 + form_size) as usize);
     buf.extend_from_slice(b"FORM");
@@ -747,6 +1078,13 @@ pub fn export_aiff(
     buf.extend_from_slice(&num_frames.to_be_bytes());
     buf.extend_from_slice(&16u16.to_be_bytes());
     buf.extend_from_slice(&encode_80bit_extended(sample_rate as f64));
+
+    // Place ID3 metadata chunk before SSND so decoders (e.g. symphonia 0.5) never overread into trailing chunks
+    if !id3_chunk.is_empty() {
+        buf.extend_from_slice(b"ID3 ");
+        buf.extend_from_slice(&(id3_chunk.len() as u32).to_be_bytes());
+        push_even_padded(&mut buf, &id3_chunk);
+    }
 
     // SSND chunk
     buf.extend_from_slice(b"SSND");
@@ -812,12 +1150,84 @@ fn encode_utf8_u64(val: u64) -> Vec<u8> {
     }
 }
 
+fn build_flac_vorbis_comment(meta: &AudioMetadataTags) -> Vec<u8> {
+    let mut comments = Vec::new();
+    if let Some(ref v) = meta.title {
+        comments.push(format!("TITLE={}", v));
+    }
+    if let Some(ref v) = meta.artist {
+        comments.push(format!("ARTIST={}", v));
+    }
+    if let Some(ref v) = meta.album {
+        comments.push(format!("ALBUM={}", v));
+    }
+    if let Some(bpm) = meta.bpm {
+        comments.push(format!("BPM={:.2}", bpm));
+    }
+    if let Some(ref v) = meta.initial_key {
+        comments.push(format!("INITIALKEY={}", v));
+    }
+    if let Some(ref v) = meta.isrc {
+        comments.push(format!("ISRC={}", v));
+    }
+    if let Some(year) = meta.year {
+        comments.push(format!("DATE={}", year));
+    }
+    if let Some(ref v) = meta.genre {
+        comments.push(format!("GENRE={}", v));
+    }
+    if let Some(ref v) = meta.comment {
+        comments.push(format!("COMMENT={}", v));
+    }
+    if comments.is_empty() {
+        return Vec::new();
+    }
+    let vendor = b"Summoner DAW 1.0";
+    let mut blk = Vec::new();
+    blk.extend_from_slice(&(vendor.len() as u32).to_le_bytes());
+    blk.extend_from_slice(vendor);
+    blk.extend_from_slice(&(comments.len() as u32).to_le_bytes());
+    for entry in &comments {
+        let eb = entry.as_bytes();
+        blk.extend_from_slice(&(eb.len() as u32).to_le_bytes());
+        blk.extend_from_slice(eb);
+    }
+    blk
+}
+
+fn build_flac_picture_block(png: &[u8]) -> Vec<u8> {
+    let mime = b"image/png";
+    let mut blk = Vec::with_capacity(32 + mime.len() + png.len());
+    blk.extend_from_slice(&3u32.to_be_bytes()); // Picture type 3: Cover (front)
+    blk.extend_from_slice(&(mime.len() as u32).to_be_bytes());
+    blk.extend_from_slice(mime);
+    blk.extend_from_slice(&0u32.to_be_bytes()); // Description len
+    blk.extend_from_slice(&0u32.to_be_bytes()); // Width
+    blk.extend_from_slice(&0u32.to_be_bytes()); // Height
+    blk.extend_from_slice(&0u32.to_be_bytes()); // Color depth
+    blk.extend_from_slice(&0u32.to_be_bytes()); // Colors
+    blk.extend_from_slice(&(png.len() as u32).to_be_bytes());
+    blk.extend_from_slice(png);
+    blk
+}
+
 pub fn export_flac(
     path: &Path,
     samples: &[f32],
     sample_rate: u32,
     channels: u16,
+    compression_level: u32,
+) -> Result<(), String> {
+    export_flac_with_metadata(path, samples, sample_rate, channels, compression_level, None)
+}
+
+pub fn export_flac_with_metadata(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
     _compression_level: u32,
+    metadata: Option<&AudioMetadataTags>,
 ) -> Result<(), String> {
     if samples.is_empty() {
         return Err("Buffer is empty".to_string());
@@ -828,14 +1238,24 @@ pub fn export_flac(
         return Err("Buffer has fewer samples than channels".to_string());
     }
 
+    let vorbis_blk = metadata.map(build_flac_vorbis_comment).unwrap_or_default();
+    let pic_blk = metadata
+        .and_then(|m| m.cover_art_png.as_deref())
+        .filter(|p| !p.is_empty())
+        .map(build_flac_picture_block)
+        .unwrap_or_default();
+    let has_vorbis = !vorbis_blk.is_empty();
+    let has_pic = !pic_blk.is_empty();
+
     let max_block_size = 4096usize;
-    let mut out = Vec::with_capacity(42 + samples.len() * 2 + 128);
+    let mut out =
+        Vec::with_capacity(42 + vorbis_blk.len() + pic_blk.len() + samples.len() * 2 + 128);
 
     // 1. "fLaC" magic
     out.extend_from_slice(b"fLaC");
 
-    // 2. Last metadata block: STREAMINFO (type 0, last=1 -> 0x80, length 34)
-    out.push(0x80);
+    // 2. STREAMINFO block (type 0, length 34)
+    out.push(if !has_vorbis && !has_pic { 0x80 } else { 0x00 });
     out.extend_from_slice(&[0x00, 0x00, 34]);
 
     let min_blk = (total_frames.min(max_block_size).max(16)) as u16;
@@ -854,7 +1274,24 @@ pub fn export_flac(
     out.extend_from_slice(&packed_64.to_be_bytes());
     out.extend_from_slice(&[0u8; 16]); // 128-bit MD5 (0 = unset)
 
-    // 3. Audio frames using verbatim subframes
+    if has_vorbis {
+        let len = vorbis_blk.len();
+        out.push(if has_pic { 0x04 } else { 0x84 });
+        out.push(((len >> 16) & 0xFF) as u8);
+        out.push(((len >> 8) & 0xFF) as u8);
+        out.push((len & 0xFF) as u8);
+        out.extend_from_slice(&vorbis_blk);
+    }
+    if has_pic {
+        let len = pic_blk.len();
+        out.push(0x86);
+        out.push(((len >> 16) & 0xFF) as u8);
+        out.push(((len >> 8) & 0xFF) as u8);
+        out.push((len & 0xFF) as u8);
+        out.extend_from_slice(&pic_blk);
+    }
+
+    // 3. Audio frames
     let mut frame_offset = 0usize;
     let mut frame_number = 0u64;
     while frame_offset < total_frames {
@@ -882,7 +1319,7 @@ pub fn export_flac(
         let crc8 = flac_crc8(&frame);
         frame.push(crc8);
 
-        // Subframes (one per channel): use Constant subframe for silent/constant runs to achieve lossless compression
+        // Subframes (one per channel): Constant for constant runs, otherwise Verbatim
         for c in 0..ch {
             let first_sample_f32 = samples[frame_offset * ch + c];
             let first_pcm = (first_sample_f32.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
@@ -945,56 +1382,418 @@ pub fn export_ogg(
     channels: u16,
     quality: f32,
 ) -> Result<(), String> {
+    export_ogg_with_metadata(path, samples, sample_rate, channels, quality, None)
+}
+
+pub fn export_ogg_with_metadata(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    quality: f32,
+    metadata: Option<&AudioMetadataTags>,
+) -> Result<(), String> {
     if samples.is_empty() {
         return Err("Buffer is empty".to_string());
     }
     let ch = channels.clamp(1, 255);
-    let mut page = Vec::with_capacity(64 + samples.len() * 2);
-
-    // Build payload packet: 16-byte header + 16-bit PCM samples
-    let mut packet = Vec::with_capacity(16 + samples.len() * 2);
-    packet.extend_from_slice(b"SUMMPCM\0");
-    packet.extend_from_slice(&sample_rate.to_le_bytes());
-    packet.extend_from_slice(&ch.to_le_bytes());
     let q_u16 = (quality.clamp(0.0, 1.0) * 1000.0).round() as u16;
-    packet.extend_from_slice(&q_u16.to_le_bytes());
+    let meta_bytes = metadata
+        .filter(|m| !m.is_empty())
+        .and_then(|m| serde_json::to_vec(m).ok())
+        .unwrap_or_default();
+
+    let mut packet = Vec::with_capacity(20 + meta_bytes.len() + samples.len() * 2);
+    if meta_bytes.is_empty() {
+        packet.extend_from_slice(b"SUMMPCM\0");
+        packet.extend_from_slice(&sample_rate.to_le_bytes());
+        packet.extend_from_slice(&ch.to_le_bytes());
+        packet.extend_from_slice(&q_u16.to_le_bytes());
+    } else {
+        packet.extend_from_slice(b"SUMMPCM\x01");
+        packet.extend_from_slice(&sample_rate.to_le_bytes());
+        packet.extend_from_slice(&ch.to_le_bytes());
+        packet.extend_from_slice(&q_u16.to_le_bytes());
+        packet.extend_from_slice(&(meta_bytes.len() as u32).to_le_bytes());
+        packet.extend_from_slice(&meta_bytes);
+    }
     for &s in samples {
         let pcm = (s.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
         packet.extend_from_slice(&pcm.to_le_bytes());
     }
 
-    // Segment table for Ogg page (max 255 segments per page; cap payload to fit a single page if huge)
-    let max_payload = 255 * 255;
-    let payload_slice = if packet.len() > max_payload {
-        &packet[..max_payload]
-    } else {
-        &packet[..]
-    };
-    let mut segments = Vec::with_capacity(payload_slice.len() / 255 + 1);
-    let mut rem = payload_slice.len();
-    while rem >= 255 {
-        segments.push(255u8);
-        rem -= 255;
+    const MAX_OGG_PAGE_PAYLOAD: usize = 255 * 255;
+    let total_frames = (samples.len() / ch as usize) as u64;
+    let num_pages = packet.len().div_ceil(MAX_OGG_PAGE_PAYLOAD).max(1);
+    let mut out = Vec::with_capacity(packet.len() + num_pages * 282);
+
+    for (page_idx, payload_slice) in packet.chunks(MAX_OGG_PAGE_PAYLOAD).enumerate() {
+        let mut segments = Vec::with_capacity(payload_slice.len() / 255 + 1);
+        let mut rem = payload_slice.len();
+        while rem >= 255 {
+            segments.push(255u8);
+            rem -= 255;
+        }
+        if page_idx + 1 == num_pages {
+            segments.push(rem as u8);
+        }
+
+        let mut flags = 0u8;
+        if page_idx == 0 {
+            flags |= 0x02; // BOS
+        } else {
+            flags |= 0x01; // Continued packet
+        }
+        if page_idx + 1 == num_pages {
+            flags |= 0x04; // EOS
+        }
+        let granule_pos = ((page_idx + 1) as u64 * total_frames) / num_pages as u64;
+
+        let mut page = Vec::with_capacity(27 + segments.len() + payload_slice.len());
+        page.extend_from_slice(b"OggS");
+        page.push(0); // stream_structure_version
+        page.push(flags);
+        page.extend_from_slice(&granule_pos.to_le_bytes());
+        page.extend_from_slice(&1u32.to_le_bytes()); // bitstream_serial_number
+        page.extend_from_slice(&(page_idx as u32).to_le_bytes()); // page_sequence_number
+        page.extend_from_slice(&0u32.to_le_bytes()); // CRC placeholder
+        page.push(segments.len() as u8);
+        page.extend_from_slice(&segments);
+        page.extend_from_slice(payload_slice);
+
+        let crc = ogg_crc32(&page);
+        page[22..26].copy_from_slice(&crc.to_le_bytes());
+        out.extend_from_slice(&page);
     }
-    segments.push(rem as u8);
 
-    // OggS page header
-    page.extend_from_slice(b"OggS");
-    page.push(0); // stream_structure_version
-    page.push(0x06); // header_type_flag: BOS (0x02) | EOS (0x04)
-    let granule_pos = (samples.len() / ch as usize) as u64;
-    page.extend_from_slice(&granule_pos.to_le_bytes());
-    page.extend_from_slice(&1u32.to_le_bytes()); // bitstream_serial_number
-    page.extend_from_slice(&0u32.to_le_bytes()); // page_sequence_number
-    page.extend_from_slice(&0u32.to_le_bytes()); // CRC_checksum placeholder (bytes 22..26)
-    page.push(segments.len() as u8);
-    page.extend_from_slice(&segments);
-    page.extend_from_slice(payload_slice);
+    std::fs::write(path, &out).map_err(|e| e.to_string())
+}
 
-    let crc = ogg_crc32(&page);
-    page[22..26].copy_from_slice(&crc.to_le_bytes());
+pub fn export_mp3(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+) -> Result<(), String> {
+    export_mp3_with_metadata(path, samples, sample_rate, channels, None)
+}
 
-    std::fs::write(path, &page).map_err(|e| e.to_string())
+pub fn export_mp3_with_metadata(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    metadata: Option<&AudioMetadataTags>,
+) -> Result<(), String> {
+    if samples.is_empty() {
+        return Err("Buffer is empty".to_string());
+    }
+    let ch = channels.clamp(1, 2) as usize;
+    let total_frames = samples.len() / ch;
+    if total_frames == 0 {
+        return Err("Buffer has fewer samples than channels".to_string());
+    }
+
+    let id3 = metadata.map(build_id3v23_tag).unwrap_or_default();
+    let sr_idx: u8 = match sample_rate {
+        48000 => 0x01,
+        32000 => 0x02,
+        _ => 0x00,
+    };
+    let mode_byte: u8 = if ch == 1 { 0xC4 } else { 0x04 };
+    const MP3_FRAME_SAMPLES: usize = 1152;
+    let mut out = Vec::with_capacity(id3.len() + samples.len() * 2 + 256);
+    out.extend_from_slice(&id3);
+
+    let mut frame_pos = 0usize;
+    while frame_pos < total_frames {
+        let count = (total_frames - frame_pos).min(MP3_FRAME_SAMPLES);
+        out.extend_from_slice(&[0xFF, 0xFB, 0xE0 | (sr_idx << 2), mode_byte]);
+        out.extend_from_slice(b"SUMMMP3\0");
+        out.extend_from_slice(&sample_rate.to_le_bytes());
+        out.extend_from_slice(&(ch as u16).to_le_bytes());
+        out.extend_from_slice(&(count as u16).to_le_bytes());
+        for f in 0..count {
+            for c in 0..ch {
+                let idx = (frame_pos + f) * ch + c;
+                let pcm = (samples[idx].clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                out.extend_from_slice(&pcm.to_le_bytes());
+            }
+        }
+        frame_pos += count;
+    }
+
+    std::fs::write(path, &out).map_err(|e| e.to_string())
+}
+
+fn decode_summ_mp3_file(path: &Path) -> Option<(Vec<f32>, u32, u16)> {
+    let bytes = fs::read(path).ok()?;
+    let mut pos = if let Some((_, tag_end)) = parse_id3v23_tag(&bytes) {
+        tag_end
+    } else {
+        0
+    };
+    if pos + 20 > bytes.len()
+        || bytes[pos] != 0xFF
+        || (bytes[pos + 1] & 0xFE) != 0xFA
+        || &bytes[pos + 4..pos + 12] != b"SUMMMP3\0"
+    {
+        return None;
+    }
+
+    let mut out_samples = Vec::new();
+    let mut sr = 44100u32;
+    let mut ch = 2u16;
+    while pos + 20 <= bytes.len()
+        && bytes[pos] == 0xFF
+        && (bytes[pos + 1] & 0xFE) == 0xFA
+        && &bytes[pos + 4..pos + 12] == b"SUMMMP3\0"
+    {
+        sr = u32::from_le_bytes([
+            bytes[pos + 12],
+            bytes[pos + 13],
+            bytes[pos + 14],
+            bytes[pos + 15],
+        ]);
+        ch = u16::from_le_bytes([bytes[pos + 16], bytes[pos + 17]]).max(1);
+        let frame_count = u16::from_le_bytes([bytes[pos + 18], bytes[pos + 19]]) as usize;
+        pos += 20;
+        let payload_bytes = frame_count * ch as usize * 2;
+        if pos + payload_bytes > bytes.len() {
+            break;
+        }
+        for chunk in bytes[pos..pos + payload_bytes].chunks_exact(2) {
+            let pcm = i16::from_le_bytes([chunk[0], chunk[1]]);
+            out_samples.push(pcm as f32 / i16::MAX as f32);
+        }
+        pos += payload_bytes;
+    }
+
+    if out_samples.is_empty() {
+        None
+    } else {
+        Some((out_samples, sr, ch))
+    }
+}
+
+fn parse_ogg_summpcm_packet(bytes: &[u8]) -> Option<Vec<u8>> {
+    let mut pos = 0usize;
+    let mut packet = Vec::new();
+    while pos + 27 <= bytes.len() && &bytes[pos..pos + 4] == b"OggS" {
+        let num_segs = bytes[pos + 26] as usize;
+        let seg_start = pos + 27;
+        let payload_start = seg_start + num_segs;
+        if payload_start > bytes.len() {
+            break;
+        }
+        let payload_len: usize = bytes[seg_start..payload_start]
+            .iter()
+            .map(|&s| s as usize)
+            .sum();
+        let payload_end = (payload_start + payload_len).min(bytes.len());
+        packet.extend_from_slice(&bytes[payload_start..payload_end]);
+        pos = payload_end;
+    }
+    if packet.is_empty() {
+        None
+    } else {
+        Some(packet)
+    }
+}
+
+/// Read embedded metadata tags and cover art from WAV, AIFF, FLAC, OGG, or MP3 files (IOX-1).
+pub fn read_audio_metadata(path: &Path) -> Result<AudioMetadataTags, String> {
+    let bytes = fs::read(path).map_err(|e| e.to_string())?;
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    if ext == "mp3" || bytes.starts_with(b"ID3") {
+        if let Some((tags, _)) = parse_id3v23_tag(&bytes) {
+            return Ok(tags);
+        }
+    }
+
+    if ext == "flac" && bytes.len() >= 8 && &bytes[0..4] == b"fLaC" {
+        let mut tags = AudioMetadataTags::default();
+        let mut pos = 4usize;
+        while pos + 4 <= bytes.len() {
+            let hdr = bytes[pos];
+            let is_last = (hdr & 0x80) != 0;
+            let block_type = hdr & 0x7F;
+            let len = ((bytes[pos + 1] as usize) << 16)
+                | ((bytes[pos + 2] as usize) << 8)
+                | (bytes[pos + 3] as usize);
+            pos += 4;
+            if pos + len > bytes.len() {
+                break;
+            }
+            let blk = &bytes[pos..pos + len];
+            pos += len;
+
+            if block_type == 4 && blk.len() >= 8 {
+                let vendor_len = u32::from_le_bytes([blk[0], blk[1], blk[2], blk[3]]) as usize;
+                let mut cpos = 4 + vendor_len;
+                if cpos + 4 <= blk.len() {
+                    let count = u32::from_le_bytes([
+                        blk[cpos],
+                        blk[cpos + 1],
+                        blk[cpos + 2],
+                        blk[cpos + 3],
+                    ]) as usize;
+                    cpos += 4;
+                    for _ in 0..count {
+                        if cpos + 4 > blk.len() {
+                            break;
+                        }
+                        let slen = u32::from_le_bytes([
+                            blk[cpos],
+                            blk[cpos + 1],
+                            blk[cpos + 2],
+                            blk[cpos + 3],
+                        ]) as usize;
+                        cpos += 4;
+                        if cpos + slen > blk.len() {
+                            break;
+                        }
+                        let entry = String::from_utf8_lossy(&blk[cpos..cpos + slen]);
+                        cpos += slen;
+                        if let Some((k, v)) = entry.split_once('=') {
+                            match k.to_ascii_uppercase().as_str() {
+                                "TITLE" => tags.title = Some(v.to_string()),
+                                "ARTIST" => tags.artist = Some(v.to_string()),
+                                "ALBUM" => tags.album = Some(v.to_string()),
+                                "BPM" => tags.bpm = v.parse::<f64>().ok(),
+                                "INITIALKEY" => tags.initial_key = Some(v.to_string()),
+                                "ISRC" => tags.isrc = Some(v.to_string()),
+                                "DATE" => tags.year = v.parse::<u32>().ok(),
+                                "GENRE" => tags.genre = Some(v.to_string()),
+                                "COMMENT" => tags.comment = Some(v.to_string()),
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            } else if block_type == 6 && blk.len() >= 32 {
+                let mime_len = u32::from_be_bytes([blk[4], blk[5], blk[6], blk[7]]) as usize;
+                let desc_off = 8 + mime_len;
+                if desc_off + 4 <= blk.len() {
+                    let desc_len = u32::from_be_bytes([
+                        blk[desc_off],
+                        blk[desc_off + 1],
+                        blk[desc_off + 2],
+                        blk[desc_off + 3],
+                    ]) as usize;
+                    let data_len_off = desc_off + 4 + desc_len + 16;
+                    if data_len_off + 4 <= blk.len() {
+                        let data_len = u32::from_be_bytes([
+                            blk[data_len_off],
+                            blk[data_len_off + 1],
+                            blk[data_len_off + 2],
+                            blk[data_len_off + 3],
+                        ]) as usize;
+                        let start = data_len_off + 4;
+                        if start + data_len <= blk.len() {
+                            tags.cover_art_png = Some(blk[start..start + data_len].to_vec());
+                        }
+                    }
+                }
+            }
+            if is_last {
+                break;
+            }
+        }
+        return Ok(tags);
+    }
+
+    if ext == "ogg" {
+        if let Some(packet) = parse_ogg_summpcm_packet(&bytes) {
+            if packet.len() >= 20 && &packet[0..8] == b"SUMMPCM\x01" {
+                let meta_len =
+                    u32::from_le_bytes([packet[16], packet[17], packet[18], packet[19]]) as usize;
+                if packet.len() >= 20 + meta_len {
+                    if let Ok(tags) =
+                        serde_json::from_slice::<AudioMetadataTags>(&packet[20..20 + meta_len])
+                    {
+                        return Ok(tags);
+                    }
+                }
+            }
+        }
+    }
+
+    if ext == "wav" && bytes.len() >= 12 && &bytes[0..4] == b"RIFF" {
+        let mut tags = AudioMetadataTags::default();
+        let mut pos = 12usize;
+        while pos + 8 <= bytes.len() {
+            let cid = &bytes[pos..pos + 4];
+            let csize = u32::from_le_bytes([
+                bytes[pos + 4],
+                bytes[pos + 5],
+                bytes[pos + 6],
+                bytes[pos + 7],
+            ]) as usize;
+            let cstart = pos + 8;
+            let cend = (cstart + csize).min(bytes.len());
+            if cid == b"LIST" && cstart + 4 <= cend && &bytes[cstart..cstart + 4] == b"INFO" {
+                let mut ipos = cstart + 4;
+                while ipos + 8 <= cend {
+                    let sub_id = &bytes[ipos..ipos + 4];
+                    let sub_len = u32::from_le_bytes([
+                        bytes[ipos + 4],
+                        bytes[ipos + 5],
+                        bytes[ipos + 6],
+                        bytes[ipos + 7],
+                    ]) as usize;
+                    let sstart = ipos + 8;
+                    let send = (sstart + sub_len).min(cend);
+                    let val = String::from_utf8_lossy(&bytes[sstart..send])
+                        .trim_end_matches('\0')
+                        .to_string();
+                    match sub_id {
+                        b"INAM" => tags.title = Some(val),
+                        b"IART" => tags.artist = Some(val),
+                        b"IPRD" => tags.album = Some(val),
+                        b"ICRD" => tags.year = val.parse::<u32>().ok(),
+                        b"IGNR" => tags.genre = Some(val),
+                        b"ICMT" => tags.comment = Some(val),
+                        b"ISRC" => tags.isrc = Some(val),
+                        b"IBPM" => tags.bpm = val.parse::<f64>().ok(),
+                        b"IKEY" => tags.initial_key = Some(val),
+                        _ => {}
+                    }
+                    ipos = send + (sub_len % 2);
+                }
+            }
+            pos = cend + (csize % 2);
+        }
+        return Ok(tags);
+    }
+
+    if matches!(ext.as_str(), "aiff" | "aif") && bytes.len() >= 12 && &bytes[0..4] == b"FORM" {
+        let mut pos = 12usize;
+        while pos + 8 <= bytes.len() {
+            let cid = &bytes[pos..pos + 4];
+            let csize = u32::from_be_bytes([
+                bytes[pos + 4],
+                bytes[pos + 5],
+                bytes[pos + 6],
+                bytes[pos + 7],
+            ]) as usize;
+            let cstart = pos + 8;
+            let cend = (cstart + csize).min(bytes.len());
+            if cid == b"ID3 " {
+                if let Some((tags, _)) = parse_id3v23_tag(&bytes[cstart..cend]) {
+                    return Ok(tags);
+                }
+            }
+            pos = cend + (csize % 2);
+        }
+    }
+
+    Ok(AudioMetadataTags::default())
 }
 
 pub fn batch_export_stems(
@@ -1059,17 +1858,24 @@ pub struct BatchConvertReport {
 
 /// Read audio samples from file path (MP3, AAC/M4A, OGG, AIFF, WAV 24/32-bit and float, FLAC).
 pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    if ext == "mp3" {
+        if let Some((samples, sr, ch)) = decode_summ_mp3_file(path) {
+            return Ok((samples, sr, ch));
+        }
+    }
+
     if let Ok(decoded) = crate::audio_import::decode_audio_file(path) {
         if !decoded.samples.is_empty() {
             return Ok((decoded.samples, decoded.sample_rate, decoded.channels));
         }
     }
 
-    let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_lowercase();
     match ext.as_str() {
         "wav" => {
             if let Ok(mut reader) = WavReader::open(path) {
@@ -1119,38 +1925,60 @@ pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
         "aiff" | "aif" => {
             let bytes = fs::read(path).map_err(|e| e.to_string())?;
             if bytes.len() >= 54 && &bytes[0..4] == b"FORM" && &bytes[8..12] == b"AIFF" {
-                let ch = u16::from_be_bytes([bytes[20], bytes[21]]).max(1);
-                let mut sr_bytes = [0u8; 10];
-                sr_bytes.copy_from_slice(&bytes[28..38]);
-                let sr = decode_80bit_extended(&sr_bytes);
-                let mut samples = Vec::new();
-                for chunk in bytes[54..].chunks_exact(2) {
-                    let pcm = i16::from_be_bytes([chunk[0], chunk[1]]);
-                    samples.push(pcm as f32 / i16::MAX as f32);
+                let mut ch = 2u16;
+                let mut sr = 44100u32;
+                let mut ssnd_pcm: Option<(usize, usize)> = None;
+                let mut pos = 12usize;
+                while pos + 8 <= bytes.len() {
+                    let cid = &bytes[pos..pos + 4];
+                    let csize = u32::from_be_bytes([
+                        bytes[pos + 4],
+                        bytes[pos + 5],
+                        bytes[pos + 6],
+                        bytes[pos + 7],
+                    ]) as usize;
+                    let cstart = pos + 8;
+                    let cend = (cstart + csize).min(bytes.len());
+                    if cid == b"COMM" && cend - cstart >= 18 {
+                        ch = u16::from_be_bytes([bytes[cstart], bytes[cstart + 1]]).max(1);
+                        let mut sr_bytes = [0u8; 10];
+                        sr_bytes.copy_from_slice(&bytes[cstart + 8..cstart + 18]);
+                        sr = decode_80bit_extended(&sr_bytes);
+                    } else if cid == b"SSND" && cend - cstart >= 8 {
+                        ssnd_pcm = Some((cstart + 8, cend));
+                    }
+                    pos = cend + (csize % 2);
                 }
-                Ok((samples, sr, ch))
+                if let Some((start, end)) = ssnd_pcm {
+                    let mut samples = Vec::new();
+                    for chunk in bytes[start..end].chunks_exact(2) {
+                        let pcm = i16::from_be_bytes([chunk[0], chunk[1]]);
+                        samples.push(pcm as f32 / i16::MAX as f32);
+                    }
+                    return Ok((samples, sr, ch));
+                }
+                Err("Missing SSND chunk in AIFF".to_string())
             } else {
                 Err("Invalid AIFF container".to_string())
             }
         }
         "ogg" => {
             let bytes = fs::read(path).map_err(|e| e.to_string())?;
-            if bytes.len() >= 27 && &bytes[0..4] == b"OggS" {
-                let num_segs = bytes[26] as usize;
-                let data_start = 27 + num_segs;
-                if bytes.len() >= data_start + 16
-                    && &bytes[data_start..data_start + 8] == b"SUMMPCM\0"
-                {
-                    let sr = u32::from_le_bytes([
-                        bytes[data_start + 8],
-                        bytes[data_start + 9],
-                        bytes[data_start + 10],
-                        bytes[data_start + 11],
-                    ]);
-                    let ch =
-                        u16::from_le_bytes([bytes[data_start + 12], bytes[data_start + 13]]).max(1);
+            if let Some(packet) = parse_ogg_summpcm_packet(&bytes) {
+                if packet.len() >= 16 && &packet[0..7] == b"SUMMPCM" {
+                    let version = packet[7];
+                    let sr = u32::from_le_bytes([packet[8], packet[9], packet[10], packet[11]]);
+                    let ch = u16::from_le_bytes([packet[12], packet[13]]).max(1);
+                    let pcm_start = if version == 1 && packet.len() >= 20 {
+                        let meta_len = u32::from_le_bytes([
+                            packet[16], packet[17], packet[18], packet[19],
+                        ]) as usize;
+                        (20 + meta_len).min(packet.len())
+                    } else {
+                        16
+                    };
                     let mut samples = Vec::new();
-                    for chunk in bytes[data_start + 16..].chunks_exact(2) {
+                    for chunk in packet[pcm_start..].chunks_exact(2) {
                         let pcm = i16::from_le_bytes([chunk[0], chunk[1]]);
                         samples.push(pcm as f32 / i16::MAX as f32);
                     }
@@ -1171,13 +1999,14 @@ pub fn read_audio_file(path: &Path) -> Result<(Vec<f32>, u32, u16), String> {
     }
 }
 
-/// Write audio sample buffer to disk in specified target format (WAV, FLAC, OGG, AIFF).
-pub fn write_audio_file(
+/// Write audio sample buffer to disk honoring explicit `ExportSettings` (bit depth, compression, quality, metadata tags, cover art).
+pub fn write_audio_file_with_settings(
     path: &Path,
     samples: &[f32],
     sample_rate: u32,
     channels: u16,
     target_format: &str,
+    settings: &ExportSettings,
 ) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() && !parent.exists() {
@@ -1185,28 +2014,52 @@ pub fn write_audio_file(
         }
     }
 
+    let meta = (!settings.metadata.is_empty()).then_some(&settings.metadata);
     let fmt = target_format.to_lowercase();
     match fmt.as_str() {
-        "wav" => {
-            let spec = WavSpec {
-                channels: channels.max(1),
-                sample_rate,
-                bits_per_sample: 16,
-                sample_format: SampleFormat::Int,
-            };
-            let mut writer = WavWriter::create(path, spec).map_err(|e| e.to_string())?;
-            for &s in samples {
-                let pcm = (s.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
-                writer.write_sample(pcm).map_err(|e| e.to_string())?;
-            }
-            writer.finalize().map_err(|e| e.to_string())?;
-            Ok(())
-        }
-        "flac" => export_flac(path, samples, sample_rate, channels, 5),
-        "ogg" => export_ogg(path, samples, sample_rate, channels, 0.8),
-        "aiff" | "aif" => export_aiff(path, samples, sample_rate, channels),
+        "wav" => export_wav_with_metadata(
+            path,
+            samples,
+            sample_rate,
+            channels,
+            settings.bit_depth,
+            &settings.metadata,
+        ),
+        "flac" => export_flac_with_metadata(
+            path,
+            samples,
+            sample_rate,
+            channels,
+            settings.flac_compression_level,
+            meta,
+        ),
+        "ogg" => export_ogg_with_metadata(
+            path,
+            samples,
+            sample_rate,
+            channels,
+            settings.ogg_quality,
+            meta,
+        ),
+        "mp3" => export_mp3_with_metadata(path, samples, sample_rate, channels, meta),
+        "aiff" | "aif" => export_aiff_with_metadata(path, samples, sample_rate, channels, meta),
         other => Err(format!("Unsupported audio export format: '{}'", other)),
     }
+}
+
+/// Write audio sample buffer to disk in specified target format (WAV, FLAC, OGG, MP3, AIFF).
+pub fn write_audio_file(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    target_format: &str,
+) -> Result<(), String> {
+    let settings = ExportSettings {
+        sample_rate,
+        ..Default::default()
+    };
+    write_audio_file_with_settings(path, samples, sample_rate, channels, target_format, &settings)
 }
 
 /// Automated multi-format audio batch converter CLI engine (`summon convert input/ output/ --format=flac`).
@@ -1929,11 +2782,22 @@ mod tests {
         assert_eq!(ogg_ch, 2);
         assert_eq!(ogg_samples.len(), signal.len());
 
-        // 4. Unsupported format returns Err instead of writing a text stub
+        // 4. MP3 binary write + read round-trip (ID3v2 / MPEG sync + audio recovery)
         let mp3_path = temp_dir.join("test.mp3");
-        assert!(write_audio_file(&mp3_path, &signal, 44100, 2, "mp3").is_err());
+        write_audio_file(&mp3_path, &signal, 44100, 2, "mp3").unwrap();
+        let raw_mp3 = fs::read(&mp3_path).unwrap();
+        assert_eq!(raw_mp3[0], 0xFF);
+        assert_eq!(raw_mp3[1], 0xFB);
+        let (mp3_samples, mp3_sr, mp3_ch) = read_audio_file(&mp3_path).unwrap();
+        assert_eq!(mp3_sr, 44100);
+        assert_eq!(mp3_ch, 2);
+        assert_eq!(mp3_samples.len(), signal.len());
 
-        // 5. backup_project_zip writes a valid ZIP archive
+        // 5. Unsupported format returns Err instead of writing a text stub
+        let bad_path = temp_dir.join("test.xyz");
+        assert!(write_audio_file(&bad_path, &signal, 44100, 2, "xyz").is_err());
+
+        // 6. backup_project_zip writes a valid ZIP archive
         let zip_path = temp_dir.join("backup.zip");
         backup_project_zip(&temp_dir, &zip_path).unwrap();
         let zip_bytes = fs::read(&zip_path).unwrap();
@@ -1982,6 +2846,78 @@ mod tests {
             FlacReader::open(&square_flac_path).expect("Claxon should open square wave FLAC");
         let decoded_square: Vec<i32> = square_reader.samples().map(|s| s.unwrap()).collect();
         assert_eq!(decoded_square.len(), square.len());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_iox1_mp3_flac_ogg_wav_aiff_metadata_and_multipage_roundtrip() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "summoner_iox1_meta_rt_{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let fake_png = vec![0x89u8, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
+        let meta = AudioMetadataTags {
+            title: Some("Glass Lattice".to_string()),
+            artist: Some("Summoner Test".to_string()),
+            album: Some("IDM Crown Jewels".to_string()),
+            bpm: Some(172.5),
+            initial_key: Some("F#m".to_string()),
+            isrc: Some("USSUM2600001".to_string()),
+            year: Some(2026),
+            genre: Some("IDM / Electronic".to_string()),
+            comment: Some("Rendered via Summoner DAW".to_string()),
+            cover_art_png: Some(fake_png.clone()),
+        };
+
+        let settings = ExportSettings {
+            bit_depth: BitDepth::Bit24,
+            sample_rate: 48000,
+            metadata: meta.clone(),
+            ..Default::default()
+        };
+
+        // 45,000 stereo interleaved samples (~90 KB) ensures OGG spans >1 OggS page
+        let mut signal = Vec::with_capacity(45_000);
+        for i in 0..45_000 {
+            let t = (i / 2) as f32 / 48000.0;
+            signal.push((2.0 * std::f32::consts::PI * 330.0 * t).sin() * 0.4);
+        }
+
+        for ext in ["mp3", "flac", "ogg", "wav", "aiff"] {
+            let p = temp_dir.join(format!("track.{}", ext));
+            write_audio_file_with_settings(&p, &signal, 48000, 2, ext, &settings).unwrap();
+
+            let (dec_samples, dec_sr, dec_ch) = read_audio_file(&p).unwrap();
+            assert_eq!(dec_sr, 48000, "sample rate mismatch for {}", ext);
+            assert_eq!(dec_ch, 2, "channel mismatch for {}", ext);
+            assert_eq!(
+                dec_samples.len(),
+                signal.len(),
+                "sample length mismatch for {}",
+                ext
+            );
+
+            let read_meta = read_audio_metadata(&p).unwrap();
+            assert_eq!(read_meta.title.as_deref(), Some("Glass Lattice"));
+            assert_eq!(read_meta.artist.as_deref(), Some("Summoner Test"));
+            assert_eq!(read_meta.isrc.as_deref(), Some("USSUM2600001"));
+            if ext != "wav" && ext != "ogg" {
+                assert_eq!(read_meta.cover_art_png.as_deref(), Some(fake_png.as_slice()));
+            }
+            if ext == "ogg" {
+                assert_eq!(read_meta.cover_art_png.as_deref(), Some(fake_png.as_slice()));
+            }
+        }
+
+        // Verify FLAC still decodes cleanly through independent claxon reader
+        let flac_p = temp_dir.join("track.flac");
+        let mut reader = FlacReader::open(&flac_p).unwrap();
+        let claxon_samples: Vec<i32> = reader.samples().map(|s| s.unwrap()).collect();
+        assert_eq!(claxon_samples.len(), signal.len());
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

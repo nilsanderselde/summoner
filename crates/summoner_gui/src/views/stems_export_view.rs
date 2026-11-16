@@ -554,9 +554,10 @@ impl StemsExportView {
         let uncompressed_stem_bytes = bytes_per_sec * total_duration;
 
         let compression_multiplier = match self.format {
-            StemExportFormat::Wav => 1.0,
+            StemExportFormat::Wav | StemExportFormat::Aiff => 1.0,
             StemExportFormat::Flac => 0.60, // ~40% lossless compression ratio
             StemExportFormat::Ogg => 0.20,  // Lossy ~256kbps
+            StemExportFormat::Mp3 => 0.14,  // MP3 320kbps CBR
         };
 
         let total_bytes = stem_count as f32 * uncompressed_stem_bytes * compression_multiplier;
@@ -623,6 +624,7 @@ impl StemsExportView {
                 silence_threshold_db: self.silence_threshold_db,
                 dither: summoner_project::export::DitherMode::None,
                 target_lufs: None,
+                metadata: Default::default(),
             },
             naming_pattern: self.naming_pattern.clone(),
             include_master: self.include_master,
@@ -699,6 +701,8 @@ impl StemsExportView {
             StemExportFormat::Wav => "WAV",
             StemExportFormat::Flac => "FLAC",
             StemExportFormat::Ogg => "OGG",
+            StemExportFormat::Mp3 => "MP3",
+            StemExportFormat::Aiff => "AIFF",
         };
         let bit_str = match self.bit_depth {
             BitDepth::Bit16 => "16-bit",
@@ -860,8 +864,10 @@ impl StemsExportView {
 
                 let formats = [
                     (StemExportFormat::Wav, "WAV (Linear PCM Audio)"),
+                    (StemExportFormat::Aiff, "AIFF (Apple PCM Audio)"),
                     (StemExportFormat::Flac, "FLAC (Lossless Free Audio)"),
                     (StemExportFormat::Ogg, "OGG (Vorbis Compressed)"),
+                    (StemExportFormat::Mp3, "MP3 (320 kbps CBR + ID3v2)"),
                 ];
                 for (fmt, lbl) in formats {
                     if ui.radio_value(&mut self.format, fmt, lbl).clicked() {

@@ -78,10 +78,10 @@ pub const CAPABILITIES: &[Capability] = &[
     ),
     cap(
         "audio.encode_compressed",
-        "MP3/AAC/Opus/FLAC encoding",
-        Modelled,
-        "IOX-1",
-        "No encoder crates; WAV only",
+        "MP3/OGG/FLAC/AIFF/WAV encoding with metadata tags",
+        Real,
+        "",
+        "Pure-Rust FLAC, OGG, MP3 (ID3v2.3 + cover art), WAV, AIFF",
     ),
     cap(
         "audio.sample_rate_conversion",
